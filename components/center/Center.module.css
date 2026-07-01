@@ -35,7 +35,9 @@
   min-height: 0;
 }
 
-/* Pull-tab to open the assistant, docked on the border between Rail and Center */
+/* Pull-tab to open/reduce the assistant — stays docked on the same
+   horizontal line, on the border right after the assistant column (or
+   after Rail when the assistant is closed). */
 .pullTab {
   position: absolute;
   left: 0;
@@ -44,35 +46,43 @@
   z-index: 80;
   background: var(--sage);
   color: #fff;
-  width: 38px;
-  border-radius: 20px;
+  width: 46px;
+  min-height: 188px;
+  border-radius: 23px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 14px 0 16px;
-  gap: 10px;
-  box-shadow: 0 8px 24px rgba(36, 74, 58, 0.32);
-  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  padding: 18px 0 20px;
+  gap: 14px;
+  box-shadow: 0 8px 24px rgba(36, 74, 58, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s, min-height 0.15s;
 }
 .pullTab:hover {
   transform: translate(-50%, -50%) translateY(-2px);
   background: var(--sage-700);
-  box-shadow: 0 10px 28px rgba(36, 74, 58, 0.4);
+  box-shadow: 0 10px 28px rgba(36, 74, 58, 0.45);
+}
+.pullTabOpen {
+  min-height: 96px;
+  gap: 10px;
 }
 .pullTabGrip {
-  width: 14px;
+  width: 16px;
   height: 3px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 6px 0 rgba(255, 255, 255, 0.55), 0 -6px 0 rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 7px 0 rgba(255, 255, 255, 0.6), 0 -7px 0 rgba(255, 255, 255, 0.6);
+  flex: none;
 }
 .pullTabLabel {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  font-weight: 600;
-  font-size: 12px;
-  letter-spacing: 0.01em;
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: 0.03em;
   white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
 }
 
 @media (max-width: 860px) {
@@ -81,7 +91,8 @@
   }
 
   /* No rail/center border on mobile (rail is an off-canvas overlay) — fall back to a floating button */
-  .pullTab {
+  .pullTab,
+  .pullTabOpen {
     position: fixed;
     left: auto;
     right: 20px;
@@ -92,6 +103,7 @@
     padding: 13px 20px 13px 16px;
     border-radius: 28px;
     width: auto;
+    min-height: 0;
   }
   .pullTab:hover {
     transform: translateY(-2px);

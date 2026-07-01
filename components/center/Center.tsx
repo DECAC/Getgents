@@ -11,7 +11,7 @@ import { EmptyCenter } from "./EmptyCenter";
 import styles from "./Center.module.css";
 
 export function Center() {
-  const { currentEspace, activeTab, openAssistant, assistantOpen } = useEspace();
+  const { currentEspace, activeTab, openAssistant, closeAssistant, assistantOpen } = useEspace();
 
   function renderContent() {
     if (activeTab === "map" && currentEspace.map) return <MapTab map={currentEspace.map} />;
@@ -48,20 +48,27 @@ export function Center() {
         {renderContent()}
       </div>
 
-      {!assistantOpen && (
-        <button
-          className={styles.pullTab}
-          onClick={openAssistant}
-          aria-haspopup="dialog"
-          title="Parler à votre assistant"
-        >
-          <span className={styles.pullTabGrip} aria-hidden="true" />
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <button
+        className={[styles.pullTab, assistantOpen ? styles.pullTabOpen : ""].filter(Boolean).join(" ")}
+        onClick={assistantOpen ? closeAssistant : openAssistant}
+        aria-haspopup="dialog"
+        aria-expanded={assistantOpen}
+        title={assistantOpen ? "Réduire la fenêtre d'échange" : "Parler à votre assistant"}
+      >
+        <span className={styles.pullTabGrip} aria-hidden="true" />
+        {assistantOpen ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
+        ) : (
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
           </svg>
-          <span className={styles.pullTabLabel}>Parler à votre assistant</span>
-        </button>
-      )}
+        )}
+        <span className={styles.pullTabLabel}>
+          {assistantOpen ? "Réduire" : "Parler à votre assistant"}
+        </span>
+      </button>
     </main>
   );
 }
