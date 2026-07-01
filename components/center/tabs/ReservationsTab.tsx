@@ -2,7 +2,8 @@
 
 import { useEspace } from "@/lib/context/EspaceContext";
 import type { EspaceTab, ReservationItem } from "@/lib/types";
-import styles from "./ReservationsTab.module.css";
+import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "À envoyer",
@@ -12,17 +13,17 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_CLASS: Record<string, string> = {
-  pending: styles.statusPending,
-  sent: styles.statusSent,
-  confirmed: styles.statusConfirmed,
-  cancelled: styles.statusCancelled,
+  pending: "bg-secondary text-secondary-foreground",
+  sent: "bg-accent text-accent-foreground",
+  confirmed: "bg-primary-tint text-primary-hover",
+  cancelled: "bg-muted text-muted-foreground",
 };
 
 const IC_CLASS: Record<string, string> = {
-  pending: styles.icPending,
-  sent: styles.icSent,
-  confirmed: styles.icDone,
-  cancelled: styles.icCancelled,
+  pending: "bg-secondary",
+  sent: "bg-accent",
+  confirmed: "bg-primary-tint",
+  cancelled: "bg-muted",
 };
 
 export function ReservationsTab({ tab }: { tab: EspaceTab }) {
@@ -35,43 +36,58 @@ export function ReservationsTab({ tab }: { tab: EspaceTab }) {
   });
 
   return (
-    <div className={styles.wrap}>
-      <div className={styles.summary}>
-        <div className={[styles.stat, styles.statPending].join(" ")}>
-          <div className={styles.statN}>{counts.pending}</div>
-          <div className={styles.statL}>À envoyer</div>
-        </div>
-        <div className={[styles.stat, styles.statSent].join(" ")}>
-          <div className={styles.statN}>{counts.sent}</div>
-          <div className={styles.statL}>Envoyées</div>
-        </div>
-        <div className={[styles.stat, styles.statDone].join(" ")}>
-          <div className={styles.statN}>{counts.confirmed}</div>
-          <div className={styles.statL}>Confirmées</div>
-        </div>
+    <div className="mx-auto max-w-[680px]">
+      <div className="mb-4 flex flex-wrap gap-2.5">
+        <Card className="min-w-[120px] flex-1 px-3.5 py-3">
+          <div className="font-display text-[22px] font-bold tracking-tight text-secondary-foreground">
+            {counts.pending}
+          </div>
+          <div className="mt-px text-[11px] text-muted-foreground">À envoyer</div>
+        </Card>
+        <Card className="min-w-[120px] flex-1 px-3.5 py-3">
+          <div className="font-display text-[22px] font-bold tracking-tight text-accent-foreground">
+            {counts.sent}
+          </div>
+          <div className="mt-px text-[11px] text-muted-foreground">Envoyées</div>
+        </Card>
+        <Card className="min-w-[120px] flex-1 px-3.5 py-3">
+          <div className="font-display text-[22px] font-bold tracking-tight text-primary-hover">
+            {counts.confirmed}
+          </div>
+          <div className="mt-px text-[11px] text-muted-foreground">Confirmées</div>
+        </Card>
       </div>
 
-      <div className={styles.list}>
+      <div className="flex flex-col gap-2.5">
         {items.length === 0 ? (
-          <div className={styles.empty}>
+          <div className="rounded-xl bg-background p-5 text-center text-[12.5px] leading-relaxed text-muted-foreground">
             Aucune proposition pour l&apos;instant. Le gent en déposera ici dès qu&apos;il en trouvera une pertinente.
           </div>
         ) : (
           items.map((item) => (
-            <div key={item.id} className={styles.row}>
-              <div className={[styles.ic, IC_CLASS[item.status]].join(" ")}>{item.icon}</div>
-              <div className={styles.info}>
-                <div className={styles.rtitle}>{item.what}</div>
-                <div className={styles.rmeta}>
+            <Card key={item.id} className="flex items-center gap-[13px] px-[15px] py-[13px]">
+              <div className={cn("grid h-9 w-9 flex-none place-items-center rounded-lg text-[17px]", IC_CLASS[item.status])}>
+                {item.icon}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-semibold tracking-tight">
+                  {item.what}
+                </div>
+                <div className="mt-0.5 text-[11.5px] text-muted-foreground">
                   {item.service}
                   {item.price ? ` · ${item.price}` : ""}
                 </div>
               </div>
-              <span className={[styles.status, STATUS_CLASS[item.status]].join(" ")}>
+              <span
+                className={cn(
+                  "flex-none whitespace-nowrap rounded-full px-2.5 py-1 text-[10.5px] font-semibold",
+                  STATUS_CLASS[item.status]
+                )}
+              >
                 {STATUS_LABEL[item.status] ?? item.status}
               </span>
               <button
-                className={styles.goBtn}
+                className="grid h-[30px] w-[30px] flex-none place-items-center rounded-lg text-muted-foreground hover:bg-background hover:text-foreground"
                 onClick={() => openResvModal(item.id)}
                 aria-label={`Voir le détail de ${item.what}`}
                 title="Voir le détail"
@@ -80,7 +96,7 @@ export function ReservationsTab({ tab }: { tab: EspaceTab }) {
                   <path d="M9 18l6-6-6-6" />
                 </svg>
               </button>
-            </div>
+            </Card>
           ))
         )}
       </div>

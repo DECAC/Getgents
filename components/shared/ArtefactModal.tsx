@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTMLDoc } from "./SafeHTML";
-import styles from "./Modal.module.css";
+import { Dialog, DialogContent, DialogHeader, DialogBody, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 function VisualGrid() {
   return (
-    <div className={styles.visualGrid}>
+    <div className="mb-4 grid grid-cols-[1.4fr_1fr_1fr] grid-rows-[90px_90px] gap-1.5 [&_>_div:first-child]:row-span-2 [&_svg]:block [&_svg]:h-full [&_svg]:w-full [&_svg]:rounded-lg">
       <div>
         <svg viewBox="0 0 200 190">
           <rect width="200" height="190" fill="#CFE0DD" />
@@ -44,66 +44,44 @@ export function ArtefactModal() {
     ? currentEspace.artefacts.find((a) => a.id === modalArtefactId) ?? null
     : null;
 
-  useEffect(() => {
-    if (artefact) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
-  }, [artefact]);
-
-  if (!artefact) return null;
-
   return (
-    <div
-      className={styles.overlay}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-      onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
-    >
-      <div className={styles.modal}>
-        <div className={styles.head}>
-          <div
-            className={styles.ti}
-            dangerouslySetInnerHTML={{ __html: artefact.icon }}
-          />
-          <div>
-            <h3 className={styles.title} id="modal-title">{artefact.title}</h3>
-            <div className={styles.meta}>
-              {artefact.type} · {artefact.date}
-            </div>
-          </div>
-          <button className={styles.closeBtn} onClick={closeModal} aria-label="Fermer">
-            ✕
-          </button>
-        </div>
+    <Dialog open={!!artefact} onOpenChange={(open) => !open && closeModal()}>
+      <DialogContent>
+        {artefact && (
+          <>
+            <DialogHeader>
+              <div
+                className="grid h-[38px] w-[38px] flex-none place-items-center rounded-[9px] bg-secondary text-secondary-foreground [&_svg]:h-5 [&_svg]:w-5"
+                dangerouslySetInnerHTML={{ __html: artefact.icon }}
+              />
+              <div>
+                <DialogTitle>{artefact.title}</DialogTitle>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  {artefact.type} · {artefact.date}
+                </div>
+              </div>
+            </DialogHeader>
 
-        <div className={styles.body}>
-          {artefact.visual && (
-            <div className={styles.visualWrap}>
-              <VisualGrid />
-            </div>
-          )}
-          <SafeHTMLDoc html={artefact.body} />
-        </div>
+            <DialogBody>
+              {artefact.visual && <VisualGrid />}
+              <SafeHTMLDoc html={artefact.body} />
+            </DialogBody>
 
-        <div className={styles.foot}>
-          <span className={styles.footLabel}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z" />
-            </svg>
-            Généré par Getgents · gabarit standard
-          </span>
-          <button className={styles.btnGhost} onClick={() => alert("Export PDF — non implémenté dans ce commit.")}>
-            Exporter en PDF
-          </button>
-          <button className={styles.btnPrim} onClick={() => alert("Mise à jour — non implémentée dans ce commit.")}>
-            Mettre à jour
-          </button>
-        </div>
-      </div>
-    </div>
+            <DialogFooter>
+              <span className="mr-auto flex items-center gap-1.5 text-[11px] text-faint">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z" />
+                </svg>
+                Généré par Getgents · gabarit standard
+              </span>
+              <Button variant="outline" onClick={() => alert("Export PDF — non implémenté dans ce commit.")}>
+                Exporter en PDF
+              </Button>
+              <Button onClick={() => alert("Mise à jour — non implémentée dans ce commit.")}>Mettre à jour</Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

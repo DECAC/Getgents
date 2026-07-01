@@ -4,7 +4,6 @@ const config = {
   transform: { "^.+\\.tsx?$": ["ts-jest", { tsconfig: { jsx: "react-jsx" } }] },
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
-    "\\.module\\.css$": "<rootDir>/__mocks__/styleMock.ts",
   },
 };
 

@@ -2,7 +2,7 @@
 
 import { useEspace } from "@/lib/context/EspaceContext";
 import type { EspaceMap } from "@/lib/types";
-import styles from "./MapTab.module.css";
+import { cn } from "@/lib/utils";
 
 export function MapTab({ map }: { map: EspaceMap }) {
   const { selectedDay, selectDay } = useEspace();
@@ -11,9 +11,9 @@ export function MapTab({ map }: { map: EspaceMap }) {
   const routePath = stops.map((p, i) => `${i ? "L" : "M"}${p.x},${p.y}`).join(" ");
 
   return (
-    <div className={styles.mapview}>
-      <div className={styles.mapcanvas}>
-        <svg viewBox="0 0 720 420" role="img" aria-label="Carte schématique du road trip">
+    <div className="mx-auto flex max-w-[880px] items-start gap-[18px] max-[860px]:flex-col">
+      <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-border bg-card">
+        <svg viewBox="0 0 720 420" role="img" aria-label="Carte schématique du road trip" className="block h-auto w-full">
           <rect width="720" height="420" fill="#D6E2E2" />
           <g stroke="#C9D5D5" strokeWidth="1" opacity="0.5">
             <line x1="0" y1="105" x2="720" y2="105" />
@@ -52,7 +52,14 @@ export function MapTab({ map }: { map: EspaceMap }) {
           {stops.map((stop) => {
             const on = selectedDay === stop.day;
             return (
-              <g key={stop.day} className={styles.mapPin} onClick={() => selectDay(stop.day)} role="button" tabIndex={0} aria-label={`Étape ${stop.day} : ${stop.city}`}>
+              <g
+                key={stop.day}
+                className="cursor-pointer"
+                onClick={() => selectDay(stop.day)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Étape ${stop.day} : ${stop.city}`}
+              >
                 <circle
                   cx={stop.x}
                   cy={stop.y}
@@ -89,27 +96,35 @@ export function MapTab({ map }: { map: EspaceMap }) {
         </svg>
       </div>
 
-      <div className={styles.maplist}>
-        <h4 className={styles.maplistTitle}>{map.title}</h4>
-        <p className={styles.hint}>{map.hint}</p>
+      <div className="w-[230px] flex-none max-[860px]:w-full">
+        <h4 className="m-0 mb-1 font-display text-sm tracking-tight">{map.title}</h4>
+        <p className="m-0 mb-3 text-[11.5px] text-muted-foreground">{map.hint}</p>
         {stops.map((stop) => (
           <button
             key={stop.day}
-            className={[styles.stop, selectedDay === stop.day ? styles.stopSel : ""].filter(Boolean).join(" ")}
+            className={cn(
+              "mb-[3px] flex w-full items-start gap-[11px] rounded-lg border border-transparent px-2.5 py-2.5 text-left hover:bg-card",
+              selectedDay === stop.day && "border-primary bg-primary-tint"
+            )}
             onClick={() => selectDay(stop.day)}
             aria-pressed={selectedDay === stop.day}
           >
-            <span className={[styles.stopD, selectedDay === stop.day ? styles.stopDSel : ""].filter(Boolean).join(" ")}>
+            <span
+              className={cn(
+                "grid h-6 w-6 flex-none place-items-center rounded-full bg-primary text-[11.5px] font-semibold text-white",
+                selectedDay === stop.day && "bg-secondary-foreground"
+              )}
+            >
               {stop.day}
             </span>
             <span>
-              <span className={styles.stopCity}>{stop.city}</span>
-              <span className={styles.stopNight}>{stop.night}</span>
+              <span className="block text-[13.5px] font-semibold tracking-tight">{stop.city}</span>
+              <span className="mt-px block text-[11.5px] text-muted-foreground">{stop.night}</span>
             </span>
           </button>
         ))}
-        <div className={styles.mapNote}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flex: "none" }}>
+        <div className="mt-3 flex gap-1.5 text-[11px] leading-tight text-faint">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-none">
             <circle cx="12" cy="12" r="9" />
             <path d="M12 8h.01M11 12h1v4h1" />
           </svg>

@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
-import styles from "./Aside.module.css";
+import { Textarea } from "@/components/ui/textarea";
 
 const FILE_ICON = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -32,15 +32,15 @@ export function Aside() {
 
   return (
     <aside
-      className={[styles.aside, asideCollapsed ? styles.collapsed : ""].filter(Boolean).join(" ")}
+      className="relative flex min-h-0 flex-col overflow-y-auto border-l border-border bg-card"
       aria-label="Mémoire et fichiers"
       id="aside"
     >
       {/* Icon rail (visible when the aside is collapsed) */}
       {asideCollapsed && (
-        <div className={styles.asideRail}>
+        <div className="flex h-full flex-col items-center gap-2 py-4">
           <button
-            className={styles.railToggleBtn}
+            className="mb-1 grid h-[30px] w-[30px] place-items-center rounded-lg text-muted-foreground hover:bg-background hover:text-foreground"
             onClick={toggleAsideCollapsed}
             title="Déployer Mémoire et fichiers"
             aria-label="Déployer Mémoire et fichiers"
@@ -50,7 +50,7 @@ export function Aside() {
             </svg>
           </button>
           <button
-            className={styles.railBtn}
+            className="relative grid h-[38px] w-[38px] place-items-center rounded-[10px] border border-border bg-card text-muted-foreground hover:border-primary hover:bg-background hover:text-foreground"
             onClick={toggleAsideCollapsed}
             title="Ouvrir Mémoire"
             aria-label="Ouvrir Mémoire"
@@ -60,7 +60,7 @@ export function Aside() {
             </svg>
           </button>
           <button
-            className={styles.railBtn}
+            className="relative grid h-[38px] w-[38px] place-items-center rounded-[10px] border border-border bg-card text-muted-foreground hover:border-primary hover:bg-background hover:text-foreground"
             onClick={toggleAsideCollapsed}
             title="Ouvrir Fichiers"
             aria-label="Ouvrir Fichiers"
@@ -70,7 +70,7 @@ export function Aside() {
               <path d="M17 13v6M14 16h6" />
             </svg>
             {files.length > 0 && (
-              <span className={styles.railDot} aria-hidden="true" />
+              <span className="absolute -right-[3px] -top-[3px] h-[9px] w-[9px] rounded-full border-[1.5px] border-card bg-secondary-foreground" aria-hidden="true" />
             )}
           </button>
         </div>
@@ -79,10 +79,12 @@ export function Aside() {
       {/* Full aside content */}
       {!asideCollapsed && (
         <>
-          <div className={styles.asideHead}>
-            <span className={styles.asideHeadLabel}>Mémoire et fichiers</span>
+          <div className="flex flex-shrink-0 items-center justify-between px-[18px] pb-0 pt-3.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-faint">
+              Mémoire et fichiers
+            </span>
             <button
-              className={styles.collapseBtn}
+              className="grid h-[26px] w-[26px] flex-none place-items-center rounded-[7px] text-muted-foreground hover:bg-background hover:text-foreground"
               onClick={toggleAsideCollapsed}
               title="Réduire la colonne"
               aria-label="Réduire la colonne"
@@ -93,9 +95,9 @@ export function Aside() {
             </button>
           </div>
 
-          <section className={styles.section}>
-            <div className={styles.shead}>
-              <h3 className={styles.sTitle}>
+          <section className="p-[18px]">
+            <div className="mb-1 flex items-center justify-between">
+              <h3 className="m-0 flex items-center gap-2 font-display text-[14.5px] font-bold tracking-tight">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" strokeWidth="2">
                   <path d="M9 3a3 3 0 0 0-3 3v12a3 3 0 0 0 9 0V6a3 3 0 0 0-3-3z" />
                   <path d="M9 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H9" />
@@ -103,18 +105,18 @@ export function Aside() {
                 Mémoire
               </h3>
             </div>
-            <p className={styles.shelp}>
+            <p className="m-0 mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
               Le résumé que votre assistant tient à jour : l&apos;historique et vos décisions au
               fil des échanges. Modifiable.
             </p>
-            <textarea
+            <Textarea
               ref={memRef}
-              className={styles.memory}
+              className="min-h-[120px] overflow-hidden"
               value={currentEspace.memory}
               onChange={handleMemoryChange}
               aria-label="Mémoire de l'espace"
             />
-            <div className={styles.memFoot}>
+            <div className="mt-2.5 flex items-center gap-1.5 px-0.5 text-[11px] leading-tight text-muted-foreground">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" strokeWidth="2">
                 <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0" />
                 <path d="M12 7v5l3 2" />
@@ -123,37 +125,39 @@ export function Aside() {
             </div>
           </section>
 
-          <section className={styles.section}>
-            <div className={styles.shead}>
-              <h3 className={styles.sTitle}>
+          <section className="border-t border-muted p-[18px]">
+            <div className="mb-1 flex items-center justify-between">
+              <h3 className="m-0 flex items-center gap-2 font-display text-[14.5px] font-bold tracking-tight">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2">
                   <path d="M21 12.5V7a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6" />
                   <path d="M17 13v6M14 16h6" />
                 </svg>
                 Fichiers
               </h3>
-              {files.length > 0 && (
-                <span className={styles.cnt}>{files.length}</span>
-              )}
+              {files.length > 0 && <span className="text-[11px] font-medium text-faint">{files.length}</span>}
             </div>
-            <p className={styles.shelp}>
+            <p className="m-0 mb-3 text-[11.5px] leading-relaxed text-muted-foreground">
               Ce que vous avez téléversé pour cette conversation — billets, documents, photos.
             </p>
 
-            <div className={styles.artlist}>
+            <div className="mb-2.5 flex flex-col gap-2.5">
               {files.length === 0 ? (
-                <div className={styles.artEmpty}>
+                <div className="rounded-lg bg-background p-4 text-center text-[12.5px] leading-relaxed text-muted-foreground">
                   Aucun fichier pour l&apos;instant.
                   <br />
                   Ajoutez un document, une photo ou un billet à transmettre à l&apos;assistant.
                 </div>
               ) : (
                 files.map((f) => (
-                  <div key={f.id} className={styles.artcard}>
-                    <span className={styles.artTi}>{FILE_ICON}</span>
-                    <span className={styles.artInfo}>
-                      <span className={styles.artTitle}>{f.name}</span>
-                      <span className={styles.artMeta}>
+                  <div key={f.id} className="flex items-start gap-[11px] rounded-lg border border-border bg-card p-3">
+                    <span className="grid h-8 w-8 flex-none place-items-center rounded-lg bg-secondary text-secondary-foreground [&_svg]:h-[17px] [&_svg]:w-[17px]">
+                      {FILE_ICON}
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold leading-tight tracking-tight">
+                        {f.name}
+                      </span>
+                      <span className="mt-[3px] text-[11px] text-muted-foreground">
                         {f.size} · {f.date}
                       </span>
                     </span>
@@ -163,7 +167,7 @@ export function Aside() {
             </div>
 
             <button
-              className={styles.uploadBtn}
+              className="flex w-full items-center justify-center gap-[7px] rounded-lg border border-dashed border-border bg-transparent px-3 py-2.5 text-[12.5px] font-semibold text-primary-hover hover:border-primary hover:bg-primary-tint"
               onClick={() => alert("Maquette : ouvrirait un sélecteur de fichier.")}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

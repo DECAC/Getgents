@@ -1,48 +1,107 @@
-@import "../styles/tokens.css";
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 96 12% 92%;
+    --foreground: 207 34% 13%;
+
+    --card: 90 30% 99%;
+    --card-foreground: 207 34% 13%;
+
+    --popover: 90 30% 99%;
+    --popover-foreground: 207 34% 13%;
+
+    --primary: 155 33% 27%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 155 35% 22%;
+    --primary-tint: 127 16% 90%;
+
+    --secondary: 44 52% 88%;
+    --secondary-foreground: 39 80% 32%;
+    --secondary-tint: 44 52% 88%;
+
+    --muted: 90 15% 89%;
+    --muted-foreground: 199 11% 40%;
+    --faint: 200 8% 58%;
+
+    --accent: 315 23% 90%;
+    --accent-foreground: 323 28% 32%;
+    --accent-tint: 315 23% 90%;
+
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 93 11% 84%;
+    --input: 93 11% 84%;
+    --ring: 155 33% 27%;
+
+    --radius: 0.625rem;
+
+    --font-display: "Bricolage Grotesque", sans-serif;
+    --font-sans: "Inter", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", monospace;
+
+    /* Layout tokens (shell grid) */
+    --rail: 248px;
+    --rail-min: 66px;
+    --aside: 336px;
+    --aside-collapsed: 56px;
+    --assist: 66.6667vw;
+
+    /* Legacy color aliases — kept so data files (e.g. lib/mock-data/espaces.ts)
+       referencing var(--sage) etc. in inline styles/SVG props keep resolving. */
+    --ink: hsl(var(--foreground));
+    --muted: hsl(var(--muted-foreground));
+    --faint: hsl(var(--faint));
+    --bg: hsl(var(--background));
+    --card: hsl(var(--card));
+    --line: hsl(var(--border));
+    --line-soft: hsl(var(--muted));
+    --sage: hsl(var(--primary));
+    --sage-700: hsl(var(--primary-hover));
+    --sage-tint: hsl(var(--primary-tint));
+    --gold: hsl(var(--secondary-foreground));
+    --gold-tint: hsl(var(--secondary-tint));
+    --plum: hsl(var(--accent-foreground));
+    --plum-tint: hsl(var(--accent-tint));
+  }
 }
 
-html,
-body {
-  margin: 0;
-  height: 100%;
-  padding: 0;
-}
-
-body {
-  font-family: "Inter", system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--ink);
-  font-size: 14px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: inherit;
-}
-
-textarea {
-  font-family: inherit;
-}
-
-::selection {
-  background: var(--sage-tint);
-}
-
-:focus-visible {
-  outline: 2px solid var(--sage);
-  outline-offset: 2px;
-  border-radius: 4px;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body {
+    margin: 0;
+    height: 100%;
+    padding: 0;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+  textarea {
+    font-family: inherit;
+  }
+  ::selection {
+    @apply bg-primary-tint;
+  }
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
 /* Skip link */
@@ -50,7 +109,7 @@ textarea {
   position: absolute;
   left: -999px;
   top: 8px;
-  background: var(--ink);
+  background: hsl(var(--foreground));
   color: #fff;
   padding: 8px 12px;
   border-radius: 6px;
@@ -68,9 +127,9 @@ body.col-resizing {
   user-select: none;
 }
 
-/* Shared doc styles used inside modal body (sanitized HTML) */
+/* Shared doc styles used inside modal body (sanitized HTML from lib/sanitize.ts) */
 .gendoc h4 {
-  font-family: "Bricolage Grotesque", sans-serif;
+  font-family: var(--font-display);
   font-size: 15px;
   margin: 18px 0 7px;
   letter-spacing: -0.01em;
@@ -93,7 +152,7 @@ body.col-resizing {
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid hsl(var(--muted));
   font-size: 13.5px;
 }
 .gendoc .check {
@@ -107,7 +166,7 @@ body.col-resizing {
   width: 17px;
   height: 17px;
   border-radius: 5px;
-  border: 1.5px solid var(--line);
+  border: 1.5px solid hsl(var(--border));
   flex: none;
   margin-top: 1px;
   display: grid;
@@ -115,11 +174,11 @@ body.col-resizing {
   font-size: 11px;
 }
 .gendoc .check.ok .box {
-  background: var(--sage);
-  border-color: var(--sage);
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
   color: #fff;
 }
 .gendoc .check.ok span {
-  color: var(--muted);
+  color: hsl(var(--muted-foreground));
   text-decoration: line-through;
 }

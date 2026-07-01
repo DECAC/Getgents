@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import type { EspaceTab, BudgetHistoryPoint } from "@/lib/types";
-import styles from "./BudgetTab.module.css";
+import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export function BudgetTab({ tab }: { tab: EspaceTab }) {
   const { addSpend } = useEspace();
@@ -53,56 +56,59 @@ export function BudgetTab({ tab }: { tab: EspaceTab }) {
   }
 
   return (
-    <div className={styles.wrap}>
+    <div className="mx-auto max-w-[680px]">
       {/* Envelope card */}
-      <div className={styles.card}>
-        <div className={styles.cardHead}>
+      <Card className="mb-4 p-[18px]">
+        <div className="flex items-start gap-2.5">
           <div>
-            <h4 className={styles.cardTitle}>Enveloppe du voyage</h4>
-            <div className={styles.cardSub}>
+            <h4 className="m-0 mb-[3px] font-display text-[15px] tracking-tight">Enveloppe du voyage</h4>
+            <div className="mb-3.5 text-xs text-muted-foreground">
               Suivi en temps réel — mis à jour à chaque réservation confirmée ou dépense déclarée
             </div>
           </div>
-          <span className={styles.liveTag}>
-            <span className={styles.pulse} />
+          <span className="ml-auto flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full bg-primary-tint px-2 py-[3px] text-[10px] font-semibold text-primary-hover">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
             En direct
           </span>
         </div>
-        <div className={styles.envelope}>
-          <span className={styles.amt}>
+        <div className="mb-2.5 flex items-baseline gap-2">
+          <span className="font-display text-[26px] font-bold tracking-tight">
             {spent.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
           </span>
-          <span className={styles.of}>/ {envelope.toLocaleString("fr-FR")} € engagés</span>
+          <span className="text-[13px] text-muted-foreground">/ {envelope.toLocaleString("fr-FR")} € engagés</span>
         </div>
-        <div className={styles.barTrack}>
+        <div className="relative h-3.5 overflow-hidden rounded-lg bg-background">
           <div
-            className={[styles.barFill, warnLevel ? styles.barWarn : ""].filter(Boolean).join(" ")}
+            className={cn(
+              "h-full rounded-lg bg-gradient-to-r from-primary to-primary-hover transition-[width] duration-500",
+              warnLevel && "from-secondary-foreground to-[#b5862a]"
+            )}
             style={{ width: `${pct}%` }}
           />
-          <div className={styles.barMarker} style={{ left: "80%" }} />
+          <div className="absolute -top-1 h-[22px] w-0.5 bg-foreground opacity-35" style={{ left: "80%" }} />
         </div>
-        <div className={styles.barLabels}>
+        <div className="mt-[5px] flex justify-between text-[10.5px] text-faint">
           <span>0 €</span>
           <span>Seuil d&apos;alerte 80 %</span>
           <span>{envelope.toLocaleString("fr-FR")} €</span>
         </div>
         {warnLevel && (
-          <div className={styles.alertWarn}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" style={{ flex: "none" }}>
+          <div className="mt-2.5 flex items-center gap-[7px] text-xs text-secondary-foreground">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" className="flex-none">
               <circle cx="12" cy="12" r="9" />
               <path d="M12 8v4M12 16h.01" />
             </svg>
             <span>Vous approchez du seuil d&apos;alerte à 80 % de l&apos;enveloppe.</span>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Donut card */}
-      <div className={styles.card}>
-        <h4 className={styles.cardTitle}>Répartition par poste</h4>
-        <div className={styles.cardSub}>Hors carburant et péages, comme convenu dans la mémoire</div>
-        <div className={styles.donutRow}>
-          <svg viewBox="0 0 160 160" className={styles.donutSvg}>
+      <Card className="mb-4 p-[18px]">
+        <h4 className="m-0 mb-[3px] font-display text-[15px] tracking-tight">Répartition par poste</h4>
+        <div className="mb-3.5 text-xs text-muted-foreground">Hors carburant et péages, comme convenu dans la mémoire</div>
+        <div className="flex flex-wrap items-center gap-6">
+          <svg viewBox="0 0 160 160" className="h-[150px] w-[150px] flex-none">
             {segments.length === 0 ? (
               <circle cx="80" cy="80" r={ringR} fill="none" stroke="var(--line)" strokeWidth="20" />
             ) : (
@@ -122,25 +128,25 @@ export function BudgetTab({ tab }: { tab: EspaceTab }) {
               ))
             )}
           </svg>
-          <div className={styles.legend}>
+          <div className="flex min-w-[160px] flex-1 flex-wrap gap-3.5">
             {categories.map((c) => (
-              <div key={c.label} className={styles.legendItem}>
-                <span className={styles.legendSwatch} style={{ background: c.color }} />
+              <div key={c.label} className="flex items-center gap-[7px] text-xs">
+                <span className="h-2.5 w-2.5 flex-none rounded-[3px]" style={{ background: c.color }} />
                 {c.label}
-                <span className={styles.legendVal}>
+                <span className="ml-[3px] font-semibold">
                   {c.spent.toLocaleString("fr-FR", { minimumFractionDigits: c.spent % 1 ? 2 : 0 })} €
                 </span>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Sparkline card */}
-      <div className={styles.card}>
-        <h4 className={styles.cardTitle}>Évolution du cumul engagé</h4>
-        <div className={styles.cardSub}>Depuis l&apos;ouverture de l&apos;espace</div>
-        <svg viewBox={`0 0 ${W} ${H}`} className={styles.sparkSvg}>
+      <Card className="mb-4 p-[18px]">
+        <h4 className="m-0 mb-[3px] font-display text-[15px] tracking-tight">Évolution du cumul engagé</h4>
+        <div className="mb-3.5 text-xs text-muted-foreground">Depuis l&apos;ouverture de l&apos;espace</div>
+        <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full">
           <line
             x1={pad} y1={envY.toFixed(1)} x2={W - pad} y2={envY.toFixed(1)}
             stroke="var(--gold)" strokeWidth="1.5" strokeDasharray="4 4"
@@ -159,17 +165,17 @@ export function BudgetTab({ tab }: { tab: EspaceTab }) {
             </text>
           ))}
         </svg>
-      </div>
+      </Card>
 
       {/* Spend input card */}
-      <div className={styles.card}>
-        <h4 className={styles.cardTitle}>Déclarer une dépense</h4>
-        <div className={styles.cardSub}>
+      <Card className="mb-4 p-[18px]">
+        <h4 className="m-0 mb-[3px] font-display text-[15px] tracking-tight">Déclarer une dépense</h4>
+        <div className="mb-3.5 text-xs text-muted-foreground">
           Pour ce que l&apos;assistant ne voit pas passer (espèces, achats sur place…)
         </div>
-        <div className={styles.spendInput}>
+        <div className="flex gap-2 border-t border-muted pt-3.5">
           <select
-            className={styles.spendSelect}
+            className="flex-[1.1] rounded-md border border-border bg-background px-2.5 py-[7px] text-[12.5px] text-foreground"
             value={spendCat}
             onChange={(e) => setSpendCat(e.target.value)}
             aria-label="Catégorie de dépense"
@@ -178,8 +184,8 @@ export function BudgetTab({ tab }: { tab: EspaceTab }) {
               <option key={c.label} value={c.label}>{c.label}</option>
             ))}
           </select>
-          <input
-            className={styles.spendAmtInput}
+          <Input
+            className="flex-1 h-auto py-[7px] text-[12.5px]"
             type="number"
             min={0}
             step={0.5}
@@ -188,11 +194,11 @@ export function BudgetTab({ tab }: { tab: EspaceTab }) {
             onChange={(e) => setSpendAmt(e.target.value)}
             aria-label="Montant en euros"
           />
-          <button className={styles.spendBtn} onClick={handleAddSpend}>
+          <Button className="flex-none" onClick={handleAddSpend}>
             Ajouter
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

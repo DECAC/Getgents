@@ -3,8 +3,11 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import type { ConversationMessage } from "@/lib/types";
-import styles from "./AssistantPanel.module.css";
+
+const HANDLE_ACTIVE_CLASS = "bg-primary-tint [&::after]:bg-primary";
 
 export function AssistantPanel() {
   const {
@@ -54,13 +57,13 @@ export function AssistantPanel() {
     function onUp() {
       if (!dragging) return;
       dragging = false;
-      handle!.classList.remove(styles.handleActive);
+      handle!.classList.remove(...HANDLE_ACTIVE_CLASS.split(" "));
       document.body.classList.remove("col-resizing");
     }
 
     function onDown(e: MouseEvent) {
       dragging = true;
-      handle!.classList.add(styles.handleActive);
+      handle!.classList.add(...HANDLE_ACTIVE_CLASS.split(" "));
       document.body.classList.add("col-resizing");
       e.preventDefault();
     }
@@ -104,17 +107,19 @@ export function AssistantPanel() {
   function renderMessage(m: ConversationMessage, i: number) {
     if (m.role === "tool") {
       return (
-        <div key={i} className={styles.toolcall}>
-          <div className={styles.toolHead}>
+        <div key={i} className="mb-5 ml-[39px] max-w-[78%]">
+          <div className="flex items-center gap-[7px] text-[11.5px] font-medium text-muted-foreground">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M14 7l-5 5 5 5M3 12h11" />
             </svg>
             Le gent a utilisé une intégration
           </div>
-          <div className={styles.toolChip}>
-            <span className={styles.toolKind}>{m.kind}</span>
-            <span className={styles.toolWhat}>{m.what}</span>
-            <span className={styles.toolOk}>✓</span>
+          <div className="mt-1.5 flex items-center gap-2.5 rounded-[10px] border border-border bg-card px-3 py-2.5 text-[12.5px]">
+            <span className="rounded-[5px] bg-primary-tint px-[7px] py-0.5 font-mono text-[10.5px] font-semibold uppercase tracking-wide text-primary-hover">
+              {m.kind}
+            </span>
+            <span className="flex-1 text-foreground">{m.what}</span>
+            <span className="text-sm text-primary">✓</span>
           </div>
         </div>
       );
@@ -124,8 +129,12 @@ export function AssistantPanel() {
       const a = currentEspace.artefacts.find((x) => x.id === m.ref);
       if (!a) return null;
       return (
-        <button key={i} className={styles.artefVisual} onClick={() => openArtefactModal(a.id)}>
-          <div className={styles.artefVisualLab}>
+        <button
+          key={i}
+          className="mb-5 ml-[39px] block max-w-[78%] rounded-xl border border-border bg-card p-[13px] text-left transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-[0_4px_14px_rgba(21,33,43,0.08)]"
+          onClick={() => openArtefactModal(a.id)}
+        >
+          <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-primary-hover">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <circle cx="9" cy="9" r="2" />
@@ -133,22 +142,28 @@ export function AssistantPanel() {
             </svg>
             {a.type}
           </div>
-          <div className={styles.artefVisualTitle}>{a.title}</div>
+          <div className="my-1 text-[14.5px] font-semibold tracking-tight">{a.title}</div>
           <VisualGrid />
-          <div className={styles.artefMeta}>{a.date} · illustration stylisée, pas une photo</div>
+          <div className="mt-2 text-[11.5px] text-muted-foreground">{a.date} · illustration stylisée, pas une photo</div>
         </button>
       );
     }
 
     if (m.role === "artef-pointer") {
-      const cls = m.status === "sent" ? styles.picSent : styles.picPending;
+      const isSent = m.status === "sent";
       return (
-        <button key={i} className={styles.artefPointer} onClick={() => jumpToTab(m.tab ?? "")}>
-          <div className={[styles.pic, cls].join(" ")}>{m.icon}</div>
-          <div className={styles.ptext}>
-            <div className={styles.ptitle}>{m.title}</div>
+        <button
+          key={i}
+          className="mb-5 ml-[39px] flex w-auto max-w-[78%] items-center gap-2.5 rounded-[10px] border border-border bg-card px-[13px] py-[11px] text-left hover:border-primary"
+          onClick={() => jumpToTab(m.tab ?? "")}
+        >
+          <div className={cn("grid h-7 w-7 flex-none place-items-center rounded-[7px] text-sm", isSent ? "bg-accent" : "bg-secondary")}>
+            {m.icon}
           </div>
-          <div className={styles.plink}>
+          <div className="min-w-0 flex-1 text-[12.5px]">
+            <div className="font-semibold text-foreground">{m.title}</div>
+          </div>
+          <div className="flex items-center gap-[3px] whitespace-nowrap text-[11px] font-semibold text-primary-hover">
             {m.link}
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 18l6-6-6-6" />
@@ -158,12 +173,27 @@ export function AssistantPanel() {
       );
     }
 
+    const isUser = m.role === "user";
     return (
-      <div key={i} className={[styles.msg, m.role === "user" ? styles.msgUser : styles.msgAgent].join(" ")}>
-        <div className={styles.av}>{m.role === "agent" ? "🤖" : "CL"}</div>
-        <div className={styles.bubble}>
+      <div key={i} className={cn("mb-5 flex gap-[11px]", isUser && "flex-row-reverse")}>
+        <div
+          className={cn(
+            "grid h-7 w-7 flex-none place-items-center rounded-lg text-[13px] font-semibold",
+            isUser ? "rounded-full bg-accent text-accent-foreground" : "bg-primary text-white"
+          )}
+        >
+          {m.role === "agent" ? "🤖" : "CL"}
+        </div>
+        <div
+          className={cn(
+            "max-w-[78%] rounded-2xl px-3.5 py-[11px] text-sm",
+            isUser
+              ? "rounded-tr-[5px] bg-primary-hover text-white/95"
+              : "rounded-tl-[5px] border border-border bg-card"
+          )}
+        >
           <SafeHTML html={m.text ?? ""} />
-          <div className={styles.t}>{m.t}</div>
+          <div className={cn("mt-[7px] text-[10.5px]", isUser ? "text-white/60" : "text-faint")}>{m.t}</div>
         </div>
       </div>
     );
@@ -172,15 +202,17 @@ export function AssistantPanel() {
   function renderHist() {
     const items = currentEspace.conversation.filter((m) => m.role === "user" || m.role === "agent");
     if (!items.length) {
-      return <div className={styles.empty}>Aucun échange pour l'instant.</div>;
+      return <div className="pt-[30px] text-center text-[12.5px] text-muted-foreground">Aucun échange pour l&apos;instant.</div>;
     }
     return (
-      <div className={styles.histList}>
+      <div className="flex flex-col gap-2">
         {items.map((m, i) => (
-          <div key={i} className={styles.histItem}>
-            <div className={styles.hname}>{m.role === "agent" ? "🤖 Le gent" : "Vous"}</div>
-            <div className={styles.hsnip}>{stripTags(m.text ?? "").slice(0, 140)}</div>
-            <div className={styles.hmeta}>{m.t}</div>
+          <div key={i} className="rounded-[10px] border border-border bg-background p-2.5 text-left hover:border-primary">
+            <div className="text-[12.5px] font-semibold">{m.role === "agent" ? "🤖 Le gent" : "Vous"}</div>
+            <div className="mt-[3px] text-[11.5px] leading-relaxed text-muted-foreground">
+              {stripTags(m.text ?? "").slice(0, 140)}
+            </div>
+            <div className="mt-[5px] text-[10.5px] text-faint">{m.t}</div>
           </div>
         ))}
       </div>
@@ -188,59 +220,76 @@ export function AssistantPanel() {
   }
 
   return (
-    <section className={styles.panel} aria-label="Assistant" aria-modal="false">
-      <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner" />
+    <section className="relative flex min-h-0 min-w-0 flex-col overflow-hidden border-r border-border bg-card" aria-label="Assistant" aria-modal="false">
+      <div
+        ref={handleRef}
+        title="Glisser pour redimensionner"
+        className={cn(
+          "absolute -right-[3px] top-0 bottom-0 z-20 w-[7px] cursor-col-resize bg-transparent hover:bg-primary-tint",
+          "after:absolute after:left-1/2 after:top-1/2 after:h-8 after:w-[3px] after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-[3px] after:bg-border hover:after:bg-primary"
+        )}
+      />
 
-      <div className={styles.head}>
-        <div className={styles.headIc}>{currentEspace.icon}</div>
-        <div className={styles.headMeta}>
-          <h3 className={styles.headTitle}>{currentEspace.gent}</h3>
-          <div className={styles.headSub}>{currentEspace.name}</div>
+      <div className="flex flex-none items-center gap-[11px] border-b border-border p-4">
+        <div className="grid h-[34px] w-[34px] flex-none place-items-center rounded-lg bg-primary text-base text-white">
+          {currentEspace.icon}
         </div>
-        <button className={styles.closeBtn} onClick={closeAssistant} aria-label="Fermer l'assistant">
+        <div className="min-w-0 flex-1">
+          <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap font-display text-[15px] font-bold tracking-tight">
+            {currentEspace.gent}
+          </h3>
+          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-muted-foreground">
+            {currentEspace.name}
+          </div>
+        </div>
+        <button
+          className="grid h-[30px] w-[30px] flex-none place-items-center rounded-lg text-muted-foreground hover:bg-background"
+          onClick={closeAssistant}
+          aria-label="Fermer l'assistant"
+        >
           ✕
         </button>
       </div>
 
-      <div className={styles.scope}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <div className="flex flex-none items-center gap-[7px] border-b border-muted bg-primary-tint px-[18px] py-2.5 text-[11px] text-primary-hover">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-none">
           <rect x="3" y="3" width="7" height="7" rx="1.5" />
           <rect x="14" y="3" width="7" height="7" rx="1.5" />
           <rect x="3" y="14" width="7" height="7" rx="1.5" />
           <rect x="14" y="14" width="7" height="7" rx="1.5" />
         </svg>
-        <span>L'assistant couvre tout le gent — naviguez librement entre les onglets pendant que vous échangez.</span>
+        <span>L&apos;assistant couvre tout le gent — naviguez librement entre les onglets pendant que vous échangez.</span>
       </div>
 
-      <div className={styles.tabs}>
-        <button
-          className={[styles.tab, cdView === "chat" ? styles.tabOn : ""].filter(Boolean).join(" ")}
-          onClick={() => setCdView("chat")}
-        >
-          Conversation
-        </button>
-        <button
-          className={[styles.tab, cdView === "hist" ? styles.tabOn : ""].filter(Boolean).join(" ")}
-          onClick={() => setCdView("hist")}
-        >
-          Historique
-        </button>
-      </div>
+      <Tabs value={cdView} onValueChange={(v) => setCdView(v as "chat" | "hist")} className="flex-none border-b border-muted px-3">
+        <TabsList className="h-auto bg-transparent p-0">
+          <TabsTrigger value="chat" className="rounded-t-none px-[11px] py-2.5 text-[12.5px]">
+            Conversation
+          </TabsTrigger>
+          <TabsTrigger value="hist" className="rounded-t-none px-[11px] py-2.5 text-[12.5px]">
+            Historique
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-      <div className={styles.body} ref={bodyRef}>
+      <div className="min-h-0 flex-1 overflow-y-auto p-[18px]" ref={bodyRef}>
         {cdView === "hist"
           ? renderHist()
           : currentEspace.conversation.length
           ? currentEspace.conversation.map((m, i) => renderMessage(m, i))
-          : <div className={styles.empty}>Aucun échange pour l'instant.</div>}
+          : <div className="pt-[30px] text-center text-[12.5px] text-muted-foreground">Aucun échange pour l&apos;instant.</div>}
       </div>
 
       {cdView === "chat" && (
-        <div className={styles.composerWrap}>
-          <div className={[styles.composer, !composerText.trim() ? styles.composerOff : ""].join(" ")}>
+        <div className="flex-none border-t border-border px-3.5 pb-3.5 pt-2.5">
+          <div
+            className={cn(
+              "flex items-end gap-[7px] rounded-2xl border border-border bg-background py-1.5 pl-3.5 pr-1.5 focus-within:border-primary"
+            )}
+          >
             <textarea
               ref={textareaRef}
-              className={styles.composerTextarea}
+              className="max-h-[90px] flex-1 resize-none border-none bg-transparent py-1.5 text-sm leading-relaxed text-foreground outline-none placeholder:text-faint"
               rows={1}
               placeholder="Écrire à votre assistant…"
               aria-label="Votre message"
@@ -249,7 +298,7 @@ export function AssistantPanel() {
               onKeyDown={handleKeyDown}
             />
             <button
-              className={styles.sendBtn}
+              className="grid h-[30px] w-[30px] flex-none place-items-center rounded-full bg-primary text-white hover:bg-primary-hover disabled:bg-border disabled:text-faint"
               aria-label="Envoyer"
               disabled={!composerText.trim()}
               onClick={handleSend}
@@ -259,7 +308,7 @@ export function AssistantPanel() {
               </svg>
             </button>
           </div>
-          <div className={styles.aiDisclosure}>
+          <div className="pt-1.5 text-center text-[10px] text-faint">
             Vous interagissez avec une IA. Vérifiez les informations importantes.
           </div>
         </div>
@@ -270,7 +319,7 @@ export function AssistantPanel() {
 
 function VisualGrid() {
   return (
-    <div className={styles.visualGrid}>
+    <div className="grid grid-cols-[1.4fr_1fr_1fr] grid-rows-[90px_90px] gap-1.5 [&_>_div:first-child]:row-span-2 [&_svg]:block [&_svg]:h-full [&_svg]:w-full [&_svg]:rounded-lg">
       <div>
         <svg viewBox="0 0 200 190">
           <rect width="200" height="190" fill="#CFE0DD" />

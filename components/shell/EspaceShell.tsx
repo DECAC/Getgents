@@ -8,7 +8,6 @@ import { Center } from "@/components/center/Center";
 import { Aside } from "@/components/aside/Aside";
 import { ArtefactModal } from "@/components/shared/ArtefactModal";
 import { ResvModal } from "@/components/shared/ResvModal";
-import styles from "./EspaceShell.module.css";
 
 function ShellInner() {
   const { railCollapsed, assistantOpen, asideCollapsed, closeModal, closeAssistant } = useEspace();
@@ -28,22 +27,22 @@ function ShellInner() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  const shellClass = [
-    styles.shell,
-    railCollapsed ? styles.collapsed : "",
-    assistantOpen ? styles.assistOpen : "",
-    assistantOpen && !asideCollapsed ? styles.asideExpanded : "",
-    !assistantOpen && asideCollapsed ? styles.asideCollapsedOnly : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const railCol = railCollapsed ? "var(--rail-min)" : "var(--rail)";
+  const asideCol = asideCollapsed ? "var(--aside-collapsed)" : "var(--aside)";
+  const gridTemplateColumns = assistantOpen
+    ? `${railCol} var(--assist) 1fr ${asideCol}`
+    : `${railCol} 1fr ${asideCol}`;
 
   return (
     <>
       <a href="#main-content" className="skip-link">
         Aller au contenu principal
       </a>
-      <div className={shellClass} id="shell">
+      <div
+        className="grid h-screen overflow-hidden transition-[grid-template-columns] duration-200 max-[860px]:!grid-cols-1"
+        style={{ gridTemplateColumns }}
+        id="shell"
+      >
         <Rail />
         {assistantOpen && <AssistantPanel />}
         <Center />
