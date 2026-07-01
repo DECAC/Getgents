@@ -1,0 +1,125 @@
+@import "../styles/tokens.css";
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  padding: 0;
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+textarea {
+  font-family: inherit;
+}
+
+::selection {
+  background: var(--sage-tint);
+}
+
+:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 8px;
+  background: var(--ink);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  z-index: 200;
+  font-size: 13px;
+  font-weight: 600;
+}
+.skip-link:focus {
+  left: 8px;
+}
+
+/* Applied by AssistantPanel resize logic */
+body.col-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* Shared doc styles used inside modal body (sanitized HTML) */
+.gendoc h4 {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 15px;
+  margin: 18px 0 7px;
+  letter-spacing: -0.01em;
+}
+.gendoc h4:first-child {
+  margin-top: 0;
+}
+.gendoc p {
+  margin: 0 0 10px;
+}
+.gendoc ul,
+.gendoc ol {
+  margin: 0 0 12px;
+  padding-left: 18px;
+}
+.gendoc li {
+  margin-bottom: 6px;
+}
+.gendoc .row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 13.5px;
+}
+.gendoc .check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 0;
+  font-size: 13.5px;
+}
+.gendoc .check .box {
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
+  border: 1.5px solid var(--line);
+  flex: none;
+  margin-top: 1px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+}
+.gendoc .check.ok .box {
+  background: var(--sage);
+  border-color: var(--sage);
+  color: #fff;
+}
+.gendoc .check.ok span {
+  color: var(--muted);
+  text-decoration: line-through;
+}

@@ -1,0 +1,38 @@
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail) 1fr var(--aside);
+  height: 100vh;
+  overflow: hidden;
+  transition: grid-template-columns 0.2s;
+}
+
+.shell.collapsed {
+  grid-template-columns: var(--rail-min) 1fr var(--aside);
+}
+
+.shell.assistOpen {
+  grid-template-columns: var(--rail) var(--assist) 1fr var(--aside-collapsed);
+}
+
+.shell.assistOpen.collapsed {
+  grid-template-columns: var(--rail-min) var(--assist) 1fr var(--aside-collapsed);
+}
+
+.shell.assistOpen.asidePinned {
+  grid-template-columns: var(--rail) var(--assist) 1fr var(--aside);
+}
+
+.shell.assistOpen.collapsed.asidePinned {
+  grid-template-columns: var(--rail-min) var(--assist) 1fr var(--aside);
+}
+
+@media (max-width: 860px) {
+  .shell,
+  .shell.collapsed,
+  .shell.assistOpen,
+  .shell.assistOpen.collapsed,
+  .shell.assistOpen.asidePinned,
+  .shell.assistOpen.collapsed.asidePinned {
+    grid-template-columns: 1fr;
+  }
+}

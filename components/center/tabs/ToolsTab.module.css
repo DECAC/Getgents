@@ -1,0 +1,113 @@
+.wrap {
+  max-width: 680px;
+  margin: 0 auto;
+}
+.daydiv {
+  text-align: center;
+  font-size: 11px;
+  color: var(--faint);
+  font-weight: 500;
+  margin: 6px 0 18px;
+  letter-spacing: 0.04em;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.row {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 13px 15px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.tic {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  font-size: 16px;
+}
+.ticLecture { background: #eef1ed; color: var(--muted); }
+.ticEcriture { background: var(--gold-tint); color: var(--gold); }
+.ticCompte { background: var(--plum-tint); color: var(--plum); }
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+.name {
+  font-weight: 600;
+  font-size: 13.5px;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+.riskBadge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.riskLecture { background: #eef1ed; color: var(--muted); }
+.riskEcriture { background: var(--gold-tint); color: var(--gold); }
+.riskCompte { background: var(--plum-tint); color: var(--plum); }
+
+.connectOff {
+  flex: none;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--plum);
+  color: #fff;
+}
+.connectOff:hover {
+  background: #5a3049;
+}
+.connectOn {
+  flex: none;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--sage-tint);
+  color: var(--sage-700);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.note {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-top: 4px;
+  display: flex;
+  gap: 9px;
+}
+.note svg {
+  flex: none;
+  margin-top: 1px;
+}

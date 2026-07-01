@@ -1,0 +1,134 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(21, 33, 43, 0.42);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+
+.modal {
+  background: var(--card);
+  border-radius: 16px;
+  max-width: 620px;
+  width: 100%;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(21, 33, 43, 0.3);
+}
+
+.head {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+.ti {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: var(--gold-tint);
+  color: var(--gold);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.ti svg {
+  width: 20px;
+  height: 20px;
+}
+.title {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.closeBtn {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 18px;
+  flex: none;
+}
+.closeBtn:hover {
+  background: var(--bg);
+}
+
+.body {
+  padding: 22px;
+  overflow-y: auto;
+}
+
+.foot {
+  padding: 14px 22px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.footLabel {
+  font-size: 11px;
+  color: var(--faint);
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btnPrim {
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-weight: 600;
+  font-size: 13px;
+  background: var(--sage);
+  color: #fff;
+}
+.btnPrim:hover {
+  background: var(--sage-700);
+}
+.btnGhost {
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-weight: 600;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.btnGhost:hover {
+  background: var(--bg);
+}
+
+/* Visual grid for artefacts */
+.visualWrap {
+  margin-bottom: 16px;
+}
+.visualGrid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  grid-template-rows: 90px 90px;
+  gap: 6px;
+}
+.visualGrid > div:first-child {
+  grid-row: 1 / 3;
+}
+.visualGrid svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  display: block;
+}

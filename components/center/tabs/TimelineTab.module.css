@@ -1,0 +1,91 @@
+.wrap {
+  max-width: 680px;
+  margin: 0 auto;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+.title {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 15px;
+  margin: 0 0 3px;
+  letter-spacing: -0.01em;
+}
+.sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.timeline {
+  position: relative;
+  padding-left: 30px;
+}
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--line);
+}
+.step {
+  position: relative;
+  padding-bottom: 22px;
+}
+.step:last-child {
+  padding-bottom: 0;
+}
+.dot {
+  position: absolute;
+  left: -30px;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--sage);
+  color: #fff;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--card);
+}
+.future .dot {
+  background: var(--bg);
+  color: var(--muted);
+  border-color: var(--line);
+}
+.city {
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+}
+.night {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 7px;
+  flex-wrap: wrap;
+}
+.tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--sage-tint);
+  color: var(--sage-700);
+}
+.tagPending {
+  background: var(--gold-tint);
+  color: var(--gold);
+}

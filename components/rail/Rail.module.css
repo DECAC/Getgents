@@ -1,0 +1,287 @@
+.rail {
+  background: var(--card);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 18px 16px 14px;
+  flex-shrink: 0;
+}
+
+.mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--sage);
+  position: relative;
+  flex: none;
+}
+.mark::before,
+.mark::after {
+  content: "";
+  position: absolute;
+  background: #fff;
+  border-radius: 1px;
+}
+.mark::before {
+  width: 11px;
+  height: 2px;
+  left: 7px;
+  top: 11px;
+}
+.mark::after {
+  width: 2px;
+  height: 11px;
+  left: 12px;
+  top: 7px;
+  background: var(--gold-tint);
+}
+
+.brandName {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.railToggle {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  flex: none;
+}
+.railToggle:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.railLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  padding: 14px 18px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.espaceList {
+  list-style: none;
+  margin: 0;
+  padding: 0 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+.espaceItem {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  gap: 11px;
+  padding: 11px 10px;
+  border-radius: var(--r);
+  align-items: flex-start;
+  margin-bottom: 2px;
+  transition: background 0.12s;
+}
+.espaceItem:hover {
+  background: var(--bg);
+}
+.espaceItem.active {
+  background: var(--sage-tint);
+}
+
+.ic {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+.icActive {
+  border-color: var(--sage);
+}
+
+.body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  font-weight: 600;
+  font-size: 13.5px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.dotLive { background: var(--sage); }
+.dotPaused { background: var(--gold); }
+.dotDone { background: var(--faint); }
+
+.discover {
+  margin: 8px;
+  padding: 11px 14px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r);
+  color: var(--sage-700);
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.discover:hover {
+  background: var(--sage-tint);
+  border-color: var(--sage);
+}
+
+.discoverLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.acct {
+  border-top: 1px solid var(--line-soft);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.av {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--plum-tint);
+  color: var(--plum);
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  flex: none;
+}
+
+.acctMeta {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.who {
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.plan {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Collapsed state ---------- */
+.collapsed .brand {
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 0 14px;
+}
+.collapsed .brandName,
+.collapsed .railLabel,
+.collapsed .body,
+.collapsed .discoverLabel,
+.collapsed .acctMeta {
+  display: none;
+}
+.collapsed .railToggle {
+  margin: 0;
+}
+.collapsed .espaceList {
+  padding: 6px 0;
+}
+.collapsed .espaceItem {
+  justify-content: center;
+  padding: 10px 0;
+}
+.collapsed .discover {
+  justify-content: center;
+  padding: 11px 0;
+  margin: 8px 10px;
+}
+.collapsed .acct {
+  justify-content: center;
+  padding: 12px 0;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 860px) {
+  .rail {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform 0.22s;
+    box-shadow: 6px 0 24px rgba(21, 33, 43, 0.12);
+  }
+  .rail.open {
+    transform: translateX(0);
+  }
+  .railToggle {
+    display: none;
+  }
+}

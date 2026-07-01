@@ -1,0 +1,184 @@
+.wrap {
+  max-width: 680px;
+  margin: 0 auto;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.cardTitle {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 15px;
+  margin: 0 0 3px;
+  letter-spacing: -0.01em;
+}
+.cardSub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.liveTag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--sage-700);
+  background: var(--sage-tint);
+  padding: 3px 8px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  flex: none;
+}
+.pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sage);
+  animation: pulse 1.8s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.envelope {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.amt {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.of {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.barTrack {
+  height: 14px;
+  background: var(--bg);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+.barFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--sage), var(--sage-700));
+  border-radius: 8px;
+  transition: width 0.6s ease;
+}
+.barWarn {
+  background: linear-gradient(90deg, var(--gold), #b5862a);
+}
+.barMarker {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 22px;
+  background: var(--ink);
+  opacity: 0.35;
+}
+.barLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--faint);
+  margin-top: 5px;
+}
+.alertWarn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--gold);
+}
+
+/* Donut */
+.donutRow {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.donutSvg {
+  width: 150px;
+  height: 150px;
+  flex: none;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  flex: 1;
+  min-width: 160px;
+}
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+.legendVal {
+  font-weight: 600;
+  margin-left: 3px;
+}
+
+/* Sparkline */
+.sparkSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Spend input */
+.spendInput {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+.spendSelect,
+.spendAmtInput {
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--ink);
+}
+.spendSelect { flex: 1.1; }
+.spendAmtInput { flex: 1; }
+.spendBtn {
+  background: var(--sage);
+  color: #fff;
+  padding: 7px 13px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  flex: none;
+}
+.spendBtn:hover {
+  background: var(--sage-700);
+}

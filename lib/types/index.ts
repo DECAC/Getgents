@@ -1,0 +1,130 @@
+export type EspaceStatus = "live" | "paused" | "done";
+
+export type ToolCategory = "lecture" | "ecriture" | "compte_tiers";
+
+export interface Tool {
+  id: string;
+  name: string;
+  category: ToolCategory;
+  icon: string;
+  desc: string;
+  connectable: boolean;
+  connected?: boolean;
+}
+
+export interface TimelineStep {
+  day: number;
+  city: string;
+  night: string;
+  status: "done" | "future";
+  tags: string[];
+}
+
+export interface ReservationItem {
+  id: string;
+  icon: string;
+  service: string;
+  category: ToolCategory;
+  what: string;
+  rows: [string, string][];
+  price: string | null;
+  status: "pending" | "sent" | "confirmed" | "cancelled";
+}
+
+export interface BudgetCategory {
+  label: string;
+  color: string;
+  spent: number;
+}
+
+export interface BudgetHistoryPoint {
+  day: string;
+  cum: number;
+}
+
+export type TabKind = "timeline" | "resv" | "chart";
+
+export interface EspaceTab {
+  id: string;
+  name: string;
+  kind: TabKind;
+  sub: string;
+  steps?: TimelineStep[];
+  items?: ReservationItem[];
+  envelope?: number;
+  categories?: BudgetCategory[];
+  history?: BudgetHistoryPoint[];
+}
+
+export interface MapStop {
+  day: number;
+  city: string;
+  night: string;
+  x: number;
+  y: number;
+}
+
+export interface EspaceMap {
+  title: string;
+  hint: string;
+  stops: MapStop[];
+}
+
+export type ConversationRole =
+  | "agent"
+  | "user"
+  | "tool"
+  | "artef-visual"
+  | "artef-pointer";
+
+export interface ConversationMessage {
+  role: ConversationRole;
+  text?: string;
+  t?: string;
+  kind?: string;
+  what?: string;
+  ok?: boolean;
+  ref?: string;
+  tab?: string;
+  icon?: string;
+  status?: "pending" | "sent";
+  title?: string;
+  link?: string;
+}
+
+export interface UserFile {
+  id: string;
+  name: string;
+  size: string;
+  date: string;
+}
+
+export interface Artefact {
+  id: string;
+  title: string;
+  type: string;
+  icon: string;
+  date: string;
+  visual?: boolean;
+  body: string;
+}
+
+export interface Espace {
+  icon: string;
+  name: string;
+  gent: string;
+  version: number;
+  status: EspaceStatus;
+  statusLabel: string;
+  sensitive: boolean;
+  integrations: { label: string; action: boolean }[];
+  tools: Tool[];
+  tabs: EspaceTab[];
+  map: EspaceMap | null;
+  memory: string;
+  conversation: ConversationMessage[];
+  files: UserFile[];
+  artefacts: Artefact[];
+}
+
+export type EspacesMap = Record<string, Espace>;
