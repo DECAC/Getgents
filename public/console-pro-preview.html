@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Getgents — Console Pro (aperçu)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --card: #232733;
+      --card-hover: #2a2f3d;
+      --ink: #e8eaed;
+      --muted: #8b93a7;
+      --faint: #6b7280;
+      --border: #2d3348;
+      --border-strong: #3d4560;
+      --accent: #6ee7b7;
+      --accent-dim: rgba(110, 231, 183, 0.12);
+      --accent-glow: rgba(110, 231, 183, 0.35);
+      --indigo: #818cf8;
+      --indigo-dim: rgba(129, 140, 248, 0.15);
+      --warn: #fbbf24;
+      --warn-dim: rgba(251, 191, 36, 0.12);
+      --rail: 240px;
+      --aside: 300px;
+      --assist: 340px;
+      --r: 8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Inter", system-ui, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      background: var(--bg);
+      color: var(--ink);
+      height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: var(--rail) var(--assist) 1fr var(--aside);
+      height: 100vh;
+    }
+
+    /* ── Rail ── */
+    .rail {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mark {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, var(--accent) 0%, #34d399 100%);
+      flex-shrink: 0;
+    }
+
+    .brand-name {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .rail-label {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--faint);
+      padding: 14px 14px 6px;
+    }
+
+    .espace-list {
+      list-style: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 8px;
+    }
+
+    .espace-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: var(--r);
+      border: 1px solid transparent;
+      background: none;
+      color: var(--muted);
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      position: relative;
+    }
+
+    .espace-item:hover {
+      background: var(--card);
+      color: var(--ink);
+    }
+
+    .espace-item.active {
+      background: var(--card);
+      border-color: var(--border-strong);
+      color: var(--ink);
+    }
+
+    .espace-item.active::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 8px;
+      bottom: 8px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent-glow);
+    }
+
+    .espace-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 7px;
+      background: var(--card);
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .espace-item.active .espace-icon {
+      background: var(--accent-dim);
+    }
+
+    .espace-name {
+      font-size: 12.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .espace-sub {
+      font-size: 11px;
+      color: var(--faint);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 1px;
+    }
+
+    .dot-live {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent-glow);
+    }
+
+    .rail-footer {
+      border-top: 1px solid var(--border);
+      padding: 12px 14px;
+    }
+
+    .acct {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .acct-av {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--indigo-dim);
+      color: var(--indigo);
+      font-size: 10px;
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+    }
+
+    .acct-who { font-size: 12px; font-weight: 600; }
+    .acct-plan { font-size: 10px; color: var(--faint); font-family: "IBM Plex Mono", monospace; }
+
+    /* ── Assistant ── */
+    .assistant {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .assist-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .assist-ic {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      background: var(--accent-dim);
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+    }
+
+    .assist-title { font-size: 13px; font-weight: 600; }
+    .assist-sub { font-size: 11px; color: var(--faint); }
+
+    .assist-scope {
+      margin: 10px 12px 0;
+      padding: 8px 10px;
+      border-radius: var(--r);
+      border: 1px solid var(--border);
+      background: var(--card);
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .assist-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .msg {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .msg-av {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      font-size: 11px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .msg-agent .msg-av { background: var(--card); }
+    .msg-user .msg-av {
+      background: var(--indigo-dim);
+      color: var(--indigo);
+      font-weight: 700;
+      font-size: 9px;
+    }
+
+    .bubble {
+      padding: 9px 12px;
+      border-radius: var(--r);
+      font-size: 12.5px;
+      line-height: 1.5;
+      max-width: 92%;
+    }
+
+    .msg-agent .bubble {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--ink);
+    }
+
+    .msg-user .bubble {
+      background: var(--indigo-dim);
+      border: 1px solid rgba(129, 140, 248, 0.25);
+    }
+
+    .msg-time {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      color: var(--faint);
+      margin-top: 4px;
+    }
+
+    .toolcall {
+      padding: 8px 10px;
+      border-radius: var(--r);
+      border: 1px dashed var(--border-strong);
+      background: rgba(110, 231, 183, 0.04);
+      font-size: 11px;
+    }
+
+    .toolcall-head {
+      color: var(--accent);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      margin-bottom: 6px;
+    }
+
+    .tool-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      background: var(--card);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .tool-kind {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      color: var(--accent);
+      background: var(--accent-dim);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .composer-wrap {
+      padding: 10px 12px 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .composer {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      background: var(--card);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r);
+      padding: 8px 10px;
+    }
+
+    .composer:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .composer textarea {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 12.5px;
+      resize: none;
+      outline: none;
+      min-height: 20px;
+    }
+
+    .send-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover {
+      filter: brightness(1.08);
+    }
+
+    /* ── Center ── */
+    .center {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--bg);
+    }
+
+    .ehead {
+      padding: 16px 20px 0;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .ehead-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .ehead-ic {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+    }
+
+    .ehead-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .gentline {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .gentline b { color: var(--ink); font-weight: 600; }
+
+    .status-pill {
+      margin-left: auto;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(110, 231, 183, 0.25);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .badge {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+    }
+
+    .badge-ai {
+      color: var(--indigo);
+      border-color: rgba(129, 140, 248, 0.3);
+      background: var(--indigo-dim);
+    }
+
+    .badge-warn {
+      color: var(--warn);
+      border-color: rgba(251, 191, 36, 0.3);
+      background: var(--warn-dim);
+    }
+
+    .threadbar {
+      display: flex;
+      gap: 2px;
+    }
+
+    .tab {
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .tab:hover { color: var(--ink); }
+
+    .tab.on {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .card {
+      max-width: 640px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px 18px;
+      transition: border-color 0.15s;
+    }
+
+    .card:hover { border-color: var(--border-strong); }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: var(--faint);
+      margin-bottom: 16px;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 28px;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 10px;
+      top: 4px;
+      bottom: 4px;
+      width: 1px;
+      background: var(--border-strong);
+    }
+
+    .step {
+      position: relative;
+      padding-bottom: 18px;
+    }
+
+    .step:last-child { padding-bottom: 0; }
+
+    .step-dot {
+      position: absolute;
+      left: -28px;
+      top: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      font-weight: 600;
+      display: grid;
+      place-items: center;
+    }
+
+    .step.future .step-dot {
+      border-color: var(--border-strong);
+      color: var(--faint);
+    }
+
+    .step-city { font-weight: 600; font-size: 13px; }
+    .step-night { font-size: 11.5px; color: var(--muted); margin: 2px 0 6px; }
+
+    .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+
+    .tag {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(110, 231, 183, 0.2);
+    }
+
+    .tag.pending {
+      background: var(--warn-dim);
+      color: var(--warn);
+      border-color: rgba(251, 191, 36, 0.2);
+    }
+
+    /* ── Aside ── */
+    .aside {
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .aside-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      font-family: "IBM Plex Mono", monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--faint);
+    }
+
+    .section {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .s-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .s-title .ico { color: var(--accent); }
+
+    .s-help {
+      font-size: 11px;
+      color: var(--faint);
+      margin-bottom: 10px;
+      line-height: 1.45;
+    }
+
+    .memory {
+      width: 100%;
+      min-height: 100px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 10px 12px;
+      resize: none;
+      outline: none;
+    }
+
+    .memory:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .file-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      margin-bottom: 6px;
+    }
+
+    .file-card:hover { border-color: var(--border-strong); }
+
+    .file-meta {
+      font-size: 10px;
+      color: var(--faint);
+      font-family: "IBM Plex Mono", monospace;
+    }
+
+    .upload-btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: var(--r);
+      border: 1px dashed var(--border-strong);
+      background: transparent;
+      color: var(--muted);
+      font-size: 11.5px;
+      cursor: pointer;
+    }
+
+    .upload-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .preview-banner {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--card);
+      border: 1px solid var(--border-strong);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      color: var(--muted);
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .preview-banner span { color: var(--accent); }
+
+    @media (max-width: 1100px) {
+      .shell {
+        grid-template-columns: 200px 280px 1fr;
+      }
+      .aside { display: none; }
+    }
+
+    @media (max-width: 860px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+      .rail, .assistant { display: none; }
+      .aside { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="shell">
+
+    <nav class="rail" aria-label="Mes gents actifs">
+      <div class="brand">
+        <div class="mark"></div>
+        <span class="brand-name">Getgents</span>
+      </div>
+      <div class="rail-label">// mes_gents_actifs</div>
+      <ul class="espace-list">
+        <li>
+          <button type="button" class="espace-item active">
+            <span class="espace-icon">🧭</span>
+            <span>
+              <div class="espace-name">Road trip en famille</div>
+              <div class="espace-sub"><span class="dot-live"></span> En cours · Compagnon voyage</div>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="espace-item">
+            <span class="espace-icon">🏠</span>
+            <span>
+              <div class="espace-name">Rénovation cuisine</div>
+              <div class="espace-sub">En pause · Expert travaux</div>
+            </span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="espace-item">
+            <span class="espace-icon">📋</span>
+            <span>
+              <div class="espace-name">Dossier administratif</div>
+              <div class="espace-sub">Terminé · Assistant admin</div>
+            </span>
+          </button>
+        </li>
+      </ul>
+      <div class="rail-footer">
+        <div class="acct">
+          <div class="acct-av">CL</div>
+          <div>
+            <div class="acct-who">Camille Léaud</div>
+            <div class="acct-plan">plan: gents_pro · 3 actifs</div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <section class="assistant" aria-label="Assistant">
+      <div class="assist-head">
+        <div class="assist-ic">🧭</div>
+        <div>
+          <div class="assist-title">Compagnon de planification</div>
+          <div class="assist-sub">Road trip en famille — été 2026</div>
+        </div>
+      </div>
+      <div class="assist-scope">
+        L'assistant couvre tout le gent — naviguez librement entre les onglets pendant que vous échangez.
+      </div>
+      <div class="assist-body">
+        <div class="msg msg-user">
+          <div class="msg-av">CL</div>
+          <div>
+            <div class="bubble">On pourrait ajouter une étape aux Cinque Terre ?</div>
+            <div class="msg-time">14:32</div>
+          </div>
+        </div>
+        <div class="msg msg-agent">
+          <div class="msg-av">🤖</div>
+          <div>
+            <div class="bubble">Bonne idée — j'ai ajouté 2 nuits à La Spezia avec accès en train. Consultez l'onglet <strong>Itinéraire</strong>.</div>
+            <div class="msg-time">14:32</div>
+          </div>
+        </div>
+        <div class="toolcall">
+          <div class="toolcall-head">→ integration.used</div>
+          <div class="tool-chip">
+            <span class="tool-kind">MCP Cartes</span>
+            <span>Calcul trajet Lyon → La Spezia</span>
+            <span style="color:var(--accent);margin-left:auto">✓</span>
+          </div>
+        </div>
+        <div class="msg msg-agent">
+          <div class="msg-av">🤖</div>
+          <div>
+            <div class="bubble">Souhaitez-vous que je cherche un hôtel sur Booking.com pour cette étape ?</div>
+            <div class="msg-time">14:33</div>
+          </div>
+        </div>
+      </div>
+      <div class="composer-wrap">
+        <div class="composer">
+          <textarea rows="1" placeholder="Écrire à votre assistant…"></textarea>
+          <button type="button" class="send-btn" aria-label="Envoyer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <main class="center">
+      <header class="ehead">
+        <div class="ehead-top">
+          <div class="ehead-ic">🧭</div>
+          <div>
+            <h1 class="ehead-title">Road trip en famille — été 2026</h1>
+            <div class="gentline">Propulsé par <b>Compagnon de planification de voyage</b> · v4</div>
+          </div>
+          <span class="status-pill"><span class="dot-live"></span> live</span>
+        </div>
+        <div class="badges">
+          <span class="badge badge-ai">⚡ interaction_ia</span>
+          <span class="badge">MCP Cartes</span>
+          <span class="badge badge-warn">⚠ Booking.com</span>
+          <span class="badge badge-warn">⚠ Billetterie ferry</span>
+        </div>
+        <div class="threadbar" role="tablist">
+          <button type="button" class="tab on" role="tab">Itinéraire</button>
+          <button type="button" class="tab" role="tab">Réservations</button>
+          <button type="button" class="tab" role="tab">Budget</button>
+          <button type="button" class="tab" role="tab">Carte</button>
+          <button type="button" class="tab" role="tab">Tools</button>
+        </div>
+      </header>
+      <div class="content">
+        <div class="card">
+          <h2 class="card-title">Itinéraire</h2>
+          <p class="card-sub">Construit au fil de vos échanges avec l'assistant</p>
+          <div class="timeline">
+            <div class="step">
+              <div class="step-dot">1</div>
+              <div class="step-city">Lyon</div>
+              <div class="step-night">Nuit à Lyon · départ</div>
+              <div class="tags"><span class="tag">Confirmé</span></div>
+            </div>
+            <div class="step">
+              <div class="step-dot">2</div>
+              <div class="step-city">Annecy</div>
+              <div class="step-night">Nuit à Annecy</div>
+              <div class="tags"><span class="tag">Confirmé</span></div>
+            </div>
+            <div class="step">
+              <div class="step-dot">3</div>
+              <div class="step-city">Turin</div>
+              <div class="step-night">Nuit à Turin</div>
+              <div class="tags"><span class="tag">Confirmé</span><span class="tag">Musée égyptien</span></div>
+            </div>
+            <div class="step">
+              <div class="step-dot">4</div>
+              <div class="step-city">Cinque Terre</div>
+              <div class="step-night">2 nuits · base La Spezia</div>
+              <div class="tags"><span class="tag">Ajouté à votre demande</span></div>
+            </div>
+            <div class="step future">
+              <div class="step-dot">5</div>
+              <div class="step-city">Nice</div>
+              <div class="step-night">Retour · nuit à Nice</div>
+              <div class="tags"><span class="tag pending">À confirmer</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="aside" aria-label="Mémoire et fichiers">
+      <div class="aside-head">Mémoire & fichiers</div>
+      <section class="section">
+        <h3 class="s-title"><span class="ico">▸</span> Mémoire</h3>
+        <p class="s-help">Résumé tenu à jour par l'assistant — modifiable.</p>
+        <textarea class="memory">Famille de 4, véhicule personnel. Préférences : hôtels 3★, restaurants locaux, éviter autoroutes payantes si possible. Cinque Terre ajouté le 1er juil.</textarea>
+      </section>
+      <section class="section">
+        <h3 class="s-title"><span class="ico">▸</span> Fichiers</h3>
+        <p class="s-help">Documents téléversés pour cette conversation.</p>
+        <div class="file-card">
+          <span>📄</span>
+          <div>
+            <div style="font-size:12px;font-weight:500">permis_conduire.pdf</div>
+            <div class="file-meta">245 Ko · 28 juin</div>
+          </div>
+        </div>
+        <button type="button" class="upload-btn">+ Ajouter un fichier</button>
+      </section>
+    </aside>
+
+  </div>
+
+  <div class="preview-banner">Aperçu UI <span>Console Pro</span> — Getgents maquette statique</div>
+
+  <script>
+    document.querySelectorAll(".tab").forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        document.querySelectorAll(".tab").forEach(function (t) { t.classList.remove("on"); });
+        tab.classList.add("on");
+      });
+    });
+
+    document.querySelectorAll(".espace-item").forEach(function (item) {
+      item.addEventListener("click", function () {
+        document.querySelectorAll(".espace-item").forEach(function (i) { i.classList.remove("active"); });
+        item.classList.add("active");
+      });
+    });
+  </script>
+
+</body>
+</html>
