@@ -6,40 +6,44 @@
 
 @layer base {
   :root {
-    --background: 96 12% 92%;
-    --foreground: 207 34% 13%;
-
-    --card: 90 30% 99%;
-    --card-foreground: 207 34% 13%;
-
-    --popover: 90 30% 99%;
-    --popover-foreground: 207 34% 13%;
-
-    --primary: 155 33% 27%;
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 155 35% 22%;
-    --primary-tint: 127 16% 90%;
-
-    --secondary: 44 52% 88%;
-    --secondary-foreground: 39 80% 32%;
-    --secondary-tint: 44 52% 88%;
-
-    --muted: 90 15% 89%;
-    --muted-foreground: 199 11% 40%;
-    --faint: 200 8% 58%;
-
-    --accent: 315 23% 90%;
-    --accent-foreground: 323 28% 32%;
-    --accent-tint: 315 23% 90%;
-
-    --destructive: 0 65% 45%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 93 11% 84%;
-    --input: 93 11% 84%;
-    --ring: 155 33% 27%;
-
-    --radius: 0.625rem;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.525 0.223 3.958);
+    --primary-foreground: oklch(0.971 0.014 343.198);
+    --primary-hover: oklch(0.45 0.223 3.958);
+    --primary-tint: oklch(0.95 0.03 3.958);
+    --secondary: oklch(0.967 0.001 286.375);
+    --secondary-foreground: oklch(0.21 0.006 285.885);
+    --secondary-tint: oklch(0.967 0.001 286.375);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --faint: oklch(0.65 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --accent-tint: oklch(0.97 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(1 0 0);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --radius: 0.45rem;
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.592 0.249 0.584);
+    --sidebar-primary-foreground: oklch(0.971 0.014 343.198);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
 
     --font-display: "Bricolage Grotesque", sans-serif;
     --font-sans: "Inter", system-ui, sans-serif;
@@ -54,20 +58,58 @@
 
     /* Legacy color aliases — kept so data files (e.g. lib/mock-data/espaces.ts)
        referencing var(--sage) etc. in inline styles/SVG props keep resolving. */
-    --ink: hsl(var(--foreground));
-    --muted: hsl(var(--muted-foreground));
-    --faint: hsl(var(--faint));
-    --bg: hsl(var(--background));
-    --card: hsl(var(--card));
-    --line: hsl(var(--border));
-    --line-soft: hsl(var(--muted));
-    --sage: hsl(var(--primary));
-    --sage-700: hsl(var(--primary-hover));
-    --sage-tint: hsl(var(--primary-tint));
-    --gold: hsl(var(--secondary-foreground));
-    --gold-tint: hsl(var(--secondary-tint));
-    --plum: hsl(var(--accent-foreground));
-    --plum-tint: hsl(var(--accent-tint));
+    --ink: var(--foreground);
+    --muted: var(--muted-foreground);
+    --bg: var(--background);
+    --line: var(--border);
+    --line-soft: var(--muted);
+    --sage: var(--primary);
+    --sage-700: var(--primary-hover);
+    --sage-tint: var(--primary-tint);
+    --gold: var(--secondary-foreground);
+    --gold-tint: var(--secondary-tint);
+    --plum: var(--accent-foreground);
+    --plum-tint: var(--accent-tint);
+  }
+
+  .dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.459 0.187 3.815);
+    --primary-foreground: oklch(0.971 0.014 343.198);
+    --primary-hover: oklch(0.38 0.187 3.815);
+    --primary-tint: oklch(0.3 0.05 3.815);
+    --secondary: oklch(0.274 0.006 286.033);
+    --secondary-foreground: oklch(0.985 0 0);
+    --secondary-tint: oklch(0.274 0.006 286.033);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --faint: oklch(0.5 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --accent-tint: oklch(0.269 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --destructive-foreground: oklch(1 0 0);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.656 0.241 354.308);
+    --sidebar-primary-foreground: oklch(0.971 0.014 343.198);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
   }
 }
 
@@ -98,7 +140,7 @@
     @apply bg-primary-tint;
   }
   :focus-visible {
-    outline: 2px solid hsl(var(--ring));
+    outline: 2px solid var(--ring);
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -109,7 +151,7 @@
   position: absolute;
   left: -999px;
   top: 8px;
-  background: hsl(var(--foreground));
+  background: var(--foreground);
   color: #fff;
   padding: 8px 12px;
   border-radius: 6px;
@@ -152,7 +194,7 @@ body.col-resizing {
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid hsl(var(--muted));
+  border-bottom: 1px solid var(--muted);
   font-size: 13.5px;
 }
 .gendoc .check {
@@ -166,7 +208,7 @@ body.col-resizing {
   width: 17px;
   height: 17px;
   border-radius: 5px;
-  border: 1.5px solid hsl(var(--border));
+  border: 1.5px solid var(--border);
   flex: none;
   margin-top: 1px;
   display: grid;
@@ -174,11 +216,11 @@ body.col-resizing {
   font-size: 11px;
 }
 .gendoc .check.ok .box {
-  background: hsl(var(--primary));
-  border-color: hsl(var(--primary));
+  background: var(--primary);
+  border-color: var(--primary);
   color: #fff;
 }
 .gendoc .check.ok span {
-  color: hsl(var(--muted-foreground));
+  color: var(--muted-foreground);
   text-decoration: line-through;
 }
