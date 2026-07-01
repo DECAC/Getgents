@@ -34,6 +34,19 @@
   color: var(--ink);
   border-color: var(--sage);
 }
+.railToggleBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.railToggleBtn:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
 .railDot {
   position: absolute;
   top: -3px;
@@ -43,6 +56,35 @@
   border-radius: 50%;
   background: var(--gold);
   border: 1.5px solid var(--card);
+}
+
+/* Header with manual collapse toggle */
+.asideHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 0 18px;
+  flex-shrink: 0;
+}
+.asideHeadLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+.collapseBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  flex: none;
+}
+.collapseBtn:hover {
+  background: var(--bg);
+  color: var(--ink);
 }
 
 /* Section */

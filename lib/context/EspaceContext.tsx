@@ -12,7 +12,7 @@ interface EspaceContextValue {
   activeTab: ActiveTab;
   railCollapsed: boolean;
   assistantOpen: boolean;
-  asidePinned: boolean;
+  asideCollapsed: boolean;
   selectedDay: number | null;
   modalArtefactId: string | null;
   modalResvId: string | null;
@@ -23,8 +23,7 @@ interface EspaceContextValue {
   toggleRail: () => void;
   openAssistant: () => void;
   closeAssistant: () => void;
-  pinAside: () => void;
-  unpinAside: () => void;
+  toggleAsideCollapsed: () => void;
   selectDay: (day: number | null) => void;
   openArtefactModal: (id: string) => void;
   openResvModal: (id: string) => void;
@@ -48,7 +47,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   const [activeTab, setActiveTab] = useState<ActiveTab>(0);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
-  const [asidePinned, setAsidePinned] = useState(false);
+  const [asideCollapsed, setAsideCollapsed] = useState(false);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [modalArtefactId, setModalArtefactId] = useState<string | null>(null);
   const [modalResvId, setModalResvId] = useState<string | null>(null);
@@ -70,16 +69,16 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
 
   const openAssistant = useCallback(() => {
     setAssistantOpen(true);
-    setAsidePinned(false);
+    // Auto-collapse the aside to free up room; the user can re-expand it anytime.
+    setAsideCollapsed(true);
   }, []);
 
   const closeAssistant = useCallback(() => {
     setAssistantOpen(false);
-    setAsidePinned(false);
+    setAsideCollapsed(false);
   }, []);
 
-  const pinAside = useCallback(() => setAsidePinned(true), []);
-  const unpinAside = useCallback(() => setAsidePinned(false), []);
+  const toggleAsideCollapsed = useCallback(() => setAsideCollapsed((v) => !v), []);
 
   const selectDay = useCallback((day: number | null) => {
     setSelectedDay((prev) => (prev === day ? null : day));
@@ -199,7 +198,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         activeTab,
         railCollapsed,
         assistantOpen,
-        asidePinned,
+        asideCollapsed,
         selectedDay,
         modalArtefactId,
         modalResvId,
@@ -209,8 +208,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         toggleRail,
         openAssistant,
         closeAssistant,
-        pinAside,
-        unpinAside,
+        toggleAsideCollapsed,
         selectDay,
         openArtefactModal,
         openResvModal,

@@ -12,7 +12,7 @@ const FILE_ICON = (
 );
 
 export function Aside() {
-  const { currentEspace, assistantOpen, asidePinned, pinAside, updateMemory } = useEspace();
+  const { currentEspace, asideCollapsed, toggleAsideCollapsed, updateMemory } = useEspace();
   const memRef = useRef<HTMLTextAreaElement>(null);
   const files = currentEspace.files;
 
@@ -30,20 +30,28 @@ export function Aside() {
     e.target.style.height = e.target.scrollHeight + "px";
   }
 
-  const isCollapsed = assistantOpen && !asidePinned;
-
   return (
     <aside
-      className={[styles.aside, isCollapsed ? styles.collapsed : ""].filter(Boolean).join(" ")}
+      className={[styles.aside, asideCollapsed ? styles.collapsed : ""].filter(Boolean).join(" ")}
       aria-label="Mémoire et fichiers"
       id="aside"
     >
-      {/* Icon rail (visible when aside is collapsed by assistant being open) */}
-      {isCollapsed && (
+      {/* Icon rail (visible when the aside is collapsed) */}
+      {asideCollapsed && (
         <div className={styles.asideRail}>
           <button
+            className={styles.railToggleBtn}
+            onClick={toggleAsideCollapsed}
+            title="Déployer Mémoire et fichiers"
+            aria-label="Déployer Mémoire et fichiers"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10 6l-6 6 6 6" />
+            </svg>
+          </button>
+          <button
             className={styles.railBtn}
-            onClick={pinAside}
+            onClick={toggleAsideCollapsed}
             title="Ouvrir Mémoire"
             aria-label="Ouvrir Mémoire"
           >
@@ -53,7 +61,7 @@ export function Aside() {
           </button>
           <button
             className={styles.railBtn}
-            onClick={pinAside}
+            onClick={toggleAsideCollapsed}
             title="Ouvrir Fichiers"
             aria-label="Ouvrir Fichiers"
           >
@@ -69,8 +77,22 @@ export function Aside() {
       )}
 
       {/* Full aside content */}
-      {!isCollapsed && (
+      {!asideCollapsed && (
         <>
+          <div className={styles.asideHead}>
+            <span className={styles.asideHeadLabel}>Mémoire et fichiers</span>
+            <button
+              className={styles.collapseBtn}
+              onClick={toggleAsideCollapsed}
+              title="Réduire la colonne"
+              aria-label="Réduire la colonne"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 6l6 6-6 6" />
+              </svg>
+            </button>
+          </div>
+
           <section className={styles.section}>
             <div className={styles.shead}>
               <h3 className={styles.sTitle}>

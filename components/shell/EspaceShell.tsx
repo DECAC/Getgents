@@ -11,7 +11,7 @@ import { ResvModal } from "@/components/shared/ResvModal";
 import styles from "./EspaceShell.module.css";
 
 function ShellInner() {
-  const { railCollapsed, assistantOpen, asidePinned, closeModal, closeAssistant } = useEspace();
+  const { railCollapsed, assistantOpen, asideCollapsed, closeModal, closeAssistant } = useEspace();
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -32,7 +32,8 @@ function ShellInner() {
     styles.shell,
     railCollapsed ? styles.collapsed : "",
     assistantOpen ? styles.assistOpen : "",
-    assistantOpen && asidePinned ? styles.asidePinned : "",
+    assistantOpen && !asideCollapsed ? styles.asideExpanded : "",
+    !assistantOpen && asideCollapsed ? styles.asideCollapsedOnly : "",
   ]
     .filter(Boolean)
     .join(" ");

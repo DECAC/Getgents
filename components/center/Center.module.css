@@ -35,31 +35,73 @@
   min-height: 0;
 }
 
-/* Floating assistant button */
-.fab {
-  position: fixed;
-  right: 28px;
-  bottom: 28px;
+/* Pull-tab to open the assistant, docked on the border between Rail and Center */
+.pullTab {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translate(-50%, -50%);
   z-index: 80;
   background: var(--sage);
   color: #fff;
-  border-radius: 28px;
-  padding: 13px 20px 13px 16px;
+  width: 38px;
+  border-radius: 20px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 9px;
-  font-weight: 600;
-  font-size: 13.5px;
+  padding: 14px 0 16px;
+  gap: 10px;
   box-shadow: 0 8px 24px rgba(36, 74, 58, 0.32);
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
-.fab:hover {
-  transform: translateY(-2px);
+.pullTab:hover {
+  transform: translate(-50%, -50%) translateY(-2px);
+  background: var(--sage-700);
   box-shadow: 0 10px 28px rgba(36, 74, 58, 0.4);
+}
+.pullTabGrip {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 6px 0 rgba(255, 255, 255, 0.55), 0 -6px 0 rgba(255, 255, 255, 0.55);
+}
+.pullTabLabel {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 @media (max-width: 860px) {
   .mobtabs {
     display: flex;
+  }
+
+  /* No rail/center border on mobile (rail is an off-canvas overlay) — fall back to a floating button */
+  .pullTab {
+    position: fixed;
+    left: auto;
+    right: 20px;
+    top: auto;
+    bottom: 20px;
+    transform: none;
+    flex-direction: row;
+    padding: 13px 20px 13px 16px;
+    border-radius: 28px;
+    width: auto;
+  }
+  .pullTab:hover {
+    transform: translateY(-2px);
+  }
+  .pullTabGrip {
+    display: none;
+  }
+  .pullTabLabel {
+    writing-mode: horizontal-tb;
+    transform: none;
+    font-size: 13.5px;
   }
 }

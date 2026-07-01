@@ -10,7 +10,6 @@ export function AssistantPanel() {
   const {
     currentEspace,
     closeAssistant,
-    pinAside,
     switchTab,
     espaces,
     currentId,
