@@ -46,7 +46,7 @@
     --sidebar-ring: oklch(0.708 0 0);
 
     --font-display: "Bricolage Grotesque", sans-serif;
-    --font-sans: "Inter", system-ui, sans-serif;
+    --font-sans: var(--font-geist-sans), "Inter", system-ui, sans-serif;
     --font-mono: "IBM Plex Mono", monospace;
 
     /* Layout tokens (shell grid) */
