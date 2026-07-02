@@ -1,21 +1,70 @@
 "use client";
 
+import { useRef, useCallback } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
+import { canResizeAssist, setAssistWidthFromPointer } from "@/lib/assistResize";
 import { CenterHeader } from "./CenterHeader";
 import { TimelineTab } from "./tabs/TimelineTab";
 import { ReservationsTab } from "./tabs/ReservationsTab";
 import { BudgetTab } from "./tabs/BudgetTab";
 import { MapTab } from "./tabs/MapTab";
-import { ToolsTab } from "./tabs/ToolsTab";
 import { EmptyCenter } from "./EmptyCenter";
 import styles from "./Center.module.css";
 
 export function Center() {
   const { currentEspace, activeTab, openAssistant, closeAssistant, assistantOpen } = useEspace();
+  const pullTabRef = useRef<HTMLButtonElement>(null);
+  const dragRef = useRef({ active: false, moved: false, startX: 0 });
+  const suppressClickRef = useRef(false);
+
+  const handlePullTabClick = useCallback(() => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    if (assistantOpen) closeAssistant();
+    else openAssistant();
+  }, [assistantOpen, closeAssistant, openAssistant]);
+
+  const handlePullTabPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (!assistantOpen || !canResizeAssist()) return;
+      dragRef.current = { active: true, moved: false, startX: e.clientX };
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    [assistantOpen]
+  );
+
+  const handlePullTabPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (!dragRef.current.active || !assistantOpen) return;
+      if (Math.abs(e.clientX - dragRef.current.startX) > 4) {
+        if (!dragRef.current.moved) {
+          dragRef.current.moved = true;
+          document.body.classList.add("col-resizing");
+          pullTabRef.current?.classList.add(styles.pullTabResizing);
+        }
+        setAssistWidthFromPointer(e.clientX);
+      }
+    },
+    [assistantOpen]
+  );
+
+  const endPullTabDrag = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragRef.current.active) return;
+    if (dragRef.current.moved) {
+      suppressClickRef.current = true;
+      document.body.classList.remove("col-resizing");
+      pullTabRef.current?.classList.remove(styles.pullTabResizing);
+    }
+    dragRef.current = { active: false, moved: false, startX: 0 };
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  }, []);
 
   function renderContent() {
     if (activeTab === "map" && currentEspace.map) return <MapTab map={currentEspace.map} />;
-    if (activeTab === "tools") return <ToolsTab tools={currentEspace.tools} />;
 
     const tab = currentEspace.tabs[activeTab as number];
     if (!tab) return <EmptyCenter espace={currentEspace} />;
@@ -49,11 +98,21 @@ export function Center() {
       </div>
 
       <button
+        ref={pullTabRef}
+        type="button"
         className={[styles.pullTab, assistantOpen ? styles.pullTabOpen : ""].filter(Boolean).join(" ")}
-        onClick={assistantOpen ? closeAssistant : openAssistant}
+        onClick={handlePullTabClick}
+        onPointerDown={handlePullTabPointerDown}
+        onPointerMove={handlePullTabPointerMove}
+        onPointerUp={endPullTabDrag}
+        onPointerCancel={endPullTabDrag}
         aria-haspopup="dialog"
         aria-expanded={assistantOpen}
-        title={assistantOpen ? "Réduire la fenêtre d'échange" : "Parler à votre assistant"}
+        title={
+          assistantOpen
+            ? "Glisser pour redimensionner · clic pour réduire"
+            : "Parler à votre assistant"
+        }
       >
         <span className={styles.pullTabGrip} aria-hidden="true" />
         {assistantOpen ? (
@@ -65,8 +124,10 @@ export function Center() {
             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
           </svg>
         )}
-        <span className={styles.pullTabLabel}>
-          {assistantOpen ? "Réduire" : "Parler à votre assistant"}
+        <span className={styles.pullTabLabelWrap}>
+          <span className={styles.pullTabLabel}>
+            {assistantOpen ? "Réduire" : "Parler à votre assistant"}
+          </span>
         </span>
       </button>
     </main>

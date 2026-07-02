@@ -1,10 +1,15 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import type { Espace, EspacesMap, ReservationItem } from "@/lib/types";
+import type { Espace, EspacesMap, ReservationItem, ConversationThread } from "@/lib/types";
 import { ESPACES as INITIAL_ESPACES } from "@/lib/mock-data/espaces";
+import {
+  formatConversationStartedAt,
+  getActiveConversation,
+  newConversationId,
+} from "@/lib/conversationUtils";
 
-type ActiveTab = number | "map" | "tools";
+type ActiveTab = number | "map";
 
 interface EspaceContextValue {
   espaces: EspacesMap;
@@ -17,6 +22,7 @@ interface EspaceContextValue {
   modalArtefactId: string | null;
   modalResvId: string | null;
   currentEspace: Espace;
+  activeConversation: ConversationThread;
 
   switchEspace: (id: string) => void;
   switchTab: (tab: ActiveTab) => void;
@@ -30,6 +36,8 @@ interface EspaceContextValue {
   closeModal: () => void;
   updateMemory: (text: string) => void;
   sendMessage: (text: string) => void;
+  startNewConversation: () => void;
+  switchConversation: (id: string) => void;
   confirmReservation: (itemId: string) => void;
   cancelReservation: (itemId: string) => void;
   connectTool: (toolName: string) => void;
@@ -53,6 +61,10 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   const [modalResvId, setModalResvId] = useState<string | null>(null);
 
   const currentEspace = espaces[currentId];
+  const activeConversation = getActiveConversation(
+    currentEspace.conversations,
+    currentEspace.activeConversationId
+  );
 
   const switchEspace = useCallback((id: string) => {
     setCurrentId(id);
@@ -69,13 +81,13 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
 
   const openAssistant = useCallback(() => {
     setAssistantOpen(true);
-    // Auto-collapse the aside to free up room; the user can re-expand it anytime.
+    // Libère de la place : rail et aside se réduisent ; l'utilisateur peut les rouvrir.
+    setRailCollapsed(true);
     setAsideCollapsed(true);
   }, []);
 
   const closeAssistant = useCallback(() => {
     setAssistantOpen(false);
-    setAsideCollapsed(false);
   }, []);
 
   const toggleAsideCollapsed = useCallback(() => setAsideCollapsed((v) => !v), []);
@@ -109,12 +121,52 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   const sendMessage = useCallback((text: string) => {
     setEspaces((prev) => {
       const espace = prev[currentId];
-      const newConv = [
-        ...espace.conversation,
+      const threadId = espace.activeConversationId;
+      const newMessages = [
         { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" },
-        { role: "agent" as const, text: "<p>Bien noté — je mets la mémoire à jour et je reprends à partir de là. (Réponse simulée dans la maquette.)</p>", t: "à l'instant" },
+        {
+          role: "agent" as const,
+          text: "<p>Bien noté — je mets la mémoire à jour et je reprends à partir de là. (Réponse simulée dans la maquette.)</p>",
+          t: "à l'instant",
+        },
       ];
-      return { ...prev, [currentId]: { ...espace, conversation: newConv } };
+      const conversations = espace.conversations.map((thread) =>
+        thread.id === threadId
+          ? { ...thread, messages: [...thread.messages, ...newMessages] }
+          : thread
+      );
+      return { ...prev, [currentId]: { ...espace, conversations } };
+    });
+  }, [currentId]);
+
+  const startNewConversation = useCallback(() => {
+    setEspaces((prev) => {
+      const espace = prev[currentId];
+      const active = getActiveConversation(espace.conversations, espace.activeConversationId);
+      if (active.messages.length === 0) return prev;
+
+      const id = newConversationId();
+      const thread: ConversationThread = {
+        id,
+        startedAt: formatConversationStartedAt(),
+        messages: [],
+      };
+      return {
+        ...prev,
+        [currentId]: {
+          ...espace,
+          conversations: [thread, ...espace.conversations],
+          activeConversationId: id,
+        },
+      };
+    });
+  }, [currentId]);
+
+  const switchConversation = useCallback((id: string) => {
+    setEspaces((prev) => {
+      const espace = prev[currentId];
+      if (!espace.conversations.some((t) => t.id === id)) return prev;
+      return { ...prev, [currentId]: { ...espace, activeConversationId: id } };
     });
   }, [currentId]);
 
@@ -203,6 +255,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         modalArtefactId,
         modalResvId,
         currentEspace,
+        activeConversation,
         switchEspace,
         switchTab,
         toggleRail,
@@ -215,6 +268,8 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         closeModal,
         updateMemory,
         sendMessage,
+        startNewConversation,
+        switchConversation,
         confirmReservation,
         cancelReservation,
         connectTool,

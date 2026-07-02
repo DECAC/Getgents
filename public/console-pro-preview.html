@@ -447,33 +447,50 @@
       white-space: nowrap;
     }
 
-    .badges {
+    .metrics {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 8px;
       margin-bottom: 12px;
     }
 
-    .badge {
-      font-family: "IBM Plex Mono", monospace;
-      font-size: 10px;
-      padding: 3px 8px;
-      border-radius: 5px;
+    .metric {
+      min-width: 120px;
+      padding: 8px 12px;
+      border-radius: var(--r);
       border: 1px solid var(--border);
       background: var(--surface);
+    }
+
+    .metric-val {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+
+    .metric-of {
+      font-size: 11px;
+      font-weight: 500;
       color: var(--muted);
     }
 
-    .badge-ai {
-      color: var(--indigo);
-      border-color: rgba(129, 140, 248, 0.3);
-      background: var(--indigo-dim);
+    .metric-label {
+      margin-top: 3px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      color: var(--faint);
+      text-transform: lowercase;
     }
 
-    .badge-warn {
-      color: var(--warn);
-      border-color: rgba(251, 191, 36, 0.3);
+    .metric-warn {
+      border-color: rgba(251, 191, 36, 0.35);
       background: var(--warn-dim);
+    }
+
+    .metric-warn .metric-val {
+      color: var(--warn);
     }
 
     .threadbar {
@@ -840,11 +857,23 @@
           </div>
           <span class="status-pill"><span class="dot-live"></span> live</span>
         </div>
-        <div class="badges">
-          <span class="badge badge-ai">⚡ interaction_ia</span>
-          <span class="badge">MCP Cartes</span>
-          <span class="badge badge-warn">⚠ Booking.com</span>
-          <span class="badge badge-warn">⚠ Billetterie ferry</span>
+        <div class="metrics" aria-label="Indicateurs du gent">
+          <div class="metric">
+            <div class="metric-val">45</div>
+            <div class="metric-label">jours avant départ</div>
+          </div>
+          <div class="metric metric-warn">
+            <div class="metric-val">1 200 € <span class="metric-of">/ 1 500 €</span></div>
+            <div class="metric-label">budget engagé</div>
+          </div>
+          <div class="metric">
+            <div class="metric-val">4</div>
+            <div class="metric-label">voyageurs</div>
+          </div>
+          <div class="metric">
+            <div class="metric-val">4/5</div>
+            <div class="metric-label">étapes confirmées</div>
+          </div>
         </div>
         <div class="threadbar" role="tablist">
           <button type="button" class="tab on" role="tab">Itinéraire</button>

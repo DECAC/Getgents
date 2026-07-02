@@ -2,6 +2,9 @@
   max-width: 680px;
   margin: 0 auto;
 }
+.wrapAside {
+  margin: 0;
+}
 .daydiv {
   text-align: center;
   font-size: 11px;
@@ -23,6 +26,15 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
+}
+.rowAside {
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+}
+.rowAside .connectOff,
+.rowAside .connectOn {
+  align-self: flex-start;
 }
 .tic {
   width: 34px;

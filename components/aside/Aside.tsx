@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
+import { ToolsTab } from "@/components/center/tabs/ToolsTab";
 import styles from "./Aside.module.css";
 
 const FILE_ICON = (
@@ -15,6 +16,7 @@ export function Aside() {
   const { currentEspace, asideCollapsed, toggleAsideCollapsed, updateMemory } = useEspace();
   const memRef = useRef<HTMLTextAreaElement>(null);
   const files = currentEspace.files;
+  const tools = currentEspace.tools;
 
   // Auto-size textarea when espace changes
   useEffect(() => {
@@ -33,7 +35,7 @@ export function Aside() {
   return (
     <aside
       className={[styles.aside, asideCollapsed ? styles.collapsed : ""].filter(Boolean).join(" ")}
-      aria-label="Mémoire et fichiers"
+      aria-label="Mémoire, fichiers et tools"
       id="aside"
     >
       {/* Icon rail (visible when the aside is collapsed) */}
@@ -73,6 +75,18 @@ export function Aside() {
               <span className={styles.railDot} aria-hidden="true" />
             )}
           </button>
+          {tools.length > 0 && (
+            <button
+              className={styles.railBtn}
+              onClick={toggleAsideCollapsed}
+              title="Ouvrir Tools"
+              aria-label="Ouvrir Tools"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
 
@@ -173,6 +187,24 @@ export function Aside() {
               Ajouter un fichier
             </button>
           </section>
+
+          {tools.length > 0 && (
+            <section className={styles.section} id="aside-tools">
+              <div className={styles.shead}>
+                <h3 className={styles.sTitle}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--plum)" strokeWidth="2">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z" />
+                  </svg>
+                  Tools
+                </h3>
+                <span className={styles.cnt}>{tools.length}</span>
+              </div>
+              <p className={styles.shelp}>
+                Intégrations et connecteurs disponibles pour ce gent — lecture seule, écriture ou compte tiers.
+              </p>
+              <ToolsTab tools={tools} variant="aside" />
+            </section>
+          )}
         </>
       )}
     </aside>

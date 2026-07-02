@@ -84,54 +84,51 @@
 .dotPaused { background: var(--gold); }
 .dotDone { background: var(--faint); }
 
-/* Badges */
-.badges {
+/* Metrics */
+.metrics {
   display: flex;
-  gap: 7px;
   flex-wrap: wrap;
+  gap: 8px;
   margin: 11px 0 2px;
 }
 
-.badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 9px;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+.metric {
+  min-width: 120px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
 }
-.badge svg {
-  width: 12px;
-  height: 12px;
-}
-.badgeAi {
-  background: #eef1ed;
+
+.metricVal {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--ink);
-  border: 1px solid var(--line);
+  line-height: 1.2;
 }
-.badgeSens {
-  background: var(--plum-tint);
-  color: var(--plum);
-}
-.badgeInt {
-  background: #fff;
+
+.metricOf {
+  font-size: 11px;
+  font-weight: 500;
   color: var(--muted);
-  border: 1px solid var(--line);
-  cursor: pointer;
 }
-.badgeInt:hover {
-  border-color: var(--sage);
-  color: var(--sage-700);
+
+.metricLabel {
+  margin-top: 3px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  color: var(--faint);
+  text-transform: lowercase;
 }
-.badgeAct {
+
+.metricWarn {
+  border-color: rgba(184, 134, 11, 0.35);
   background: var(--gold-tint);
-  color: var(--gold);
-  border: 1px solid transparent;
-  cursor: pointer;
 }
-.badgeAct:hover {
-  border-color: var(--gold);
+
+.metricWarn .metricVal {
+  color: var(--gold);
 }
 
 /* Threadbar */

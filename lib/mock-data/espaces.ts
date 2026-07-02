@@ -14,6 +14,12 @@ export const ESPACES: EspacesMap = {
     status: "live",
     statusLabel: "En cours",
     sensitive: false,
+    metrics: [
+      { value: "45", label: "jours avant départ" },
+      { value: "737 €", suffix: "/ 2 800 €", label: "budget engagé" },
+      { value: "4", label: "voyageurs" },
+      { value: "4/5", label: "étapes confirmées" },
+    ],
     integrations: [
       { label: "MCP Cartes", action: false },
       { label: "Webhook restaurants", action: false },
@@ -141,7 +147,11 @@ export const ESPACES: EspacesMap = {
       ],
     },
     memory: `Road trip familial à travers les Alpes et la Riviera, du 12 au 19 juillet 2026.\nFoyer : 2 adultes, 2 enfants (6 et 9 ans). Préférence sans gluten pour l'aîné — à prendre en compte à chaque étape restauration.\nBudget : 2 800 € hors carburant et péages. Alerte prévue à 80 %.\n\nItinéraire en validation : Lyon (J1) → Annecy (J2) → Turin (J3) → Cinque Terre / La Spezia (J4, 2 nuits) → Nice (J5).\nDécisions prises : étapes Lyon, Annecy, Turin confirmées ; Cinque Terre ajoutée à votre demande ; accès aux villages en train depuis La Spezia retenu pour ne pas conduire sur place.\nHébergement encore à confirmer sur l'ensemble du parcours.\n\nAucune réservation ni paiement n'est effectué en votre nom.`,
-    conversation: [
+    conversations: [
+      {
+        id: "conv-voyage-1",
+        startedAt: "24 juin",
+        messages: [
       { role: "agent", text: "<p>Bon retour. On reprend votre road trip : <b>Lyon → Annecy → Turin → Nice</b>, du 12 au 19 juillet, 2 adultes + 2 enfants. Vous vouliez intercaler une étape entre Turin et Nice.</p>", t: "09:14" },
       { role: "user", text: "<p>Oui — les Cinque Terre. Mais je ne veux pas conduire une fois sur place.</p>", t: "09:15" },
       { role: "tool", kind: "MCP", what: "Cartes — Turin → La Spezia, puis accès Cinque Terre", ok: true },
@@ -160,7 +170,10 @@ export const ESPACES: EspacesMap = {
       { role: "tool", kind: "Webhook", what: "Billetterie ferry — La Spezia, 5 places, J4 matin", ok: true },
       { role: "agent", text: "<p>Proposition de billetterie déposée également — confirmation requise de votre part avant tout envoi.</p>", t: "10:06" },
       { role: "artef-pointer", tab: "reservations", icon: "⛴️", status: "pending", title: "Proposition — 5 billets ferry", link: "Voir dans Réservations" },
+        ],
+      },
     ],
+    activeConversationId: "conv-voyage-1",
     files: [
       { id: "f1", name: "Confirmation_vol_LYS-NCE.pdf", size: "212 Ko", date: "Ajouté le 24 juin" },
       { id: "f2", name: "Carte_grise_vehicule.jpg", size: "1,4 Mo", date: "Ajouté le 24 juin" },
@@ -229,20 +242,124 @@ export const ESPACES: EspacesMap = {
     status: "paused",
     statusLabel: "En pause",
     sensitive: true,
+    metrics: [
+      { value: "2/5", label: "échéances traitées" },
+      { value: "6 mois", label: "délai déclaration" },
+      { value: "1/3", label: "documents fournis" },
+    ],
     integrations: [{ label: "Aucune intégration externe", action: false }],
     tools: [],
-    tabs: [],
-    conversation: [
+    tabs: [
+      {
+        id: "echeances",
+        name: "Échéances",
+        kind: "timeline",
+        sub: "Repères généraux — chaque situation est différente, à valider avec votre notaire",
+        steps: [
+          {
+            day: 1,
+            city: "Constat et déclaration du décès",
+            night: "Constaté par un médecin, puis déclaré en mairie — généralement pris en charge par les pompes funèbres.",
+            status: "done",
+            tags: ["Fait"],
+          },
+          {
+            day: 2,
+            city: "Signalement aux organismes",
+            night: "Employeur, banques, caisses de retraite et sécurité sociale informés du décès.",
+            status: "done",
+            tags: ["Fait"],
+          },
+          {
+            day: 3,
+            city: "Option de l'héritier",
+            night: "Choix d'accepter ou de renoncer à la succession — à décider avec le notaire.",
+            status: "future",
+            tags: ["À décider", "Délai de réflexion possible : 4 mois"],
+          },
+          {
+            day: 4,
+            city: "Déclaration de succession",
+            night: "À déposer auprès de l'administration fiscale — délai de principe : 6 mois après le décès (12 mois si hors de France).",
+            status: "future",
+            tags: ["Échéance clé", "À confirmer avec le notaire"],
+          },
+          {
+            day: 5,
+            city: "Paiement des droits de succession",
+            night: "Dû en principe au moment du dépôt de la déclaration, sauf délai accordé par l'administration.",
+            status: "future",
+            tags: ["À anticiper"],
+          },
+        ],
+      },
+    ],
+    conversations: [
+      {
+        id: "conv-succession-1",
+        startedAt: "lundi",
+        messages: [
       { role: "agent", text: "<p>Cet espace traite des informations sensibles (financières et juridiques). Je vous accompagne sur les étapes et les délais — je ne donne pas de conseil juridique formel et ne remplace pas un notaire.</p>", t: "lun." },
       { role: "user", text: "<p>Quels sont les premiers délais à ne pas rater ?</p>", t: "lun." },
-      { role: "agent", text: "<p>Trois échéances structurantes existent en droit français des successions. Je peux les consigner dans la mémoire avec leur point de départ, mais chaque cas a ses particularités — à valider avec votre notaire.</p>", t: "lun." },
+      { role: "agent", text: "<p>Trois échéances structurantes existent en droit français des successions. Je les ai consignées dans une chronologie, avec leur point de départ — chaque cas a ses particularités, à valider avec votre notaire.</p>", t: "lun." },
+      { role: "artef-pointer", tab: "echeances", icon: "⚖️", status: "pending", title: "Chronologie des échéances — à valider avec votre notaire", link: "Voir les échéances" },
+      { role: "user", text: "<p>Peux-tu aussi préparer une checklist des démarches ?</p>", t: "lun." },
+      { role: "agent", text: "<p>Fait — je l'ai ajoutée à vos artefacts, avec ce qui est déjà réglé et ce qu'il reste à faire.</p>", t: "lun." },
+        ],
+      },
     ],
-    memory: `Espace ouvert pour accompagner une succession. Informations sensibles (financier, judiciaire).\nLe gent aide sur les étapes et les délais ; il ne fournit pas de conseil juridique formel.\n\nÀ renseigner : lien au défunt, présence d'un testament, notaire saisi, nombre d'héritiers.`,
+    activeConversationId: "conv-succession-1",
+    memory: `Espace ouvert pour accompagner une succession. Informations sensibles (financier, judiciaire).\nLe gent aide sur les étapes et les délais ; il ne fournit pas de conseil juridique formel.\n\nChronologie générale consignée dans l'onglet Échéances : déclaration du décès, option de l'héritier, déclaration de succession (6 mois), paiement des droits.\n\nÀ renseigner : lien au défunt, présence d'un testament, notaire saisi, nombre d'héritiers.`,
     map: null,
     files: [
       { id: "f1", name: "Acte_deces.pdf", size: "380 Ko", date: "Ajouté lundi" },
     ],
-    artefacts: [],
+    artefacts: [
+      {
+        id: "checklist-succession",
+        title: "Checklist des démarches",
+        type: "Checklist",
+        icon: ICON_CHECK,
+        date: "Créée aujourd'hui",
+        body: `<h4>Déjà fait</h4>
+        <div class="check ok"><div class="box">✓</div><span>Acte de décès obtenu</span></div>
+        <div class="check ok"><div class="box">✓</div><span>Employeur et organismes sociaux informés</span></div>
+        <h4>À faire</h4>
+        <div class="check"><div class="box"></div><span>Saisir un notaire (si ce n'est pas déjà fait)</span></div>
+        <div class="check"><div class="box"></div><span>Réunir les relevés bancaires et contrats d'assurance-vie</span></div>
+        <div class="check"><div class="box"></div><span>Statuer sur l'option de l'héritier avec le notaire</span></div>
+        <div class="check"><div class="box"></div><span>Préparer la déclaration de succession (délai : 6 mois)</span></div>
+        <p style="font-size:12px;color:var(--muted)">Liste générale et non exhaustive — chaque succession a ses particularités.</p>`,
+      },
+      {
+        id: "recap-dossier",
+        title: "Récapitulatif du dossier",
+        type: "Rapport",
+        icon: ICON_REPORT,
+        date: "Mis à jour aujourd'hui",
+        body: `<h4>Synthèse</h4>
+        <div class="row"><span>Notaire saisi</span><b>À renseigner</b></div>
+        <div class="row"><span>Testament</span><b>À renseigner</b></div>
+        <div class="row"><span>Nombre d'héritiers</span><b>À renseigner</b></div>
+        <div class="row"><span>Statut</span><b>En pause</b></div>
+        <p style="font-size:12px;color:var(--muted)">Document de suivi. Ne constitue pas un acte ni un avis juridique.</p>`,
+      },
+      {
+        id: "glossaire-succession",
+        title: "Glossaire des termes juridiques",
+        type: "Rapport",
+        icon: ICON_REPORT,
+        date: "Généré à la demande",
+        body: `<h4>Quelques termes courants</h4>
+        <ul>
+        <li><b>Option de l'héritier.</b> Décision d'accepter purement et simplement, d'accepter à concurrence de l'actif net, ou de renoncer à la succession.</li>
+        <li><b>Réserve héréditaire.</b> Part du patrimoine qui revient obligatoirement à certains héritiers, quelle que soit la volonté du défunt.</li>
+        <li><b>Quotité disponible.</b> Part du patrimoine dont le défunt pouvait librement disposer (donation, testament).</li>
+        <li><b>Indivision.</b> Situation où plusieurs héritiers possèdent ensemble un même bien avant son partage.</li>
+        </ul>
+        <p style="font-size:12px;color:var(--muted)">Définitions simplifiées à but pédagogique — ne remplacent pas l'avis de votre notaire.</p>`,
+      },
+    ],
   },
 
   fiscal: {
@@ -253,12 +370,23 @@ export const ESPACES: EspacesMap = {
     status: "done",
     statusLabel: "Résolu",
     sensitive: true,
+    metrics: [
+      { value: "28 mai", label: "déposée le" },
+      { value: "2", label: "parts fiscales" },
+    ],
     integrations: [{ label: "Aucune intégration externe", action: false }],
     tools: [],
     tabs: [],
-    conversation: [
+    conversations: [
+      {
+        id: "conv-fiscal-1",
+        startedAt: "28 mai",
+        messages: [
       { role: "agent", text: "<p>Espace clôturé : votre déclaration a été déposée le 28 mai. Le récapitulatif reste dans les artefacts. Vous pouvez rouvrir cet espace l'an prochain — la mémoire sera reprise.</p>", t: "28 mai" },
+        ],
+      },
     ],
+    activeConversationId: "conv-fiscal-1",
     memory: `Déclaration des revenus 2025. Foyer fiscal : 2 parts.\nStatut : déposée le 28 mai 2026.\nEspace clôturé — réutilisable l'an prochain avec reprise de la mémoire.`,
     map: null,
     files: [],

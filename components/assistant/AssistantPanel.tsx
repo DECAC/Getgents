@@ -4,17 +4,20 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import type { ConversationMessage } from "@/lib/types";
+import { setAssistWidthFromPointer } from "@/lib/assistResize";
+import { threadPreview, threadLastActivity } from "@/lib/conversationUtils";
 import styles from "./AssistantPanel.module.css";
 
 export function AssistantPanel() {
   const {
     currentEspace,
+    activeConversation,
     closeAssistant,
     switchTab,
-    espaces,
-    currentId,
     openArtefactModal,
     sendMessage,
+    startNewConversation,
+    switchConversation,
   } = useEspace();
 
   const [cdView, setCdView] = useState<"chat" | "hist">("chat");
@@ -25,30 +28,25 @@ export function AssistantPanel() {
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
-  }, [currentEspace.conversation, cdView]);
+  }, [activeConversation.messages, cdView]);
 
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
 
-  // Drag-to-resize
+  useEffect(() => {
+    document.documentElement.style.setProperty("--assist", "30vw");
+  }, []);
+
+  // Drag-to-resize (edge handle)
   useEffect(() => {
     const handle = handleRef.current;
     if (!handle) return;
     let dragging = false;
 
-    function clamp(px: number) {
-      const min = 320;
-      const max = Math.round(window.innerWidth * 0.75);
-      return Math.max(min, Math.min(max, px));
-    }
-
     function onMove(e: MouseEvent) {
       if (!dragging) return;
-      const rail = document.getElementById("rail");
-      const railWidth = rail ? rail.getBoundingClientRect().width : 248;
-      const px = clamp(e.clientX - railWidth);
-      document.documentElement.style.setProperty("--assist", px + "px");
+      setAssistWidthFromPointer(e.clientX);
     }
 
     function onUp() {
@@ -169,20 +167,48 @@ export function AssistantPanel() {
     );
   }
 
+  function handleNewConversation() {
+    startNewConversation();
+    setCdView("chat");
+    setComposerText("");
+  }
+
+  function handleSelectConversation(id: string) {
+    switchConversation(id);
+    setCdView("chat");
+  }
+
   function renderHist() {
-    const items = currentEspace.conversation.filter((m) => m.role === "user" || m.role === "agent");
-    if (!items.length) {
-      return <div className={styles.empty}>Aucun échange pour l'instant.</div>;
+    const threads = currentEspace.conversations;
+
+    if (!threads.length) {
+      return <div className={styles.empty}>Aucun échange pour l&apos;instant.</div>;
     }
+
     return (
       <div className={styles.histList}>
-        {items.map((m, i) => (
-          <div key={i} className={styles.histItem}>
-            <div className={styles.hname}>{m.role === "agent" ? "🤖 Le gent" : "Vous"}</div>
-            <div className={styles.hsnip}>{stripTags(m.text ?? "").slice(0, 140)}</div>
-            <div className={styles.hmeta}>{m.t}</div>
-          </div>
-        ))}
+        {threads.map((thread, i) => {
+          const isActive = thread.id === currentEspace.activeConversationId;
+          const label =
+            thread.messages.length === 0
+              ? "Nouvel échange"
+              : `Échange ${threads.length - i}`;
+          return (
+            <button
+              key={thread.id}
+              type="button"
+              className={[styles.histItem, isActive ? styles.histItemActive : ""].filter(Boolean).join(" ")}
+              onClick={() => handleSelectConversation(thread.id)}
+            >
+              <div className={styles.hname}>{label}</div>
+              <div className={styles.hsnip}>{threadPreview(thread)}</div>
+              <div className={styles.hmeta}>
+                {thread.startedAt} · {threadLastActivity(thread)}
+                {thread.messages.length === 0 ? " · vide" : ""}
+              </div>
+            </button>
+          );
+        })}
       </div>
     );
   }
@@ -212,27 +238,46 @@ export function AssistantPanel() {
         <span>L'assistant couvre tout le gent — naviguez librement entre les onglets pendant que vous échangez.</span>
       </div>
 
-      <div className={styles.tabs}>
+      <div className={styles.tabsRow}>
+        <div className={styles.tabs}>
+          <button
+            type="button"
+            className={[styles.tab, cdView === "chat" ? styles.tabOn : ""].filter(Boolean).join(" ")}
+            onClick={() => setCdView("chat")}
+          >
+            Conversation
+          </button>
+          <button
+            type="button"
+            className={[styles.tab, cdView === "hist" ? styles.tabOn : ""].filter(Boolean).join(" ")}
+            onClick={() => setCdView("hist")}
+          >
+            Historique
+          </button>
+        </div>
         <button
-          className={[styles.tab, cdView === "chat" ? styles.tabOn : ""].filter(Boolean).join(" ")}
-          onClick={() => setCdView("chat")}
+          type="button"
+          className={styles.newConvBtn}
+          onClick={handleNewConversation}
+          title="Démarrer un nouvel échange — les artefacts du gent ne sont pas modifiés"
         >
-          Conversation
-        </button>
-        <button
-          className={[styles.tab, cdView === "hist" ? styles.tabOn : ""].filter(Boolean).join(" ")}
-          onClick={() => setCdView("hist")}
-        >
-          Historique
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Nouvel échange
         </button>
       </div>
 
       <div className={styles.body} ref={bodyRef}>
         {cdView === "hist"
           ? renderHist()
-          : currentEspace.conversation.length
-          ? currentEspace.conversation.map((m, i) => renderMessage(m, i))
-          : <div className={styles.empty}>Aucun échange pour l'instant.</div>}
+          : activeConversation.messages.length
+          ? activeConversation.messages.map((m, i) => renderMessage(m, i))
+          : (
+            <div className={styles.empty}>
+              Nouvel échange — écrivez votre premier message. Le contenu du gent (itinéraire, réservations…) reste inchangé.
+            </div>
+          )}
       </div>
 
       {cdView === "chat" && (
@@ -298,8 +343,4 @@ function VisualGrid() {
       </div>
     </div>
   );
-}
-
-function stripTags(html: string): string {
-  return html.replace(/<[^>]*>/g, "");
 }

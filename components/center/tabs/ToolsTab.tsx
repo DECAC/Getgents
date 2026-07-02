@@ -22,15 +22,18 @@ const RISK_CLASS: Record<string, string> = {
   compte_tiers: styles.riskCompte,
 };
 
-export function ToolsTab({ tools }: { tools: Tool[] }) {
+export function ToolsTab({ tools, variant = "center" }: { tools: Tool[]; variant?: "center" | "aside" }) {
   const { connectTool } = useEspace();
+  const wrapClass = variant === "aside" ? styles.wrapAside : styles.wrap;
+
+  if (tools.length === 0) return null;
 
   return (
-    <div className={styles.wrap}>
-      <div className={styles.daydiv}>— Tools de ce gent —</div>
+    <div className={wrapClass}>
+      {variant === "center" && <div className={styles.daydiv}>— Tools de ce gent —</div>}
       <div className={styles.list}>
         {tools.map((tool) => (
-          <div key={tool.id} className={styles.row}>
+          <div key={tool.id} className={[styles.row, variant === "aside" ? styles.rowAside : ""].filter(Boolean).join(" ")}>
             <div className={[styles.tic, TIC_CLASS[tool.category]].join(" ")}>{tool.icon}</div>
             <div className={styles.info}>
               <div className={styles.name}>

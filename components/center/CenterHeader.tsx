@@ -58,48 +58,24 @@ export function CenterHeader() {
         </span>
       </div>
 
-      <div className={styles.badges}>
-        <span className={styles.badgeAi}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 8h.01M11 12h1v4h1" />
-          </svg>
-          Interaction IA
-        </span>
+      {e.metrics.length > 0 && (
+        <div className={styles.metrics} aria-label="Indicateurs du gent">
+          {e.metrics.map((metric, i) => (
+            <div
+              key={i}
+              className={[styles.metric, metric.warn ? styles.metricWarn : ""].filter(Boolean).join(" ")}
+            >
+              <div className={styles.metricVal}>
+                {metric.value}
+                {metric.suffix && <span className={styles.metricOf}> {metric.suffix}</span>}
+              </div>
+              <div className={styles.metricLabel}>{metric.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
-        {e.sensitive && (
-          <span className={styles.badgeSens}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 3 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z" />
-              <path d="M12 8v4M12 16h.01" />
-            </svg>
-            Données sensibles
-          </span>
-        )}
-
-        {e.integrations.map((intg, i) => (
-          <button
-            key={i}
-            className={[styles.badge, intg.action ? styles.badgeAct : styles.badgeInt].join(" ")}
-            onClick={() => switchTab("tools")}
-            title={intg.action ? "Action engageante — voir dans Tools" : "Lecture seule — voir dans Tools"}
-          >
-            {intg.action ? (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 9v4M12 17h.01" />
-                <path d="M10.3 3.86 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.86a2 2 0 0 0-3.4 0z" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 7H7a5 5 0 0 0 0 10h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8" />
-              </svg>
-            )}
-            {intg.label}
-          </button>
-        ))}
-      </div>
-
-      {(e.tabs.length > 0 || e.map || e.tools.length > 0) && (
+      {(e.tabs.length > 0 || e.map) && (
         <div className={styles.threadbar} role="tablist">
           {e.tabs.map((tab, i) => (
             <button
@@ -128,22 +104,6 @@ export function CenterHeader() {
                 </svg>
               </span>
               Carte
-            </button>
-          )}
-
-          {e.tools.length > 0 && (
-            <button
-              className={[styles.tab, activeTab === "tools" ? styles.tabOn : ""].filter(Boolean).join(" ")}
-              onClick={() => switchTab("tools")}
-              role="tab"
-              aria-selected={activeTab === "tools"}
-            >
-              <span className={styles.tabIcon}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z" />
-                </svg>
-              </span>
-              Tools
             </button>
           )}
         </div>

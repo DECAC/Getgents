@@ -5,7 +5,8 @@
   background: var(--bg);
   position: relative;
   min-height: 0;
-  overflow: hidden;
+  /* Visible so the pull-tab label isn't clipped at the rail/center seam */
+  overflow: visible;
 }
 
 .mobtabs {
@@ -46,17 +47,18 @@
   z-index: 80;
   background: var(--sage);
   color: #fff;
-  width: 46px;
-  min-height: 188px;
-  border-radius: 23px;
+  width: 48px;
+  border-radius: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 18px 0 20px;
-  gap: 14px;
+  justify-content: center;
+  padding: 16px 0;
+  gap: 12px;
   box-shadow: 0 8px 24px rgba(36, 74, 58, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  transition: transform 0.15s, box-shadow 0.15s, background 0.15s, min-height 0.15s;
+  overflow: visible;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
 .pullTab:hover {
   transform: translate(-50%, -50%) translateY(-2px);
@@ -64,8 +66,16 @@
   box-shadow: 0 10px 28px rgba(36, 74, 58, 0.45);
 }
 .pullTabOpen {
-  min-height: 96px;
-  gap: 10px;
+  gap: 8px;
+  padding: 14px 0;
+  cursor: col-resize;
+}
+.pullTabOpen:hover {
+  cursor: col-resize;
+}
+.pullTabResizing {
+  transition: none;
+  background: var(--sage-700);
 }
 .pullTabGrip {
   width: 16px;
@@ -75,14 +85,30 @@
   box-shadow: 0 7px 0 rgba(255, 255, 255, 0.6), 0 -7px 0 rgba(255, 255, 255, 0.6);
   flex: none;
 }
+.pullTabLabelWrap {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 10.5rem;
+  padding: 4px 0;
+}
+.pullTabOpen .pullTabLabelWrap {
+  min-height: 3.5rem;
+}
 .pullTabLabel {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
+  display: block;
+  flex: none;
   font-weight: 700;
-  font-size: 13.5px;
-  letter-spacing: 0.03em;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  line-height: 1;
   white-space: nowrap;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
 }
 
 @media (max-width: 860px) {
@@ -110,6 +136,11 @@
   }
   .pullTabGrip {
     display: none;
+  }
+  .pullTabLabelWrap {
+    min-height: 0;
+    width: auto;
+    padding: 0;
   }
   .pullTabLabel {
     writing-mode: horizontal-tb;

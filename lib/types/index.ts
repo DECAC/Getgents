@@ -77,6 +77,12 @@ export type ConversationRole =
   | "artef-visual"
   | "artef-pointer";
 
+export interface ConversationThread {
+  id: string;
+  startedAt: string;
+  messages: ConversationMessage[];
+}
+
 export interface ConversationMessage {
   role: ConversationRole;
   text?: string;
@@ -109,6 +115,13 @@ export interface Artefact {
   body: string;
 }
 
+export interface EspaceMetric {
+  value: string;
+  suffix?: string;
+  label: string;
+  warn?: boolean;
+}
+
 export interface Espace {
   icon: string;
   name: string;
@@ -117,12 +130,14 @@ export interface Espace {
   status: EspaceStatus;
   statusLabel: string;
   sensitive: boolean;
+  metrics: EspaceMetric[];
   integrations: { label: string; action: boolean }[];
   tools: Tool[];
   tabs: EspaceTab[];
   map: EspaceMap | null;
   memory: string;
-  conversation: ConversationMessage[];
+  conversations: ConversationThread[];
+  activeConversationId: string;
   files: UserFile[];
   artefacts: Artefact[];
 }
