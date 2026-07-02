@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from "react";
 import type { Espace, EspacesMap, ReservationItem, ConversationThread } from "@/lib/types";
 import { ESPACES as INITIAL_ESPACES } from "@/lib/mock-data/espaces";
 import {
@@ -36,6 +36,7 @@ interface EspaceContextValue {
   closeModal: () => void;
   updateMemory: (text: string) => void;
   sendMessage: (text: string) => void;
+  isThinking: boolean;
   startNewConversation: () => void;
   switchConversation: (id: string) => void;
   confirmReservation: (itemId: string) => void;
@@ -59,6 +60,9 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [modalArtefactId, setModalArtefactId] = useState<string | null>(null);
   const [modalResvId, setModalResvId] = useState<string | null>(null);
+  const [isThinking, setIsThinking] = useState(false);
+  const currentIdRef = useRef(currentId);
+  currentIdRef.current = currentId;
 
   const currentEspace = espaces[currentId];
   const activeConversation = getActiveConversation(
@@ -119,25 +123,80 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   }, [currentId]);
 
   const sendMessage = useCallback((text: string) => {
+    const id = currentIdRef.current;
+
+    // Add user message immediately
     setEspaces((prev) => {
-      const espace = prev[currentId];
+      const espace = prev[id];
       const threadId = espace.activeConversationId;
-      const newMessages = [
-        { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" },
-        {
-          role: "agent" as const,
-          text: "<p>Bien noté — je mets la mémoire à jour et je reprends à partir de là. (Réponse simulée dans la maquette.)</p>",
-          t: "à l'instant",
-        },
-      ];
       const conversations = espace.conversations.map((thread) =>
         thread.id === threadId
-          ? { ...thread, messages: [...thread.messages, ...newMessages] }
+          ? { ...thread, messages: [...thread.messages, { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" }] }
           : thread
       );
-      return { ...prev, [currentId]: { ...espace, conversations } };
+      return { ...prev, [id]: { ...espace, conversations } };
     });
-  }, [currentId]);
+
+    setIsThinking(true);
+
+    // Build history for the API call
+    setEspaces((prev) => {
+      const espace = prev[id];
+      const threadId = espace.activeConversationId;
+      const thread = espace.conversations.find((t) => t.id === threadId);
+      const history = (thread?.messages ?? []).map((m) => ({
+        role: m.role === "agent" ? "assistant" : "user",
+        content: (m.text ?? "").replace(/<[^>]+>/g, ""),
+      }));
+
+      const systemPrompt = espace.memory
+        ? `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}". Mémoire de l'espace : ${espace.memory}`
+        : `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`;
+
+      fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "anthropic/claude-sonnet-5",
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...history,
+          ],
+          max_tokens: 1024,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          const reply: string = data?.choices?.[0]?.message?.content ?? "Erreur : réponse vide.";
+          const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
+          setEspaces((p) => {
+            const e = p[id];
+            const tId = e.activeConversationId;
+            const convs = e.conversations.map((t) =>
+              t.id === tId
+                ? { ...t, messages: [...t.messages, { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant" }] }
+                : t
+            );
+            return { ...p, [id]: { ...e, conversations: convs } };
+          });
+        })
+        .catch(() => {
+          setEspaces((p) => {
+            const e = p[id];
+            const tId = e.activeConversationId;
+            const convs = e.conversations.map((t) =>
+              t.id === tId
+                ? { ...t, messages: [...t.messages, { role: "agent" as const, text: "<p>Erreur de connexion au service IA.</p>", t: "à l'instant" }] }
+                : t
+            );
+            return { ...p, [id]: { ...e, conversations: convs } };
+          });
+        })
+        .finally(() => setIsThinking(false));
+
+      return prev; // no-op state update; side effect above does the real work
+    });
+  }, []);
 
   const startNewConversation = useCallback(() => {
     setEspaces((prev) => {
@@ -268,6 +327,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         closeModal,
         updateMemory,
         sendMessage,
+        isThinking,
         startNewConversation,
         switchConversation,
         confirmReservation,

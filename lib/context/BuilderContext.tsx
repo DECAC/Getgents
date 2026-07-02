@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability } from "@/lib/types/builder";
 import { GENT_DRAFTS, CONNECTOR_CATALOG } from "@/lib/mock-data/builder";
 
@@ -30,6 +30,7 @@ interface BuilderContextValue {
 
   sendBuilderMessage: (text: string) => void;
   applyBuilderSuggestion: (suggestion: string) => void;
+  isThinking: boolean;
 }
 
 const BuilderContext = createContext<BuilderContextValue | null>(null);
@@ -57,6 +58,9 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   const [currentId, setCurrentId] = useState(initialId);
   const [activeTab, setActiveTab] = useState<BuilderTab>("prompt");
   const [replyCursor, setReplyCursor] = useState(0);
+  const [isThinking, setIsThinking] = useState(false);
+  const currentIdRef = useRef(currentId);
+  currentIdRef.current = currentId;
 
   const currentDraft = drafts[currentId];
 
@@ -147,18 +151,81 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   }, [currentId]);
 
   const sendBuilderMessage = useCallback((text: string) => {
+    const id = currentIdRef.current;
+
     setDrafts((prev) => {
-      const draft = prev[currentId];
-      const reply = BUILDER_ASSISTANT_REPLIES[replyCursor % BUILDER_ASSISTANT_REPLIES.length];
+      const draft = prev[id];
       const builderConversation = [
         ...draft.builderConversation,
         { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" },
-        { role: "agent" as const, text: `<p>${reply}</p>`, t: "à l'instant" },
       ];
-      return { ...prev, [currentId]: { ...draft, builderConversation } };
+      return { ...prev, [id]: { ...draft, builderConversation } };
     });
-    setReplyCursor((c) => c + 1);
-  }, [currentId, replyCursor]);
+
+    setIsThinking(true);
+
+    setDrafts((prev) => {
+      const draft = prev[id];
+      const systemPrompt = draft.systemPrompt
+        ? `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
+        : `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace.`;
+
+      const history = draft.builderConversation.map((m) => ({
+        role: m.role === "agent" ? "assistant" : "user",
+        content: (m.text ?? "").replace(/<[^>]+>/g, ""),
+      }));
+
+      fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "anthropic/claude-sonnet-5",
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...history,
+            { role: "user", content: text },
+          ],
+          max_tokens: 1024,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          const reply: string = data?.choices?.[0]?.message?.content ?? "Erreur : réponse vide.";
+          const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
+          setDrafts((p) => {
+            const d = p[id];
+            return {
+              ...p,
+              [id]: {
+                ...d,
+                builderConversation: [
+                  ...d.builderConversation,
+                  { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant" },
+                ],
+              },
+            };
+          });
+        })
+        .catch(() => {
+          setDrafts((p) => {
+            const d = p[id];
+            return {
+              ...p,
+              [id]: {
+                ...d,
+                builderConversation: [
+                  ...d.builderConversation,
+                  { role: "agent" as const, text: "<p>Erreur de connexion au service IA.</p>", t: "à l'instant" },
+                ],
+              },
+            };
+          });
+        })
+        .finally(() => setIsThinking(false));
+
+      return prev;
+    });
+  }, []);
 
   const applyBuilderSuggestion = useCallback((suggestion: string) => {
     setDrafts((prev) => {
@@ -188,6 +255,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         toggleArtefactTemplate,
         sendBuilderMessage,
         applyBuilderSuggestion,
+        isThinking,
       }}
     >
       {children}
