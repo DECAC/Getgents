@@ -167,7 +167,9 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       })
         .then((res) => res.json())
         .then((data) => {
-          const reply: string = data?.choices?.[0]?.message?.content ?? "Erreur : réponse vide.";
+          const reply: string =
+            data?.choices?.[0]?.message?.content ??
+            `Erreur API : ${data?.error?.message ?? JSON.stringify(data)}`;
           const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
           setEspaces((p) => {
             const e = p[id];
