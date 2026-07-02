@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
+import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
 import type { ConversationMessage } from "@/lib/types";
 import { setAssistWidthFromPointer } from "@/lib/assistResize";
 import { threadPreview, threadLastActivity } from "@/lib/conversationUtils";
@@ -165,14 +166,8 @@ export function AssistantPanel() {
             <SafeHTML html={m.text ?? ""} />
             <div className={styles.t}>{m.t}</div>
           </div>
-          {m.role === "agent" && isLastMessage && !!m.suggestions?.length && (
-            <div className={styles.suggestions}>
-              {m.suggestions.map((s, si) => (
-                <button key={si} type="button" className={styles.suggestionChip} onClick={() => sendMessage(s)}>
-                  {s}
-                </button>
-              ))}
-            </div>
+          {m.role === "agent" && isLastMessage && !!m.questions?.length && (
+            <QuickReplyQuestions questions={m.questions} onSubmit={sendMessage} />
           )}
         </div>
       </div>

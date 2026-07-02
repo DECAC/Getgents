@@ -8,7 +8,7 @@ import {
   getActiveConversation,
   newConversationId,
 } from "@/lib/conversationUtils";
-import { extractSuggestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
+import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 
 type ActiveTab = number | "map";
 
@@ -173,14 +173,14 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
           const raw: string =
             data?.choices?.[0]?.message?.content ??
             `Erreur API : ${data?.error?.message ?? JSON.stringify(data)}`;
-          const { text: reply, suggestions } = extractSuggestions(raw);
+          const { text: reply, questions } = extractQuestions(raw);
           const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
           setEspaces((p) => {
             const e = p[id];
             const tId = e.activeConversationId;
             const convs = e.conversations.map((t) =>
               t.id === tId
-                ? { ...t, messages: [...t.messages, { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant", suggestions }] }
+                ? { ...t, messages: [...t.messages, { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant", questions }] }
                 : t
             );
             return { ...p, [id]: { ...e, conversations: convs } };

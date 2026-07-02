@@ -1,0 +1,75 @@
+.wrap {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.qLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--plum);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  flex: none;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--plum-tint);
+  background: var(--plum-tint);
+  color: var(--plum);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: normal;
+  text-align: left;
+}
+.chip:hover {
+  background: var(--plum);
+  color: #fff;
+}
+.chipOn {
+  background: var(--plum);
+  color: #fff;
+}
+
+.submitBtn {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  font-weight: 600;
+  font-size: 12.5px;
+  background: var(--plum);
+  color: #fff;
+}
+.submitBtn:hover {
+  background: #5a3049;
+}
