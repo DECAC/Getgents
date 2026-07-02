@@ -1,5 +1,5 @@
 @import "../styles/tokens.css";
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 
 *,
 *::before,
@@ -70,7 +70,7 @@ body.col-resizing {
 
 /* Shared doc styles used inside modal body (sanitized HTML) */
 .gendoc h4 {
-  font-family: "Bricolage Grotesque", sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 15px;
   margin: 18px 0 7px;
   letter-spacing: -0.01em;

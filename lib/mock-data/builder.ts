@@ -1,8 +1,9 @@
 import type {
   OpenRouterModel,
-  ConnectorCatalogEntry,
+  ConnectorToolType,
   GentDraftsMap,
   ArtefactTemplateConfig,
+  KnowledgeSource,
 } from "@/lib/types/builder";
 
 // Catalogue de modèles accessible via une seule clé API OpenRouter.
@@ -97,60 +98,62 @@ export const MODEL_CATALOG: OpenRouterModel[] = [
   },
 ];
 
-export const CONNECTOR_CATALOG: ConnectorCatalogEntry[] = [
+// Types d'outils proposés au créateur d'un gent — pas des services déjà
+// connectés, mais des modèles de configuration que le créateur personnalise.
+export const CONNECTOR_TOOL_TYPES: ConnectorToolType[] = [
   {
-    id: "mcp-cartes",
-    name: "MCP Cartes",
+    kind: "connecteur",
+    name: "Connecteur",
+    icon: "🔌",
+    description:
+      "Connectez-vous à des API et services propriétaires à l'aide des connecteurs Getgents pour extraire des données ou effectuer des actions.",
+  },
+  {
+    kind: "connecteur-predefini",
+    name: "Connecteur prédéfini",
+    icon: "📦",
+    description:
+      "Choisissez parmi une sélection de connexions prédéfinies à des milliers d'API populaires, provenant de nombreux éditeurs, grands et petits.",
+  },
+  {
+    kind: "connecteur-personnalise",
+    name: "Connecteur personnalisé",
+    icon: "🛠️",
+    description:
+      "Définissez une connexion à un service ou un système personnalisé pour activer des outils sur mesure. Le connecteur a besoin d'autorisations d'affichage et de partage pour l'organisation pour que l'assistant l'utilise.",
+  },
+  {
+    kind: "flux-assistant",
+    name: "Flux d'assistant",
+    icon: "🔁",
+    description: "Définissez un flux d'assistant, incluant une ou plusieurs actions à réaliser.",
+  },
+  {
+    kind: "invite",
+    name: "Invite",
+    icon: "💬",
+    description:
+      "Invite basée sur un modèle à tour unique qui peut référencer les connaissances que vous fournissez et générer du code pour analyser les données.",
+  },
+  {
+    kind: "api-rest",
+    name: "API REST",
+    icon: "🌐",
+    description:
+      "Définissez une connexion à une API REST et sélectionnez un ou plusieurs points de terminaison et méthodes d'API à ajouter en tant qu'outils.",
+  },
+  {
     kind: "mcp",
-    icon: "🗺️",
-    category: "lecture",
-    desc: "Calcule trajets et itinéraires via un serveur MCP tiers. Lecture seule.",
-    endpointHint: "mcp://cartes.getgents.tools",
+    name: "Protocole de contexte de modèle (MCP)",
+    icon: "🔗",
+    description: "Connectez-vous à un serveur MCP pour accéder aux outils et aux ressources.",
   },
   {
-    id: "mcp-recherche-web",
-    name: "MCP Recherche web",
-    kind: "mcp",
-    icon: "🔎",
-    category: "lecture",
-    desc: "Recherche d'informations publiques à jour. Lecture seule.",
-    endpointHint: "mcp://search.getgents.tools",
-  },
-  {
-    id: "mcp-fichiers",
-    name: "MCP Fichiers",
-    kind: "mcp",
-    icon: "📁",
-    category: "lecture",
-    desc: "Lit les fichiers déposés par l'utilisateur dans l'espace (PDF, images).",
-    endpointHint: "mcp://files.getgents.tools",
-  },
-  {
-    id: "webhook-ecriture",
-    name: "Webhook générique (écriture)",
-    kind: "mcp",
-    icon: "✏️",
-    category: "ecriture",
-    desc: "Envoie une action vers un système tiers après confirmation explicite de l'utilisateur.",
-    endpointHint: "mcp://webhook.getgents.tools",
-  },
-  {
-    id: "a2a-notaire",
-    name: "Agent partenaire — Notaire (A2A)",
-    kind: "a2a",
-    icon: "⚖️",
-    category: "ecriture",
-    desc: "Délègue une tâche à un agent tiers spécialisé via le protocole Agent-to-Agent.",
-    endpointHint: "a2a://notaire-partner.example",
-  },
-  {
-    id: "compte-booking",
-    name: "Booking.com",
-    kind: "a2a",
-    icon: "🏨",
-    category: "compte_tiers",
-    desc: "Compte personnel connecté par l'utilisateur final — jamais par le builder.",
-    endpointHint: "a2a://booking.com/agent",
+    kind: "ordinateur",
+    name: "Utilisation de l'ordinateur",
+    icon: "🖥️",
+    description:
+      "Permet à votre assistant d'interagir avec n'importe quel système doté d'une interface utilisateur graphique, pour les sites web et les applications de bureau, en sélectionnant des boutons, en choisissant des menus et en saisissant du texte dans les champs à l'écran.",
   },
 ];
 
@@ -199,6 +202,16 @@ const DEFAULT_ARTEFACT_TEMPLATES: ArtefactTemplateConfig[] = [
   },
 ];
 
+const KNOWLEDGE_VOYAGE: KnowledgeSource[] = [
+  { id: "know-1", kind: "file", label: "Guide-gastronomie-sans-gluten.pdf", meta: "1,2 Mo · ajouté il y a 3 jours" },
+  { id: "know-2", kind: "url", label: "https://www.guides-voyage.fr/alpes-familles", meta: "Page web de référence" },
+  { id: "know-3", kind: "text", label: "Préférences de la famille Léaud", meta: "Note ajoutée manuellement" },
+];
+
+const KNOWLEDGE_SUCCESSION: KnowledgeSource[] = [
+  { id: "know-1", kind: "file", label: "Bareme-droits-succession-2026.pdf", meta: "480 Ko · ajouté hier" },
+];
+
 export const GENT_DRAFTS: GentDraftsMap = {
   "voyage-v5": {
     id: "voyage-v5",
@@ -224,9 +237,13 @@ Règles impératives :
       { capability: "tts", modelId: null },
       { capability: "stt", modelId: null },
     ],
-    connectors: CONNECTOR_CATALOG.filter((c) =>
-      ["mcp-cartes", "mcp-fichiers", "webhook-ecriture", "compte-booking"].includes(c.id)
-    ).map((c) => ({ ...c, connected: c.id !== "compte-booking" })),
+    knowledgeSources: KNOWLEDGE_VOYAGE,
+    connectors: [
+      { id: "tool-1", toolKind: "mcp", name: "MCP Cartes" },
+      { id: "tool-2", toolKind: "mcp", name: "MCP Fichiers" },
+      { id: "tool-3", toolKind: "api-rest", name: "Webhook de réservation (écriture)" },
+      { id: "tool-4", toolKind: "connecteur-predefini", name: "Booking.com" },
+    ],
     artefactTemplates: DEFAULT_ARTEFACT_TEMPLATES.map((t) =>
       ["tpl-report", "tpl-checklist", "tpl-visual", "tpl-timeline", "tpl-budget", "tpl-map"].includes(t.id)
         ? { ...t, enabled: true }
@@ -271,10 +288,8 @@ Cet espace traite des données sensibles : reste factuel, sobre, et évite toute
       { capability: "tts", modelId: null },
       { capability: "stt", modelId: null },
     ],
-    connectors: CONNECTOR_CATALOG.filter((c) => c.id === "mcp-fichiers").map((c) => ({
-      ...c,
-      connected: true,
-    })),
+    knowledgeSources: KNOWLEDGE_SUCCESSION,
+    connectors: [{ id: "tool-1", toolKind: "mcp", name: "MCP Fichiers" }],
     artefactTemplates: DEFAULT_ARTEFACT_TEMPLATES.map((t) =>
       t.id === "tpl-report" || t.id === "tpl-checklist" ? { ...t, enabled: true } : t
     ),
@@ -302,6 +317,7 @@ Cet espace traite des données sensibles : reste factuel, sobre, et évite toute
       { capability: "tts", modelId: null },
       { capability: "stt", modelId: null },
     ],
+    knowledgeSources: [],
     connectors: [],
     artefactTemplates: DEFAULT_ARTEFACT_TEMPLATES.map((t) => ({ ...t, enabled: false })),
     builderConversation: [

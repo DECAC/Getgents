@@ -26,16 +26,6 @@ const TABS: { id: BuilderTab; label: string; icon: JSX.Element }[] = [
     ),
   },
   {
-    id: "models",
-    label: "Modèles",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z" />
-        <path d="M9 12l2 2 4-4" />
-      </svg>
-    ),
-  },
-  {
     id: "connectors",
     label: "Connecteurs",
     icon: (

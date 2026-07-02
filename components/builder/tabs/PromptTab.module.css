@@ -14,7 +14,7 @@
 }
 
 .title {
-  font-family: "Bricolage Grotesque", sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 15px;
   margin: 0 0 3px;
   letter-spacing: -0.01em;
@@ -70,4 +70,130 @@
   flex: none;
   margin-top: 2px;
   color: var(--plum);
+}
+
+/* ---------- Connaissances ---------- */
+.knowList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.knowRow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.knowIc {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.knowInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.knowLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowMeta {
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 1px;
+}
+
+.knowRemove {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+}
+.knowRemove:hover {
+  background: var(--plum-tint);
+  color: var(--plum);
+}
+
+.knowAddRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.knowAddBtn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border-radius: 8px;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.knowAddBtn:hover {
+  border-color: var(--plum);
+  color: var(--plum);
+  background: var(--plum-tint);
+}
+
+.hiddenFileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.urlInput {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.urlInput:focus {
+  outline: none;
+  border-color: var(--plum);
+  box-shadow: 0 0 0 3px var(--plum-tint);
+}
+
+/* ---------- En-tête de section sans encadré (ex. Modèles) ---------- */
+.sectionHead {
+  margin-top: 4px;
+}
+.sectionHead .title {
+  margin-bottom: 3px;
+}
+.sectionHead .sub {
+  margin-bottom: 0;
 }

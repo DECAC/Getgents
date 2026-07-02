@@ -45,7 +45,7 @@
   flex: none;
   font-size: 16px;
 }
-.ticLecture { background: #eef1ed; color: var(--muted); }
+.ticLecture { background: #f1f2f4; color: var(--muted); }
 .ticEcriture { background: var(--gold-tint); color: var(--gold); }
 .ticCompte { background: var(--plum-tint); color: var(--plum); }
 
@@ -77,7 +77,7 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
-.riskLecture { background: #eef1ed; color: var(--muted); }
+.riskLecture { background: #f1f2f4; color: var(--muted); }
 .riskEcriture { background: var(--gold-tint); color: var(--gold); }
 .riskCompte { background: var(--plum-tint); color: var(--plum); }
 

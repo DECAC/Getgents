@@ -30,7 +30,7 @@ export function BuilderDashboard() {
         <div className={styles.head}>
           <div className={styles.mark} aria-hidden="true" />
           <div>
-            <h1 className={styles.title}>Back office — Builder</h1>
+            <h1 className={styles.title}>Gent&apos; studio</h1>
             <div className={styles.sub}>Concevez, testez et publiez la V1 de vos gents.</div>
           </div>
           <a href="/espace/voyage" className={styles.backLink}>

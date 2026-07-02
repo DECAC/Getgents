@@ -1,18 +1,19 @@
+/* Design tokens — style inspiré d'OpenRouter (fond blanc, accent indigo, gris neutres) */
 :root {
-  --ink: #15212b;
-  --muted: #5c6b72;
-  --faint: #8a969c;
-  --bg: #e9ece7;
-  --card: #fcfdfb;
-  --line: #d6dbd2;
-  --line-soft: #e4e8e0;
-  --sage: #2e5c49;
-  --sage-700: #244a3a;
-  --sage-tint: #e2eae3;
-  --gold: #946610;
-  --gold-tint: #f0e7cf;
-  --plum: #6a3b58;
-  --plum-tint: #ebdfe8;
+  --ink: #111827;
+  --muted: #6b7280;
+  --faint: #9ca3af;
+  --bg: #f4f5f7;
+  --card: #ffffff;
+  --line: #e5e7eb;
+  --line-soft: #f0f1f3;
+  --sage: #6366f1;
+  --sage-700: #4f46e5;
+  --sage-tint: #eef2ff;
+  --gold: #d97706;
+  --gold-tint: #fef3c7;
+  --plum: #db2777;
+  --plum-tint: #fce7f3;
   --r: 10px;
   --rail: 248px;
   --rail-min: 66px;
