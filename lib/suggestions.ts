@@ -3,6 +3,9 @@
 // quand la réponse pose une ou plusieurs questions fermées. On l'extrait
 // avant affichage pour construire des puces cliquables numérotées.
 const QUESTIONS_RE = /<!--QUESTIONS:\s*(\[[\s\S]*?\])\s*-->/;
+// Repère un bloc tronqué (réponse coupée par max_tokens avant la balise fermante) :
+// on masque au moins l'artefact brut même si on ne peut pas parser les questions.
+const TRUNCATED_MARKER_RE = /<!--QUESTIONS:[\s\S]*$/;
 
 export interface QuestionBlock {
   q: string;
@@ -17,7 +20,11 @@ export const SUGGESTIONS_PROMPT_INSTRUCTION =
 
 export function extractQuestions(raw: string): { text: string; questions: QuestionBlock[] } {
   const match = raw.match(QUESTIONS_RE);
-  if (!match) return { text: raw, questions: [] };
+  if (!match) {
+    const truncated = raw.match(TRUNCATED_MARKER_RE);
+    if (truncated) return { text: raw.slice(0, truncated.index).trim(), questions: [] };
+    return { text: raw, questions: [] };
+  }
 
   let questions: QuestionBlock[] = [];
   try {

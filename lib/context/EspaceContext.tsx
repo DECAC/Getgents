@@ -165,7 +165,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
             { role: "system", content: systemPrompt },
             ...history,
           ],
-          max_tokens: 1024,
+          max_tokens: 2048,
         }),
       })
         .then((res) => res.json())

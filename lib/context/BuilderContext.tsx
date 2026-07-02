@@ -192,7 +192,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
             ...history,
             { role: "user", content: text },
           ],
-          max_tokens: 1024,
+          max_tokens: 2048,
         }),
       })
         .then((res) => res.json())
