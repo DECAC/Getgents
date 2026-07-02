@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability } from "@/lib/types/builder";
 import { GENT_DRAFTS, CONNECTOR_CATALOG } from "@/lib/mock-data/builder";
+import { extractSuggestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 
 export type BuilderTab = "prompt" | "models" | "connectors" | "artefacts";
 
@@ -166,9 +167,11 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
 
     setDrafts((prev) => {
       const draft = prev[id];
-      const systemPrompt = draft.systemPrompt
-        ? `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
-        : `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace.`;
+      const systemPrompt = `${
+        draft.systemPrompt
+          ? `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
+          : `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace.`
+      }\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
 
       const history = draft.builderConversation.map((m) => ({
         role: m.role === "agent" ? "assistant" : "user",
@@ -194,9 +197,10 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       })
         .then((res) => res.json())
         .then((data) => {
-          const reply: string =
+          const raw: string =
             data?.choices?.[0]?.message?.content ??
             `Erreur API : ${data?.error?.message ?? JSON.stringify(data)}`;
+          const { text: reply, suggestions } = extractSuggestions(raw);
           const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
           setDrafts((p) => {
             const d = p[id];
@@ -206,7 +210,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
                 ...d,
                 builderConversation: [
                   ...d.builderConversation,
-                  { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant" },
+                  { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant", suggestions },
                 ],
               },
             };

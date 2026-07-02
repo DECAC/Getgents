@@ -51,6 +51,7 @@ export function BuilderAssistantPanel() {
 
   function renderMessage(m: ConversationMessage, i: number) {
     const isUser = m.role === "user";
+    const isLastMessage = i === currentDraft.builderConversation.length - 1;
     return (
       <div key={i} className={[styles.msg, isUser ? styles.msgUser : styles.msgAgent].join(" ")}>
         <div className={styles.av}>{isUser ? "V" : "🛠️"}</div>
@@ -69,6 +70,15 @@ export function BuilderAssistantPanel() {
               </svg>
               Insérer dans le prompt système
             </button>
+          )}
+          {!isUser && isLastMessage && !!m.suggestions?.length && (
+            <div className={styles.suggestions}>
+              {m.suggestions.map((s, si) => (
+                <button key={si} type="button" className={styles.suggestionChip} onClick={() => sendBuilderMessage(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>

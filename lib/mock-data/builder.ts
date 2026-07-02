@@ -28,6 +28,15 @@ export const MODEL_CATALOG: OpenRouterModel[] = [
     tagline: "Excellent raisonnement et suivi d'instructions longues.",
   },
   {
+    id: "mistralai/mistral-large",
+    label: "Mistral Large",
+    provider: "Mistral AI",
+    capability: "chat",
+    contextWindow: 128_000,
+    pricing: { input: 2, output: 6 },
+    tagline: "Modèle européen, bon équilibre performance / souveraineté des données.",
+  },
+  {
     id: "google/gemini-2.5-flash",
     label: "Gemini 2.5 Flash",
     provider: "Google",

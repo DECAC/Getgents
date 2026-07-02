@@ -156,12 +156,24 @@ export function AssistantPanel() {
       );
     }
 
+    const isLastMessage = i === activeConversation.messages.length - 1;
     return (
       <div key={i} className={[styles.msg, m.role === "user" ? styles.msgUser : styles.msgAgent].join(" ")}>
         <div className={styles.av}>{m.role === "agent" ? "🤖" : "CL"}</div>
-        <div className={styles.bubble}>
-          <SafeHTML html={m.text ?? ""} />
-          <div className={styles.t}>{m.t}</div>
+        <div>
+          <div className={styles.bubble}>
+            <SafeHTML html={m.text ?? ""} />
+            <div className={styles.t}>{m.t}</div>
+          </div>
+          {m.role === "agent" && isLastMessage && !!m.suggestions?.length && (
+            <div className={styles.suggestions}>
+              {m.suggestions.map((s, si) => (
+                <button key={si} type="button" className={styles.suggestionChip} onClick={() => sendMessage(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );

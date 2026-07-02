@@ -136,6 +136,28 @@
   text-decoration: underline;
 }
 
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.suggestionChip {
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--plum-tint);
+  background: var(--plum-tint);
+  color: var(--plum);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: normal;
+  text-align: left;
+}
+.suggestionChip:hover {
+  background: var(--plum);
+  color: #fff;
+}
+
 .composerWrap {
   padding: 10px 14px 14px;
   border-top: 1px solid var(--line);

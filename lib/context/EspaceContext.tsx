@@ -8,6 +8,7 @@ import {
   getActiveConversation,
   newConversationId,
 } from "@/lib/conversationUtils";
+import { extractSuggestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 
 type ActiveTab = number | "map";
 
@@ -149,9 +150,11 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         content: (m.text ?? "").replace(/<[^>]+>/g, ""),
       }));
 
-      const systemPrompt = espace.memory
-        ? `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}". Mémoire de l'espace : ${espace.memory}`
-        : `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`;
+      const systemPrompt = `${
+        espace.memory
+          ? `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}". Mémoire de l'espace : ${espace.memory}`
+          : `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`
+      }\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
 
       fetch("/api/chat", {
         method: "POST",
@@ -167,16 +170,17 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       })
         .then((res) => res.json())
         .then((data) => {
-          const reply: string =
+          const raw: string =
             data?.choices?.[0]?.message?.content ??
             `Erreur API : ${data?.error?.message ?? JSON.stringify(data)}`;
+          const { text: reply, suggestions } = extractSuggestions(raw);
           const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
           setEspaces((p) => {
             const e = p[id];
             const tId = e.activeConversationId;
             const convs = e.conversations.map((t) =>
               t.id === tId
-                ? { ...t, messages: [...t.messages, { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant" }] }
+                ? { ...t, messages: [...t.messages, { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant", suggestions }] }
                 : t
             );
             return { ...p, [id]: { ...e, conversations: convs } };
