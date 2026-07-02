@@ -236,28 +236,6 @@
   color: #9cb6a6;
 }
 
-.suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-.suggestionChip {
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--plum-tint);
-  background: var(--plum-tint);
-  color: var(--plum);
-  font-size: 12.5px;
-  font-weight: 500;
-  white-space: normal;
-  text-align: left;
-}
-.suggestionChip:hover {
-  background: var(--plum);
-  color: #fff;
-}
-
 /* Tool call */
 .toolcall {
   max-width: 78%;

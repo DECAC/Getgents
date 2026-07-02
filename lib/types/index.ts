@@ -96,7 +96,7 @@ export interface ConversationMessage {
   status?: "pending" | "sent";
   title?: string;
   link?: string;
-  suggestions?: string[];
+  questions?: { q: string; options: string[]; multi?: boolean }[];
 }
 
 export interface UserFile {

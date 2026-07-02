@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
+import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import type { ConversationMessage } from "@/lib/types";
 import styles from "./BuilderAssistantPanel.module.css";
@@ -71,14 +72,8 @@ export function BuilderAssistantPanel() {
               Insérer dans le prompt système
             </button>
           )}
-          {!isUser && isLastMessage && !!m.suggestions?.length && (
-            <div className={styles.suggestions}>
-              {m.suggestions.map((s, si) => (
-                <button key={si} type="button" className={styles.suggestionChip} onClick={() => sendBuilderMessage(s)}>
-                  {s}
-                </button>
-              ))}
-            </div>
+          {!isUser && isLastMessage && !!m.questions?.length && (
+            <QuickReplyQuestions questions={m.questions} onSubmit={sendBuilderMessage} />
           )}
         </div>
       </div>

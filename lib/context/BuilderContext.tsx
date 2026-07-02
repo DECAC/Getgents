@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG } from "@/lib/mock-data/builder";
-import { extractSuggestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
+import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 
 export type BuilderTab = "prompt" | "connectors" | "artefacts";
 
@@ -256,7 +256,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
             ...history,
             { role: "user", content: text },
           ],
-          max_tokens: 1024,
+          max_tokens: 2048,
         }),
       })
         .then((res) => res.json())
@@ -264,7 +264,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
           const raw: string =
             data?.choices?.[0]?.message?.content ??
             `Erreur API : ${data?.error?.message ?? JSON.stringify(data)}`;
-          const { text: reply, suggestions } = extractSuggestions(raw);
+          const { text: reply, questions } = extractQuestions(raw);
           const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
           setDrafts((p) => {
             const d = p[id];
@@ -274,7 +274,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
                 ...d,
                 builderConversation: [
                   ...d.builderConversation,
-                  { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant", suggestions },
+                  { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant", questions },
                 ],
               },
             };
