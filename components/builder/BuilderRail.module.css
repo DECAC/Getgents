@@ -1,0 +1,151 @@
+.rail {
+  background: var(--card);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 18px 16px 14px;
+  flex-shrink: 0;
+}
+
+.mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--plum);
+  position: relative;
+  flex: none;
+}
+.mark::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 3px;
+  background: #fff;
+  opacity: 0.85;
+}
+
+.brandName {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.backLink {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.backLink:hover {
+  color: var(--ink);
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  padding: 10px 16px 6px;
+  flex-shrink: 0;
+}
+
+.newBtn {
+  margin: 4px 12px 8px;
+  padding: 9px 12px;
+  border-radius: var(--r);
+  border: 1px dashed var(--line);
+  color: var(--plum);
+  font-weight: 600;
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.newBtn:hover {
+  background: var(--plum-tint);
+  border-color: var(--plum);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.item {
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border-radius: var(--r);
+  margin-bottom: 3px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.item:hover {
+  background: var(--bg);
+}
+.item.active {
+  background: var(--plum-tint);
+}
+
+.ic {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+}
+.item.active .ic {
+  border-color: var(--plum);
+}
+
+.name {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.statusBadge {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.statusDraft { background: var(--line-soft); color: var(--muted); }
+.statusReview { background: var(--gold-tint); color: var(--gold); }
+.statusPublished { background: var(--sage-tint); color: var(--sage-700); }

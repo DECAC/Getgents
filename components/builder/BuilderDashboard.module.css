@@ -1,0 +1,141 @@
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 36px 24px 60px;
+}
+
+.wrap {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--plum);
+  flex: none;
+}
+
+.title {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.backLink {
+  margin-left: auto;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--sage-700);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px;
+  text-align: left;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.card:hover {
+  border-color: var(--plum);
+  box-shadow: 0 4px 14px rgba(21, 33, 43, 0.06);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 10px;
+}
+
+.ic {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--plum-tint);
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  flex: none;
+}
+
+.name {
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+}
+
+.statusBadge {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 3px;
+  display: inline-block;
+}
+.statusDraft { background: var(--line-soft); color: var(--muted); }
+.statusReview { background: var(--gold-tint); color: var(--gold); }
+.statusPublished { background: var(--sage-tint); color: var(--sage-700); }
+
+.objective {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 10px;
+  min-height: 36px;
+}
+
+.meta {
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.newCard {
+  border: 1px dashed var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--plum);
+  font-weight: 600;
+  font-size: 13px;
+  min-height: 140px;
+  cursor: pointer;
+}
+.newCard:hover {
+  background: var(--plum-tint);
+  border-color: var(--plum);
+}

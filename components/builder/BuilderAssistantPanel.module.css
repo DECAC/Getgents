@@ -1,0 +1,192 @@
+.panel {
+  background: var(--card);
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.head {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex: none;
+}
+.headIc {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--plum);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  flex: none;
+}
+.headMeta {
+  flex: 1;
+  min-width: 0;
+}
+.headTitle {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.headSub {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.scope {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  background: var(--plum-tint);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 11px;
+  color: var(--plum);
+  flex: none;
+}
+.scope svg {
+  flex: none;
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+  min-height: 0;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12.5px;
+  padding-top: 30px;
+}
+
+.msg {
+  margin-bottom: 16px;
+  display: flex;
+  gap: 11px;
+}
+.msgUser {
+  flex-direction: row-reverse;
+}
+.av {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+.msgAgent .av {
+  background: var(--plum);
+  color: #fff;
+}
+.msgUser .av {
+  background: var(--sage-tint);
+  color: var(--sage-700);
+  border-radius: 50%;
+}
+.bubble {
+  padding: 10px 13px;
+  border-radius: 14px;
+  max-width: 82%;
+  font-size: 13px;
+}
+.msgAgent .bubble {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-top-left-radius: 5px;
+}
+.msgUser .bubble {
+  background: var(--sage-700);
+  color: #eaf1ec;
+  border-top-right-radius: 5px;
+}
+.t {
+  font-size: 10px;
+  color: var(--faint);
+  margin-top: 5px;
+}
+.msgUser .t {
+  color: #9cb6a6;
+}
+
+.insertBtn {
+  margin-top: 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--plum);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.insertBtn:hover {
+  text-decoration: underline;
+}
+
+.composerWrap {
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--line);
+  flex: none;
+}
+.composer {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 6px 6px 6px 13px;
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+}
+.composer:focus-within {
+  border-color: var(--plum);
+}
+.composerTextarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  font-size: 13px;
+  line-height: 1.5;
+  background: transparent;
+  color: var(--ink);
+  padding: 6px 0;
+  max-height: 90px;
+}
+.sendBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--plum);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.sendBtn:hover {
+  background: #5a3049;
+}
+.sendBtn:disabled {
+  background: var(--line);
+  color: var(--faint);
+  cursor: default;
+}
+
+.aiDisclosure {
+  font-size: 10px;
+  color: var(--faint);
+  text-align: center;
+  padding: 6px 0 0;
+}

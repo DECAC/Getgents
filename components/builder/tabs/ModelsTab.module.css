@@ -1,0 +1,165 @@
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.apiCard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.apiIc {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--plum-tint);
+  color: var(--plum);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.apiTitle {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.apiSub {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.apiBadge {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--sage-tint);
+  color: var(--sage-700);
+  white-space: nowrap;
+}
+
+.group {
+  margin-bottom: 20px;
+}
+
+.groupHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.groupTitle {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.groupRequired {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--gold);
+  background: var(--gold-tint);
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.groupOptional {
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.modelGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.modelCard {
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--card);
+  cursor: pointer;
+}
+.modelCard:hover {
+  border-color: var(--plum);
+}
+.modelCard.selected {
+  border-color: var(--plum);
+  background: var(--plum-tint);
+}
+
+.modelTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.modelLabel {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.modelCheck {
+  color: var(--plum);
+  flex: none;
+}
+
+.modelProvider {
+  font-size: 10.5px;
+  color: var(--faint);
+  font-family: "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 6px;
+}
+
+.modelTagline {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.modelPricing {
+  font-size: 10.5px;
+  color: var(--faint);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.noneCard {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: center;
+  color: var(--faint);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.noneCard:hover {
+  border-color: var(--muted);
+  color: var(--muted);
+}
+.noneCard.selected {
+  border-color: var(--muted);
+  color: var(--ink);
+  background: var(--bg);
+}

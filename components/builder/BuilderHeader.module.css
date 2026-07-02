@@ -1,0 +1,142 @@
+.head {
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  padding: 14px 22px 0;
+  flex: none;
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.ic {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: var(--plum-tint);
+  display: grid;
+  place-items: center;
+  font-size: 21px;
+  flex: none;
+}
+
+.meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.nameInput {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  border: none;
+  background: none;
+  color: var(--ink);
+  width: 100%;
+  padding: 2px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nameInput:focus {
+  outline: none;
+  background: var(--bg);
+  padding: 2px 6px;
+  margin-left: -6px;
+}
+
+.objectiveInput {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 3px;
+  border: none;
+  background: none;
+  width: 100%;
+  padding: 1px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.objectiveInput::placeholder {
+  color: var(--faint);
+}
+.objectiveInput:focus {
+  outline: none;
+  background: var(--bg);
+  padding: 1px 6px;
+  margin-left: -6px;
+}
+
+.statusPill {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 20px;
+  flex: none;
+  white-space: nowrap;
+}
+.statusDraft { background: var(--line-soft); color: var(--muted); }
+.statusReview { background: var(--gold-tint); color: var(--gold); }
+.statusPublished { background: var(--sage-tint); color: var(--sage-700); }
+
+.publishBtn {
+  flex: none;
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-weight: 600;
+  font-size: 12.5px;
+  background: var(--plum);
+  color: #fff;
+}
+.publishBtn:hover {
+  background: #5a3049;
+}
+.publishBtn:disabled {
+  background: var(--line);
+  color: var(--faint);
+  cursor: default;
+}
+
+.threadbar {
+  display: flex;
+  gap: 2px;
+  margin-top: 14px;
+  overflow-x: auto;
+}
+
+.tab {
+  padding: 9px 13px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  border-radius: 6px 6px 0 0;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tab:hover {
+  color: var(--ink);
+  background: var(--bg);
+}
+.tab.tabOn {
+  color: var(--plum);
+  font-weight: 600;
+  border-bottom-color: var(--plum);
+}
+.tabIcon {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex: none;
+}
+.tabIcon svg {
+  width: 14px;
+  height: 14px;
+}
