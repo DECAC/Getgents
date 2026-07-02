@@ -175,11 +175,15 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         content: (m.text ?? "").replace(/<[^>]+>/g, ""),
       }));
 
+      const chatModelId =
+        draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ??
+        "anthropic/claude-sonnet-5";
+
       fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "anthropic/claude-sonnet-5",
+          model: chatModelId,
           messages: [
             { role: "system", content: systemPrompt },
             ...history,
