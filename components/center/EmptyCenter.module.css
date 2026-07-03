@@ -44,6 +44,11 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+  width: 100%;
+  text-align: left;
+}
+.cardHead:hover .cardTitle {
+  color: var(--plum);
 }
 .cardTitle {
   font-weight: 700;

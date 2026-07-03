@@ -4,10 +4,11 @@ import type { Espace } from "@/lib/types";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTMLDoc } from "@/components/shared/SafeHTML";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
+import { ChecklistView } from "@/components/shared/ChecklistView";
 import styles from "./EmptyCenter.module.css";
 
 export function EmptyCenter({ espace }: { espace: Espace }) {
-  const { openArtefactModal } = useEspace();
+  const { openArtefactModal, toggleChecklistItem } = useEspace();
 
   if (espace.artefacts.length === 0) {
     return (
@@ -24,14 +25,20 @@ export function EmptyCenter({ espace }: { espace: Espace }) {
   return (
     <div className={styles.feed}>
       {espace.artefacts.map((a) => (
-        <button key={a.id} className={styles.card} onClick={() => openArtefactModal(a.id)}>
-          <div className={styles.cardHead}>
+        <div key={a.id} className={styles.card}>
+          <button type="button" className={styles.cardHead} onClick={() => openArtefactModal(a.id)}>
             <span className={styles.cardTitle}>{a.title}</span>
             <span className={styles.cardMeta}>{a.type} · {a.date}</span>
-          </div>
+          </button>
           {a.chartData && <MiniBarChart data={a.chartData} />}
+          {a.checklistItems && (
+            <ChecklistView
+              items={a.checklistItems}
+              onToggle={(i) => toggleChecklistItem(a.id, i)}
+            />
+          )}
           {a.body && <SafeHTMLDoc className={styles.cardBody} html={a.body} />}
-        </button>
+        </div>
       ))}
     </div>
   );

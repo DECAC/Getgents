@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTMLDoc } from "./SafeHTML";
 import { MiniBarChart } from "./MiniBarChart";
+import { ChecklistView } from "./ChecklistView";
 import styles from "./Modal.module.css";
 
 function VisualGrid() {
@@ -39,7 +40,7 @@ function VisualGrid() {
 }
 
 export function ArtefactModal() {
-  const { currentEspace, modalArtefactId, closeModal } = useEspace();
+  const { currentEspace, modalArtefactId, closeModal, toggleChecklistItem } = useEspace();
 
   const artefact = modalArtefactId
     ? currentEspace.artefacts.find((a) => a.id === modalArtefactId) ?? null
@@ -88,6 +89,12 @@ export function ArtefactModal() {
             </div>
           )}
           {artefact.chartData && <MiniBarChart data={artefact.chartData} />}
+          {artefact.checklistItems && (
+            <ChecklistView
+              items={artefact.checklistItems}
+              onToggle={(i) => toggleChecklistItem(artefact.id, i)}
+            />
+          )}
           {artefact.body && <SafeHTMLDoc html={artefact.body} />}
         </div>
 

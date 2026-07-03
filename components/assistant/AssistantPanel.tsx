@@ -4,10 +4,18 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
+import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import type { ConversationMessage } from "@/lib/types";
 import { setAssistWidthFromPointer } from "@/lib/assistResize";
 import { threadPreview, threadLastActivity } from "@/lib/conversationUtils";
 import styles from "./AssistantPanel.module.css";
+
+const PROPOSAL_KIND_LABEL: Record<string, string> = {
+  report: "Rapport",
+  checklist: "Checklist",
+  chart: "Graphique",
+  visual: "Aperçu visuel",
+};
 
 export function AssistantPanel() {
   const {
@@ -17,6 +25,7 @@ export function AssistantPanel() {
     switchTab,
     openArtefactModal,
     sendMessage,
+    confirmArtefactProposal,
     startNewConversation,
     switchConversation,
   } = useEspace();
@@ -145,6 +154,67 @@ export function AssistantPanel() {
           <VisualGrid />
           <div className={styles.artefMeta}>{a.date} · illustration stylisée, pas une photo</div>
         </button>
+      );
+    }
+
+    if (m.role === "artef-proposal" && m.proposal) {
+      const p = m.proposal;
+      if (m.proposalStatus === "added") {
+        return (
+          <button key={i} className={styles.artefPointer} onClick={() => openArtefactModal(m.ref ?? "")}>
+            <div className={[styles.pic, styles.picSent].join(" ")}>✓</div>
+            <div className={styles.ptext}>
+              <div className={styles.ptitle}>Ajouté à votre espace — {p.title}</div>
+            </div>
+            <div className={styles.plink}>
+              Voir
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </div>
+          </button>
+        );
+      }
+      if (m.proposalStatus === "dismissed") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            Proposition ignorée — {p.title}
+          </div>
+        );
+      }
+      return (
+        <div key={i} className={styles.proposalCard}>
+          <div className={styles.proposalHead}>
+            <span className={styles.proposalKind}>{PROPOSAL_KIND_LABEL[p.kind] ?? "Artefact"}</span>
+            <span className={styles.proposalTitle}>{p.title}</span>
+          </div>
+          {p.chartData && <MiniBarChart data={p.chartData} />}
+          {p.items && (
+            <ul className={styles.proposalItems}>
+              {p.items.slice(0, 6).map((it, ii) => <li key={ii}>{it}</li>)}
+              {p.items.length > 6 && <li>… et {p.items.length - 6} de plus</li>}
+            </ul>
+          )}
+          {p.body && !p.items && !p.chartData && (
+            <div className={styles.proposalBody}>{p.body.slice(0, 200)}{p.body.length > 200 ? "…" : ""}</div>
+          )}
+          <div className={styles.proposalActions}>
+            <button
+              type="button"
+              className={styles.proposalAddBtn}
+              onClick={() => confirmArtefactProposal(m.id ?? "", "add")}
+            >
+              Ajouter à mon espace
+            </button>
+            <button
+              type="button"
+              className={styles.proposalDismissBtn}
+              onClick={() => confirmArtefactProposal(m.id ?? "", "dismiss")}
+            >
+              Ignorer
+            </button>
+          </div>
+        </div>
       );
     }
 

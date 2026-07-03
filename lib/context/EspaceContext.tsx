@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
-import type { Espace, EspacesMap, ReservationItem, ConversationThread, ConversationMessage } from "@/lib/types";
+import type { Espace, EspacesMap, ReservationItem, ConversationThread, ConversationMessage, Artefact } from "@/lib/types";
 import { ESPACES as INITIAL_ESPACES } from "@/lib/mock-data/espaces";
 import {
   formatConversationStartedAt,
@@ -80,6 +80,8 @@ interface EspaceContextValue {
   updateMemory: (text: string) => void;
   sendMessage: (text: string) => void;
   isThinking: boolean;
+  confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss") => void;
+  toggleChecklistItem: (artefactId: string, itemIndex: number) => void;
   startNewConversation: () => void;
   switchConversation: (id: string) => void;
   confirmReservation: (itemId: string) => void;
@@ -238,17 +240,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
 
         if (afterArtefact.artefact) {
           const sig = afterArtefact.artefact;
-          const meta = ARTEFACT_KIND_META[sig.kind] ?? { type: "Artefact", icon: "📄" };
-          const artefactId = `artef-${Date.now()}`;
-          const newArtefact = {
-            id: artefactId,
-            title: sig.title,
-            type: meta.type,
-            icon: meta.icon,
-            date: "à l'instant",
-            body: sig.body ? renderMarkdown(sig.body) : undefined,
-            chartData: sig.chartData,
-          };
+          const proposalId = `prop-${Date.now()}`;
           setEspaces((p) => {
             const e = p[id];
             const convs = e.conversations.map((t) => {
@@ -256,10 +248,16 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
               const msgs = [...t.messages];
               const lastIdx = msgs.length - 1;
               if (lastIdx >= 0) msgs[lastIdx] = { ...msgs[lastIdx], text: finalHtml, questions: afterQuestions.questions };
-              msgs.push({ role: "artef-new" as const, ref: artefactId, title: newArtefact.title, icon: newArtefact.icon, t: "à l'instant" });
+              msgs.push({
+                id: proposalId,
+                role: "artef-proposal" as const,
+                proposal: sig,
+                proposalStatus: "pending" as const,
+                t: "à l'instant",
+              });
               return { ...t, messages: msgs };
             });
-            return { ...p, [id]: { ...e, artefacts: [newArtefact, ...e.artefacts], conversations: convs } };
+            return { ...p, [id]: { ...e, conversations: convs } };
           });
         } else {
           updateLastMessage((m) => ({ ...m, text: finalHtml, questions: afterQuestions.questions }));
@@ -273,6 +271,77 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         }));
       })
       .finally(() => setIsThinking(false));
+  }, []);
+
+  const confirmArtefactProposal = useCallback((proposalId: string, decision: "add" | "dismiss") => {
+    const id = currentIdRef.current;
+    setEspaces((prev) => {
+      const espace = prev[id];
+      let targetMsg: ConversationMessage | undefined;
+      let targetThreadId: string | undefined;
+      for (const t of espace.conversations) {
+        const found = t.messages.find((m) => m.id === proposalId);
+        if (found) {
+          targetMsg = found;
+          targetThreadId = t.id;
+          break;
+        }
+      }
+      if (!targetMsg?.proposal) return prev;
+
+      let artefacts = espace.artefacts;
+      let newArtefactId: string | undefined;
+      if (decision === "add") {
+        const sig = targetMsg.proposal;
+        const meta = ARTEFACT_KIND_META[sig.kind] ?? { type: "Artefact", icon: "📄" };
+        newArtefactId = `artef-${Date.now()}`;
+        const newArtefact: Artefact = {
+          id: newArtefactId,
+          title: sig.title,
+          type: meta.type,
+          icon: meta.icon,
+          date: "à l'instant",
+          body: sig.body ? renderMarkdown(sig.body) : undefined,
+          chartData: sig.chartData,
+          checklistItems: sig.items?.map((label) => ({ label, checked: false })),
+        };
+        artefacts = [newArtefact, ...espace.artefacts];
+      }
+
+      const conversations = espace.conversations.map((t) =>
+        t.id === targetThreadId
+          ? {
+              ...t,
+              messages: t.messages.map((m) =>
+                m.id === proposalId
+                  ? {
+                      ...m,
+                      proposalStatus: decision === "add" ? ("added" as const) : ("dismissed" as const),
+                      ref: newArtefactId,
+                    }
+                  : m
+              ),
+            }
+          : t
+      );
+
+      return { ...prev, [id]: { ...espace, artefacts, conversations } };
+    });
+  }, []);
+
+  const toggleChecklistItem = useCallback((artefactId: string, itemIndex: number) => {
+    const id = currentIdRef.current;
+    setEspaces((prev) => {
+      const espace = prev[id];
+      const artefacts = espace.artefacts.map((a) => {
+        if (a.id !== artefactId || !a.checklistItems) return a;
+        const checklistItems = a.checklistItems.map((it, i) =>
+          i === itemIndex ? { ...it, checked: !it.checked } : it
+        );
+        return { ...a, checklistItems };
+      });
+      return { ...prev, [id]: { ...espace, artefacts } };
+    });
   }, []);
 
   const startNewConversation = useCallback(() => {
@@ -405,6 +474,8 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         updateMemory,
         sendMessage,
         isThinking,
+        confirmArtefactProposal,
+        toggleChecklistItem,
         startNewConversation,
         switchConversation,
         confirmReservation,

@@ -76,7 +76,8 @@ export type ConversationRole =
   | "tool"
   | "artef-visual"
   | "artef-pointer"
-  | "artef-new";
+  | "artef-new"
+  | "artef-proposal";
 
 export interface ConversationThread {
   id: string;
@@ -84,7 +85,16 @@ export interface ConversationThread {
   messages: ConversationMessage[];
 }
 
+export interface ArtefactProposal {
+  kind: "report" | "checklist" | "chart" | "visual";
+  title: string;
+  body?: string;
+  items?: string[];
+  chartData?: { label: string; value: number }[];
+}
+
 export interface ConversationMessage {
+  id?: string;
   role: ConversationRole;
   text?: string;
   t?: string;
@@ -98,6 +108,8 @@ export interface ConversationMessage {
   title?: string;
   link?: string;
   questions?: { q: string; options: string[]; multi?: boolean }[];
+  proposal?: ArtefactProposal;
+  proposalStatus?: "pending" | "added" | "dismissed";
 }
 
 export interface UserFile {
@@ -116,6 +128,7 @@ export interface Artefact {
   visual?: boolean;
   body?: string;
   chartData?: { label: string; value: number }[];
+  checklistItems?: { label: string; checked: boolean }[];
 }
 
 export interface EspaceMetric {

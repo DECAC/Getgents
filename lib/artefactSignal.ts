@@ -1,8 +1,9 @@
 // Format demandé au modèle : terminer sa réponse par un bloc caché
 // <!--ARTEFACT: {"kind":"report","title":"...","body":"...markdown..."}-->
-// (ou "kind":"chart" avec "chartData":[{"label":"...","value":1}]) quand un
-// artefact concret peut être produit à partir de l'échange. On l'extrait pour
-// créer un vrai artefact dans l'espace, affiché immédiatement au centre.
+// (ou "kind":"checklist" avec "items":["...","..."], ou "kind":"chart" avec
+// "chartData":[{"label":"...","value":1}]) quand un artefact concret peut
+// être produit à partir de l'échange. On l'extrait pour proposer à
+// l'utilisateur de l'ajouter à son espace — jamais ajouté automatiquement.
 const ARTEFACT_RE = /<!--ARTEFACT:\s*(\{[\s\S]*?\})\s*-->/;
 const TRUNCATED_MARKER_RE = /<!--ARTEFACT:[\s\S]*$/;
 
@@ -12,17 +13,18 @@ export interface ArtefactSignal {
   kind: ArtefactKind;
   title: string;
   body?: string;
+  items?: string[];
   chartData?: { label: string; value: number }[];
 }
 
 export const ARTEFACT_PROMPT_INSTRUCTION =
-  "Quand l'échange permet de produire un artefact concret et utile (une synthèse, une checklist, un graphique de données chiffrées, ou un point à ce stade), termine ta réponse (après le texte visible et après un éventuel bloc QUESTIONS, sur sa propre ligne) par un bloc : " +
+  "Quand l'échange permet de produire un artefact concret et utile (une synthèse, une checklist, un graphique de données chiffrées), termine ta réponse (après le texte visible et après un éventuel bloc QUESTIONS, sur sa propre ligne) par un bloc : " +
   '<!--ARTEFACT: {"kind":"report","title":"Titre court","body":"Contenu en markdown"}--> ' +
   'pour une synthèse ou un point ; ' +
-  '<!--ARTEFACT: {"kind":"checklist","title":"Titre court","body":"- élément 1\\n- élément 2"}--> ' +
-  "pour une liste de tâches (en markdown, une case par ligne) ; ou " +
+  '<!--ARTEFACT: {"kind":"checklist","title":"Titre court","items":["Élément 1","Élément 2","Élément 3"]}--> ' +
+  "pour une liste de tâches à cocher (items courts, un par élément, sans numérotation) ; ou " +
   '<!--ARTEFACT: {"kind":"chart","title":"Titre court","chartData":[{"label":"Catégorie A","value":120},{"label":"Catégorie B","value":80}]}--> ' +
-  "pour un graphique de données chiffrées. N'ajoute ce bloc que si un artefact a vraiment du sens à ce stade de la conversation ; sinon ne l'ajoute pas, et n'en ajoute jamais plus d'un par réponse.";
+  "pour un graphique de données chiffrées. Précise que l'utilisateur pourra choisir de l'ajouter ou non à son espace — ne dis jamais qu'il est déjà ajouté. N'ajoute ce bloc que si un artefact a vraiment du sens à ce stade ; sinon ne l'ajoute pas, et n'en ajoute jamais plus d'un par réponse.";
 
 export function extractArtefactSignal(raw: string): { text: string; artefact: ArtefactSignal | null } {
   const match = raw.match(ARTEFACT_RE);
@@ -44,6 +46,9 @@ export function extractArtefactSignal(raw: string): { text: string; artefact: Ar
         kind: parsed.kind,
         title: parsed.title,
         body: typeof parsed.body === "string" ? parsed.body : undefined,
+        items: Array.isArray(parsed.items)
+          ? parsed.items.filter((s: unknown): s is string => typeof s === "string").slice(0, 30)
+          : undefined,
         chartData: Array.isArray(parsed.chartData)
           ? parsed.chartData
               .filter((d: unknown): d is { label: string; value: number } =>

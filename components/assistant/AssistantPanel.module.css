@@ -357,6 +357,83 @@
 .artefPointer:hover {
   border-color: var(--sage);
 }
+
+.proposalCard {
+  max-width: 88%;
+  margin-left: 39px;
+  margin-bottom: 20px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 13px 15px;
+}
+.proposalHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.proposalKind {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--plum);
+  background: var(--plum-tint);
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+.proposalTitle {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.proposalItems {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--ink);
+  line-height: 1.6;
+}
+.proposalBody {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.proposalActions {
+  display: flex;
+  gap: 8px;
+}
+.proposalAddBtn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--plum);
+  color: #fff;
+}
+.proposalAddBtn:hover {
+  background: #5a3049;
+}
+.proposalDismissBtn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.proposalDismissBtn:hover {
+  background: var(--bg);
+}
+.proposalDismissed {
+  max-width: 78%;
+  margin-left: 39px;
+  margin-bottom: 20px;
+  font-size: 11.5px;
+  color: var(--faint);
+  font-style: italic;
+}
 .pic {
   width: 28px;
   height: 28px;
