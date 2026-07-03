@@ -26,6 +26,16 @@ const TABS: { id: BuilderTab; label: string; icon: JSX.Element }[] = [
     ),
   },
   {
+    id: "knowledge",
+    label: "Connaissances",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      </svg>
+    ),
+  },
+  {
     id: "models",
     label: "Modèles",
     icon: (
@@ -89,6 +99,20 @@ export function BuilderHeader() {
         >
           {currentDraft.status === "published" ? "Publié" : "Publier la V1"}
         </button>
+        {currentDraft.status === "published" && (
+          <a
+            href={`/espace/${currentDraft.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.viewLiveLink}
+          >
+            Voir côté utilisateur
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <path d="M15 3h6v6M10 14 21 3" />
+            </svg>
+          </a>
+        )}
       </div>
 
       <div className={styles.threadbar} role="tablist">

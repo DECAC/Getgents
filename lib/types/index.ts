@@ -141,6 +141,8 @@ export interface Espace {
   activeConversationId: string;
   files: UserFile[];
   artefacts: Artefact[];
+  systemPrompt?: string;
+  chatModelId?: string;
 }
 
 export type EspacesMap = Record<string, Espace>;

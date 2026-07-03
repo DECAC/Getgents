@@ -249,6 +249,8 @@ Règles impératives :
         t: "09:03",
       },
     ],
+    knowledgeFiles: [],
+    knowledgeUrls: [],
   },
 
   "succession-v1": {
@@ -285,6 +287,8 @@ Cet espace traite des données sensibles : reste factuel, sobre, et évite toute
         t: "lun.",
       },
     ],
+    knowledgeFiles: [],
+    knowledgeUrls: [],
   },
 
   "nouveau-gent": {
@@ -311,6 +315,8 @@ Cet espace traite des données sensibles : reste factuel, sobre, et évite toute
         t: "à l'instant",
       },
     ],
+    knowledgeFiles: [],
+    knowledgeUrls: [],
   },
 };
 

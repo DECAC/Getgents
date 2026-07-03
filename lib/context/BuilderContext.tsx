@@ -4,8 +4,9 @@ import React, { createContext, useContext, useState, useCallback, useRef, type R
 import type { GentDraft, GentDraftsMap, ModelCapability } from "@/lib/types/builder";
 import { GENT_DRAFTS, CONNECTOR_CATALOG } from "@/lib/mock-data/builder";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
+import { writePublishedGent, draftToEspace } from "@/lib/publishedGents";
 
-export type BuilderTab = "prompt" | "models" | "connectors" | "artefacts";
+export type BuilderTab = "prompt" | "knowledge" | "models" | "connectors" | "artefacts";
 
 interface BuilderContextValue {
   drafts: GentDraftsMap;
@@ -28,6 +29,11 @@ interface BuilderContextValue {
   addConnector: (connectorId: string) => void;
 
   toggleArtefactTemplate: (templateId: string) => void;
+
+  addKnowledgeFile: (name: string, size: string) => void;
+  removeKnowledgeFile: (fileId: string) => void;
+  addKnowledgeUrl: (url: string) => void;
+  removeKnowledgeUrl: (urlId: string) => void;
 
   sendBuilderMessage: (text: string) => void;
   applyBuilderSuggestion: (suggestion: string) => void;
@@ -98,10 +104,11 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   }, [currentId]);
 
   const publishDraft = useCallback(() => {
-    setDrafts((prev) => ({
-      ...prev,
-      [currentId]: { ...prev[currentId], status: "published", updatedAt: "à l'instant" },
-    }));
+    setDrafts((prev) => {
+      const published: GentDraft = { ...prev[currentId], status: "published", updatedAt: "à l'instant" };
+      writePublishedGent(currentId, draftToEspace(published));
+      return { ...prev, [currentId]: published };
+    });
   }, [currentId]);
 
   const assignModel = useCallback((capability: ModelCapability, modelId: string | null) => {
@@ -151,90 +158,126 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     });
   }, [currentId]);
 
+  const addKnowledgeFile = useCallback((name: string, size: string) => {
+    setDrafts((prev) => {
+      const draft = prev[currentId];
+      const file = { id: `kf-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name, size };
+      return { ...prev, [currentId]: { ...draft, knowledgeFiles: [...draft.knowledgeFiles, file], updatedAt: "à l'instant" } };
+    });
+  }, [currentId]);
+
+  const removeKnowledgeFile = useCallback((fileId: string) => {
+    setDrafts((prev) => {
+      const draft = prev[currentId];
+      return {
+        ...prev,
+        [currentId]: {
+          ...draft,
+          knowledgeFiles: draft.knowledgeFiles.filter((f) => f.id !== fileId),
+          updatedAt: "à l'instant",
+        },
+      };
+    });
+  }, [currentId]);
+
+  const addKnowledgeUrl = useCallback((url: string) => {
+    setDrafts((prev) => {
+      const draft = prev[currentId];
+      const entry = { id: `ku-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, url };
+      return { ...prev, [currentId]: { ...draft, knowledgeUrls: [...draft.knowledgeUrls, entry], updatedAt: "à l'instant" } };
+    });
+  }, [currentId]);
+
+  const removeKnowledgeUrl = useCallback((urlId: string) => {
+    setDrafts((prev) => {
+      const draft = prev[currentId];
+      return {
+        ...prev,
+        [currentId]: {
+          ...draft,
+          knowledgeUrls: draft.knowledgeUrls.filter((u) => u.id !== urlId),
+          updatedAt: "à l'instant",
+        },
+      };
+    });
+  }, [currentId]);
+
   const sendBuilderMessage = useCallback((text: string) => {
     const id = currentIdRef.current;
+    const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" };
+
+    // L'updater doit rester pur (pas d'effet de bord dedans, sinon React peut
+    // l'appeler deux fois en StrictMode/dev) : on capture juste ce qu'il faut
+    // pour l'appel API dans ces variables, le fetch se fait après, en dehors.
+    let history: { role: string; content: string }[] = [];
+    let systemPrompt = "";
+    let chatModelId = "anthropic/claude-sonnet-5";
 
     setDrafts((prev) => {
       const draft = prev[id];
-      const builderConversation = [
-        ...draft.builderConversation,
-        { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" },
-      ];
+      systemPrompt = `${
+        draft.systemPrompt
+          ? `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
+          : `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace.`
+      }\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
+      history = draft.builderConversation.map((m) => ({
+        role: m.role === "agent" ? "assistant" : "user",
+        content: (m.text ?? "").replace(/<[^>]+>/g, ""),
+      }));
+      chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? chatModelId;
+
+      const builderConversation = [...draft.builderConversation, userMsg];
       return { ...prev, [id]: { ...draft, builderConversation } };
     });
 
     setIsThinking(true);
 
-    setDrafts((prev) => {
-      const draft = prev[id];
-      const systemPrompt = `${
-        draft.systemPrompt
-          ? `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
-          : `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace.`
-      }\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
-
-      const history = draft.builderConversation.map((m) => ({
-        role: m.role === "agent" ? "assistant" : "user",
-        content: (m.text ?? "").replace(/<[^>]+>/g, ""),
-      }));
-
-      const chatModelId =
-        draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ??
-        "anthropic/claude-sonnet-5";
-
-      fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: chatModelId,
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...history,
-            { role: "user", content: text },
-          ],
-          max_tokens: 2048,
-        }),
+    fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: chatModelId,
+        messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: text }],
+        max_tokens: 2048,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const raw: string =
+          data?.choices?.[0]?.message?.content ??
+          `Erreur API : ${data?.error?.message ?? JSON.stringify(data)}`;
+        const { text: reply, questions } = extractQuestions(raw);
+        const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
+        setDrafts((p) => {
+          const d = p[id];
+          return {
+            ...p,
+            [id]: {
+              ...d,
+              builderConversation: [
+                ...d.builderConversation,
+                { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant", questions },
+              ],
+            },
+          };
+        });
       })
-        .then((res) => res.json())
-        .then((data) => {
-          const raw: string =
-            data?.choices?.[0]?.message?.content ??
-            `Erreur API : ${data?.error?.message ?? JSON.stringify(data)}`;
-          const { text: reply, questions } = extractQuestions(raw);
-          const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
-          setDrafts((p) => {
-            const d = p[id];
-            return {
-              ...p,
-              [id]: {
-                ...d,
-                builderConversation: [
-                  ...d.builderConversation,
-                  { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant", questions },
-                ],
-              },
-            };
-          });
-        })
-        .catch(() => {
-          setDrafts((p) => {
-            const d = p[id];
-            return {
-              ...p,
-              [id]: {
-                ...d,
-                builderConversation: [
-                  ...d.builderConversation,
-                  { role: "agent" as const, text: "<p>Erreur de connexion au service IA.</p>", t: "à l'instant" },
-                ],
-              },
-            };
-          });
-        })
-        .finally(() => setIsThinking(false));
-
-      return prev;
-    });
+      .catch(() => {
+        setDrafts((p) => {
+          const d = p[id];
+          return {
+            ...p,
+            [id]: {
+              ...d,
+              builderConversation: [
+                ...d.builderConversation,
+                { role: "agent" as const, text: "<p>Erreur de connexion au service IA.</p>", t: "à l'instant" },
+              ],
+            },
+          };
+        });
+      })
+      .finally(() => setIsThinking(false));
   }, []);
 
   const applyBuilderSuggestion = useCallback((suggestion: string) => {
@@ -263,6 +306,10 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         toggleConnector,
         addConnector,
         toggleArtefactTemplate,
+        addKnowledgeFile,
+        removeKnowledgeFile,
+        addKnowledgeUrl,
+        removeKnowledgeUrl,
         sendBuilderMessage,
         applyBuilderSuggestion,
         isThinking,

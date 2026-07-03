@@ -49,6 +49,17 @@ export interface ArtefactTemplateConfig {
 
 export type GentDraftStatus = "draft" | "review" | "published";
 
+export interface KnowledgeFile {
+  id: string;
+  name: string;
+  size: string;
+}
+
+export interface KnowledgeUrl {
+  id: string;
+  url: string;
+}
+
 export interface GentDraft {
   id: string;
   name: string;
@@ -61,6 +72,8 @@ export interface GentDraft {
   connectors: GentConnector[];
   artefactTemplates: ArtefactTemplateConfig[];
   builderConversation: ConversationMessage[];
+  knowledgeFiles: KnowledgeFile[];
+  knowledgeUrls: KnowledgeUrl[];
 }
 
 export type GentDraftsMap = Record<string, GentDraft>;

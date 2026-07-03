@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { Espace, EspacesMap, ReservationItem, ConversationThread } from "@/lib/types";
 import { ESPACES as INITIAL_ESPACES } from "@/lib/mock-data/espaces";
 import {
@@ -9,8 +9,40 @@ import {
   newConversationId,
 } from "@/lib/conversationUtils";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
+import { readPublishedGents } from "@/lib/publishedGents";
 
 type ActiveTab = number | "map";
+
+// Placeholder utilisé le temps qu'un gent tout juste publié (stocké côté client
+// dans localStorage) soit chargé — évite un crash pendant le rendu serveur ou
+// la première peinture cliente, qui n'ont pas accès à localStorage.
+const FALLBACK_ESPACE: Espace = {
+  icon: "✨",
+  name: "Gent",
+  gent: "Gent",
+  version: 1,
+  status: "live",
+  statusLabel: "Actif",
+  sensitive: false,
+  metrics: [],
+  integrations: [],
+  tools: [],
+  tabs: [],
+  map: null,
+  memory: "",
+  conversations: [],
+  activeConversationId: "",
+  files: [],
+  artefacts: [],
+};
+
+function seedEspaces(initialId: string): EspacesMap {
+  const espaces: EspacesMap = JSON.parse(JSON.stringify(INITIAL_ESPACES));
+  if (!espaces[initialId]) {
+    espaces[initialId] = { ...FALLBACK_ESPACE };
+  }
+  return espaces;
+}
 
 interface EspaceContextValue {
   espaces: EspacesMap;
@@ -50,9 +82,7 @@ interface EspaceContextValue {
 const EspaceContext = createContext<EspaceContextValue | null>(null);
 
 export function EspaceProvider({ children, initialId }: { children: ReactNode; initialId: string }) {
-  const [espaces, setEspaces] = useState<EspacesMap>(() =>
-    JSON.parse(JSON.stringify(INITIAL_ESPACES))
-  );
+  const [espaces, setEspaces] = useState<EspacesMap>(() => seedEspaces(initialId));
   const [currentId, setCurrentId] = useState(initialId);
   const [activeTab, setActiveTab] = useState<ActiveTab>(0);
   const [railCollapsed, setRailCollapsed] = useState(false);
@@ -64,6 +94,15 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   const [isThinking, setIsThinking] = useState(false);
   const currentIdRef = useRef(currentId);
   currentIdRef.current = currentId;
+
+  // Recharge les gents publiés depuis ce navigateur (localStorage) — n'existe
+  // pas encore côté serveur/premier rendu, d'où le placeholder FALLBACK_ESPACE.
+  useEffect(() => {
+    const published = readPublishedGents();
+    if (Object.keys(published).length) {
+      setEspaces((prev) => ({ ...prev, ...published }));
+    }
+  }, []);
 
   const currentEspace = espaces[currentId];
   const activeConversation = getActiveConversation(
@@ -125,83 +164,79 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
 
   const sendMessage = useCallback((text: string) => {
     const id = currentIdRef.current;
+    const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" };
 
-    // Add user message immediately
+    // L'updater doit rester pur (pas d'effet de bord dedans, sinon React peut
+    // l'appeler deux fois en StrictMode/dev) : on capture juste ce qu'il faut
+    // pour l'appel API dans ces variables, le fetch se fait après, en dehors.
+    let history: { role: string; content: string }[] = [];
+    let systemPrompt = "";
+    let chatModelId = "anthropic/claude-sonnet-5";
+
     setEspaces((prev) => {
       const espace = prev[id];
       const threadId = espace.activeConversationId;
-      const conversations = espace.conversations.map((thread) =>
-        thread.id === threadId
-          ? { ...thread, messages: [...thread.messages, { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" }] }
-          : thread
+      const thread = espace.conversations.find((t) => t.id === threadId);
+      const priorMessages = [...(thread?.messages ?? []), userMsg];
+      history = priorMessages.map((m) => ({
+        role: m.role === "agent" ? "assistant" : "user",
+        content: (m.text ?? "").replace(/<[^>]+>/g, ""),
+      }));
+
+      const basePrompt =
+        espace.systemPrompt?.trim() || `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`;
+      const memoryNote = espace.memory ? `\n\nMémoire de l'espace : ${espace.memory}` : "";
+      systemPrompt = `${basePrompt}${memoryNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
+      chatModelId = espace.chatModelId ?? chatModelId;
+
+      const conversations = espace.conversations.map((t) =>
+        t.id === threadId ? { ...t, messages: [...t.messages, userMsg] } : t
       );
       return { ...prev, [id]: { ...espace, conversations } };
     });
 
     setIsThinking(true);
 
-    // Build history for the API call
-    setEspaces((prev) => {
-      const espace = prev[id];
-      const threadId = espace.activeConversationId;
-      const thread = espace.conversations.find((t) => t.id === threadId);
-      const history = (thread?.messages ?? []).map((m) => ({
-        role: m.role === "agent" ? "assistant" : "user",
-        content: (m.text ?? "").replace(/<[^>]+>/g, ""),
-      }));
-
-      const systemPrompt = `${
-        espace.memory
-          ? `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}". Mémoire de l'espace : ${espace.memory}`
-          : `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`
-      }\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
-
-      fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "anthropic/claude-sonnet-5",
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...history,
-          ],
-          max_tokens: 2048,
-        }),
+    fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: chatModelId,
+        messages: [{ role: "system", content: systemPrompt }, ...history],
+        max_tokens: 2048,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const raw: string =
+          data?.choices?.[0]?.message?.content ??
+          `Erreur API : ${data?.error?.message ?? JSON.stringify(data)}`;
+        const { text: reply, questions } = extractQuestions(raw);
+        const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
+        setEspaces((p) => {
+          const e = p[id];
+          const tId = e.activeConversationId;
+          const convs = e.conversations.map((t) =>
+            t.id === tId
+              ? { ...t, messages: [...t.messages, { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant", questions }] }
+              : t
+          );
+          return { ...p, [id]: { ...e, conversations: convs } };
+        });
       })
-        .then((res) => res.json())
-        .then((data) => {
-          const raw: string =
-            data?.choices?.[0]?.message?.content ??
-            `Erreur API : ${data?.error?.message ?? JSON.stringify(data)}`;
-          const { text: reply, questions } = extractQuestions(raw);
-          const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
-          setEspaces((p) => {
-            const e = p[id];
-            const tId = e.activeConversationId;
-            const convs = e.conversations.map((t) =>
-              t.id === tId
-                ? { ...t, messages: [...t.messages, { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant", questions }] }
-                : t
-            );
-            return { ...p, [id]: { ...e, conversations: convs } };
-          });
-        })
-        .catch(() => {
-          setEspaces((p) => {
-            const e = p[id];
-            const tId = e.activeConversationId;
-            const convs = e.conversations.map((t) =>
-              t.id === tId
-                ? { ...t, messages: [...t.messages, { role: "agent" as const, text: "<p>Erreur de connexion au service IA.</p>", t: "à l'instant" }] }
-                : t
-            );
-            return { ...p, [id]: { ...e, conversations: convs } };
-          });
-        })
-        .finally(() => setIsThinking(false));
-
-      return prev; // no-op state update; side effect above does the real work
-    });
+      .catch(() => {
+        setEspaces((p) => {
+          const e = p[id];
+          const tId = e.activeConversationId;
+          const convs = e.conversations.map((t) =>
+            t.id === tId
+              ? { ...t, messages: [...t.messages, { role: "agent" as const, text: "<p>Erreur de connexion au service IA.</p>", t: "à l'instant" }] }
+              : t
+          );
+          return { ...p, [id]: { ...e, conversations: convs } };
+        });
+      })
+      .finally(() => setIsThinking(false));
   }, []);
 
   const startNewConversation = useCallback(() => {
