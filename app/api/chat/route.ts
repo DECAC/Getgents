@@ -26,11 +26,25 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify(body),
   });
 
-  const data = await upstream.json();
+  const isStream = (body as { stream?: boolean })?.stream === true;
 
   if (!upstream.ok) {
+    const data = await upstream.json().catch(() => ({}));
     return NextResponse.json(data, { status: upstream.status });
   }
 
+  if (isStream && upstream.body) {
+    // Repasse le flux SSE d'OpenRouter tel quel — le client lit les tokens
+    // au fur et à mesure pour un affichage progressif de la réponse.
+    return new NextResponse(upstream.body, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
+  }
+
+  const data = await upstream.json();
   return NextResponse.json(data);
 }

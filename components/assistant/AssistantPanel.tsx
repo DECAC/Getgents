@@ -100,6 +100,15 @@ export function AssistantPanel() {
     if (idx >= 0) switchTab(idx);
   }
 
+  // Le dernier message "agent" textuel — pas forcément le tout dernier message
+  // du fil, un pointeur d'artefact pouvant être ajouté juste après.
+  const lastAgentIndex = (() => {
+    for (let i = activeConversation.messages.length - 1; i >= 0; i--) {
+      if (activeConversation.messages[i].role === "agent") return i;
+    }
+    return -1;
+  })();
+
   function renderMessage(m: ConversationMessage, i: number) {
     if (m.role === "tool") {
       return (
@@ -139,6 +148,23 @@ export function AssistantPanel() {
       );
     }
 
+    if (m.role === "artef-new") {
+      return (
+        <button key={i} className={styles.artefPointer} onClick={() => openArtefactModal(m.ref ?? "")}>
+          <div className={[styles.pic, styles.picSent].join(" ")}>{m.icon ?? "📄"}</div>
+          <div className={styles.ptext}>
+            <div className={styles.ptitle}>{m.title}</div>
+          </div>
+          <div className={styles.plink}>
+            Voir
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+        </button>
+      );
+    }
+
     if (m.role === "artef-pointer") {
       const cls = m.status === "sent" ? styles.picSent : styles.picPending;
       return (
@@ -157,7 +183,7 @@ export function AssistantPanel() {
       );
     }
 
-    const isLastMessage = i === activeConversation.messages.length - 1;
+    const isLastMessage = i === lastAgentIndex;
     return (
       <div key={i} className={[styles.msg, m.role === "user" ? styles.msgUser : styles.msgAgent].join(" ")}>
         <div className={styles.av}>{m.role === "agent" ? "🤖" : "CL"}</div>

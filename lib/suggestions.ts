@@ -45,6 +45,9 @@ export function extractQuestions(raw: string): { text: string; questions: Questi
     // ignore malformed block
   }
 
-  const text = raw.slice(0, match.index).trim();
+  // On retire uniquement le bloc repéré : le texte avant ET après est conservé
+  // (un bloc ARTEFACT peut suivre le bloc QUESTIONS dans la même réponse).
+  const start = match.index ?? 0;
+  const text = (raw.slice(0, start) + raw.slice(start + match[0].length)).trim();
   return { text, questions };
 }

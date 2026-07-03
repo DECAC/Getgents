@@ -14,3 +14,50 @@
   max-width: 340px;
   margin: 0 auto;
 }
+
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 0;
+}
+.card {
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 20px;
+  animation: cardIn 0.35s ease;
+}
+.card:hover {
+  border-color: var(--plum);
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.cardTitle {
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+}
+.cardMeta {
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+  flex: none;
+}
+.cardBody {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.55;
+}

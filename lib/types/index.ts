@@ -75,7 +75,8 @@ export type ConversationRole =
   | "user"
   | "tool"
   | "artef-visual"
-  | "artef-pointer";
+  | "artef-pointer"
+  | "artef-new";
 
 export interface ConversationThread {
   id: string;
@@ -113,7 +114,8 @@ export interface Artefact {
   icon: string;
   date: string;
   visual?: boolean;
-  body: string;
+  body?: string;
+  chartData?: { label: string; value: number }[];
 }
 
 export interface EspaceMetric {

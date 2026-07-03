@@ -2,9 +2,12 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
+import type { ConversationMessage } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 import { writePublishedGent, draftToEspace } from "@/lib/publishedGents";
+import { renderMarkdown } from "@/lib/markdown";
+import { streamChatCompletion } from "@/lib/streamChat";
 
 export type BuilderTab = "prompt" | "connectors" | "artefacts";
 
@@ -220,10 +223,11 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   const sendBuilderMessage = useCallback((text: string) => {
     const id = currentIdRef.current;
     const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" };
+    const agentPlaceholder = { role: "agent" as const, text: "", t: "à l'instant" };
 
     // L'updater doit rester pur (pas d'effet de bord dedans, sinon React peut
     // l'appeler deux fois en StrictMode/dev) : on capture juste ce qu'il faut
-    // pour l'appel API dans ces variables, le fetch se fait après, en dehors.
+    // pour l'appel API dans ces variables, le streaming se fait après, en dehors.
     let history: { role: string; content: string }[] = [];
     let systemPrompt = "";
     let chatModelId = "anthropic/claude-sonnet-5";
@@ -241,56 +245,44 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       }));
       chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? chatModelId;
 
-      const builderConversation = [...draft.builderConversation, userMsg];
+      const builderConversation = [...draft.builderConversation, userMsg, agentPlaceholder];
       return { ...prev, [id]: { ...draft, builderConversation } };
     });
 
     setIsThinking(true);
 
-    fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    function updateLastMessage(updater: (m: ConversationMessage) => ConversationMessage) {
+      setDrafts((p) => {
+        const d = p[id];
+        const msgs = [...d.builderConversation];
+        const lastIdx = msgs.length - 1;
+        if (lastIdx < 0) return p;
+        msgs[lastIdx] = updater(msgs[lastIdx]);
+        return { ...p, [id]: { ...d, builderConversation: msgs } };
+      });
+    }
+
+    streamChatCompletion(
+      {
         model: chatModelId,
         messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: text }],
         max_tokens: 2048,
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const raw: string =
-          data?.choices?.[0]?.message?.content ??
-          `Erreur API : ${data?.error?.message ?? JSON.stringify(data)}`;
-        const { text: reply, questions } = extractQuestions(raw);
-        const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
-        setDrafts((p) => {
-          const d = p[id];
-          return {
-            ...p,
-            [id]: {
-              ...d,
-              builderConversation: [
-                ...d.builderConversation,
-                { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant", questions },
-              ],
-            },
-          };
-        });
+      },
+      (fullSoFar) => {
+        const displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
+        updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw) }));
+      }
+    )
+      .then((fullRaw) => {
+        const { text: reply, questions } = extractQuestions(fullRaw);
+        updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply), questions }));
       })
-      .catch(() => {
-        setDrafts((p) => {
-          const d = p[id];
-          return {
-            ...p,
-            [id]: {
-              ...d,
-              builderConversation: [
-                ...d.builderConversation,
-                { role: "agent" as const, text: "<p>Erreur de connexion au service IA.</p>", t: "à l'instant" },
-              ],
-            },
-          };
-        });
+      .catch((err: Error) => {
+        updateLastMessage(() => ({
+          role: "agent" as const,
+          text: `<p>Erreur de connexion au service IA${err?.message ? ` : ${err.message}` : ""}.</p>`,
+          t: "à l'instant",
+        }));
       })
       .finally(() => setIsThinking(false));
   }, []);

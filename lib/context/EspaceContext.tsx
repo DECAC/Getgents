@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
-import type { Espace, EspacesMap, ReservationItem, ConversationThread } from "@/lib/types";
+import type { Espace, EspacesMap, ReservationItem, ConversationThread, ConversationMessage } from "@/lib/types";
 import { ESPACES as INITIAL_ESPACES } from "@/lib/mock-data/espaces";
 import {
   formatConversationStartedAt,
@@ -9,7 +9,17 @@ import {
   newConversationId,
 } from "@/lib/conversationUtils";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
+import { extractArtefactSignal, ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
 import { readPublishedGents } from "@/lib/publishedGents";
+import { renderMarkdown } from "@/lib/markdown";
+import { streamChatCompletion } from "@/lib/streamChat";
+
+const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
+  report: { type: "Rapport", icon: "📄" },
+  checklist: { type: "Checklist", icon: "✅" },
+  chart: { type: "Graphique", icon: "📊" },
+  visual: { type: "Aperçu visuel", icon: "🖼️" },
+};
 
 type ActiveTab = number | "map";
 
@@ -165,17 +175,19 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   const sendMessage = useCallback((text: string) => {
     const id = currentIdRef.current;
     const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" };
+    const agentPlaceholder = { role: "agent" as const, text: "", t: "à l'instant" };
 
     // L'updater doit rester pur (pas d'effet de bord dedans, sinon React peut
     // l'appeler deux fois en StrictMode/dev) : on capture juste ce qu'il faut
-    // pour l'appel API dans ces variables, le fetch se fait après, en dehors.
+    // pour l'appel API dans ces variables, le streaming se fait après, en dehors.
     let history: { role: string; content: string }[] = [];
     let systemPrompt = "";
     let chatModelId = "anthropic/claude-sonnet-5";
+    let threadId = "";
 
     setEspaces((prev) => {
       const espace = prev[id];
-      const threadId = espace.activeConversationId;
+      threadId = espace.activeConversationId;
       const thread = espace.conversations.find((t) => t.id === threadId);
       const priorMessages = [...(thread?.messages ?? []), userMsg];
       history = priorMessages.map((m) => ({
@@ -186,55 +198,79 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       const basePrompt =
         espace.systemPrompt?.trim() || `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`;
       const memoryNote = espace.memory ? `\n\nMémoire de l'espace : ${espace.memory}` : "";
-      systemPrompt = `${basePrompt}${memoryNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
+      systemPrompt = `${basePrompt}${memoryNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}`;
       chatModelId = espace.chatModelId ?? chatModelId;
 
       const conversations = espace.conversations.map((t) =>
-        t.id === threadId ? { ...t, messages: [...t.messages, userMsg] } : t
+        t.id === threadId ? { ...t, messages: [...t.messages, userMsg, agentPlaceholder] } : t
       );
       return { ...prev, [id]: { ...espace, conversations } };
     });
 
     setIsThinking(true);
 
-    fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: chatModelId,
-        messages: [{ role: "system", content: systemPrompt }, ...history],
-        max_tokens: 2048,
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const raw: string =
-          data?.choices?.[0]?.message?.content ??
-          `Erreur API : ${data?.error?.message ?? JSON.stringify(data)}`;
-        const { text: reply, questions } = extractQuestions(raw);
-        const safeReply = reply.replace(/</g, "&lt;").replace(/\n/g, "<br/>");
-        setEspaces((p) => {
-          const e = p[id];
-          const tId = e.activeConversationId;
-          const convs = e.conversations.map((t) =>
-            t.id === tId
-              ? { ...t, messages: [...t.messages, { role: "agent" as const, text: `<p>${safeReply}</p>`, t: "à l'instant", questions }] }
-              : t
-          );
-          return { ...p, [id]: { ...e, conversations: convs } };
+    function updateLastMessage(updater: (m: ConversationMessage) => ConversationMessage) {
+      setEspaces((p) => {
+        const e = p[id];
+        const convs = e.conversations.map((t) => {
+          if (t.id !== threadId) return t;
+          const msgs = [...t.messages];
+          const lastIdx = msgs.length - 1;
+          if (lastIdx < 0) return t;
+          msgs[lastIdx] = updater(msgs[lastIdx]);
+          return { ...t, messages: msgs };
         });
+        return { ...p, [id]: { ...e, conversations: convs } };
+      });
+    }
+
+    streamChatCompletion(
+      { model: chatModelId, messages: [{ role: "system", content: systemPrompt }, ...history], max_tokens: 2048 },
+      (fullSoFar) => {
+        const displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
+        updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw) }));
+      }
+    )
+      .then((fullRaw) => {
+        const afterQuestions = extractQuestions(fullRaw);
+        const afterArtefact = extractArtefactSignal(afterQuestions.text);
+        const finalHtml = renderMarkdown(afterArtefact.text);
+
+        if (afterArtefact.artefact) {
+          const sig = afterArtefact.artefact;
+          const meta = ARTEFACT_KIND_META[sig.kind] ?? { type: "Artefact", icon: "📄" };
+          const artefactId = `artef-${Date.now()}`;
+          const newArtefact = {
+            id: artefactId,
+            title: sig.title,
+            type: meta.type,
+            icon: meta.icon,
+            date: "à l'instant",
+            body: sig.body ? renderMarkdown(sig.body) : undefined,
+            chartData: sig.chartData,
+          };
+          setEspaces((p) => {
+            const e = p[id];
+            const convs = e.conversations.map((t) => {
+              if (t.id !== threadId) return t;
+              const msgs = [...t.messages];
+              const lastIdx = msgs.length - 1;
+              if (lastIdx >= 0) msgs[lastIdx] = { ...msgs[lastIdx], text: finalHtml, questions: afterQuestions.questions };
+              msgs.push({ role: "artef-new" as const, ref: artefactId, title: newArtefact.title, icon: newArtefact.icon, t: "à l'instant" });
+              return { ...t, messages: msgs };
+            });
+            return { ...p, [id]: { ...e, artefacts: [newArtefact, ...e.artefacts], conversations: convs } };
+          });
+        } else {
+          updateLastMessage((m) => ({ ...m, text: finalHtml, questions: afterQuestions.questions }));
+        }
       })
-      .catch(() => {
-        setEspaces((p) => {
-          const e = p[id];
-          const tId = e.activeConversationId;
-          const convs = e.conversations.map((t) =>
-            t.id === tId
-              ? { ...t, messages: [...t.messages, { role: "agent" as const, text: "<p>Erreur de connexion au service IA.</p>", t: "à l'instant" }] }
-              : t
-          );
-          return { ...p, [id]: { ...e, conversations: convs } };
-        });
+      .catch((err: Error) => {
+        updateLastMessage(() => ({
+          role: "agent" as const,
+          text: `<p>Erreur de connexion au service IA${err?.message ? ` : ${err.message}` : ""}.</p>`,
+          t: "à l'instant",
+        }));
       })
       .finally(() => setIsThinking(false));
   }, []);

@@ -18,8 +18,11 @@ export function SafeHTML({ html, className }: SafeHTMLProps) {
     import("dompurify").then((mod) => {
       const DOMPurify = mod.default;
       const clean = DOMPurify.sanitize(html, {
-        ALLOWED_TAGS: ["p", "b", "strong", "i", "em", "ul", "ol", "li", "h4", "span", "div", "br"],
-        ALLOWED_ATTR: ["class", "style"],
+        ALLOWED_TAGS: [
+          "p", "b", "strong", "i", "em", "ul", "ol", "li", "h4", "span", "div", "br",
+          "code", "pre", "a", "blockquote", "table", "thead", "tbody", "tr", "td", "th", "hr",
+        ],
+        ALLOWED_ATTR: ["class", "style", "href", "target", "rel"],
       });
       setSafeHtml(clean);
     });
@@ -44,8 +47,11 @@ export function SafeHTMLDoc({ html, className }: SafeHTMLProps) {
     import("dompurify").then((mod) => {
       const DOMPurify = mod.default;
       const clean = DOMPurify.sanitize(html, {
-        ALLOWED_TAGS: ["p", "b", "strong", "i", "em", "ul", "ol", "li", "h4", "h3", "span", "div", "br"],
-        ALLOWED_ATTR: ["class", "style"],
+        ALLOWED_TAGS: [
+          "p", "b", "strong", "i", "em", "ul", "ol", "li", "h4", "h3", "span", "div", "br",
+          "code", "pre", "a", "blockquote", "table", "thead", "tbody", "tr", "td", "th", "hr",
+        ],
+        ALLOWED_ATTR: ["class", "style", "href", "target", "rel"],
       });
       setSafeHtml(clean);
     });

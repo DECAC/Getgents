@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTMLDoc } from "./SafeHTML";
+import { MiniBarChart } from "./MiniBarChart";
 import styles from "./Modal.module.css";
 
 function VisualGrid() {
@@ -86,7 +87,8 @@ export function ArtefactModal() {
               <VisualGrid />
             </div>
           )}
-          <SafeHTMLDoc html={artefact.body} />
+          {artefact.chartData && <MiniBarChart data={artefact.chartData} />}
+          {artefact.body && <SafeHTMLDoc html={artefact.body} />}
         </div>
 
         <div className={styles.foot}>
