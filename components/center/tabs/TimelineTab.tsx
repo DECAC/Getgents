@@ -1,13 +1,17 @@
 import type { EspaceTab } from "@/lib/types";
 import styles from "./TimelineTab.module.css";
 
-export function TimelineTab({ tab }: { tab: EspaceTab }) {
+export function TimelineTab({ tab, embedded }: { tab: EspaceTab; embedded?: boolean }) {
   const steps = tab.steps ?? [];
   return (
     <div className={styles.wrap}>
       <div className={styles.card}>
-        <h4 className={styles.title}>{tab.name}</h4>
-        <div className={styles.sub}>{tab.sub}</div>
+        {!embedded && (
+          <>
+            <h4 className={styles.title}>{tab.name}</h4>
+            <div className={styles.sub}>{tab.sub}</div>
+          </>
+        )}
         <div className={styles.timeline}>
           {steps.map((step) => (
             <div key={step.day} className={[styles.step, step.status === "future" ? styles.future : ""].filter(Boolean).join(" ")}>

@@ -4,15 +4,11 @@ import { useRef, useCallback } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { canResizeAssist, setAssistWidthFromPointer } from "@/lib/assistResize";
 import { CenterHeader } from "./CenterHeader";
-import { TimelineTab } from "./tabs/TimelineTab";
-import { ReservationsTab } from "./tabs/ReservationsTab";
-import { BudgetTab } from "./tabs/BudgetTab";
-import { MapTab } from "./tabs/MapTab";
-import { EmptyCenter } from "./EmptyCenter";
+import { ModuleCanvas } from "./ModuleCanvas";
 import styles from "./Center.module.css";
 
 export function Center() {
-  const { currentEspace, activeTab, openAssistant, closeAssistant, assistantOpen } = useEspace();
+  const { currentEspace, currentId, openAssistant, closeAssistant, assistantOpen } = useEspace();
   const pullTabRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef({ active: false, moved: false, startX: 0 });
   const suppressClickRef = useRef(false);
@@ -63,17 +59,6 @@ export function Center() {
     }
   }, []);
 
-  function renderContent() {
-    if (activeTab === "map" && currentEspace.map) return <MapTab map={currentEspace.map} />;
-
-    const tab = currentEspace.tabs[activeTab as number];
-    if (!tab) return <EmptyCenter espace={currentEspace} />;
-    if (tab.kind === "timeline") return <TimelineTab tab={tab} />;
-    if (tab.kind === "resv") return <ReservationsTab tab={tab} />;
-    if (tab.kind === "chart") return <BudgetTab tab={tab} />;
-    return <EmptyCenter espace={currentEspace} />;
-  }
-
   return (
     <main className={styles.center} id="main-content">
       <div className={styles.mobtabs}>
@@ -94,7 +79,8 @@ export function Center() {
       <CenterHeader />
 
       <div className={styles.content} tabIndex={-1}>
-        {renderContent()}
+        {/* key force la réinitialisation de l'agencement quand on change d'espace */}
+        <ModuleCanvas key={currentId} espace={currentEspace} />
       </div>
 
       <button
