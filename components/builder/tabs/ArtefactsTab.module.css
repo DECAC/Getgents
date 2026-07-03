@@ -29,6 +29,19 @@
   background: var(--plum-tint);
 }
 
+.thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 68px;
+  border-radius: 10px;
+  background: var(--bg);
+  margin-bottom: 12px;
+}
+.card.enabled .thumb {
+  background: rgba(255, 255, 255, 0.55);
+}
+
 .top {
   display: flex;
   align-items: center;

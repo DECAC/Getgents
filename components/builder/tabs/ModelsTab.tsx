@@ -1,114 +1,220 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import type { ModelCapability } from "@/lib/types/builder";
 import styles from "./ModelsTab.module.css";
 
-const CAPABILITY_META: Record<ModelCapability, { title: string; hint: string; required: boolean }> = {
-  chat: {
-    title: "Conversation",
-    hint: "Le modèle principal, utilisé pour tous les échanges avec l'utilisateur.",
-    required: true,
-  },
-  reasoning: {
-    title: "Raisonnement approfondi",
-    hint: "Optionnel — utile pour les décisions complexes (planification, calculs).",
-    required: false,
-  },
-  image: {
-    title: "Génération d'image",
-    hint: "Optionnel — pour produire des aperçus visuels stylisés (ex. Nanobanana).",
-    required: false,
-  },
-  tts: {
-    title: "Synthèse vocale (text-to-speech)",
-    hint: "Optionnel — pour restituer une réponse à l'oral.",
-    required: false,
-  },
-  stt: {
-    title: "Transcription vocale (speech-to-text)",
-    hint: "Optionnel — pour accepter des messages vocaux en entrée.",
-    required: false,
-  },
+const CAPABILITY_META: Record<ModelCapability, { title: string; required: boolean }> = {
+  chat: { title: "Conversation", required: true },
+  reasoning: { title: "Raisonnement approfondi", required: false },
+  image: { title: "Génération d'image", required: false },
+  tts: { title: "Synthèse vocale (text-to-speech)", required: false },
+  stt: { title: "Transcription vocale (speech-to-text)", required: false },
 };
 
 const ORDER: ModelCapability[] = ["chat", "reasoning", "image", "tts", "stt"];
 
 export function ModelsTab() {
   const { currentDraft, assignModel } = useBuilder();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (open) searchRef.current?.focus();
+    else setQuery("");
+  }, [open]);
+
+  const assignmentByCapability = useMemo(() => {
+    const map = new Map<ModelCapability, string | null>();
+    currentDraft.modelAssignments.forEach((a) => map.set(a.capability, a.modelId));
+    return map;
+  }, [currentDraft.modelAssignments]);
+
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const groups = useMemo(
+    () =>
+      ORDER.map((capability) => ({
+        capability,
+        models: MODEL_CATALOG.filter(
+          (m) =>
+            m.capability === capability &&
+            (normalizedQuery === "" ||
+              m.label.toLowerCase().includes(normalizedQuery) ||
+              m.provider.toLowerCase().includes(normalizedQuery))
+        ),
+      })),
+    [normalizedQuery]
+  );
+
+  const selectedChips = ORDER.map((capability) => {
+    const modelId = assignmentByCapability.get(capability) ?? null;
+    const model = modelId ? MODEL_CATALOG.find((m) => m.id === modelId) ?? null : null;
+    return { capability, model };
+  }).filter((c) => c.model);
+
+  const chatMissing = !assignmentByCapability.get("chat");
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.apiCard}>
-        <div className={styles.apiIc}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z" />
-          </svg>
+      <div className={styles.group}>
+        <div className={styles.groupHead}>
+          <span className={styles.groupTitle}>Modèles du gent</span>
+          {chatMissing && <span className={styles.groupRequired}>Conversation requise</span>}
         </div>
-        <div>
-          <div className={styles.apiTitle}>Clé API OpenRouter</div>
-          <div className={styles.apiSub}>
-            Une seule intégration donne accès à tous les modèles ci-dessous, quel que soit le fournisseur.
-          </div>
-        </div>
-        <span className={styles.apiBadge}>Connectée</span>
-      </div>
 
-      {ORDER.map((capability) => {
-        const meta = CAPABILITY_META[capability];
-        const models = MODEL_CATALOG.filter((m) => m.capability === capability);
-        const assignment = currentDraft.modelAssignments.find((a) => a.capability === capability);
-        const selectedId = assignment?.modelId ?? null;
-
-        return (
-          <div className={styles.group} key={capability}>
-            <div className={styles.groupHead}>
-              <span className={styles.groupTitle}>{meta.title}</span>
-              {meta.required ? (
-                <span className={styles.groupRequired}>Requis</span>
-              ) : (
-                <span className={styles.groupOptional}>{meta.hint}</span>
-              )}
-            </div>
-            {meta.required && <div className={styles.groupOptional} style={{ marginBottom: 10, marginTop: -4 }}>{meta.hint}</div>}
-
-            <div className={styles.modelGrid}>
-              {!meta.required && (
-                <button
-                  className={[styles.noneCard, selectedId === null ? styles.selected : ""].filter(Boolean).join(" ")}
-                  onClick={() => assignModel(capability, null)}
-                >
-                  Aucun modèle assigné
-                </button>
-              )}
-              {models.map((model) => (
-                <button
-                  key={model.id}
-                  className={[styles.modelCard, selectedId === model.id ? styles.selected : ""].filter(Boolean).join(" ")}
-                  onClick={() => assignModel(capability, model.id)}
-                >
-                  <div className={styles.modelTop}>
-                    <span className={styles.modelLabel}>{model.label}</span>
-                    {selectedId === model.id && (
-                      <svg className={styles.modelCheck} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-                        <path d="M9 11l2 2 4-4" />
-                        <circle cx="12" cy="12" r="9" />
-                      </svg>
+        <div className={styles.combo} ref={wrapRef}>
+          <button
+            type="button"
+            className={styles.comboTrigger}
+            onClick={() => setOpen((o) => !o)}
+            aria-haspopup="listbox"
+            aria-expanded={open}
+          >
+            {selectedChips.length === 0 ? (
+              <span className={styles.comboPlaceholder}>Choisir un ou plusieurs modèles…</span>
+            ) : (
+              <span className={styles.comboChips}>
+                {selectedChips.map(({ capability, model }) => (
+                  <span className={styles.chip} key={capability}>
+                    <span className={styles.chipCap}>{CAPABILITY_META[capability].title}</span>
+                    <span className={styles.chipLabel}>{model!.label}</span>
+                    {!CAPABILITY_META[capability].required && (
+                      <span
+                        className={styles.chipRemove}
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          assignModel(capability, null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.stopPropagation();
+                            assignModel(capability, null);
+                          }
+                        }}
+                        aria-label={`Retirer ${model!.label}`}
+                      >
+                        ×
+                      </span>
                     )}
-                  </div>
-                  <div className={styles.modelProvider}>{model.provider}</div>
-                  <div className={styles.modelTagline}>{model.tagline}</div>
-                  <div className={styles.modelPricing}>
-                    ${model.pricing.input}/${model.pricing.output} · 1M tok (in/out)
-                    {model.contextWindow ? ` · ${(model.contextWindow / 1000).toFixed(0)}k ctx` : ""}
-                  </div>
-                </button>
-              ))}
+                  </span>
+                ))}
+              </span>
+            )}
+            <svg className={styles.comboCaret} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+
+          {open && (
+            <div className={styles.comboPanel} role="listbox">
+              <div className={styles.comboSearchWrap}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M21 21l-4.3-4.3" />
+                </svg>
+                <input
+                  ref={searchRef}
+                  className={styles.comboSearch}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Rechercher un modèle par nom…"
+                  aria-label="Rechercher un modèle par nom"
+                />
+              </div>
+
+              <div className={styles.comboList}>
+                {groups.map(({ capability, models }) => {
+                  const meta = CAPABILITY_META[capability];
+                  const selectedId = assignmentByCapability.get(capability) ?? null;
+                  if (normalizedQuery && models.length === 0) return null;
+
+                  return (
+                    <div className={styles.comboGroup} key={capability}>
+                      <div className={styles.comboGroupHead}>
+                        <span>{meta.title}</span>
+                        {meta.required && <span className={styles.comboRequiredDot}>Requis</span>}
+                      </div>
+
+                      {!meta.required && !normalizedQuery && (
+                        <button
+                          type="button"
+                          className={[styles.comboOption, selectedId === null ? styles.comboOptionActive : ""]
+                            .filter(Boolean)
+                            .join(" ")}
+                          onClick={() => assignModel(capability, null)}
+                        >
+                          <span className={styles.comboOptionLabel}>Aucun modèle assigné</span>
+                        </button>
+                      )}
+
+                      {models.map((model) => {
+                        const selected = selectedId === model.id;
+                        return (
+                          <button
+                            type="button"
+                            key={model.id}
+                            className={[styles.comboOption, selected ? styles.comboOptionActive : ""]
+                              .filter(Boolean)
+                              .join(" ")}
+                            onClick={() => assignModel(capability, model.id)}
+                          >
+                            <span className={styles.comboOptionMain}>
+                              <span className={styles.comboOptionLabel}>{model.label}</span>
+                              <span className={styles.comboOptionProvider}>{model.provider}</span>
+                            </span>
+                            <span className={styles.comboOptionTagline}>{model.tagline}</span>
+                            {selected && (
+                              <svg
+                                className={styles.comboCheck}
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.4"
+                              >
+                                <path d="M9 11l2 2 4-4" />
+                                <circle cx="12" cy="12" r="9" />
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+
+                {normalizedQuery && groups.every((g) => g.models.length === 0) && (
+                  <div className={styles.comboEmpty}>Aucun modèle ne correspond à « {query} ».</div>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          )}
+        </div>
+      </div>
     </div>
   );
 }

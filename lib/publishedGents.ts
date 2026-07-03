@@ -1,5 +1,6 @@
 import type { Espace, EspacesMap, Tool, UserFile } from "@/lib/types";
 import type { GentDraft } from "@/lib/types/builder";
+import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { formatConversationStartedAt, newConversationId } from "@/lib/conversationUtils";
 
 // Pont client-only entre le Builder et le côté utilisateur : il n'y a pas de
@@ -30,28 +31,35 @@ export function writePublishedGent(id: string, espace: Espace): void {
 }
 
 export function draftToEspace(draft: GentDraft): Espace {
-  const tools: Tool[] = draft.connectors.map((c) => ({
-    id: c.id,
-    name: c.name,
-    category: c.category,
-    icon: c.icon,
-    desc: c.desc,
-    connectable: c.category === "compte_tiers",
-    connected: c.category === "compte_tiers" ? false : c.connected,
-  }));
+  // Le modèle d'outils du builder (8 types génériques configurables : MCP,
+  // API REST, connecteur personnalisé…) ne porte plus de catégorie
+  // lecture / écriture / compte-tiers — on les affiche par défaut en lecture
+  // seule côté espace ; aucun de ces types génériques ne déclenche
+  // l'invariant de connexion réservé aux comptes tiers.
+  const tools: Tool[] = draft.connectors.map((c) => {
+    const type = CONNECTOR_TOOL_TYPES.find((t) => t.kind === c.toolKind);
+    return {
+      id: c.id,
+      name: c.name,
+      category: "lecture",
+      icon: type?.icon ?? "🔌",
+      desc: c.detail || type?.description || "",
+      connectable: false,
+      connected: true,
+    };
+  });
 
-  const files: UserFile[] = [
-    ...draft.knowledgeFiles.map((f) => ({ id: f.id, name: f.name, size: f.size, date: "Base de connaissance" })),
-    ...draft.knowledgeUrls.map((u) => ({ id: u.id, name: u.url, size: "URL de référence", date: "Base de connaissance" })),
-  ];
+  const files: UserFile[] = draft.knowledgeSources.map((s) => ({
+    id: s.id,
+    name: s.label,
+    size: s.meta,
+    date: "Base de connaissance",
+  }));
 
   let systemPrompt = draft.systemPrompt.trim();
 
-  if (draft.knowledgeFiles.length || draft.knowledgeUrls.length) {
-    const refs = [
-      ...draft.knowledgeFiles.map((f) => `- fichier : ${f.name}`),
-      ...draft.knowledgeUrls.map((u) => `- url : ${u.url}`),
-    ].join("\n");
+  if (draft.knowledgeSources.length) {
+    const refs = draft.knowledgeSources.map((s) => `- ${s.kind} : ${s.label}`).join("\n");
     systemPrompt += `\n\nBase de connaissance déclarée par le créateur (références seulement — leur contenu n'est pas analysé automatiquement dans cette maquette) :\n${refs}`;
   }
 
@@ -70,9 +78,9 @@ export function draftToEspace(draft: GentDraft): Espace {
     version: 1,
     status: "live",
     statusLabel: "Actif",
-    sensitive: draft.connectors.some((c) => c.category === "compte_tiers"),
+    sensitive: false,
     metrics: [],
-    integrations: draft.connectors.map((c) => ({ label: c.name, action: c.category !== "lecture" })),
+    integrations: draft.connectors.map((c) => ({ label: c.name, action: false })),
     tools,
     tabs: [],
     map: null,

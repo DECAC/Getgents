@@ -17,7 +17,7 @@
   padding: 12px 14px;
 }
 .statN {
-  font-family: "Bricolage Grotesque", sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -57,7 +57,7 @@
 .icPending { background: var(--gold-tint); }
 .icSent { background: var(--plum-tint); }
 .icDone { background: var(--sage-tint); }
-.icCancelled { background: #eef1ed; }
+.icCancelled { background: #f1f2f4; }
 
 .info {
   flex: 1;
@@ -88,7 +88,7 @@
 .statusPending { background: var(--gold-tint); color: var(--gold); }
 .statusSent { background: var(--plum-tint); color: var(--plum); }
 .statusConfirmed { background: var(--sage-tint); color: var(--sage-700); }
-.statusCancelled { background: #eef1ed; color: var(--muted); }
+.statusCancelled { background: #f1f2f4; color: var(--muted); }
 
 .goBtn {
   flex: none;

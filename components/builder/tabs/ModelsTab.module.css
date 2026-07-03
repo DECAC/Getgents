@@ -3,50 +3,6 @@
   margin: 0 auto;
 }
 
-.apiCard {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 16px 18px;
-  margin-bottom: 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.apiIc {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--plum-tint);
-  color: var(--plum);
-  display: grid;
-  place-items: center;
-  flex: none;
-}
-
-.apiTitle {
-  font-weight: 600;
-  font-size: 13.5px;
-}
-
-.apiSub {
-  font-size: 11.5px;
-  color: var(--muted);
-  margin-top: 2px;
-}
-
-.apiBadge {
-  margin-left: auto;
-  font-size: 10.5px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: var(--sage-tint);
-  color: var(--sage-700);
-  white-space: nowrap;
-}
-
 .group {
   margin-bottom: 20px;
 }
@@ -59,7 +15,7 @@
 }
 
 .groupTitle {
-  font-family: "Bricolage Grotesque", sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 14.5px;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -75,91 +31,234 @@
   text-transform: uppercase;
 }
 
-.groupOptional {
-  font-size: 10.5px;
+/* ---------- Sélecteur unique de modèles (recherche + groupes) ---------- */
+.combo {
+  position: relative;
+}
+
+.comboTrigger {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  text-align: left;
+  cursor: pointer;
+}
+.comboTrigger:hover {
+  border-color: var(--plum);
+}
+
+.comboPlaceholder {
+  flex: 1;
+  font-size: 13px;
   color: var(--faint);
 }
 
-.modelGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
+.comboChips {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.modelCard {
-  text-align: left;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px 14px;
-  background: var(--card);
-  cursor: pointer;
-}
-.modelCard:hover {
-  border-color: var(--plum);
-}
-.modelCard.selected {
-  border-color: var(--plum);
-  background: var(--plum-tint);
-}
-
-.modelTop {
+.chip {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
+  background: var(--plum-tint);
+  border-radius: 20px;
+  padding: 3px 6px 3px 10px;
+  font-size: 11.5px;
+}
+
+.chipCap {
+  color: var(--plum);
+  font-weight: 600;
+}
+.chipCap::after {
+  content: " · ";
+  color: var(--plum);
+  opacity: 0.5;
+}
+
+.chipLabel {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.chipRemove {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: var(--plum);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.chipRemove:hover {
+  background: var(--plum);
+  color: #fff;
+}
+
+.comboCaret {
+  flex: none;
+  color: var(--faint);
+}
+
+.comboPanel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.14);
+  display: flex;
+  flex-direction: column;
+  max-height: 400px;
+  overflow: hidden;
+}
+
+.comboSearchWrap {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--faint);
+}
+
+.comboSearch {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: var(--ink);
+}
+.comboSearch:focus {
+  outline: none;
+}
+
+.comboList {
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.comboGroup {
   margin-bottom: 4px;
 }
 
-.modelLabel {
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: -0.01em;
-}
-
-.modelCheck {
-  color: var(--plum);
-  flex: none;
-}
-
-.modelProvider {
+.comboGroupHead {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 4px;
+  background: var(--card);
   font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--faint);
+}
+
+.comboRequiredDot {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-tint);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+
+.comboOption {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.comboOption:hover {
+  background: var(--bg);
+}
+.comboOptionActive {
+  background: var(--plum-tint);
+}
+.comboOptionActive:hover {
+  background: var(--plum-tint);
+}
+
+.comboOptionMain {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex: none;
+  width: 190px;
+  min-width: 190px;
+}
+
+.comboOptionLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.comboOptionProvider {
+  font-size: 10px;
   color: var(--faint);
   font-family: "IBM Plex Mono", monospace;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
-.modelTagline {
+.comboOptionTagline {
+  flex: 1;
   font-size: 11.5px;
   color: var(--muted);
-  line-height: 1.4;
-  margin-bottom: 8px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.modelPricing {
-  font-size: 10.5px;
-  color: var(--faint);
-  font-family: "IBM Plex Mono", monospace;
+.comboCheck {
+  flex: none;
+  color: var(--plum);
 }
 
-.noneCard {
-  border: 1px dashed var(--line);
-  border-radius: 12px;
-  padding: 12px 14px;
+.comboEmpty {
+  padding: 16px 10px;
   text-align: center;
-  color: var(--faint);
   font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.noneCard:hover {
-  border-color: var(--muted);
   color: var(--muted);
 }
-.noneCard.selected {
-  border-color: var(--muted);
-  color: var(--ink);
-  background: var(--bg);
+
+@media (max-width: 700px) {
+  .comboOptionMain {
+    width: auto;
+    min-width: 0;
+  }
+  .comboOptionTagline {
+    display: none;
+  }
 }

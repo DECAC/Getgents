@@ -1,4 +1,4 @@
-import type { ConversationMessage, ToolCategory } from "@/lib/types";
+import type { ConversationMessage } from "@/lib/types";
 
 /**
  * Capacités de modèles disponibles via l'API unique OpenRouter.
@@ -21,20 +21,45 @@ export interface ModelAssignment {
   modelId: string | null;
 }
 
-export type ConnectorKind = "mcp" | "a2a";
+/**
+ * Types d'outils qu'un gent peut utiliser. Il ne s'agit pas d'une liste de
+ * services déjà prêts à l'emploi : chaque type est un modèle de
+ * configuration que le créateur du gent personnalise (nom, description,
+ * points de terminaison…).
+ */
+export type ConnectorToolKind =
+  | "connecteur"
+  | "connecteur-predefini"
+  | "connecteur-personnalise"
+  | "flux-assistant"
+  | "invite"
+  | "api-rest"
+  | "mcp"
+  | "ordinateur";
 
-export interface ConnectorCatalogEntry {
-  id: string;
+export interface ConnectorToolType {
+  kind: ConnectorToolKind;
   name: string;
-  kind: ConnectorKind;
   icon: string;
-  category: ToolCategory;
-  desc: string;
-  endpointHint: string;
+  description: string;
 }
 
-export interface GentConnector extends ConnectorCatalogEntry {
-  connected: boolean;
+/** Un outil concret configuré pour un gent, à partir d'un des types ci-dessus. */
+export interface GentToolInstance {
+  id: string;
+  toolKind: ConnectorToolKind;
+  name: string;
+  /** Résumé court de la configuration saisie (ex. URL du serveur MCP). */
+  detail?: string;
+}
+
+export type KnowledgeSourceKind = "file" | "url" | "text";
+
+export interface KnowledgeSource {
+  id: string;
+  kind: KnowledgeSourceKind;
+  label: string;
+  meta: string;
 }
 
 export type ArtefactKind = "report" | "checklist" | "visual" | "timeline" | "budget" | "map";
@@ -49,17 +74,6 @@ export interface ArtefactTemplateConfig {
 
 export type GentDraftStatus = "draft" | "review" | "published";
 
-export interface KnowledgeFile {
-  id: string;
-  name: string;
-  size: string;
-}
-
-export interface KnowledgeUrl {
-  id: string;
-  url: string;
-}
-
 export interface GentDraft {
   id: string;
   name: string;
@@ -69,11 +83,10 @@ export interface GentDraft {
   status: GentDraftStatus;
   updatedAt: string;
   modelAssignments: ModelAssignment[];
-  connectors: GentConnector[];
+  knowledgeSources: KnowledgeSource[];
+  connectors: GentToolInstance[];
   artefactTemplates: ArtefactTemplateConfig[];
   builderConversation: ConversationMessage[];
-  knowledgeFiles: KnowledgeFile[];
-  knowledgeUrls: KnowledgeUrl[];
 }
 
 export type GentDraftsMap = Record<string, GentDraft>;

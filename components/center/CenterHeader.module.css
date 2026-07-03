@@ -28,7 +28,7 @@
 }
 
 .title {
-  font-family: "Bricolage Grotesque", sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 21px;
   font-weight: 700;
   margin: 0;
@@ -70,7 +70,7 @@
   color: var(--gold);
 }
 .pillDone {
-  background: #e7eae5;
+  background: #f1f2f4;
   color: var(--muted);
 }
 
