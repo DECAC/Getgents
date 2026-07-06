@@ -54,13 +54,25 @@ export function BuilderHeader() {
       <div className={styles.top}>
         <div className={styles.ic}>{currentDraft.icon}</div>
         <div className={styles.meta}>
-          <input
-            className={styles.nameInput}
-            value={currentDraft.name}
-            onChange={(e) => updateName(e.target.value)}
-            placeholder="Nom du gent"
-            aria-label="Nom du gent"
-          />
+          <label className={styles.nameLabel} htmlFor="gent-name">
+            Nom du gent
+          </label>
+          <div className={styles.nameWrap}>
+            <input
+              id="gent-name"
+              className={styles.nameInput}
+              value={currentDraft.name}
+              onChange={(e) => updateName(e.target.value)}
+              placeholder="Ex. Assistant au pair, Coach voyage…"
+              aria-label="Nom du gent"
+              spellCheck={false}
+            />
+            <span className={styles.nameEditHint} aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </span>
+          </div>
           <input
             className={styles.objectiveInput}
             value={currentDraft.objective}

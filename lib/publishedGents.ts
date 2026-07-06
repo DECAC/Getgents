@@ -30,6 +30,14 @@ export function writePublishedGent(id: string, espace: Espace): void {
   }
 }
 
+/** Met à jour le nom affiché côté utilisateur sans effacer conversations ni artefacts. */
+export function patchPublishedGentName(id: string, name: string): void {
+  if (typeof window === "undefined") return;
+  const existing = readPublishedGents()[id];
+  if (!existing) return;
+  writePublishedGent(id, { ...existing, name, gent: name });
+}
+
 export function draftToEspace(draft: GentDraft): Espace {
   // Le modèle d'outils du builder (8 types génériques configurables : MCP,
   // API REST, connecteur personnalisé…) ne porte plus de catégorie
@@ -63,9 +71,13 @@ export function draftToEspace(draft: GentDraft): Espace {
     systemPrompt += `\n\nBase de connaissance déclarée par le créateur (références seulement — leur contenu n'est pas analysé automatiquement dans cette maquette) :\n${refs}`;
   }
 
-  const enabledArtefacts = draft.artefactTemplates.filter((t) => t.enabled).map((t) => t.label);
+  const enabledArtefacts = draft.artefactTemplates.filter((t) => t.enabled);
   if (enabledArtefacts.length) {
-    systemPrompt += `\n\nTypes d'artefacts que tu peux proposer de générer pour cet utilisateur : ${enabledArtefacts.join(", ")}.`;
+    const labels = enabledArtefacts.map((t) => t.label).join(", ");
+    systemPrompt +=
+      `\n\nTypes d'artefacts activés pour cet espace : ${labels}. ` +
+      "À chaque réponse utile, propose activement l'un de ces formats via le bloc ARTEFACT (checklist pour les étapes, rapport pour les textes et modèles, graphique pour les chiffres). " +
+      "L'utilisateur décide s'il l'ajoute à son espace — ton rôle est de le proposer souvent, pas d'attendre qu'il le demande.";
   }
 
   const threadId = newConversationId();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, Fragment } from "react";
 import type { Espace, EspaceTab } from "@/lib/types";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { TimelineTab } from "./tabs/TimelineTab";
@@ -12,6 +12,24 @@ import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { ChecklistView } from "@/components/shared/ChecklistView";
 import styles from "./ModuleCanvas.module.css";
 
+type ModuleSize = "list" | "small" | "medium" | "large";
+
+const SIZE_ORDER: ModuleSize[] = ["list", "small", "medium", "large"];
+
+const SIZE_LAYOUT: Record<ModuleSize, { cols: number; height: number }> = {
+  list: { cols: 4, height: 44 },
+  small: { cols: 1, height: 180 },
+  medium: { cols: 2, height: 300 },
+  large: { cols: 4, height: 480 },
+};
+
+const SIZE_LABEL: Record<ModuleSize, string> = {
+  list: "Liste",
+  small: "Petit",
+  medium: "Moyen",
+  large: "Très grand",
+};
+
 interface ModuleDef {
   id: string;
   title: string;
@@ -22,8 +40,7 @@ interface ModuleDef {
 }
 
 interface ModuleConf {
-  span: 1 | 2;
-  height?: number;
+  size: ModuleSize;
 }
 
 function tabContent(tab: EspaceTab) {
@@ -33,14 +50,80 @@ function tabContent(tab: EspaceTab) {
   return null;
 }
 
+function defaultSize(id: string): ModuleSize {
+  if (id.startsWith("tab-") || id === "map") return "large";
+  return "small";
+}
+
+function nextSize(current: ModuleSize): ModuleSize {
+  const i = SIZE_ORDER.indexOf(current);
+  return SIZE_ORDER[(i + 1) % SIZE_ORDER.length];
+}
+
+function SizeIcon({ size }: { size: ModuleSize }) {
+  if (size === "list") {
+    return (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+      </svg>
+    );
+  }
+  if (size === "small") {
+    return (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="4" y="8" width="8" height="8" rx="1.5" />
+      </svg>
+    );
+  }
+  if (size === "medium") {
+    return (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="6" width="18" height="12" rx="2" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="3" width="20" height="18" rx="2" />
+    </svg>
+  );
+}
+
+interface DropZoneProps {
+  index: number;
+  active: boolean;
+  onDragOver: (index: number) => void;
+  onDrop: (index: number) => void;
+  onDragLeave: () => void;
+}
+
+function DropZone({ index, active, onDragOver, onDrop, onDragLeave }: DropZoneProps) {
+  return (
+    <div
+      className={[styles.dropZone, active ? styles.dropZoneActive : ""].filter(Boolean).join(" ")}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        onDragOver(index);
+      }}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop(index);
+      }}
+      aria-hidden="true"
+    />
+  );
+}
+
 export function ModuleCanvas({ espace }: { espace: Espace }) {
   const { openArtefactModal, toggleChecklistItem } = useEspace();
 
-  // Ordre + tailles des modules, état local par montage (réinitialisé au
-  // changement d'espace via la prop key posée par Center).
   const [order, setOrder] = useState<string[]>([]);
   const [conf, setConf] = useState<Record<string, ModuleConf>>({});
+  const [savedConf, setSavedConf] = useState<Record<string, ModuleConf> | null>(null);
   const dragId = useRef<string | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   const modules: ModuleDef[] = [
     ...espace.tabs.map((tab): ModuleDef => ({
@@ -82,61 +165,52 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     ...modules.filter((m) => !order.includes(m.id)),
   ];
 
-  const handleDrop = useCallback((targetId: string) => {
+  const insertAt = useCallback((targetIndex: number) => {
     const source = dragId.current;
     dragId.current = null;
-    if (!source || source === targetId) return;
+    setDropIndex(null);
+    if (!source) return;
+
     setOrder(() => {
       const ids = orderedModules.map((m) => m.id);
       const from = ids.indexOf(source);
-      const to = ids.indexOf(targetId);
-      if (from < 0 || to < 0) return ids;
+      if (from < 0) return ids;
       ids.splice(from, 1);
-      ids.splice(to, 0, source);
+      const adjusted = from < targetIndex ? targetIndex - 1 : targetIndex;
+      ids.splice(Math.max(0, adjusted), 0, source);
       return ids;
     });
   }, [orderedModules]);
 
-  function startResize(e: React.PointerEvent, id: string) {
-    e.preventDefault();
-    e.stopPropagation();
-    const card = (e.currentTarget as HTMLElement).closest(`.${styles.card}`) as HTMLElement | null;
-    if (!card) return;
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startH = card.offsetHeight;
-    const startSpan = conf[id]?.span ?? defaultSpan(id);
-    const colWidth = card.offsetWidth / startSpan;
-
-    function onMove(ev: PointerEvent) {
-      const dx = ev.clientX - startX;
-      const dy = ev.clientY - startY;
-      const span: 1 | 2 = dx > colWidth * 0.4 ? 2 : dx < -colWidth * 0.4 ? 1 : startSpan;
-      const height = Math.max(140, startH + dy);
-      setConf((prev) => ({ ...prev, [id]: { span, height } }));
-    }
-    function onUp() {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      document.body.classList.remove("col-resizing");
-    }
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    document.body.classList.add("col-resizing");
-  }
-
-  function defaultSpan(id: string): 1 | 2 {
-    // Les vues denses (timeline, réservations, carte) démarrent en pleine largeur.
-    if (id.startsWith("tab-") || id === "map") return 2;
-    return 1;
-  }
-
-  function toggleSpan(id: string) {
+  function cycleSize(id: string) {
     setConf((prev) => {
-      const current = prev[id]?.span ?? defaultSpan(id);
-      return { ...prev, [id]: { ...prev[id], span: current === 2 ? 1 : 2 } };
+      const current = prev[id]?.size ?? defaultSize(id);
+      return { ...prev, [id]: { size: nextSize(current) } };
     });
   }
+
+  function getSize(id: string): ModuleSize {
+    return conf[id]?.size ?? defaultSize(id);
+  }
+
+  function collapseAllToList() {
+    setConf((prev) => {
+      setSavedConf(prev);
+      const next = { ...prev };
+      orderedModules.forEach((m) => {
+        next[m.id] = { size: "list" };
+      });
+      return next;
+    });
+  }
+
+  function restoreSizes() {
+    setConf(savedConf ?? {});
+    setSavedConf(null);
+  }
+
+  const allList =
+    orderedModules.length > 0 && orderedModules.every((m) => getSize(m.id) === "list");
 
   if (!modules.length) {
     return (
@@ -151,88 +225,135 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
   }
 
   return (
-    <div className={styles.canvas}>
-      {orderedModules.map((m) => {
-        const c = conf[m.id] ?? { span: defaultSpan(m.id) };
-        return (
-          <section
-            key={m.id}
-            className={styles.card}
-            style={{
-              gridColumn: c.span === 2 ? "span 2" : "span 1",
-              height: c.height ? `${c.height}px` : undefined,
-            }}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => handleDrop(m.id)}
-          >
-            <header
-              className={styles.cardHead}
-              draggable
-              onDragStart={(e) => {
-                dragId.current = m.id;
-                e.dataTransfer.effectAllowed = "move";
-              }}
-              title="Glisser pour réorganiser"
+    <div className={styles.wrap}>
+      <div className={styles.toolbar}>
+        <span className={styles.toolbarCount}>
+          {orderedModules.length} module{orderedModules.length > 1 ? "s" : ""}
+        </span>
+        <div className={styles.toolbarActions}>
+          {savedConf && allList && (
+            <button
+              type="button"
+              className={styles.toolbarBtn}
+              onClick={restoreSizes}
+              title="Rétablir les tailles précédentes"
             >
-              <span className={styles.gripIcon} aria-hidden="true">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="8" cy="6" r="1.6" /><circle cx="16" cy="6" r="1.6" />
-                  <circle cx="8" cy="12" r="1.6" /><circle cx="16" cy="12" r="1.6" />
-                  <circle cx="8" cy="18" r="1.6" /><circle cx="16" cy="18" r="1.6" />
-                </svg>
-              </span>
-              <span className={styles.cardTitleWrap}>
-                <span className={styles.cardTitle}>{m.title}</span>
-                {m.sub && <span className={styles.cardSub}>{m.sub}</span>}
-              </span>
-              <span className={styles.cardActions}>
-                <button
-                  type="button"
-                  className={styles.actionBtn}
-                  onClick={() => toggleSpan(m.id)}
-                  title={c.span === 2 ? "Réduire à une demi-largeur" : "Étendre en pleine largeur"}
-                  aria-label={c.span === 2 ? "Réduire le module" : "Agrandir le module"}
-                >
-                  {c.span === 2 ? (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M9 4H4v5M15 20h5v-5" />
-                    </svg>
-                  ) : (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M15 4h5v5M9 20H4v-5M20 4l-6 6M4 20l6-6" />
-                    </svg>
-                  )}
-                </button>
-                {m.openModal && (
+              Rétablir
+            </button>
+          )}
+          <button
+            type="button"
+            className={[styles.toolbarBtn, styles.toolbarBtnPrimary, allList ? styles.toolbarBtnDisabled : ""]
+              .filter(Boolean)
+              .join(" ")}
+            onClick={collapseAllToList}
+            disabled={allList}
+            title="Afficher tous les modules en vue liste compacte"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+            </svg>
+            Tout réduire
+          </button>
+        </div>
+      </div>
+      <div className={styles.canvas}>
+      {orderedModules.map((m, i) => {
+        const size = getSize(m.id);
+        const layout = SIZE_LAYOUT[size];
+        const isList = size === "list";
+
+        return (
+          <Fragment key={m.id}>
+            <DropZone
+              index={i}
+              active={dropIndex === i}
+              onDragOver={setDropIndex}
+              onDrop={insertAt}
+              onDragLeave={() => setDropIndex(null)}
+            />
+            <section
+              className={[styles.card, isList ? styles.cardList : ""].filter(Boolean).join(" ")}
+              style={{
+                gridColumn: `span ${layout.cols}`,
+                height: `${layout.height}px`,
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                const before = e.clientY < rect.top + rect.height / 2;
+                setDropIndex(before ? i : i + 1);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                const before = e.clientY < rect.top + rect.height / 2;
+                insertAt(before ? i : i + 1);
+              }}
+            >
+              <header
+                className={styles.cardHead}
+                draggable
+                onDragStart={(e) => {
+                  dragId.current = m.id;
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                onDragEnd={() => {
+                  dragId.current = null;
+                  setDropIndex(null);
+                }}
+                title="Glisser pour réorganiser"
+              >
+                <span className={styles.gripIcon} aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="8" cy="6" r="1.6" /><circle cx="16" cy="6" r="1.6" />
+                    <circle cx="8" cy="12" r="1.6" /><circle cx="16" cy="12" r="1.6" />
+                    <circle cx="8" cy="18" r="1.6" /><circle cx="16" cy="18" r="1.6" />
+                  </svg>
+                </span>
+                <span className={styles.cardTitleWrap}>
+                  <span className={styles.cardTitle}>{m.title}</span>
+                  {m.sub && <span className={styles.cardSub}>{m.sub}</span>}
+                </span>
+                <span className={styles.cardActions}>
                   <button
                     type="button"
                     className={styles.actionBtn}
-                    onClick={m.openModal}
-                    title="Ouvrir en grand"
-                    aria-label="Ouvrir en grand"
+                    onClick={() => cycleSize(m.id)}
+                    title={`Taille : ${SIZE_LABEL[size]} — cliquer pour changer`}
+                    aria-label={`Taille actuelle ${SIZE_LABEL[size]}, cliquer pour agrandir`}
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                      <path d="M15 3h6v6M10 14 21 3" />
-                    </svg>
+                    <SizeIcon size={size} />
                   </button>
-                )}
-              </span>
-            </header>
-            <div className={styles.cardBody}>{m.render()}</div>
-            <span
-              className={styles.resizeHandle}
-              onPointerDown={(e) => startResize(e, m.id)}
-              title="Glisser pour redimensionner"
-              aria-hidden="true"
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.4">
-                <path d="M9 1 1 9M9 5 5 9" />
-              </svg>
-            </span>
-          </section>
+                  {m.openModal && (
+                    <button
+                      type="button"
+                      className={styles.actionBtn}
+                      onClick={m.openModal}
+                      title="Ouvrir en grand"
+                      aria-label="Ouvrir en grand"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <path d="M15 3h6v6M10 14 21 3" />
+                      </svg>
+                    </button>
+                  )}
+                </span>
+              </header>
+              {!isList && <div className={styles.cardBody}>{m.render()}</div>}
+            </section>
+          </Fragment>
         );
       })}
+      <DropZone
+        index={orderedModules.length}
+        active={dropIndex === orderedModules.length}
+        onDragOver={setDropIndex}
+        onDrop={insertAt}
+        onDragLeave={() => setDropIndex(null)}
+      />
+      </div>
     </div>
   );
 }

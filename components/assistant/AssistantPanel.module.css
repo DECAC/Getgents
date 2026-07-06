@@ -187,10 +187,8 @@
 .msg {
   margin-bottom: 20px;
   display: flex;
+  align-items: flex-start;
   gap: 11px;
-}
-.msgUser {
-  flex-direction: row-reverse;
 }
 .av {
   width: 28px;
@@ -211,34 +209,85 @@
   color: var(--plum);
   border-radius: 50%;
 }
+.msgBody {
+  flex: 1;
+  min-width: 0;
+}
+.msgAuthor {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
 .bubble {
-  padding: 11px 14px;
-  border-radius: 14px;
-  max-width: 78%;
+  width: 100%;
+  padding: 2px 0;
+  border-radius: 10px;
   font-size: 14px;
 }
 .msgAgent .bubble {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-top-left-radius: 5px;
+  background: transparent;
 }
 .msgUser .bubble {
-  background: var(--sage-700);
-  color: #eaf1ec;
-  border-top-right-radius: 5px;
+  background: var(--bg);
+  padding: 10px 12px;
 }
 .t {
   font-size: 10.5px;
   color: var(--faint);
   margin-top: 7px;
 }
-.msgUser .t {
-  color: #9cb6a6;
+
+/* Reasoning disclosure */
+.reasoningToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--faint);
+  padding: 3px 0;
+  margin-bottom: 6px;
+}
+.reasoningToggle:hover {
+  color: var(--muted);
+}
+.reasoningChevron {
+  flex: none;
+  transition: transform 0.15s ease;
+  display: grid;
+  place-items: center;
+}
+.reasoningChevronOpen {
+  transform: rotate(90deg);
+}
+.reasoningLive {
+  color: var(--sage-700);
+}
+.reasoningLive .reasoningChevron {
+  animation: reasoningPulse 1.2s ease-in-out infinite;
+}
+@keyframes reasoningPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+.reasoningBox {
+  background: var(--bg);
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+  white-space: pre-wrap;
+  max-height: 220px;
+  overflow-y: auto;
 }
 
 /* Tool call */
 .toolcall {
-  max-width: 78%;
   margin-left: 39px;
   margin-bottom: 20px;
 }
@@ -283,7 +332,6 @@
 
 /* Artef visual */
 .artefVisual {
-  max-width: 78%;
   margin-left: 39px;
   margin-bottom: 20px;
   background: var(--card);
@@ -339,7 +387,6 @@
 
 /* Artef pointer */
 .artefPointer {
-  max-width: 78%;
   margin-left: 39px;
   margin-bottom: 20px;
   background: var(--card);
@@ -359,7 +406,6 @@
 }
 
 .proposalCard {
-  max-width: 88%;
   margin-left: 39px;
   margin-bottom: 20px;
   background: var(--card);
@@ -427,7 +473,6 @@
   background: var(--bg);
 }
 .proposalDismissed {
-  max-width: 78%;
   margin-left: 39px;
   margin-bottom: 20px;
   font-size: 11.5px;

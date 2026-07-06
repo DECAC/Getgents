@@ -110,6 +110,7 @@ export interface ConversationMessage {
   questions?: { q: string; options: string[]; multi?: boolean }[];
   proposal?: ArtefactProposal;
   proposalStatus?: "pending" | "added" | "dismissed";
+  reasoning?: string;
 }
 
 export interface UserFile {

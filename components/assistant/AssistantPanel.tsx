@@ -28,10 +28,12 @@ export function AssistantPanel() {
     confirmArtefactProposal,
     startNewConversation,
     switchConversation,
+    isThinking,
   } = useEspace();
 
   const [cdView, setCdView] = useState<"chat" | "hist">("chat");
   const [composerText, setComposerText] = useState("");
+  const [expandedReasoning, setExpandedReasoning] = useState<Record<number, boolean>>({});
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
@@ -39,6 +41,10 @@ export function AssistantPanel() {
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [activeConversation.messages, cdView]);
+
+  useEffect(() => {
+    setExpandedReasoning({});
+  }, [activeConversation.id]);
 
   useEffect(() => {
     textareaRef.current?.focus();
@@ -117,6 +123,43 @@ export function AssistantPanel() {
     }
     return -1;
   })();
+
+  function toggleReasoning(i: number) {
+    setExpandedReasoning((prev) => ({ ...prev, [i]: !isReasoningOpen(i) }));
+  }
+
+  function isReasoningOpen(i: number): boolean {
+    const m = activeConversation.messages[i];
+    if (i in expandedReasoning) return expandedReasoning[i];
+    // Ouvert automatiquement pendant que le modèle réfléchit et n'a pas
+    // encore commencé à répondre — se referme dès que le texte arrive,
+    // sauf si l'utilisateur l'a déjà déplié/replié manuellement.
+    return isThinking && i === lastAgentIndex && !m?.text;
+  }
+
+  function renderReasoning(m: ConversationMessage, i: number) {
+    if (!m.reasoning) return null;
+    const live = isThinking && i === lastAgentIndex && !m.text;
+    const open = isReasoningOpen(i);
+    return (
+      <>
+        <button
+          type="button"
+          className={[styles.reasoningToggle, live ? styles.reasoningLive : ""].filter(Boolean).join(" ")}
+          onClick={() => toggleReasoning(i)}
+          aria-expanded={open}
+        >
+          <span className={[styles.reasoningChevron, open ? styles.reasoningChevronOpen : ""].filter(Boolean).join(" ")} aria-hidden="true">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+          </span>
+          {live ? "Réflexion en cours…" : "Raisonnement"}
+        </button>
+        {open && <div className={styles.reasoningBox}>{m.reasoning}</div>}
+      </>
+    );
+  }
 
   function renderMessage(m: ConversationMessage, i: number) {
     if (m.role === "tool") {
@@ -254,15 +297,18 @@ export function AssistantPanel() {
     }
 
     const isLastMessage = i === lastAgentIndex;
+    const isAgent = m.role === "agent";
     return (
-      <div key={i} className={[styles.msg, m.role === "user" ? styles.msgUser : styles.msgAgent].join(" ")}>
-        <div className={styles.av}>{m.role === "agent" ? "🤖" : "CL"}</div>
-        <div>
+      <div key={i} className={[styles.msg, isAgent ? styles.msgAgent : styles.msgUser].join(" ")}>
+        <div className={styles.av}>{isAgent ? "🤖" : "CL"}</div>
+        <div className={styles.msgBody}>
+          <div className={styles.msgAuthor}>{isAgent ? currentEspace.gent : "Vous"}</div>
+          {isAgent && renderReasoning(m, i)}
           <div className={styles.bubble}>
             <SafeHTML html={m.text ?? ""} />
             <div className={styles.t}>{m.t}</div>
           </div>
-          {m.role === "agent" && isLastMessage && !!m.questions?.length && (
+          {isAgent && isLastMessage && !!m.questions?.length && (
             <QuickReplyQuestions questions={m.questions} onSubmit={sendMessage} />
           )}
         </div>

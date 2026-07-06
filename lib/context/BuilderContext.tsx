@@ -5,7 +5,7 @@ import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, Know
 import type { ConversationMessage } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
-import { writePublishedGent, draftToEspace } from "@/lib/publishedGents";
+import { writePublishedGent, draftToEspace, patchPublishedGentName } from "@/lib/publishedGents";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion } from "@/lib/streamChat";
 
@@ -124,7 +124,13 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   }, [currentId]);
 
   const updateName = useCallback((text: string) => {
-    setDrafts((prev) => ({ ...prev, [currentId]: { ...prev[currentId], name: text, updatedAt: "à l'instant" } }));
+    setDrafts((prev) => {
+      const draft = { ...prev[currentId], name: text, updatedAt: "à l'instant" };
+      if (draft.status === "published") {
+        patchPublishedGentName(currentId, text);
+      }
+      return { ...prev, [currentId]: draft };
+    });
   }, [currentId]);
 
   const publishDraft = useCallback(() => {
@@ -273,7 +279,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw) }));
       }
     )
-      .then((fullRaw) => {
+      .then(({ text: fullRaw }) => {
         const { text: reply, questions } = extractQuestions(fullRaw);
         updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply), questions }));
       })

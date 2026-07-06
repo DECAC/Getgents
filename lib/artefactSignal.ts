@@ -18,13 +18,17 @@ export interface ArtefactSignal {
 }
 
 export const ARTEFACT_PROMPT_INSTRUCTION =
-  "Quand l'échange permet de produire un artefact concret et utile (une synthèse, une checklist, un graphique de données chiffrées), termine ta réponse (après le texte visible et après un éventuel bloc QUESTIONS, sur sa propre ligne) par un bloc : " +
+  "Propose systématiquement un artefact sauvegardable dès que ta réponse contient du contenu structuré exploitable — ne te limite pas aux seuls cas « parfaits ». " +
+  "Dès qu'il y a des étapes, une liste de documents, un modèle de lettre/contrat, des chiffres ou un récapitulatif, termine ta réponse (après le texte visible et après un éventuel bloc QUESTIONS, sur sa propre ligne) par exactement un bloc : " +
   '<!--ARTEFACT: {"kind":"report","title":"Titre court","body":"Contenu en markdown"}--> ' +
-  'pour une synthèse ou un point ; ' +
+  "pour une synthèse, un modèle de document, une procédure détaillée ou un texte à réutiliser ; " +
   '<!--ARTEFACT: {"kind":"checklist","title":"Titre court","items":["Élément 1","Élément 2","Élément 3"]}--> ' +
-  "pour une liste de tâches à cocher (items courts, un par élément, sans numérotation) ; ou " +
+  "pour des étapes à cocher, une liste de pièces ou de tâches (items courts, un par élément, sans numérotation) ; ou " +
   '<!--ARTEFACT: {"kind":"chart","title":"Titre court","chartData":[{"label":"Catégorie A","value":120},{"label":"Catégorie B","value":80}]}--> ' +
-  "pour un graphique de données chiffrées. Précise que l'utilisateur pourra choisir de l'ajouter ou non à son espace — ne dis jamais qu'il est déjà ajouté. N'ajoute ce bloc que si un artefact a vraiment du sens à ce stade ; sinon ne l'ajoute pas, et n'en ajoute jamais plus d'un par réponse.";
+  "dès qu'il y a des montants, pourcentages ou comparaisons chiffrées. " +
+  "Choisis le kind le plus utile : si plusieurs formats conviennent, privilégie checklist pour l'actionnable et report pour les textes longs. " +
+  "Invite brièvement l'utilisateur à l'ajouter à son espace (bouton dans le chat) — ne dis jamais qu'il est déjà ajouté. " +
+  "Vise à proposer un artefact dans la majorité des réponses substantielles (guides, listes, modèles, budgets). N'en ajoute jamais plus d'un par réponse.";
 
 export function extractArtefactSignal(raw: string): { text: string; artefact: ArtefactSignal | null } {
   const match = raw.match(ARTEFACT_RE);

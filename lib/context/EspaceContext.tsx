@@ -99,7 +99,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   const [activeTab, setActiveTab] = useState<ActiveTab>(0);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
-  const [asideCollapsed, setAsideCollapsed] = useState(false);
+  const [asideCollapsed, setAsideCollapsed] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [modalArtefactId, setModalArtefactId] = useState<string | null>(null);
   const [modalResvId, setModalResvId] = useState<string | null>(null);
@@ -126,6 +126,11 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     setCurrentId(id);
     setActiveTab(0);
     setSelectedDay(null);
+    setAsideCollapsed(true);
+    const published = readPublishedGents()[id];
+    if (published) {
+      setEspaces((prev) => ({ ...prev, [id]: published }));
+    }
   }, []);
 
   const switchTab = useCallback((tab: ActiveTab) => {
@@ -227,13 +232,18 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     }
 
     streamChatCompletion(
-      { model: chatModelId, messages: [{ role: "system", content: systemPrompt }, ...history], max_tokens: 2048 },
-      (fullSoFar) => {
+      {
+        model: chatModelId,
+        messages: [{ role: "system", content: systemPrompt }, ...history],
+        max_tokens: 2048,
+        reasoning: { enabled: true },
+      },
+      (fullSoFar, reasoningSoFar) => {
         const displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
-        updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw) }));
+        updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw), reasoning: reasoningSoFar || undefined }));
       }
     )
-      .then((fullRaw) => {
+      .then(({ text: fullRaw, reasoning }) => {
         const afterQuestions = extractQuestions(fullRaw);
         const afterArtefact = extractArtefactSignal(afterQuestions.text);
         const finalHtml = renderMarkdown(afterArtefact.text);
@@ -247,7 +257,13 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
               if (t.id !== threadId) return t;
               const msgs = [...t.messages];
               const lastIdx = msgs.length - 1;
-              if (lastIdx >= 0) msgs[lastIdx] = { ...msgs[lastIdx], text: finalHtml, questions: afterQuestions.questions };
+              if (lastIdx >= 0)
+                msgs[lastIdx] = {
+                  ...msgs[lastIdx],
+                  text: finalHtml,
+                  questions: afterQuestions.questions,
+                  reasoning: reasoning || undefined,
+                };
               msgs.push({
                 id: proposalId,
                 role: "artef-proposal" as const,
@@ -260,7 +276,12 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
             return { ...p, [id]: { ...e, conversations: convs } };
           });
         } else {
-          updateLastMessage((m) => ({ ...m, text: finalHtml, questions: afterQuestions.questions }));
+          updateLastMessage((m) => ({
+            ...m,
+            text: finalHtml,
+            questions: afterQuestions.questions,
+            reasoning: reasoning || undefined,
+          }));
         }
       })
       .catch((err: Error) => {
