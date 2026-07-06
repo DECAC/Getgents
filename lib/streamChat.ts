@@ -8,14 +8,34 @@ export interface StreamChatResult {
   reasoning: string;
 }
 
+/** Événement émis par la route quand le gent utilise un outil MCP. */
+export interface ToolEvent {
+  status: "connected" | "connect_error" | "running" | "done";
+  server?: string;
+  toolCount?: number;
+  call?: string;
+  args?: Record<string, unknown>;
+  ok?: boolean;
+  message?: string;
+}
+
 // Appelle /api/chat en streaming et notifie onToken avec le texte accumulé à
 // chaque fragment reçu, pour un affichage progressif façon LLM (au lieu
 // d'attendre la réponse complète avant de l'afficher). Le flux de raisonnement
 // (modèles "thinking" supportés par OpenRouter) est accumulé séparément et
 // notifié via onToken en second argument — vide si le modèle n'en fournit pas.
+// Si mcpServers est fourni, la route exécute une boucle d'outils MCP et
+// signale chaque appel via onToolEvent.
 export async function streamChatCompletion(
-  payload: { model: string; messages: ChatMessage[]; max_tokens?: number; reasoning?: { enabled?: boolean } },
-  onToken: (fullTextSoFar: string, fullReasoningSoFar: string) => void
+  payload: {
+    model: string;
+    messages: ChatMessage[];
+    max_tokens?: number;
+    reasoning?: { enabled?: boolean };
+    mcpServers?: { name: string; url: string }[];
+  },
+  onToken: (fullTextSoFar: string, fullReasoningSoFar: string) => void,
+  onToolEvent?: (ev: ToolEvent) => void
 ): Promise<StreamChatResult> {
   const res = await fetch("/api/chat", {
     method: "POST",
@@ -48,6 +68,10 @@ export async function streamChatCompletion(
       if (dataStr === "[DONE]") continue;
       try {
         const json = JSON.parse(dataStr);
+        if (json?.tool_event && onToolEvent) {
+          onToolEvent(json.tool_event as ToolEvent);
+          continue;
+        }
         const delta = json?.choices?.[0]?.delta;
         const content: string | undefined = delta?.content;
         const reasoningDetails: { type?: string; text?: string }[] | undefined = delta?.reasoning_details;

@@ -83,6 +83,18 @@ export function draftToEspace(draft: GentDraft): Espace {
   const threadId = newConversationId();
   const chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? undefined;
 
+  // Les connecteurs MCP dont le détail est une URL deviennent de vrais
+  // serveurs d'outils côté chat (transport Streamable HTTP, ex. datagouv).
+  const mcpServers = draft.connectors
+    .filter((c) => c.toolKind === "mcp" && typeof c.detail === "string" && /^https?:\/\//.test(c.detail))
+    .map((c) => ({ name: c.name, url: c.detail as string }));
+
+  if (mcpServers.length) {
+    systemPrompt +=
+      `\n\nTu disposes d'outils temps réel via ${mcpServers.length > 1 ? "les serveurs MCP" : "le serveur MCP"} ${mcpServers.map((s) => s.name).join(", ")}. ` +
+      "Utilise-les dès que la question porte sur des données qu'ils couvrent, plutôt que de répondre de mémoire, et cite la source des données obtenues.";
+  }
+
   return {
     icon: draft.icon,
     name: draft.name,
@@ -103,5 +115,6 @@ export function draftToEspace(draft: GentDraft): Espace {
     artefacts: [],
     systemPrompt,
     chatModelId,
+    mcpServers: mcpServers.length ? mcpServers : undefined,
   };
 }

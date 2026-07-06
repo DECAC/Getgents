@@ -159,6 +159,8 @@ export interface Espace {
   artefacts: Artefact[];
   systemPrompt?: string;
   chatModelId?: string;
+  /** Serveurs MCP (transport Streamable HTTP) configurés dans le builder. */
+  mcpServers?: { name: string; url: string }[];
 }
 
 export type EspacesMap = Record<string, Espace>;

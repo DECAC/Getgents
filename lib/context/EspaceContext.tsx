@@ -191,10 +191,12 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     let systemPrompt = "";
     let chatModelId = "anthropic/claude-sonnet-5";
     let threadId = "";
+    let mcpServers: { name: string; url: string }[] | undefined;
 
     setEspaces((prev) => {
       const espace = prev[id];
       threadId = espace.activeConversationId;
+      mcpServers = espace.mcpServers;
       const thread = espace.conversations.find((t) => t.id === threadId);
       const priorMessages = [...(thread?.messages ?? []), userMsg];
       history = priorMessages.map((m) => ({
@@ -231,16 +233,40 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       });
     }
 
+    // Insère un message "outil" juste avant la bulle agent en cours de frappe,
+    // pour montrer en direct les appels MCP effectués par le gent.
+    function pushToolMessage(kind: string, what: string, ok: boolean) {
+      setEspaces((p) => {
+        const e = p[id];
+        const convs = e.conversations.map((t) => {
+          if (t.id !== threadId) return t;
+          const msgs = [...t.messages];
+          msgs.splice(Math.max(msgs.length - 1, 0), 0, { role: "tool" as const, kind, what, ok, t: "à l'instant" });
+          return { ...t, messages: msgs };
+        });
+        return { ...p, [id]: { ...e, conversations: convs } };
+      });
+    }
+
     streamChatCompletion(
       {
         model: chatModelId,
         messages: [{ role: "system", content: systemPrompt }, ...history],
         max_tokens: 2048,
         reasoning: { enabled: true },
+        mcpServers,
       },
       (fullSoFar, reasoningSoFar) => {
         const displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
         updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw), reasoning: reasoningSoFar || undefined }));
+      },
+      (ev) => {
+        if (ev.status === "done") {
+          const [server, tool] = (ev.call ?? "").split("__");
+          pushToolMessage("MCP", `${server ?? "serveur"} · ${tool ?? ev.call}`, ev.ok !== false);
+        } else if (ev.status === "connect_error") {
+          pushToolMessage("MCP", `Connexion impossible à ${ev.server} — ${ev.message ?? "erreur"}`, false);
+        }
       }
     )
       .then(({ text: fullRaw, reasoning }) => {

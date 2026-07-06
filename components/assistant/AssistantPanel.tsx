@@ -174,7 +174,7 @@ export function AssistantPanel() {
           <div className={styles.toolChip}>
             <span className={styles.toolKind}>{m.kind}</span>
             <span className={styles.toolWhat}>{m.what}</span>
-            <span className={styles.toolOk}>✓</span>
+            <span className={styles.toolOk}>{m.ok === false ? "✕" : "✓"}</span>
           </div>
         </div>
       );
