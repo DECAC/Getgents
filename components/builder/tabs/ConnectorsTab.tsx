@@ -7,6 +7,13 @@ import { McpConfigModal } from "../McpConfigModal";
 import type { ConnectorToolKind } from "@/lib/types/builder";
 import styles from "./ConnectorsTab.module.css";
 
+// Seul un serveur MCP avec une URL http(s) est réellement appelé en
+// production (boucle d'outils dans /api/chat) — tous les autres types sont
+// affichés dans l'espace publié mais ne déclenchent aucun appel réel.
+function isRealConnector(instance: { toolKind: ConnectorToolKind; detail?: string }): boolean {
+  return instance.toolKind === "mcp" && !!instance.detail && /^https?:\/\//.test(instance.detail);
+}
+
 // Les 4 types mis en avant en accès rapide, comme les raccourcis de création
 // d'un écran d'ajout d'outil classique.
 const FEATURED_KINDS: ConnectorToolKind[] = ["ordinateur", "flux-assistant", "invite", "mcp"];
@@ -62,20 +69,33 @@ export function ConnectorsTab() {
         <div className={styles.list}>
           {currentDraft.connectors.map((instance) => {
             const type = typeByKind[instance.toolKind];
+            const real = isRealConnector(instance);
             return (
               <div className={styles.row} key={instance.id}>
                 <div className={styles.ic}>{type?.icon ?? "🔌"}</div>
                 <div className={styles.info}>
-                  <input
-                    className={styles.nameInput}
-                    defaultValue={instance.name}
-                    onBlur={(e) => {
-                      const value = e.target.value.trim();
-                      if (value && value !== instance.name) renameToolInstance(instance.id, value);
-                      else e.target.value = instance.name;
-                    }}
-                    aria-label={`Nom de l'outil ${instance.name}`}
-                  />
+                  <div className={styles.nameRow}>
+                    <input
+                      className={styles.nameInput}
+                      defaultValue={instance.name}
+                      onBlur={(e) => {
+                        const value = e.target.value.trim();
+                        if (value && value !== instance.name) renameToolInstance(instance.id, value);
+                        else e.target.value = instance.name;
+                      }}
+                      aria-label={`Nom de l'outil ${instance.name}`}
+                    />
+                    <span
+                      className={[styles.statusBadge, real ? styles.statusReal : styles.statusSimulated].join(" ")}
+                      title={
+                        real
+                          ? "Ce serveur MCP est réellement appelé par le gent en production."
+                          : "Affiché côté utilisateur mais ne déclenche aucun appel réel dans cette maquette."
+                      }
+                    >
+                      {real ? "● Connecté" : "○ Simulé"}
+                    </span>
+                  </div>
                   <div className={styles.typeTag}>{type?.name ?? instance.toolKind}</div>
                   <div className={styles.desc}>{type?.description}</div>
                   {instance.detail && <div className={styles.detail}>{instance.detail}</div>}
@@ -173,9 +193,10 @@ export function ConnectorsTab() {
           <path d="M12 8v4M12 16h.01" />
         </svg>
         <span>
-          Les connecteurs personnalisés et API REST demandent des autorisations d&apos;affichage et
-          de partage pour l&apos;organisation avant que l&apos;assistant puisse les utiliser en
-          production.
+          Seul un serveur <b>MCP</b> configuré avec une URL (ex. datagouv) est réellement appelé par
+          le gent — badge <b>● Connecté</b>. Les autres types (connecteur, API REST, flux
+          d&apos;assistant…) sont affichés côté utilisateur à titre d&apos;aperçu — badge{" "}
+          <b>○ Simulé</b> — sans déclencher d&apos;appel réel dans cette maquette.
         </span>
       </div>
 

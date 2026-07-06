@@ -5,6 +5,38 @@
   flex-direction: column;
   min-height: 0;
   min-width: 0;
+  position: relative;
+}
+
+/* Resize handle — sur le bord gauche puisque ce panneau est en dernière colonne */
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  z-index: 20;
+  background: transparent;
+}
+.resizeHandle:hover,
+.handleActive {
+  background: var(--sage-tint);
+}
+.resizeHandle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 32px;
+  border-radius: 3px;
+  background: var(--line);
+}
+.resizeHandle:hover::after,
+.handleActive::after {
+  background: var(--sage);
 }
 
 .head {

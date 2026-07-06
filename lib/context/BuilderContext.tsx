@@ -6,6 +6,7 @@ import type { ConversationMessage } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 import { writePublishedGent, draftToEspace, patchPublishedGentName } from "@/lib/publishedGents";
+import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion } from "@/lib/streamChat";
 
@@ -136,7 +137,8 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
 
   const publishDraft = useCallback(() => {
     setDrafts((prev) => {
-      const published: GentDraft = { ...prev[currentId], status: "published", updatedAt: "à l'instant" };
+      const draft = { ...prev[currentId], status: "published" as const, updatedAt: "à l'instant" };
+      const published: GentDraft = { ...draft, publishedSnapshot: draftContentSnapshot(draft) };
       writePublishedGent(currentId, draftToEspace(published));
       return { ...prev, [currentId]: published };
     });

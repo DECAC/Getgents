@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { ModelsTab } from "./ModelsTab";
 import type { KnowledgeSourceKind } from "@/lib/types/builder";
@@ -44,6 +44,26 @@ export function PromptTab() {
   const [urlValue, setUrlValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Valeur locale découplée des re-rendus du contexte (ex. streaming de
+  // l'assistant du builder) : sans ça, chaque frappe pouvait interrompre une
+  // composition de caractère accentué en cours (le navigateur reset le champ
+  // au milieu d'une séquence de touche morte), donnant des accents mangés.
+  const [promptValue, setPromptValue] = useState(currentDraft.systemPrompt);
+  const lastPushedRef = useRef(currentDraft.systemPrompt);
+
+  useEffect(() => {
+    if (currentDraft.systemPrompt !== lastPushedRef.current) {
+      setPromptValue(currentDraft.systemPrompt);
+      lastPushedRef.current = currentDraft.systemPrompt;
+    }
+  }, [currentDraft.systemPrompt]);
+
+  function handlePromptChange(text: string) {
+    setPromptValue(text);
+    lastPushedRef.current = text;
+    updateSystemPrompt(text);
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) addKnowledgeSource("file", file.name, `${formatSize(file.size)} · ajouté à l'instant`);
@@ -68,8 +88,8 @@ export function PromptTab() {
         </div>
         <textarea
           className={styles.promptArea}
-          value={currentDraft.systemPrompt}
-          onChange={(e) => updateSystemPrompt(e.target.value)}
+          value={promptValue}
+          onChange={(e) => handlePromptChange(e.target.value)}
           placeholder={
             "Tu es [nom du gent] de Getgents.\n\nObjectif : ...\n\nRègles impératives :\n- ...\n- ..."
           }

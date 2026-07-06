@@ -81,6 +81,12 @@
   color: var(--muted);
 }
 
+.nameWarning {
+  font-size: 11px;
+  color: var(--gold-700, #9a6a1e);
+  margin-top: 2px;
+}
+
 .objectiveInput {
   font-size: 12.5px;
   color: var(--muted);

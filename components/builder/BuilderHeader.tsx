@@ -1,6 +1,7 @@
 "use client";
 
 import { useBuilder, type BuilderTab } from "@/lib/context/BuilderContext";
+import { hasCustomName, isDirtySincePublish } from "@/lib/builderSnapshot";
 import styles from "./BuilderHeader.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -49,6 +50,19 @@ const TABS: { id: BuilderTab; label: string; icon: JSX.Element }[] = [
 export function BuilderHeader() {
   const { currentDraft, activeTab, switchTab, updateName, updateObjective, publishDraft } = useBuilder();
 
+  const nameOk = hasCustomName(currentDraft);
+  const dirty = isDirtySincePublish(currentDraft);
+  const alreadyLive = currentDraft.status === "published" && !dirty;
+  const publishDisabled = alreadyLive || !nameOk || !currentDraft.systemPrompt.trim();
+
+  let publishLabel = "Publier la V1";
+  if (alreadyLive) publishLabel = "Publié";
+  else if (currentDraft.status === "published" && dirty) publishLabel = "Publier la mise à jour";
+
+  let publishHint: string | undefined;
+  if (!nameOk) publishHint = "Donnez un nom au gent avant de publier";
+  else if (!currentDraft.systemPrompt.trim()) publishHint = "Rédigez un prompt système avant de publier";
+
   return (
     <header className={styles.head}>
       <div className={styles.top}>
@@ -73,6 +87,7 @@ export function BuilderHeader() {
               </svg>
             </span>
           </div>
+          {!nameOk && <div className={styles.nameWarning}>Donnez un nom à ce gent pour pouvoir le publier</div>}
           <input
             className={styles.objectiveInput}
             value={currentDraft.objective}
@@ -87,9 +102,10 @@ export function BuilderHeader() {
         <button
           className={styles.publishBtn}
           onClick={publishDraft}
-          disabled={currentDraft.status === "published" || !currentDraft.systemPrompt.trim()}
+          disabled={publishDisabled}
+          title={publishHint}
         >
-          {currentDraft.status === "published" ? "Publié" : "Publier la V1"}
+          {publishLabel}
         </button>
         {currentDraft.status === "published" && (
           <a

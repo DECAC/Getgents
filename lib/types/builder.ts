@@ -89,6 +89,8 @@ export interface GentDraft {
   builderConversation: ConversationMessage[];
   /** Autorise le gent publié à faire des recherches web (plugin OpenRouter). */
   webSearch?: boolean;
+  /** Empreinte du contenu au moment de la dernière publication (voir builderSnapshot.ts). */
+  publishedSnapshot?: string;
 }
 
 export type GentDraftsMap = Record<string, GentDraft>;

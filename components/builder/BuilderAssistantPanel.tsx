@@ -6,6 +6,7 @@ import { SafeHTML } from "@/components/shared/SafeHTML";
 import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import type { ConversationMessage } from "@/lib/types";
+import { setBuilderAssistWidthFromPointer, canResizeAssist } from "@/lib/assistResize";
 import styles from "./BuilderAssistantPanel.module.css";
 
 const CHAT_MODELS = MODEL_CATALOG.filter((m) => m.capability === "chat");
@@ -19,6 +20,44 @@ export function BuilderAssistantPanel() {
   const [composerText, setComposerText] = useState("");
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const handleRef = useRef<HTMLDivElement>(null);
+
+  // Drag-to-resize (edge handle) — même mécanique que le panneau assistant
+  // côté espace, sur une variable CSS dédiée (--builder-assist).
+  useEffect(() => {
+    const handle = handleRef.current;
+    if (!handle) return;
+    let dragging = false;
+
+    function onMove(e: MouseEvent) {
+      if (!dragging) return;
+      setBuilderAssistWidthFromPointer(e.clientX);
+    }
+
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      handle!.classList.remove(styles.handleActive);
+      document.body.classList.remove("col-resizing");
+    }
+
+    function onDown(e: MouseEvent) {
+      if (!canResizeAssist()) return;
+      dragging = true;
+      handle!.classList.add(styles.handleActive);
+      document.body.classList.add("col-resizing");
+      e.preventDefault();
+    }
+
+    handle.addEventListener("mousedown", onDown);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      handle.removeEventListener("mousedown", onDown);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
 
   const chatModelId =
     currentDraft.modelAssignments.find((a) => a.capability === "chat")?.modelId ??
@@ -82,6 +121,8 @@ export function BuilderAssistantPanel() {
 
   return (
     <section className={styles.panel} aria-label="Assistant du builder" id="builder-assistant">
+      <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner" />
+
       <div className={styles.head}>
         <div className={styles.headIc}>🛠️</div>
         <div className={styles.headMeta}>
