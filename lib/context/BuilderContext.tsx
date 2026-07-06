@@ -38,6 +38,7 @@ interface BuilderContextValue {
   removeToolInstance: (instanceId: string) => void;
 
   toggleArtefactTemplate: (templateId: string) => void;
+  toggleWebSearch: () => void;
 
   sendBuilderMessage: (text: string) => void;
   applyBuilderSuggestion: (suggestion: string) => void;
@@ -226,6 +227,13 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     });
   }, [currentId]);
 
+  const toggleWebSearch = useCallback(() => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: { ...prev[currentId], webSearch: !prev[currentId].webSearch, updatedAt: "à l'instant" },
+    }));
+  }, [currentId]);
+
   const sendBuilderMessage = useCallback((text: string) => {
     const id = currentIdRef.current;
     const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" };
@@ -324,6 +332,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         renameToolInstance,
         removeToolInstance,
         toggleArtefactTemplate,
+        toggleWebSearch,
         sendBuilderMessage,
         applyBuilderSuggestion,
         isThinking,

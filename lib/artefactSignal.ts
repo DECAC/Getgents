@@ -7,7 +7,7 @@
 const ARTEFACT_RE = /<!--ARTEFACT:\s*(\{[\s\S]*?\})\s*-->/;
 const TRUNCATED_MARKER_RE = /<!--ARTEFACT:[\s\S]*$/;
 
-export type ArtefactKind = "report" | "checklist" | "chart" | "visual";
+export type ArtefactKind = "report" | "checklist" | "chart" | "visual" | "map";
 
 export interface ArtefactSignal {
   kind: ArtefactKind;
@@ -15,6 +15,7 @@ export interface ArtefactSignal {
   body?: string;
   items?: string[];
   chartData?: { label: string; value: number }[];
+  mapPoints?: { label: string; lat: number; lon: number }[];
 }
 
 export const ARTEFACT_PROMPT_INSTRUCTION =
@@ -25,7 +26,9 @@ export const ARTEFACT_PROMPT_INSTRUCTION =
   '<!--ARTEFACT: {"kind":"checklist","title":"Titre court","items":["Élément 1","Élément 2","Élément 3"]}--> ' +
   "pour des étapes à cocher, une liste de pièces ou de tâches (items courts, un par élément, sans numérotation) ; ou " +
   '<!--ARTEFACT: {"kind":"chart","title":"Titre court","chartData":[{"label":"Catégorie A","value":120},{"label":"Catégorie B","value":80}]}--> ' +
-  "dès qu'il y a des montants, pourcentages ou comparaisons chiffrées. " +
+  "dès qu'il y a des montants, pourcentages ou comparaisons chiffrées ; ou " +
+  '<!--ARTEFACT: {"kind":"map","title":"Titre court","points":[{"label":"Lyon","lat":45.7578,"lon":4.832},{"label":"Annecy","lat":45.8992,"lon":6.1294}]}--> ' +
+  "dès que la réponse mentionne des lieux, un itinéraire, des adresses ou des zones géographiques — fournis des coordonnées WGS84 (lat/lon) précises pour chaque point, la carte est rendue sur fond IGN (cartes.gouv.fr). " +
   "Choisis le kind le plus utile : si plusieurs formats conviennent, privilégie checklist pour l'actionnable et report pour les textes longs. " +
   "Invite brièvement l'utilisateur à l'ajouter à son espace (bouton dans le chat) — ne dis jamais qu'il est déjà ajouté. " +
   "Vise à proposer un artefact dans la majorité des réponses substantielles (guides, listes, modèles, budgets). N'en ajoute jamais plus d'un par réponse.";
@@ -44,7 +47,7 @@ export function extractArtefactSignal(raw: string): { text: string; artefact: Ar
     if (
       parsed &&
       typeof parsed.title === "string" &&
-      ["report", "checklist", "chart", "visual"].includes(parsed.kind)
+      ["report", "checklist", "chart", "visual", "map"].includes(parsed.kind)
     ) {
       artefact = {
         kind: parsed.kind,
@@ -59,6 +62,14 @@ export function extractArtefactSignal(raw: string): { text: string; artefact: Ar
                 !!d && typeof (d as { label?: unknown }).label === "string" && typeof (d as { value?: unknown }).value === "number"
               )
               .slice(0, 12)
+          : undefined,
+        mapPoints: Array.isArray(parsed.points)
+          ? parsed.points
+              .filter((pt: unknown): pt is { label: string; lat: number; lon: number } => {
+                const o = pt as { label?: unknown; lat?: unknown; lon?: unknown };
+                return !!o && typeof o.label === "string" && typeof o.lat === "number" && typeof o.lon === "number";
+              })
+              .slice(0, 25)
           : undefined,
       };
     }

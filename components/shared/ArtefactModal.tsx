@@ -5,6 +5,7 @@ import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTMLDoc } from "./SafeHTML";
 import { MiniBarChart } from "./MiniBarChart";
 import { ChecklistView } from "./ChecklistView";
+import { MapArtefact } from "./MapArtefact";
 import styles from "./Modal.module.css";
 
 function VisualGrid() {
@@ -89,6 +90,7 @@ export function ArtefactModal() {
             </div>
           )}
           {artefact.chartData && <MiniBarChart data={artefact.chartData} />}
+          {artefact.mapPoints && <MapArtefact points={artefact.mapPoints} height={380} />}
           {artefact.checklistItems && (
             <ChecklistView
               items={artefact.checklistItems}

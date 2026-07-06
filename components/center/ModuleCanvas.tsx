@@ -10,6 +10,7 @@ import { MapTab } from "./tabs/MapTab";
 import { SafeHTMLDoc } from "@/components/shared/SafeHTML";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { ChecklistView } from "@/components/shared/ChecklistView";
+import { MapArtefact } from "@/components/shared/MapArtefact";
 import styles from "./ModuleCanvas.module.css";
 
 type ModuleSize = "list" | "small" | "medium" | "large";
@@ -37,6 +38,8 @@ interface ModuleDef {
   kind: "tab" | "map" | "artefact";
   render: () => React.ReactNode;
   openModal?: () => void;
+  /** Taille de départ si l'utilisateur n'a pas encore redimensionné. */
+  preferredSize?: ModuleSize;
 }
 
 interface ModuleConf {
@@ -147,10 +150,12 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       title: a.title,
       sub: `${a.type} · ${a.date}`,
       kind: "artefact",
+      preferredSize: a.mapPoints ? "medium" : undefined,
       openModal: () => openArtefactModal(a.id),
       render: () => (
         <>
           {a.chartData && <MiniBarChart data={a.chartData} />}
+          {a.mapPoints && <MapArtefact points={a.mapPoints} />}
           {a.checklistItems && (
             <ChecklistView items={a.checklistItems} onToggle={(i) => toggleChecklistItem(a.id, i)} />
           )}
@@ -183,14 +188,14 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
   }, [orderedModules]);
 
   function cycleSize(id: string) {
-    setConf((prev) => {
-      const current = prev[id]?.size ?? defaultSize(id);
-      return { ...prev, [id]: { size: nextSize(current) } };
-    });
+    const current = getSize(id);
+    setConf((prev) => ({ ...prev, [id]: { size: nextSize(current) } }));
   }
 
   function getSize(id: string): ModuleSize {
-    return conf[id]?.size ?? defaultSize(id);
+    if (conf[id]?.size) return conf[id].size;
+    const preferred = modules.find((m) => m.id === id)?.preferredSize;
+    return preferred ?? defaultSize(id);
   }
 
   function collapseAllToList() {

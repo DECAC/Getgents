@@ -87,6 +87,8 @@ export interface GentDraft {
   connectors: GentToolInstance[];
   artefactTemplates: ArtefactTemplateConfig[];
   builderConversation: ConversationMessage[];
+  /** Autorise le gent publié à faire des recherches web (plugin OpenRouter). */
+  webSearch?: boolean;
 }
 
 export type GentDraftsMap = Record<string, GentDraft>;

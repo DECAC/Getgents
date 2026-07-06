@@ -15,6 +15,7 @@ const PROPOSAL_KIND_LABEL: Record<string, string> = {
   checklist: "Checklist",
   chart: "Graphique",
   visual: "Aperçu visuel",
+  map: "Carte",
 };
 
 export function AssistantPanel() {
@@ -232,6 +233,12 @@ export function AssistantPanel() {
             <span className={styles.proposalTitle}>{p.title}</span>
           </div>
           {p.chartData && <MiniBarChart data={p.chartData} />}
+          {p.mapPoints && (
+            <ul className={styles.proposalItems}>
+              {p.mapPoints.slice(0, 6).map((pt, ii) => <li key={ii}>📍 {pt.label}</li>)}
+              {p.mapPoints.length > 6 && <li>… et {p.mapPoints.length - 6} de plus</li>}
+            </ul>
+          )}
           {p.items && (
             <ul className={styles.proposalItems}>
               {p.items.slice(0, 6).map((it, ii) => <li key={ii}>{it}</li>)}

@@ -89,6 +89,11 @@ export function draftToEspace(draft: GentDraft): Espace {
     .filter((c) => c.toolKind === "mcp" && typeof c.detail === "string" && /^https?:\/\//.test(c.detail))
     .map((c) => ({ name: c.name, url: c.detail as string }));
 
+  if (draft.webSearch) {
+    systemPrompt +=
+      "\n\nLa recherche web est activée pour cet espace : tes réponses peuvent s'appuyer sur des résultats web récents. Cite tes sources quand tu utilises une information issue du web.";
+  }
+
   if (mcpServers.length) {
     systemPrompt +=
       `\n\nTu disposes d'outils temps réel via ${mcpServers.length > 1 ? "les serveurs MCP" : "le serveur MCP"} ${mcpServers.map((s) => s.name).join(", ")}. ` +
@@ -116,5 +121,6 @@ export function draftToEspace(draft: GentDraft): Espace {
     systemPrompt,
     chatModelId,
     mcpServers: mcpServers.length ? mcpServers : undefined,
+    webSearch: draft.webSearch || undefined,
   };
 }

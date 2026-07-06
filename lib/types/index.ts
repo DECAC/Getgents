@@ -85,12 +85,19 @@ export interface ConversationThread {
   messages: ConversationMessage[];
 }
 
+export interface MapPoint {
+  label: string;
+  lat: number;
+  lon: number;
+}
+
 export interface ArtefactProposal {
-  kind: "report" | "checklist" | "chart" | "visual";
+  kind: "report" | "checklist" | "chart" | "visual" | "map";
   title: string;
   body?: string;
   items?: string[];
   chartData?: { label: string; value: number }[];
+  mapPoints?: MapPoint[];
 }
 
 export interface ConversationMessage {
@@ -130,6 +137,8 @@ export interface Artefact {
   body?: string;
   chartData?: { label: string; value: number }[];
   checklistItems?: { label: string; checked: boolean }[];
+  /** Points géolocalisés pour les artefacts carte (fond IGN cartes.gouv.fr). */
+  mapPoints?: MapPoint[];
 }
 
 export interface EspaceMetric {
@@ -161,6 +170,8 @@ export interface Espace {
   chatModelId?: string;
   /** Serveurs MCP (transport Streamable HTTP) configurés dans le builder. */
   mcpServers?: { name: string; url: string }[];
+  /** Recherche web activée pour ce gent (plugin web OpenRouter). */
+  webSearch?: boolean;
 }
 
 export type EspacesMap = Record<string, Espace>;

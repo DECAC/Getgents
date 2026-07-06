@@ -13,6 +13,7 @@ interface ChatBody {
   stream?: boolean;
   reasoning?: { enabled?: boolean };
   mcpServers?: { name: string; url: string }[];
+  webSearch?: boolean;
 }
 
 export async function POST(req: NextRequest) {
@@ -39,7 +40,14 @@ export async function POST(req: NextRequest) {
   const upstream = await fetch(OPENROUTER_API, {
     method: "POST",
     headers: openrouterHeaders(key),
-    body: JSON.stringify({ ...body, mcpServers: undefined }),
+    body: JSON.stringify({
+      ...body,
+      mcpServers: undefined,
+      webSearch: undefined,
+      // Plugin de recherche web d'OpenRouter : le fournisseur annote la
+      // réponse avec des résultats web récents, quel que soit le modèle.
+      ...(body.webSearch ? { plugins: [{ id: "web" }] } : {}),
+    }),
   });
 
   if (!upstream.ok) {
@@ -132,6 +140,7 @@ function mcpToolLoopResponse(body: ChatBody, servers: { name: string; url: strin
               messages,
               max_tokens: body.max_tokens ?? 2048,
               ...(withTools ? { tools: openaiTools } : {}),
+              ...(body.webSearch ? { plugins: [{ id: "web" }] } : {}),
             }),
           });
           const data = await res.json();

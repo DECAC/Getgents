@@ -39,7 +39,7 @@ function formatSize(bytes: number): string {
 }
 
 export function PromptTab() {
-  const { currentDraft, updateSystemPrompt, addKnowledgeSource, removeKnowledgeSource } = useBuilder();
+  const { currentDraft, updateSystemPrompt, addKnowledgeSource, removeKnowledgeSource, toggleWebSearch } = useBuilder();
   const wordCount = currentDraft.systemPrompt.trim().split(/\s+/).filter(Boolean).length;
   const [urlValue, setUrlValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -146,6 +146,28 @@ export function PromptTab() {
         </div>
       </div>
       <ModelsTab />
+
+      <div className={styles.card}>
+        <div className={styles.webSearchRow}>
+          <div>
+            <h4 className={styles.title}>Recherche web</h4>
+            <div className={styles.sub}>
+              Autorise ce gent à consulter le web en temps réel pour compléter ses réponses
+              (résultats récents, sources citées).
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!!currentDraft.webSearch}
+            className={[styles.switch, currentDraft.webSearch ? styles.switchOn : ""].filter(Boolean).join(" ")}
+            onClick={toggleWebSearch}
+            aria-label="Activer la recherche web"
+          >
+            <span className={styles.knob} />
+          </button>
+        </div>
+      </div>
 
       <div className={styles.card}>
         <h4 className={styles.title}>Bonnes pratiques</h4>

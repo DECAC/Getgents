@@ -19,6 +19,7 @@ const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
   checklist: { type: "Checklist", icon: "✅" },
   chart: { type: "Graphique", icon: "📊" },
   visual: { type: "Aperçu visuel", icon: "🖼️" },
+  map: { type: "Carte", icon: "🗺️" },
 };
 
 type ActiveTab = number | "map";
@@ -192,11 +193,13 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     let chatModelId = "anthropic/claude-sonnet-5";
     let threadId = "";
     let mcpServers: { name: string; url: string }[] | undefined;
+    let webSearch: boolean | undefined;
 
     setEspaces((prev) => {
       const espace = prev[id];
       threadId = espace.activeConversationId;
       mcpServers = espace.mcpServers;
+      webSearch = espace.webSearch;
       const thread = espace.conversations.find((t) => t.id === threadId);
       const priorMessages = [...(thread?.messages ?? []), userMsg];
       history = priorMessages.map((m) => ({
@@ -255,6 +258,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         max_tokens: 2048,
         reasoning: { enabled: true },
         mcpServers,
+        webSearch,
       },
       (fullSoFar, reasoningSoFar) => {
         const displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
@@ -351,6 +355,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
           body: sig.body ? renderMarkdown(sig.body) : undefined,
           chartData: sig.chartData,
           checklistItems: sig.items?.map((label) => ({ label, checked: false })),
+          mapPoints: sig.mapPoints,
         };
         artefacts = [newArtefact, ...espace.artefacts];
       }
