@@ -35,6 +35,7 @@ export function AssistantPanel() {
   const [cdView, setCdView] = useState<"chat" | "hist">("chat");
   const [composerText, setComposerText] = useState("");
   const [expandedReasoning, setExpandedReasoning] = useState<Record<number, boolean>>({});
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
@@ -128,6 +129,34 @@ export function AssistantPanel() {
   function toggleReasoning(i: number) {
     setExpandedReasoning((prev) => ({ ...prev, [i]: !isReasoningOpen(i) }));
   }
+
+  function htmlToPlainText(html: string): string {
+    const el = document.createElement("div");
+    el.innerHTML = html;
+    return (el.textContent ?? el.innerText ?? "").trim();
+  }
+
+  const copyAgentMessage = useCallback(async (index: number, html: string) => {
+    const plain = htmlToPlainText(html);
+    if (!plain) return;
+    try {
+      await navigator.clipboard.writeText(plain);
+      setCopiedIndex(index);
+      window.setTimeout(() => setCopiedIndex((prev) => (prev === index ? null : prev)), 2000);
+    } catch {
+      // Secours pour navigateurs sans accès clipboard sécurisé
+      const ta = document.createElement("textarea");
+      ta.value = plain;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopiedIndex(index);
+      window.setTimeout(() => setCopiedIndex((prev) => (prev === index ? null : prev)), 2000);
+    }
+  }, []);
 
   function isReasoningOpen(i: number): boolean {
     const m = activeConversation.messages[i];
@@ -305,11 +334,40 @@ export function AssistantPanel() {
 
     const isLastMessage = i === lastAgentIndex;
     const isAgent = m.role === "agent";
+    const canCopy = isAgent && !!m.text?.trim();
+    const isCopied = copiedIndex === i;
     return (
       <div key={i} className={[styles.msg, isAgent ? styles.msgAgent : styles.msgUser].join(" ")}>
         <div className={styles.av}>{isAgent ? "🤖" : "CL"}</div>
         <div className={styles.msgBody}>
-          <div className={styles.msgAuthor}>{isAgent ? currentEspace.gent : "Vous"}</div>
+          <div className={styles.msgAuthorRow}>
+            <div className={styles.msgAuthor}>{isAgent ? currentEspace.gent : "Vous"}</div>
+            {canCopy && (
+              <button
+                type="button"
+                className={[styles.copyBtn, isCopied ? styles.copyBtnDone : ""].filter(Boolean).join(" ")}
+                onClick={() => copyAgentMessage(i, m.text ?? "")}
+                aria-label={isCopied ? "Réponse copiée" : "Copier la réponse"}
+              >
+                {isCopied ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    Copié
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    Copier
+                  </>
+                )}
+              </button>
+            )}
+          </div>
           {isAgent && renderReasoning(m, i)}
           <div className={styles.bubble}>
             <SafeHTML html={m.text ?? ""} />

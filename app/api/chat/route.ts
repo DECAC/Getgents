@@ -19,7 +19,13 @@ interface ChatBody {
 export async function POST(req: NextRequest) {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) {
-    return NextResponse.json({ error: "OPENROUTER_API_KEY not configured" }, { status: 500 });
+    return NextResponse.json(
+      {
+        error:
+          "Clé API OpenRouter absente. Créez un fichier .env.local à la racine du projet avec OPENROUTER_API_KEY=votre_clé, puis redémarrez le serveur (npm run dev).",
+      },
+      { status: 500 }
+    );
   }
 
   let body: ChatBody;
@@ -127,6 +133,7 @@ function mcpToolLoopResponse(body: ChatBody, servers: { name: string; url: strin
         }
 
         const messages: Record<string, unknown>[] = [...(body.messages ?? [])];
+        let sentContent = false;
 
         // 2. Boucle d'appels : le modèle décide quand utiliser les outils.
         // Au dernier tour, les outils sont retirés pour forcer une réponse.
@@ -145,7 +152,11 @@ function mcpToolLoopResponse(body: ChatBody, servers: { name: string; url: strin
           });
           const data = await res.json();
           if (!res.ok) {
-            sendContent(`Erreur API : ${data?.error?.message ?? JSON.stringify(data)}`);
+            const err = data?.error;
+            const errText =
+              typeof err === "string" ? err : typeof err?.message === "string" ? err.message : JSON.stringify(data);
+            sendContent(`Erreur API : ${errText}`);
+            sentContent = true;
             break;
           }
 
@@ -160,6 +171,7 @@ function mcpToolLoopResponse(body: ChatBody, servers: { name: string; url: strin
             for (let i = 0; i < content.length; i += 60) {
               sendContent(content.slice(i, i + 60));
             }
+            if (content) sentContent = true;
             break;
           }
 
@@ -195,6 +207,12 @@ function mcpToolLoopResponse(body: ChatBody, servers: { name: string; url: strin
             sendToolEvent({ status: "done", call: tc.function.name, ok });
             messages.push({ role: "tool", tool_call_id: tc.id, content: resultText });
           }
+        }
+
+        if (!sentContent) {
+          sendContent(
+            "Je n'ai pas pu finaliser une réponse (réponse vide ou limite d'appels d'outils atteinte). Réessayez ou reformulez votre question."
+          );
         }
       } catch (err) {
         send({ choices: [{ delta: { content: `Erreur de traitement : ${(err as Error).message}` } }] });

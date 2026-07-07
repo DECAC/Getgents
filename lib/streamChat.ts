@@ -46,7 +46,14 @@ export async function streamChatCompletion(
 
   if (!res.ok || !res.body) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data?.error?.message ?? `Erreur API (${res.status})`);
+    const err = data?.error;
+    const message =
+      typeof err === "string"
+        ? err
+        : typeof err?.message === "string"
+          ? err.message
+          : `Erreur API (${res.status})`;
+    throw new Error(message);
   }
 
   const reader = res.body.getReader();
