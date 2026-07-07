@@ -34,24 +34,6 @@ export function CenterHeader() {
           {e.statusLabel}
         </span>
       </div>
-
-      {e.metrics.length > 0 && (
-        <div className={styles.metrics} aria-label="Indicateurs du gent">
-          {e.metrics.map((metric, i) => (
-            <div
-              key={i}
-              className={[styles.metric, metric.warn ? styles.metricWarn : ""].filter(Boolean).join(" ")}
-            >
-              <div className={styles.metricVal}>
-                {metric.value}
-                {metric.suffix && <span className={styles.metricOf}> {metric.suffix}</span>}
-              </div>
-              <div className={styles.metricLabel}>{metric.label}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
     </header>
   );
 }

@@ -1,7 +1,7 @@
 .ehead {
   background: var(--card);
   border-bottom: 1px solid var(--line);
-  padding: 14px 22px 0;
+  padding: 14px 22px;
   flex: none;
 }
 
@@ -83,53 +83,6 @@
 .dotLive { background: var(--sage); }
 .dotPaused { background: var(--gold); }
 .dotDone { background: var(--faint); }
-
-/* Metrics */
-.metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 11px 0 2px;
-}
-
-.metric {
-  min-width: 120px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--bg);
-}
-
-.metricVal {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-  line-height: 1.2;
-}
-
-.metricOf {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--muted);
-}
-
-.metricLabel {
-  margin-top: 3px;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 10px;
-  color: var(--faint);
-  text-transform: lowercase;
-}
-
-.metricWarn {
-  border-color: rgba(184, 134, 11, 0.35);
-  background: var(--gold-tint);
-}
-
-.metricWarn .metricVal {
-  color: var(--gold);
-}
 
 /* Threadbar */
 .threadbar {
