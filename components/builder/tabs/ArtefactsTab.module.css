@@ -22,11 +22,6 @@
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 15px 16px;
-  cursor: pointer;
-}
-.card.enabled {
-  border-color: var(--plum);
-  background: var(--plum-tint);
 }
 
 .thumb {
@@ -38,14 +33,12 @@
   background: var(--bg);
   margin-bottom: 12px;
 }
-.card.enabled .thumb {
-  background: rgba(255, 255, 255, 0.55);
-}
 
 .top {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 6px;
 }
 
@@ -55,35 +48,35 @@
   letter-spacing: -0.01em;
 }
 
-.switch {
-  width: 34px;
-  height: 20px;
-  border-radius: 10px;
-  background: var(--line);
-  position: relative;
+.badge {
   flex: none;
-  transition: background 0.15s;
-}
-.switch::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  transition: transform 0.15s;
-}
-.card.enabled .switch {
-  background: var(--plum);
-}
-.card.enabled .switch::after {
-  transform: translateX(14px);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  color: var(--sage-700, #2f6d4f);
+  background: var(--sage-tint);
 }
 
 .desc {
   font-size: 12px;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.note {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  display: flex;
+  gap: 9px;
+  margin-top: 18px;
+}
+.note svg {
+  flex: none;
+  margin-top: 1px;
 }

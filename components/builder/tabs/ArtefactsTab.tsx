@@ -1,6 +1,6 @@
 "use client";
 
-import { useBuilder } from "@/lib/context/BuilderContext";
+import { ARTEFACT_EXAMPLES } from "@/lib/mock-data/builder";
 import type { ArtefactKind } from "@/lib/types/builder";
 import styles from "./ArtefactsTab.module.css";
 
@@ -77,31 +77,38 @@ const ARTEFACT_ILLUSTRATION: Record<ArtefactKind, JSX.Element> = {
 };
 
 export function ArtefactsTab() {
-  const { currentDraft, toggleArtefactTemplate } = useBuilder();
-
   return (
     <div className={styles.wrap}>
       <p className={styles.intro}>
-        Choisissez les types d&apos;artefacts que ce gent peut générer automatiquement au fil de la
-        conversation avec l&apos;utilisateur final. Chaque artefact activé devient disponible pour
-        l&apos;assistant en production, dans l&apos;espace de l&apos;utilisateur.
+        Ces artefacts sont générés <b>automatiquement</b> par le gent, au moment le plus pertinent
+        de la conversation — aucune activation à faire ici : tous les types sont éligibles pour
+        tous les gents. Voici des exemples illustratifs des formats disponibles.
       </p>
       <div className={styles.grid}>
-        {currentDraft.artefactTemplates.map((tpl) => (
-          <button
-            key={tpl.id}
-            className={[styles.card, tpl.enabled ? styles.enabled : ""].filter(Boolean).join(" ")}
-            onClick={() => toggleArtefactTemplate(tpl.id)}
-            aria-pressed={tpl.enabled}
-          >
+        {ARTEFACT_EXAMPLES.map((tpl) => (
+          <div key={tpl.id} className={styles.card}>
             <div className={styles.thumb}>{ARTEFACT_ILLUSTRATION[tpl.kind]}</div>
             <div className={styles.top}>
               <span className={styles.label}>{tpl.label}</span>
-              <span className={styles.switch} aria-hidden="true" />
+              <span className={styles.badge} title="Ce format est toujours disponible, sans configuration">
+                Automatique
+              </span>
             </div>
             <div className={styles.desc}>{tpl.description}</div>
-          </button>
+          </div>
         ))}
+      </div>
+      <div className={styles.note}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 8v4M12 16h.01" />
+        </svg>
+        <span>
+          Le gent décide seul, au fil de la conversation, quel format produire s&apos;il détecte un
+          contenu structurable (liste, chiffres, procédure, lieux…). L&apos;utilisateur final voit
+          toujours une proposition qu&apos;il peut <b>ajouter</b> ou <b>ignorer</b> avant qu&apos;elle
+          ne rejoigne son espace de travail — rien n&apos;est jamais ajouté sans son accord.
+        </span>
       </div>
     </div>
   );

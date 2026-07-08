@@ -49,7 +49,8 @@
 
 .canvas {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-auto-flow: dense;
   gap: 8px 10px;
   align-items: start;
   padding-bottom: 40px;
@@ -90,10 +91,10 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-.cardList {
+.cardCompact {
   border-radius: 10px;
 }
-.cardList .cardHead {
+.cardCompact .cardHead {
   border-bottom: none;
   padding: 8px 12px;
 }
@@ -167,6 +168,31 @@
   padding: 14px;
 }
 
+.resizeHandle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding-top: 4px;
+  padding-left: 4px;
+  color: var(--faint);
+  cursor: nwse-resize;
+  touch-action: none;
+  opacity: 0.5;
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+.resizeHandle:hover,
+.resizeHandle:active {
+  opacity: 1;
+  color: var(--sage-700);
+}
+.cardCompact .resizeHandle {
+  display: none;
+}
+
 .empty {
   text-align: center;
   padding-top: 60px;
@@ -193,8 +219,11 @@
     height: auto !important;
     min-height: 120px;
   }
-  .cardList {
+  .cardCompact {
     height: 44px !important;
     min-height: 44px;
+  }
+  .resizeHandle {
+    display: none;
   }
 }

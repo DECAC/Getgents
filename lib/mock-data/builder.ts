@@ -2,7 +2,7 @@ import type {
   OpenRouterModel,
   ConnectorToolType,
   GentDraftsMap,
-  ArtefactTemplateConfig,
+  ArtefactExample,
   KnowledgeSource,
 } from "@/lib/types/builder";
 
@@ -157,48 +157,45 @@ export const CONNECTOR_TOOL_TYPES: ConnectorToolType[] = [
   },
 ];
 
-const DEFAULT_ARTEFACT_TEMPLATES: ArtefactTemplateConfig[] = [
+// Exemples illustratifs affichés dans l'onglet Artefacts du builder — tous
+// les types sont éligibles pour tous les gents, sans configuration : le
+// modèle décide seul, au fil de la conversation, quand en proposer un.
+export const ARTEFACT_EXAMPLES: ArtefactExample[] = [
   {
     id: "tpl-report",
     label: "Rapport de synthèse",
     kind: "report",
     description: "Document texte structuré (titres, listes) généré à la demande.",
-    enabled: true,
   },
   {
     id: "tpl-checklist",
     label: "Checklist",
     kind: "checklist",
     description: "Liste de tâches à cocher, utile pour un suivi de préparatifs.",
-    enabled: true,
   },
   {
     id: "tpl-visual",
     label: "Aperçu visuel",
     kind: "visual",
     description: "Illustration stylisée générée par un modèle image (ex. Nanobanana).",
-    enabled: false,
   },
   {
     id: "tpl-timeline",
     label: "Frise chronologique",
     kind: "timeline",
     description: "Étapes datées avec statut — adapté aux plannings et parcours.",
-    enabled: false,
   },
   {
     id: "tpl-budget",
     label: "Suivi budgétaire",
     kind: "budget",
     description: "Enveloppe, répartition par poste et historique de dépenses.",
-    enabled: false,
   },
   {
     id: "tpl-map",
     label: "Carte schématique",
     kind: "map",
     description: "Représentation schématique d'un parcours ou de lieux clés.",
-    enabled: false,
   },
 ];
 
@@ -244,11 +241,6 @@ Règles impératives :
       { id: "tool-3", toolKind: "api-rest", name: "Webhook de réservation (écriture)" },
       { id: "tool-4", toolKind: "connecteur-predefini", name: "Booking.com" },
     ],
-    artefactTemplates: DEFAULT_ARTEFACT_TEMPLATES.map((t) =>
-      ["tpl-report", "tpl-checklist", "tpl-visual", "tpl-timeline", "tpl-budget", "tpl-map"].includes(t.id)
-        ? { ...t, enabled: true }
-        : t
-    ),
     builderConversation: [
       {
         role: "agent",
@@ -290,9 +282,6 @@ Cet espace traite des données sensibles : reste factuel, sobre, et évite toute
     ],
     knowledgeSources: KNOWLEDGE_SUCCESSION,
     connectors: [{ id: "tool-1", toolKind: "mcp", name: "MCP Fichiers" }],
-    artefactTemplates: DEFAULT_ARTEFACT_TEMPLATES.map((t) =>
-      t.id === "tpl-report" || t.id === "tpl-checklist" ? { ...t, enabled: true } : t
-    ),
     builderConversation: [
       {
         role: "agent",
@@ -319,7 +308,6 @@ Cet espace traite des données sensibles : reste factuel, sobre, et évite toute
     ],
     knowledgeSources: [],
     connectors: [],
-    artefactTemplates: DEFAULT_ARTEFACT_TEMPLATES.map((t) => ({ ...t, enabled: false })),
     builderConversation: [
       {
         role: "agent",
@@ -329,5 +317,3 @@ Cet espace traite des données sensibles : reste factuel, sobre, et évite toute
     ],
   },
 };
-
-export { DEFAULT_ARTEFACT_TEMPLATES };
