@@ -71,14 +71,13 @@ export function draftToEspace(draft: GentDraft): Espace {
     systemPrompt += `\n\nBase de connaissance déclarée par le créateur (références seulement — leur contenu n'est pas analysé automatiquement dans cette maquette) :\n${refs}`;
   }
 
-  const enabledArtefacts = draft.artefactTemplates.filter((t) => t.enabled);
-  if (enabledArtefacts.length) {
-    const labels = enabledArtefacts.map((t) => t.label).join(", ");
-    systemPrompt +=
-      `\n\nTypes d'artefacts activés pour cet espace : ${labels}. ` +
-      "À chaque réponse utile, propose activement l'un de ces formats via le bloc ARTEFACT (checklist pour les étapes, rapport pour les textes et modèles, graphique pour les chiffres). " +
-      "L'utilisateur décide s'il l'ajoute à son espace — ton rôle est de le proposer souvent, pas d'attendre qu'il le demande.";
-  }
+  // Tous les artefacts (rapport, checklist, graphique, aperçu visuel, carte) sont éligibles
+  // pour tous les gents — pas de configuration côté créateur. Le modèle décide seul, au fil de
+  // la conversation, quand un artefact concret apporte de la valeur (voir ARTEFACT_PROMPT_INSTRUCTION,
+  // toujours injectée côté chat dans EspaceContext).
+  systemPrompt +=
+    "\n\nGénère des artefacts (rapport, checklist, graphique, aperçu visuel, carte) automatiquement et intelligemment, uniquement quand le contenu de la conversation s'y prête — n'attends jamais qu'on te le demande explicitement, et ne les propose pas non plus systématiquement hors de propos. " +
+    "L'utilisateur décide s'il ajoute chaque proposition à son espace de travail.";
 
   const threadId = newConversationId();
   const chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? undefined;

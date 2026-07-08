@@ -38,7 +38,6 @@ interface BuilderContextValue {
   renameToolInstance: (instanceId: string, name: string) => void;
   removeToolInstance: (instanceId: string) => void;
 
-  toggleArtefactTemplate: (templateId: string) => void;
   toggleWebSearch: () => void;
 
   sendBuilderMessage: (text: string) => void;
@@ -219,16 +218,6 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     });
   }, [currentId]);
 
-  const toggleArtefactTemplate = useCallback((templateId: string) => {
-    setDrafts((prev) => {
-      const draft = prev[currentId];
-      const artefactTemplates = draft.artefactTemplates.map((t) =>
-        t.id === templateId ? { ...t, enabled: !t.enabled } : t
-      );
-      return { ...prev, [currentId]: { ...draft, artefactTemplates, updatedAt: "à l'instant" } };
-    });
-  }, [currentId]);
-
   const toggleWebSearch = useCallback(() => {
     setDrafts((prev) => ({
       ...prev,
@@ -333,7 +322,6 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         addToolInstance,
         renameToolInstance,
         removeToolInstance,
-        toggleArtefactTemplate,
         toggleWebSearch,
         sendBuilderMessage,
         applyBuilderSuggestion,

@@ -64,12 +64,17 @@ export interface KnowledgeSource {
 
 export type ArtefactKind = "report" | "checklist" | "visual" | "timeline" | "budget" | "map";
 
-export interface ArtefactTemplateConfig {
+/**
+ * Exemple illustratif d'un type d'artefact que le gent peut générer.
+ * Ce n'est plus une config activable/désactivable par gent : tous les types
+ * sont éligibles pour tous les gents, le modèle décide seul quand en
+ * proposer un — voir ARTEFACT_PROMPT_INSTRUCTION (lib/artefactSignal.ts).
+ */
+export interface ArtefactExample {
   id: string;
   label: string;
   kind: ArtefactKind;
   description: string;
-  enabled: boolean;
 }
 
 export type GentDraftStatus = "draft" | "review" | "published";
@@ -85,7 +90,6 @@ export interface GentDraft {
   modelAssignments: ModelAssignment[];
   knowledgeSources: KnowledgeSource[];
   connectors: GentToolInstance[];
-  artefactTemplates: ArtefactTemplateConfig[];
   builderConversation: ConversationMessage[];
   /** Autorise le gent publié à faire des recherches web (plugin OpenRouter). */
   webSearch?: boolean;

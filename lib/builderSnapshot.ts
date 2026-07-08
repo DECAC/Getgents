@@ -22,7 +22,6 @@ export function draftContentSnapshot(draft: GentDraft): string {
     modelAssignments: draft.modelAssignments,
     knowledgeSources: draft.knowledgeSources,
     connectors: draft.connectors,
-    artefactTemplates: draft.artefactTemplates,
     webSearch: draft.webSearch,
   });
 }

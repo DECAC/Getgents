@@ -13,23 +13,21 @@ import { ChecklistView } from "@/components/shared/ChecklistView";
 import { MapArtefact } from "@/components/shared/MapArtefact";
 import styles from "./ModuleCanvas.module.css";
 
-type ModuleSize = "list" | "small" | "medium" | "large";
+interface ModuleLayout {
+  /** Largeur en nombre de colonnes, sur une grille de GRID_COLUMNS colonnes. */
+  cols: number;
+  /** Hauteur en pixels. */
+  height: number;
+}
 
-const SIZE_ORDER: ModuleSize[] = ["list", "small", "medium", "large"];
-
-const SIZE_LAYOUT: Record<ModuleSize, { cols: number; height: number }> = {
-  list: { cols: 4, height: 44 },
-  small: { cols: 1, height: 180 },
-  medium: { cols: 2, height: 300 },
-  large: { cols: 4, height: 480 },
-};
-
-const SIZE_LABEL: Record<ModuleSize, string> = {
-  list: "Liste",
-  small: "Petit",
-  medium: "Moyen",
-  large: "Très grand",
-};
+/** Grille plus fine que l'ancien système à 4 presets, pour un redimensionnement continu. */
+const GRID_COLUMNS = 8;
+const MIN_COLS = 2;
+const MAX_COLS = GRID_COLUMNS;
+const MIN_HEIGHT = 120;
+const MAX_HEIGHT = 640;
+/** Hauteur en dessous de laquelle le corps de la carte est masqué (vue compacte "liste"). */
+const COMPACT_HEIGHT = 56;
 
 interface ModuleDef {
   id: string;
@@ -39,11 +37,7 @@ interface ModuleDef {
   render: () => React.ReactNode;
   openModal?: () => void;
   /** Taille de départ si l'utilisateur n'a pas encore redimensionné. */
-  preferredSize?: ModuleSize;
-}
-
-interface ModuleConf {
-  size: ModuleSize;
+  preferredLayout?: ModuleLayout;
 }
 
 function tabContent(tab: EspaceTab) {
@@ -53,43 +47,17 @@ function tabContent(tab: EspaceTab) {
   return null;
 }
 
-function defaultSize(id: string): ModuleSize {
-  if (id.startsWith("tab-") || id === "map") return "large";
-  return "small";
+function defaultLayout(id: string): ModuleLayout {
+  if (id.startsWith("tab-") || id === "map") return { cols: GRID_COLUMNS, height: 480 };
+  return { cols: 2, height: 180 };
 }
 
-function nextSize(current: ModuleSize): ModuleSize {
-  const i = SIZE_ORDER.indexOf(current);
-  return SIZE_ORDER[(i + 1) % SIZE_ORDER.length];
+function clampCols(cols: number): number {
+  return Math.min(MAX_COLS, Math.max(MIN_COLS, Math.round(cols)));
 }
 
-function SizeIcon({ size }: { size: ModuleSize }) {
-  if (size === "list") {
-    return (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-      </svg>
-    );
-  }
-  if (size === "small") {
-    return (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="4" y="8" width="8" height="8" rx="1.5" />
-      </svg>
-    );
-  }
-  if (size === "medium") {
-    return (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="3" y="6" width="18" height="12" rx="2" />
-      </svg>
-    );
-  }
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="2" y="3" width="20" height="18" rx="2" />
-    </svg>
-  );
+function clampHeight(height: number): number {
+  return Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.round(height)));
 }
 
 interface DropZoneProps {
@@ -123,10 +91,18 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
   const { openArtefactModal, toggleChecklistItem } = useEspace();
 
   const [order, setOrder] = useState<string[]>([]);
-  const [conf, setConf] = useState<Record<string, ModuleConf>>({});
-  const [savedConf, setSavedConf] = useState<Record<string, ModuleConf> | null>(null);
+  const [conf, setConf] = useState<Record<string, ModuleLayout>>({});
+  const [savedConf, setSavedConf] = useState<Record<string, ModuleLayout> | null>(null);
   const dragId = useRef<string | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const resizeState = useRef<{
+    id: string;
+    startX: number;
+    startY: number;
+    startCols: number;
+    startHeight: number;
+    colWidth: number;
+  } | null>(null);
 
   const modules: ModuleDef[] = [
     ...espace.tabs.map((tab): ModuleDef => ({
@@ -150,7 +126,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       title: a.title,
       sub: `${a.type} · ${a.date}`,
       kind: "artefact",
-      preferredSize: a.mapPoints ? "medium" : undefined,
+      preferredLayout: a.mapPoints ? { cols: 4, height: 300 } : undefined,
       openModal: () => openArtefactModal(a.id),
       render: () => (
         <>
@@ -187,15 +163,49 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     });
   }, [orderedModules]);
 
-  function cycleSize(id: string) {
-    const current = getSize(id);
-    setConf((prev) => ({ ...prev, [id]: { size: nextSize(current) } }));
+  function getLayout(id: string): ModuleLayout {
+    if (conf[id]) return conf[id];
+    const preferred = modules.find((m) => m.id === id)?.preferredLayout;
+    return preferred ?? defaultLayout(id);
   }
 
-  function getSize(id: string): ModuleSize {
-    if (conf[id]?.size) return conf[id].size;
-    const preferred = modules.find((m) => m.id === id)?.preferredSize;
-    return preferred ?? defaultSize(id);
+  function beginResize(e: React.PointerEvent<HTMLSpanElement>, id: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    const card = e.currentTarget.parentElement as HTMLElement | null;
+    const layout = getLayout(id);
+    const rect = card?.getBoundingClientRect();
+    const colWidth = rect && layout.cols > 0 ? rect.width / layout.cols : 120;
+    resizeState.current = {
+      id,
+      startX: e.clientX,
+      startY: e.clientY,
+      startCols: layout.cols,
+      startHeight: layout.height,
+      colWidth,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function onResizeMove(e: React.PointerEvent<HTMLSpanElement>) {
+    const state = resizeState.current;
+    if (!state) return;
+    const deltaCols = Math.round((e.clientX - state.startX) / state.colWidth);
+    const deltaHeight = e.clientY - state.startY;
+    setConf((prev) => ({
+      ...prev,
+      [state.id]: {
+        cols: clampCols(state.startCols + deltaCols),
+        height: clampHeight(state.startHeight + deltaHeight),
+      },
+    }));
+  }
+
+  function endResize(e: React.PointerEvent<HTMLSpanElement>) {
+    if (resizeState.current && e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    resizeState.current = null;
   }
 
   function collapseAllToList() {
@@ -203,7 +213,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       setSavedConf(prev);
       const next = { ...prev };
       orderedModules.forEach((m) => {
-        next[m.id] = { size: "list" };
+        next[m.id] = { cols: GRID_COLUMNS, height: COMPACT_HEIGHT };
       });
       return next;
     });
@@ -215,7 +225,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
   }
 
   const allList =
-    orderedModules.length > 0 && orderedModules.every((m) => getSize(m.id) === "list");
+    orderedModules.length > 0 && orderedModules.every((m) => getLayout(m.id).height <= COMPACT_HEIGHT);
 
   if (!modules.length) {
     return (
@@ -264,9 +274,8 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       </div>
       <div className={styles.canvas}>
       {orderedModules.map((m, i) => {
-        const size = getSize(m.id);
-        const layout = SIZE_LAYOUT[size];
-        const isList = size === "list";
+        const layout = getLayout(m.id);
+        const isCompact = layout.height <= COMPACT_HEIGHT;
 
         return (
           <Fragment key={m.id}>
@@ -278,7 +287,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
               onDragLeave={() => setDropIndex(null)}
             />
             <section
-              className={[styles.card, isList ? styles.cardList : ""].filter(Boolean).join(" ")}
+              className={[styles.card, isCompact ? styles.cardCompact : ""].filter(Boolean).join(" ")}
               style={{
                 gridColumn: `span ${layout.cols}`,
                 height: `${layout.height}px`,
@@ -321,15 +330,6 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                   {m.sub && <span className={styles.cardSub}>{m.sub}</span>}
                 </span>
                 <span className={styles.cardActions}>
-                  <button
-                    type="button"
-                    className={styles.actionBtn}
-                    onClick={() => cycleSize(m.id)}
-                    title={`Taille : ${SIZE_LABEL[size]} — cliquer pour changer`}
-                    aria-label={`Taille actuelle ${SIZE_LABEL[size]}, cliquer pour agrandir`}
-                  >
-                    <SizeIcon size={size} />
-                  </button>
                   {m.openModal && (
                     <button
                       type="button"
@@ -346,7 +346,21 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                   )}
                 </span>
               </header>
-              {!isList && <div className={styles.cardBody}>{m.render()}</div>}
+              {!isCompact && <div className={styles.cardBody}>{m.render()}</div>}
+              <span
+                className={styles.resizeHandle}
+                onPointerDown={(e) => beginResize(e, m.id)}
+                onPointerMove={onResizeMove}
+                onPointerUp={endResize}
+                onPointerCancel={endResize}
+                title="Glisser pour redimensionner"
+                aria-hidden="true"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+                  <path d="M8.5 1.5 1.5 8.5" />
+                  <path d="M8.5 5 5 8.5" />
+                </svg>
+              </span>
             </section>
           </Fragment>
         );
