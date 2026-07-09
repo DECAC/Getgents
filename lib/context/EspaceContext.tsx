@@ -108,8 +108,6 @@ interface EspaceContextValue {
   isThinking: boolean;
   confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss") => void;
   confirmThemeProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
-  renameThemeTab: (tabId: string, label: string) => void;
-  deleteThemeTab: (tabId: string) => void;
   toggleChecklistItem: (artefactId: string, itemIndex: number) => void;
   startNewConversation: () => void;
   switchConversation: (id: string) => void;
@@ -480,24 +478,6 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     });
   }, []);
 
-  const renameThemeTab = useCallback((tabId: string, label: string) => {
-    const trimmed = label.trim();
-    if (!trimmed) return;
-    setEspaces((prev) => {
-      const espace = prev[currentId];
-      const themeTabs = (espace.themeTabs ?? []).map((t) => (t.id === tabId ? { ...t, label: trimmed } : t));
-      return { ...prev, [currentId]: { ...espace, themeTabs } };
-    });
-  }, [currentId]);
-
-  const deleteThemeTab = useCallback((tabId: string) => {
-    setEspaces((prev) => {
-      const espace = prev[currentId];
-      const themeTabs = (espace.themeTabs ?? []).filter((t) => t.id !== tabId);
-      return { ...prev, [currentId]: { ...espace, themeTabs } };
-    });
-  }, [currentId]);
-
   const toggleChecklistItem = useCallback((artefactId: string, itemIndex: number) => {
     const id = currentIdRef.current;
     setEspaces((prev) => {
@@ -645,8 +625,6 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         isThinking,
         confirmArtefactProposal,
         confirmThemeProposal,
-        renameThemeTab,
-        deleteThemeTab,
         toggleChecklistItem,
         startNewConversation,
         switchConversation,

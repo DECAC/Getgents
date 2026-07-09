@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback, Fragment } from "react";
-import type { Espace, EspaceTab } from "@/lib/types";
+import type { Espace, EspaceTab, Artefact, TimelineStep, ReservationItem, BudgetCategory } from "@/lib/types";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { TimelineTab } from "./tabs/TimelineTab";
 import { ReservationsTab } from "./tabs/ReservationsTab";
@@ -55,17 +55,55 @@ function tabContent(tab: EspaceTab) {
   return null;
 }
 
-function defaultLayout(id: string): ModuleLayout {
-  if (id.startsWith("tab-") || id === "map") return { cols: GRID_COLUMNS, height: 480 };
-  return { cols: 2, height: 180 };
-}
-
 function clampCols(cols: number): number {
   return Math.min(MAX_COLS, Math.max(MIN_COLS, Math.round(cols)));
 }
 
 function clampHeight(height: number): number {
   return Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.round(height)));
+}
+
+/**
+ * Bornes resserrées pour les tailles de départ (à distinguer des bornes de
+ * redimensionnement MIN/MAX_HEIGHT) : on vise une taille "juste", ni écrasée
+ * ni disproportionnée, que l'utilisateur peut ensuite agrandir ou réduire
+ * librement via la poignée de redimensionnement.
+ */
+function clampPreferredHeight(height: number): number {
+  return Math.min(420, Math.max(160, Math.round(height)));
+}
+
+/** Taille de départ pour un onglet "Itinéraire" : dépend du nombre d'étapes. */
+function timelineLayout(steps: TimelineStep[] | undefined): ModuleLayout {
+  return { cols: 5, height: clampPreferredHeight(150 + (steps?.length ?? 0) * 58) };
+}
+
+/** Taille de départ pour un onglet "Réservations" : dépend du nombre de propositions. */
+function reservationsLayout(items: ReservationItem[] | undefined): ModuleLayout {
+  return { cols: 4, height: clampPreferredHeight(130 + (items?.length ?? 0) * 92) };
+}
+
+/** Taille de départ pour un onglet "Budget" : dépend du nombre de catégories suivies. */
+function budgetLayout(categories: BudgetCategory[] | undefined): ModuleLayout {
+  return { cols: 3, height: clampPreferredHeight(230 + (categories?.length ?? 0) * 18) };
+}
+
+/** La carte reste une vue schématique compacte par défaut, plutôt que pleine largeur. */
+function mapLayout(): ModuleLayout {
+  return { cols: 5, height: 320 };
+}
+
+/** Taille de départ pour un artefact généré en conversation : dépend de sa nature et de son contenu. */
+function artefactLayout(a: Artefact): ModuleLayout {
+  if (a.checklistItems?.length) {
+    return { cols: 3, height: clampPreferredHeight(110 + a.checklistItems.length * 34) };
+  }
+  if (a.chartData?.length) return { cols: 4, height: 300 };
+  if (a.mapPoints?.length) return { cols: 4, height: 300 };
+
+  const plainTextLength = (a.body ?? "").replace(/<[^>]+>/g, " ").trim().length;
+  if (a.visual) return { cols: 3, height: clampPreferredHeight(170 + plainTextLength / 5) };
+  return { cols: 4, height: clampPreferredHeight(160 + plainTextLength / 4) };
 }
 
 interface DropZoneProps {
@@ -96,11 +134,10 @@ function DropZone({ index, active, onDragOver, onDrop, onDragLeave }: DropZonePr
 }
 
 export function ModuleCanvas({ espace }: { espace: Espace }) {
-  const { openArtefactModal, toggleChecklistItem, renameThemeTab, deleteThemeTab } = useEspace();
+  const { openArtefactModal, toggleChecklistItem } = useEspace();
 
   const [viewMode, setViewMode] = useState<"modules" | "themes">("modules");
   const [activeViewTabId, setActiveViewTabId] = useState<string | null>(null);
-  const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [order, setOrder] = useState<string[]>([]);
   const [conf, setConf] = useState<Record<string, ModuleLayout>>({});
   const [savedConf, setSavedConf] = useState<Record<string, ModuleLayout> | null>(null);
@@ -121,6 +158,12 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       title: tab.name,
       sub: tab.sub,
       kind: "tab",
+      preferredLayout:
+        tab.kind === "timeline"
+          ? timelineLayout(tab.steps)
+          : tab.kind === "resv"
+            ? reservationsLayout(tab.items)
+            : budgetLayout(tab.categories),
       render: () => tabContent(tab),
     })),
     ...(espace.map
@@ -129,6 +172,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
           title: espace.map.title,
           sub: espace.map.hint,
           kind: "map" as const,
+          preferredLayout: mapLayout(),
           render: () => <MapTab map={espace.map!} />,
         }]
       : []),
@@ -137,7 +181,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       title: a.title,
       sub: `${a.type} · ${a.date}`,
       kind: "artefact",
-      preferredLayout: a.mapPoints ? { cols: 4, height: 300 } : undefined,
+      preferredLayout: artefactLayout(a),
       openModal: () => openArtefactModal(a.id),
       render: () => (
         <>
@@ -180,8 +224,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
 
   function getLayout(id: string): ModuleLayout {
     if (conf[id]) return conf[id];
-    const preferred = modules.find((m) => m.id === id)?.preferredLayout;
-    return preferred ?? defaultLayout(id);
+    return modules.find((m) => m.id === id)?.preferredLayout ?? { cols: 4, height: 260 };
   }
 
   function beginResize(e: React.PointerEvent<HTMLSpanElement>, id: string) {
@@ -382,11 +425,6 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     );
   }
 
-  function commitRename(tabId: string, value: string) {
-    setRenamingTabId(null);
-    renameThemeTab(tabId, value);
-  }
-
   return (
     <div className={styles.wrap}>
       <div className={styles.toolbar}>
@@ -454,42 +492,16 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                 .filter(Boolean)
                 .join(" ")}
             >
-              {renamingTabId === vt.id ? (
-                <input
-                  autoFocus
-                  className={styles.viewTabRenameInput}
-                  defaultValue={vt.label}
-                  onBlur={(e) => commitRename(vt.id, e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitRename(vt.id, e.currentTarget.value);
-                    if (e.key === "Escape") setRenamingTabId(null);
-                  }}
-                  aria-label={`Renommer l'onglet ${vt.label}`}
-                />
-              ) : (
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={vt.id === resolvedActiveTabId}
-                  className={styles.viewTabLabel}
-                  onClick={() => setActiveViewTabId(vt.id)}
-                  onDoubleClick={() => vt.isTheme && setRenamingTabId(vt.id)}
-                  title={vt.isTheme ? "Double-cliquer pour renommer" : vt.label}
-                >
-                  {vt.label}
-                </button>
-              )}
-              {vt.isTheme && (
-                <button
-                  type="button"
-                  className={styles.viewTabDeleteBtn}
-                  onClick={() => deleteThemeTab(vt.id)}
-                  title="Supprimer cet onglet thématique"
-                  aria-label={`Supprimer l'onglet ${vt.label}`}
-                >
-                  ×
-                </button>
-              )}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={vt.id === resolvedActiveTabId}
+                className={styles.viewTabLabel}
+                onClick={() => setActiveViewTabId(vt.id)}
+                title={vt.label}
+              >
+                {vt.label}
+              </button>
             </div>
           ))}
         </div>
