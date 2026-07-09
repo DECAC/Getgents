@@ -5,7 +5,7 @@ import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
-import type { ConversationMessage } from "@/lib/types";
+import type { ConversationMessage, Espace } from "@/lib/types";
 import { setAssistWidthFromPointer } from "@/lib/assistResize";
 import { threadPreview, threadLastActivity } from "@/lib/conversationUtils";
 import styles from "./AssistantPanel.module.css";
@@ -18,6 +18,24 @@ const PROPOSAL_KIND_LABEL: Record<string, string> = {
   map: "Carte",
 };
 
+/** Titre lisible d'un module (même convention d'id que ModuleCanvas.tsx : tab-<id>, map, artef-<id>). */
+function moduleTitle(espace: Espace, moduleId: string): string {
+  if (moduleId === "map") return espace.map?.title ?? "Carte";
+  if (moduleId.startsWith("tab-")) {
+    const id = moduleId.slice(4);
+    return espace.tabs.find((t) => t.id === id)?.name ?? moduleId;
+  }
+  if (moduleId.startsWith("artef-")) {
+    const id = moduleId.slice(6);
+    return espace.artefacts.find((a) => a.id === id)?.title ?? moduleId;
+  }
+  return moduleId;
+}
+
+function themeTabLabel(espace: Espace, tabId: string): string {
+  return espace.themeTabs?.find((t) => t.id === tabId)?.label ?? "cet onglet";
+}
+
 export function AssistantPanel() {
   const {
     currentEspace,
@@ -27,6 +45,7 @@ export function AssistantPanel() {
     openArtefactModal,
     sendMessage,
     confirmArtefactProposal,
+    confirmThemeProposal,
     startNewConversation,
     switchConversation,
     isThinking,
@@ -289,6 +308,62 @@ export function AssistantPanel() {
               type="button"
               className={styles.proposalDismissBtn}
               onClick={() => confirmArtefactProposal(m.id ?? "", "dismiss")}
+            >
+              Ignorer
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (m.role === "theme-proposal" && m.themeProposal) {
+      const action = m.themeProposal;
+      const headline =
+        action.action === "create"
+          ? `Regrouper ${action.moduleIds.length} élément${action.moduleIds.length > 1 ? "s" : ""} sous « ${action.label} »`
+          : action.action === "rename"
+            ? `Renommer « ${themeTabLabel(currentEspace, action.tabId)} » en « ${action.label} »`
+            : `Supprimer l'onglet « ${themeTabLabel(currentEspace, action.tabId)} »`;
+
+      if (m.themeProposalStatus === "applied") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            ✓ Appliqué — {headline}
+          </div>
+        );
+      }
+      if (m.themeProposalStatus === "dismissed") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            Proposition ignorée — {headline}
+          </div>
+        );
+      }
+      return (
+        <div key={i} className={styles.proposalCard}>
+          <div className={styles.proposalHead}>
+            <span className={styles.proposalKind}>Onglet thématique</span>
+            <span className={styles.proposalTitle}>{headline}</span>
+          </div>
+          {action.action === "create" && (
+            <ul className={styles.proposalItems}>
+              {action.moduleIds.map((id) => (
+                <li key={id}>{moduleTitle(currentEspace, id)}</li>
+              ))}
+            </ul>
+          )}
+          <div className={styles.proposalActions}>
+            <button
+              type="button"
+              className={styles.proposalAddBtn}
+              onClick={() => confirmThemeProposal(m.id ?? "", "apply")}
+            >
+              Appliquer
+            </button>
+            <button
+              type="button"
+              className={styles.proposalDismissBtn}
+              onClick={() => confirmThemeProposal(m.id ?? "", "dismiss")}
             >
               Ignorer
             </button>

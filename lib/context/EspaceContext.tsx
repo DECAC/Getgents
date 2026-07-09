@@ -1,7 +1,16 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
-import type { Espace, EspacesMap, ReservationItem, ConversationThread, ConversationMessage, Artefact } from "@/lib/types";
+import type {
+  Espace,
+  EspacesMap,
+  ReservationItem,
+  ConversationThread,
+  ConversationMessage,
+  Artefact,
+  ThemeTab,
+  ThemeTabProposalAction,
+} from "@/lib/types";
 import { ESPACES as INITIAL_ESPACES } from "@/lib/mock-data/espaces";
 import {
   formatConversationStartedAt,
@@ -10,6 +19,7 @@ import {
 } from "@/lib/conversationUtils";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 import { extractArtefactSignal, ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
+import { extractThemeTabSignal, describeModulesForPrompt, THEME_TAB_PROMPT_INSTRUCTION } from "@/lib/themeTabSignal";
 import { readPublishedGents } from "@/lib/publishedGents";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion } from "@/lib/streamChat";
@@ -21,6 +31,21 @@ const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
   visual: { type: "Aperçu visuel", icon: "🖼️" },
   map: { type: "Carte", icon: "🗺️" },
 };
+
+/** Applique une action de thème (create/rename/delete) — un module n'appartient qu'à un seul onglet thématique à la fois. */
+function applyThemeTabAction(themeTabs: ThemeTab[], action: ThemeTabProposalAction): ThemeTab[] {
+  if (action.action === "create") {
+    const stripped = themeTabs
+      .map((t) => ({ ...t, moduleIds: t.moduleIds.filter((id) => !action.moduleIds.includes(id)) }))
+      .filter((t) => t.moduleIds.length > 0);
+    const newTab: ThemeTab = { id: `theme-${Date.now()}`, label: action.label, moduleIds: action.moduleIds };
+    return [...stripped, newTab];
+  }
+  if (action.action === "rename") {
+    return themeTabs.map((t) => (t.id === action.tabId ? { ...t, label: action.label } : t));
+  }
+  return themeTabs.filter((t) => t.id !== action.tabId);
+}
 
 type ActiveTab = number | "map";
 
@@ -82,6 +107,9 @@ interface EspaceContextValue {
   sendMessage: (text: string) => void;
   isThinking: boolean;
   confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss") => void;
+  confirmThemeProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
+  renameThemeTab: (tabId: string, label: string) => void;
+  deleteThemeTab: (tabId: string) => void;
   toggleChecklistItem: (artefactId: string, itemIndex: number) => void;
   startNewConversation: () => void;
   switchConversation: (id: string) => void;
@@ -210,7 +238,9 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       const basePrompt =
         espace.systemPrompt?.trim() || `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`;
       const memoryNote = espace.memory ? `\n\nMémoire de l'espace : ${espace.memory}` : "";
-      systemPrompt = `${basePrompt}${memoryNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}`;
+      systemPrompt =
+        `${basePrompt}${memoryNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
+        `\n\n${THEME_TAB_PROMPT_INSTRUCTION}\n\n${describeModulesForPrompt(espace)}`;
       chatModelId = espace.chatModelId ?? chatModelId;
 
       const conversations = espace.conversations.map((t) =>
@@ -276,7 +306,8 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       .then(({ text: fullRaw, reasoning }) => {
         const afterQuestions = extractQuestions(fullRaw);
         const afterArtefact = extractArtefactSignal(afterQuestions.text);
-        const finalHtml = renderMarkdown(afterArtefact.text);
+        const afterTheme = extractThemeTabSignal(afterArtefact.text);
+        const finalHtml = renderMarkdown(afterTheme.text);
 
         if (afterArtefact.artefact) {
           const sig = afterArtefact.artefact;
@@ -299,6 +330,33 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
                 role: "artef-proposal" as const,
                 proposal: sig,
                 proposalStatus: "pending" as const,
+                t: "à l'instant",
+              });
+              return { ...t, messages: msgs };
+            });
+            return { ...p, [id]: { ...e, conversations: convs } };
+          });
+        } else if (afterTheme.themeAction) {
+          const action = afterTheme.themeAction;
+          const proposalId = `theme-prop-${Date.now()}`;
+          setEspaces((p) => {
+            const e = p[id];
+            const convs = e.conversations.map((t) => {
+              if (t.id !== threadId) return t;
+              const msgs = [...t.messages];
+              const lastIdx = msgs.length - 1;
+              if (lastIdx >= 0)
+                msgs[lastIdx] = {
+                  ...msgs[lastIdx],
+                  text: finalHtml,
+                  questions: afterQuestions.questions,
+                  reasoning: reasoning || undefined,
+                };
+              msgs.push({
+                id: proposalId,
+                role: "theme-proposal" as const,
+                themeProposal: action,
+                themeProposalStatus: "pending" as const,
                 t: "à l'instant",
               });
               return { ...t, messages: msgs };
@@ -380,6 +438,65 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       return { ...prev, [id]: { ...espace, artefacts, conversations } };
     });
   }, []);
+
+  const confirmThemeProposal = useCallback((proposalId: string, decision: "apply" | "dismiss") => {
+    const id = currentIdRef.current;
+    setEspaces((prev) => {
+      const espace = prev[id];
+      let targetMsg: ConversationMessage | undefined;
+      let targetThreadId: string | undefined;
+      for (const t of espace.conversations) {
+        const found = t.messages.find((m) => m.id === proposalId);
+        if (found) {
+          targetMsg = found;
+          targetThreadId = t.id;
+          break;
+        }
+      }
+      if (!targetMsg?.themeProposal) return prev;
+
+      const themeTabs =
+        decision === "apply"
+          ? applyThemeTabAction(espace.themeTabs ?? [], targetMsg.themeProposal)
+          : espace.themeTabs ?? [];
+
+      const conversations = espace.conversations.map((t) =>
+        t.id === targetThreadId
+          ? {
+              ...t,
+              messages: t.messages.map((m) =>
+                m.id === proposalId
+                  ? {
+                      ...m,
+                      themeProposalStatus: decision === "apply" ? ("applied" as const) : ("dismissed" as const),
+                    }
+                  : m
+              ),
+            }
+          : t
+      );
+
+      return { ...prev, [id]: { ...espace, themeTabs, conversations } };
+    });
+  }, []);
+
+  const renameThemeTab = useCallback((tabId: string, label: string) => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    setEspaces((prev) => {
+      const espace = prev[currentId];
+      const themeTabs = (espace.themeTabs ?? []).map((t) => (t.id === tabId ? { ...t, label: trimmed } : t));
+      return { ...prev, [currentId]: { ...espace, themeTabs } };
+    });
+  }, [currentId]);
+
+  const deleteThemeTab = useCallback((tabId: string) => {
+    setEspaces((prev) => {
+      const espace = prev[currentId];
+      const themeTabs = (espace.themeTabs ?? []).filter((t) => t.id !== tabId);
+      return { ...prev, [currentId]: { ...espace, themeTabs } };
+    });
+  }, [currentId]);
 
   const toggleChecklistItem = useCallback((artefactId: string, itemIndex: number) => {
     const id = currentIdRef.current;
@@ -527,6 +644,9 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         sendMessage,
         isThinking,
         confirmArtefactProposal,
+        confirmThemeProposal,
+        renameThemeTab,
+        deleteThemeTab,
         toggleChecklistItem,
         startNewConversation,
         switchConversation,
