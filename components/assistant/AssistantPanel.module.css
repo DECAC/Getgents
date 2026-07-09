@@ -597,33 +597,6 @@
   border-top: 1px solid var(--line);
   flex: none;
 }
-
-.geoRow {
-  display: flex;
-  margin-bottom: 8px;
-}
-.geoChip {
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 5px 11px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--bg);
-  color: var(--muted);
-}
-.geoChip:hover {
-  border-color: var(--plum);
-  color: var(--plum);
-}
-.geoChip:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-.geoChipOn {
-  border-color: var(--sage);
-  background: var(--sage-tint);
-  color: var(--sage-700);
-}
 .composer {
   background: var(--bg);
   border: 1px solid var(--line);

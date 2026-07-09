@@ -78,7 +78,9 @@ export type ConversationRole =
   | "artef-pointer"
   | "artef-new"
   | "artef-proposal"
-  | "theme-proposal";
+  | "theme-proposal"
+  | "geo-request"
+  | "connector-proposal";
 
 export interface ConversationThread {
   id: string;
@@ -138,6 +140,11 @@ export interface ConversationMessage {
   proposalStatus?: "pending" | "added" | "dismissed";
   themeProposal?: ThemeTabProposalAction;
   themeProposalStatus?: "pending" | "applied" | "dismissed";
+  /** Demande de partage de position émise par le gent, à valider par l'utilisateur. */
+  geoRequestStatus?: "pending" | "granted" | "denied" | "error";
+  /** Connecteur préparé par l'assistant du builder, à valider par le créateur. */
+  connectorProposal?: { kind: "dataset" | "mcp"; name: string; url: string };
+  connectorProposalStatus?: "pending" | "added" | "dismissed";
   reasoning?: string;
 }
 

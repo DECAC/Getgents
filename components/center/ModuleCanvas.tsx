@@ -36,6 +36,8 @@ interface ModuleDef {
   kind: "tab" | "map" | "artefact";
   render: () => React.ReactNode;
   openModal?: () => void;
+  /** Retire le module de l'espace (artefacts uniquement). */
+  onRemove?: () => void;
   /** Taille de départ si l'utilisateur n'a pas encore redimensionné. */
   preferredLayout?: ModuleLayout;
 }
@@ -134,7 +136,7 @@ function DropZone({ index, active, onDragOver, onDrop, onDragLeave }: DropZonePr
 }
 
 export function ModuleCanvas({ espace }: { espace: Espace }) {
-  const { openArtefactModal, toggleChecklistItem, userPosition } = useEspace();
+  const { openArtefactModal, toggleChecklistItem, userPosition, removeArtefact } = useEspace();
 
   const [viewMode, setViewMode] = useState<"modules" | "themes">("modules");
   const [activeViewTabId, setActiveViewTabId] = useState<string | null>(null);
@@ -183,6 +185,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       kind: "artefact",
       preferredLayout: artefactLayout(a),
       openModal: () => openArtefactModal(a.id),
+      onRemove: () => removeArtefact(a.id),
       render: () => (
         <>
           {a.chartData && <MiniBarChart data={a.chartData} />}
@@ -390,6 +393,19 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                           <path d="M15 3h6v6M10 14 21 3" />
+                        </svg>
+                      </button>
+                    )}
+                    {m.onRemove && (
+                      <button
+                        type="button"
+                        className={styles.actionBtn}
+                        onClick={m.onRemove}
+                        title="Retirer de l'espace"
+                        aria-label={`Retirer ${m.title} de l'espace`}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 6 6 18M6 6l12 12" />
                         </svg>
                       </button>
                     )}

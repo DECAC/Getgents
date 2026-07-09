@@ -51,7 +51,7 @@ export function AssistantPanel() {
     switchConversation,
     isThinking,
     geoStatus,
-    requestGeolocation,
+    confirmGeoRequest,
   } = useEspace();
 
   const [cdView, setCdView] = useState<"chat" | "hist">("chat");
@@ -336,6 +336,59 @@ export function AssistantPanel() {
       );
     }
 
+    if (m.role === "geo-request") {
+      if (m.geoRequestStatus === "granted") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            ✓ Position partagée avec le gent
+          </div>
+        );
+      }
+      if (m.geoRequestStatus === "denied") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            Partage de position refusé
+          </div>
+        );
+      }
+      if (m.geoRequestStatus === "error") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            Position indisponible (permission navigateur refusée ou géolocalisation inaccessible)
+          </div>
+        );
+      }
+      return (
+        <div key={i} className={styles.proposalCard}>
+          <div className={styles.proposalHead}>
+            <span className={styles.proposalKind}>📍 Position</span>
+            <span className={styles.proposalTitle}>Le gent demande votre position</span>
+          </div>
+          <div className={styles.proposalBody}>
+            Elle sert uniquement à trouver les lieux les plus proches et n&apos;est jamais partagée
+            sans votre accord — votre navigateur demandera aussi sa permission.
+          </div>
+          <div className={styles.proposalActions}>
+            <button
+              type="button"
+              className={styles.proposalAddBtn}
+              disabled={geoStatus === "pending"}
+              onClick={() => confirmGeoRequest(m.id ?? "", "share")}
+            >
+              {geoStatus === "pending" ? "Localisation…" : "Partager ma position"}
+            </button>
+            <button
+              type="button"
+              className={styles.proposalDismissBtn}
+              onClick={() => confirmGeoRequest(m.id ?? "", "deny")}
+            >
+              Refuser
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     if (m.role === "theme-proposal" && m.themeProposal) {
       const action = m.themeProposal;
       const headline =
@@ -591,25 +644,6 @@ export function AssistantPanel() {
 
       {cdView === "chat" && (
         <div className={styles.composerWrap}>
-          {!!currentEspace.datasets?.length && (
-            <div className={styles.geoRow}>
-              <button
-                type="button"
-                className={[styles.geoChip, geoStatus === "granted" ? styles.geoChipOn : ""].filter(Boolean).join(" ")}
-                onClick={requestGeolocation}
-                disabled={geoStatus === "pending"}
-                title="Votre position n'est partagée qu'après votre accord (permission du navigateur) et sert uniquement à trouver les lieux les plus proches."
-              >
-                {geoStatus === "granted"
-                  ? "📍 Position partagée"
-                  : geoStatus === "pending"
-                    ? "📍 Localisation…"
-                    : geoStatus === "denied"
-                      ? "📍 Position refusée — réessayer"
-                      : "📍 Partager ma position"}
-              </button>
-            </div>
-          )}
           <div className={[styles.composer, !composerText.trim() ? styles.composerOff : ""].join(" ")}>
             <textarea
               ref={textareaRef}

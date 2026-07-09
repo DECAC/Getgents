@@ -109,7 +109,7 @@ export function draftToEspace(draft: GentDraft): Espace {
   if (datasets.length) {
     systemPrompt +=
       `\n\nTu disposes d'outils de recherche géographique sur des données ouvertes : ${datasets.map((d) => d.name).join(", ")}. ` +
-      "Pour guider l'utilisateur vers le lieu le plus proche : demande-lui d'abord de partager sa position (bouton « Partager ma position » sous le champ de saisie) — n'appelle jamais l'outil avec une position devinée. " +
+      "Pour guider l'utilisateur vers le lieu le plus proche : demande-lui d'abord de partager sa position via le marqueur GEOLOC_REQUEST (voir instruction dédiée) — n'appelle jamais l'outil avec une position devinée. " +
       "Une fois sa position connue (indiquée dans le contexte), appelle l'outil avec lat/lon, puis présente les résultats du plus proche au plus éloigné avec leur adresse et leurs caractéristiques utiles (horaires, accès PMR…). " +
       "Rends chaque adresse cliquable en l'émettant sous la forme <a href=\"geo:LAT,LON\" data-address=\"ADRESSE COMPLÈTE\">ADRESSE</a>. " +
       "Propose aussi un artefact carte des résultats quand il y en a plusieurs.";

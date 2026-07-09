@@ -20,6 +20,7 @@ import {
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 import { extractArtefactSignal, ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
 import { extractThemeTabSignal, describeModulesForPrompt, THEME_TAB_PROMPT_INSTRUCTION } from "@/lib/themeTabSignal";
+import { extractGeolocRequest, GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
 import { readPublishedGents } from "@/lib/publishedGents";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion } from "@/lib/streamChat";
@@ -112,6 +113,9 @@ interface EspaceContextValue {
   userPosition: { lat: number; lon: number } | null;
   geoStatus: GeoStatus;
   requestGeolocation: () => void;
+  /** Réponse de l'utilisateur à une demande de position émise par le gent dans le fil. */
+  confirmGeoRequest: (messageId: string, decision: "share" | "deny") => void;
+  removeArtefact: (artefactId: string) => void;
   confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss") => void;
   confirmThemeProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
   toggleChecklistItem: (artefactId: string, itemIndex: number) => void;
@@ -143,6 +147,11 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   currentIdRef.current = currentId;
   const userPositionRef = useRef(userPosition);
   userPositionRef.current = userPosition;
+  // Miroir de l'état pour les lectures synchrones hors cycle React (envoi
+  // déclenché depuis un callback navigateur, ex. géolocalisation) : les
+  // updaters setEspaces ne sont pas garantis d'être exécutés immédiatement.
+  const espacesRef = useRef(espaces);
+  espacesRef.current = espaces;
 
   // Géolocalisation à consentement explicite : déclenchée uniquement par un
   // clic utilisateur, puis validée une seconde fois par la permission navigateur.
@@ -239,46 +248,41 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" };
     const agentPlaceholder = { role: "agent" as const, text: "", t: "à l'instant" };
 
-    // L'updater doit rester pur (pas d'effet de bord dedans, sinon React peut
-    // l'appeler deux fois en StrictMode/dev) : on capture juste ce qu'il faut
-    // pour l'appel API dans ces variables, le streaming se fait après, en dehors.
-    let history: { role: string; content: string }[] = [];
-    let systemPrompt = "";
-    let chatModelId = "anthropic/claude-sonnet-5";
-    let threadId = "";
-    let mcpServers: { name: string; url: string }[] | undefined;
-    let datasets: { name: string; url: string }[] | undefined;
-    let webSearch: boolean | undefined;
+    // Capture synchrone depuis le miroir espacesRef : sendMessage peut être
+    // appelé hors d'un événement React (callback de géolocalisation), où les
+    // updaters setEspaces ne s'exécutent pas immédiatement.
+    const espace = espacesRef.current[id];
     const position = userPositionRef.current;
-
-    setEspaces((prev) => {
-      const espace = prev[id];
-      threadId = espace.activeConversationId;
-      mcpServers = espace.mcpServers;
-      datasets = espace.datasets;
-      webSearch = espace.webSearch;
-      const thread = espace.conversations.find((t) => t.id === threadId);
-      const priorMessages = [...(thread?.messages ?? []), userMsg];
-      history = priorMessages.map((m) => ({
+    const threadId = espace.activeConversationId;
+    const mcpServers = espace.mcpServers;
+    const datasets = espace.datasets;
+    const webSearch = espace.webSearch;
+    const thread = espace.conversations.find((t) => t.id === threadId);
+    const history = [...(thread?.messages ?? []), userMsg]
+      .filter((m) => m.role === "agent" || m.role === "user")
+      .map((m) => ({
         role: m.role === "agent" ? "assistant" : "user",
         content: (m.text ?? "").replace(/<[^>]+>/g, ""),
       }));
 
-      const basePrompt =
-        espace.systemPrompt?.trim() || `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`;
-      const memoryNote = espace.memory ? `\n\nMémoire de l'espace : ${espace.memory}` : "";
-      const positionNote = position
-        ? `\n\nPosition de l'utilisateur (partagée avec son consentement) : latitude ${position.lat}, longitude ${position.lon}.`
-        : "";
-      systemPrompt =
-        `${basePrompt}${memoryNote}${positionNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
-        `\n\n${THEME_TAB_PROMPT_INSTRUCTION}\n\n${describeModulesForPrompt(espace)}`;
-      chatModelId = espace.chatModelId ?? chatModelId;
+    const basePrompt =
+      espace.systemPrompt?.trim() || `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`;
+    const memoryNote = espace.memory ? `\n\nMémoire de l'espace : ${espace.memory}` : "";
+    const positionNote = position
+      ? `\n\nPosition de l'utilisateur (partagée avec son consentement) : latitude ${position.lat}, longitude ${position.lon}.`
+      : "";
+    const geolocNote = espace.datasets?.length ? `\n\n${GEOLOC_PROMPT_INSTRUCTION}` : "";
+    const systemPrompt =
+      `${basePrompt}${memoryNote}${positionNote}${geolocNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
+      `\n\n${THEME_TAB_PROMPT_INSTRUCTION}\n\n${describeModulesForPrompt(espace)}`;
+    const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
 
-      const conversations = espace.conversations.map((t) =>
+    setEspaces((prev) => {
+      const e = prev[id];
+      const conversations = e.conversations.map((t) =>
         t.id === threadId ? { ...t, messages: [...t.messages, userMsg, agentPlaceholder] } : t
       );
-      return { ...prev, [id]: { ...espace, conversations } };
+      return { ...prev, [id]: { ...e, conversations } };
     });
 
     setIsThinking(true);
@@ -340,7 +344,30 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         const afterQuestions = extractQuestions(fullRaw);
         const afterArtefact = extractArtefactSignal(afterQuestions.text);
         const afterTheme = extractThemeTabSignal(afterArtefact.text);
-        const finalHtml = renderMarkdown(afterTheme.text);
+        const afterGeo = extractGeolocRequest(afterTheme.text);
+        const finalHtml = renderMarkdown(afterGeo.text);
+
+        // Demande de position émise par le gent : carte de consentement dans
+        // le fil (jamais de géolocalisation sans validation explicite).
+        function pushGeoRequestIfAny() {
+          if (!afterGeo.geoRequest || userPositionRef.current) return;
+          const geoMsgId = `geo-${Date.now()}`;
+          setEspaces((p) => {
+            const e = p[id];
+            const convs = e.conversations.map((t) =>
+              t.id === threadId
+                ? {
+                    ...t,
+                    messages: [
+                      ...t.messages,
+                      { id: geoMsgId, role: "geo-request" as const, geoRequestStatus: "pending" as const, t: "à l'instant" },
+                    ],
+                  }
+                : t
+            );
+            return { ...p, [id]: { ...e, conversations: convs } };
+          });
+        }
 
         if (afterArtefact.artefact) {
           const sig = afterArtefact.artefact;
@@ -404,6 +431,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
             reasoning: reasoning || undefined,
           }));
         }
+        pushGeoRequestIfAny();
       })
       .catch((err: Error) => {
         updateLastMessage(() => ({
@@ -413,6 +441,67 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         }));
       })
       .finally(() => setIsThinking(false));
+  }, []);
+
+  // Met à jour le statut d'une carte de demande de position dans le fil.
+  const setGeoRequestStatus = useCallback((messageId: string, status: NonNullable<ConversationMessage["geoRequestStatus"]>) => {
+    const id = currentIdRef.current;
+    setEspaces((prev) => {
+      const espace = prev[id];
+      const conversations = espace.conversations.map((t) => ({
+        ...t,
+        messages: t.messages.map((m) => (m.id === messageId ? { ...m, geoRequestStatus: status } : m)),
+      }));
+      return { ...prev, [id]: { ...espace, conversations } };
+    });
+  }, []);
+
+  const confirmGeoRequest = useCallback(
+    (messageId: string, decision: "share" | "deny") => {
+      if (decision === "deny") {
+        setGeoRequestStatus(messageId, "denied");
+        sendMessage("Je préfère ne pas partager ma position.");
+        return;
+      }
+      if (typeof navigator === "undefined" || !navigator.geolocation) {
+        setGeoRequestStatus(messageId, "error");
+        return;
+      }
+      setGeoStatus("pending");
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const position = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+          // Mise à jour immédiate du ref : le sendMessage ci-dessous doit
+          // injecter la position sans attendre le prochain rendu.
+          userPositionRef.current = position;
+          setUserPosition(position);
+          setGeoStatus("granted");
+          setGeoRequestStatus(messageId, "granted");
+          sendMessage("J'ai partagé ma position — tu peux chercher autour de moi.");
+        },
+        () => {
+          setGeoStatus("denied");
+          setGeoRequestStatus(messageId, "error");
+        },
+        { enableHighAccuracy: true, timeout: 10_000 }
+      );
+    },
+    [sendMessage, setGeoRequestStatus]
+  );
+
+  // Retire un artefact de l'espace (canvas + onglets thématiques) ; la
+  // proposition d'origine reste visible dans le fil, marquée comme retirée.
+  const removeArtefact = useCallback((artefactId: string) => {
+    const id = currentIdRef.current;
+    setModalArtefactId((prev) => (prev === artefactId ? null : prev));
+    setEspaces((prev) => {
+      const espace = prev[id];
+      const artefacts = espace.artefacts.filter((a) => a.id !== artefactId);
+      const themeTabs = (espace.themeTabs ?? [])
+        .map((t) => ({ ...t, moduleIds: t.moduleIds.filter((mid) => mid !== `artef-${artefactId}`) }))
+        .filter((t) => t.moduleIds.length > 0);
+      return { ...prev, [id]: { ...espace, artefacts, themeTabs } };
+    });
   }, []);
 
   const confirmArtefactProposal = useCallback((proposalId: string, decision: "add" | "dismiss") => {
@@ -661,6 +750,8 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         userPosition,
         geoStatus,
         requestGeolocation,
+        confirmGeoRequest,
+        removeArtefact,
         confirmArtefactProposal,
         confirmThemeProposal,
         toggleChecklistItem,
