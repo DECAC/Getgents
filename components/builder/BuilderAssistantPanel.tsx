@@ -16,7 +16,8 @@ function stripTags(html: string): string {
 }
 
 export function BuilderAssistantPanel() {
-  const { currentDraft, sendBuilderMessage, applyBuilderSuggestion, assignModel } = useBuilder();
+  const { currentDraft, sendBuilderMessage, applyBuilderSuggestion, assignModel, confirmConnectorProposal, switchTab } =
+    useBuilder();
   const [composerText, setComposerText] = useState("");
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -90,6 +91,48 @@ export function BuilderAssistantPanel() {
   }
 
   function renderMessage(m: ConversationMessage, i: number) {
+    if (m.role === "connector-proposal" && m.connectorProposal) {
+      const p = m.connectorProposal;
+      const kindLabel = p.kind === "dataset" ? "Dataset open data" : "Serveur MCP";
+      if (m.connectorProposalStatus === "added") {
+        return (
+          <button key={i} className={styles.connectorDone} onClick={() => switchTab("connectors")}>
+            ✓ Connecteur « {p.name} » ajouté — voir l&apos;onglet Connecteurs
+          </button>
+        );
+      }
+      if (m.connectorProposalStatus === "dismissed") {
+        return (
+          <div key={i} className={styles.connectorDismissed}>
+            Proposition de connecteur ignorée — {p.name}
+          </div>
+        );
+      }
+      return (
+        <div key={i} className={styles.connectorCard}>
+          <div className={styles.connectorKind}>{p.kind === "dataset" ? "🗺️" : "🔗"} {kindLabel}</div>
+          <div className={styles.connectorName}>{p.name}</div>
+          <div className={styles.connectorUrl}>{p.url}</div>
+          <div className={styles.connectorActions}>
+            <button
+              type="button"
+              className={styles.connectorAddBtn}
+              onClick={() => confirmConnectorProposal(m.id ?? "", "add")}
+            >
+              Ajouter ce connecteur
+            </button>
+            <button
+              type="button"
+              className={styles.connectorDismissBtn}
+              onClick={() => confirmConnectorProposal(m.id ?? "", "dismiss")}
+            >
+              Ignorer
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     const isUser = m.role === "user";
     const isLastMessage = i === currentDraft.builderConversation.length - 1;
     return (

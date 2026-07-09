@@ -5,6 +5,7 @@ import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, Know
 import type { ConversationMessage } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
+import { CONNECTOR_PROMPT_INSTRUCTION, extractConnectorSignal, detectConnectorInText, type ConnectorProposal } from "@/lib/connectorSignal";
 import { writePublishedGent, draftToEspace, patchPublishedGentName } from "@/lib/publishedGents";
 import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
@@ -42,6 +43,7 @@ interface BuilderContextValue {
 
   sendBuilderMessage: (text: string) => void;
   applyBuilderSuggestion: (suggestion: string) => void;
+  confirmConnectorProposal: (messageId: string, decision: "add" | "dismiss") => void;
   isThinking: boolean;
 }
 
@@ -236,18 +238,25 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     let history: { role: string; content: string }[] = [];
     let systemPrompt = "";
     let chatModelId = "anthropic/claude-sonnet-5";
+    let existingConnectorUrls: string[] = [];
 
     setDrafts((prev) => {
       const draft = prev[id];
+      existingConnectorUrls = draft.connectors.map((c) => c.detail ?? "").filter(Boolean);
+      const connectorsNote = draft.connectors.length
+        ? `\n\nConnecteurs déjà configurés : ${draft.connectors.map((c) => `${c.name}${c.detail ? ` (${c.detail})` : ""}`).join(", ")}.`
+        : "";
       systemPrompt = `${
         draft.systemPrompt
           ? `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
           : `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace.`
-      }\n\n${MODEL_RECOMMENDATION_INSTRUCTION}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
-      history = draft.builderConversation.map((m) => ({
-        role: m.role === "agent" ? "assistant" : "user",
-        content: (m.text ?? "").replace(/<[^>]+>/g, ""),
-      }));
+      }${connectorsNote}\n\n${MODEL_RECOMMENDATION_INSTRUCTION}\n\n${CONNECTOR_PROMPT_INSTRUCTION}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
+      history = draft.builderConversation
+        .filter((m) => m.role === "agent" || m.role === "user")
+        .map((m) => ({
+          role: m.role === "agent" ? "assistant" : "user",
+          content: (m.text ?? "").replace(/<[^>]+>/g, ""),
+        }));
       chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? chatModelId;
 
       const builderConversation = [...draft.builderConversation, userMsg, agentPlaceholder];
@@ -279,8 +288,28 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       }
     )
       .then(({ text: fullRaw }) => {
-        const { text: reply, questions } = extractQuestions(fullRaw);
+        const afterConnector = extractConnectorSignal(fullRaw);
+        const { text: reply, questions } = extractQuestions(afterConnector.text);
         updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply), questions }));
+
+        // Proposition de connecteur : signal du modèle, ou détection
+        // déterministe de secours sur le message du créateur (URL de dataset).
+        let proposal: ConnectorProposal | null = afterConnector.connector ?? detectConnectorInText(text);
+        if (proposal && existingConnectorUrls.includes(proposal.url)) proposal = null;
+        if (proposal) {
+          const finalProposal = proposal;
+          setDrafts((p) => {
+            const d = p[id];
+            const msg = {
+              id: `conn-${Date.now()}`,
+              role: "connector-proposal" as const,
+              connectorProposal: finalProposal,
+              connectorProposalStatus: "pending" as const,
+              t: "à l'instant",
+            };
+            return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+          });
+        }
       })
       .catch((err: Error) => {
         updateLastMessage(() => ({
@@ -291,6 +320,34 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       })
       .finally(() => setIsThinking(false));
   }, []);
+
+  // Validation (ou refus) d'un connecteur préparé par l'assistant du builder.
+  const confirmConnectorProposal = useCallback((messageId: string, decision: "add" | "dismiss") => {
+    setDrafts((prev) => {
+      const draft = prev[currentId];
+      const msg = draft.builderConversation.find((m) => m.id === messageId);
+      if (!msg?.connectorProposal) return prev;
+
+      let connectors = draft.connectors;
+      if (decision === "add") {
+        connectors = [
+          ...connectors,
+          {
+            id: `tool-${Date.now()}`,
+            toolKind: msg.connectorProposal.kind,
+            name: msg.connectorProposal.name,
+            detail: msg.connectorProposal.url,
+          },
+        ];
+      }
+      const builderConversation = draft.builderConversation.map((m) =>
+        m.id === messageId
+          ? { ...m, connectorProposalStatus: decision === "add" ? ("added" as const) : ("dismissed" as const) }
+          : m
+      );
+      return { ...prev, [currentId]: { ...draft, connectors, builderConversation, updatedAt: "à l'instant" } };
+    });
+  }, [currentId]);
 
   const applyBuilderSuggestion = useCallback((suggestion: string) => {
     setDrafts((prev) => {
@@ -325,6 +382,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         toggleWebSearch,
         sendBuilderMessage,
         applyBuilderSuggestion,
+        confirmConnectorProposal,
         isThinking,
       }}
     >

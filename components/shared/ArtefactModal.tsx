@@ -41,7 +41,7 @@ function VisualGrid() {
 }
 
 export function ArtefactModal() {
-  const { currentEspace, modalArtefactId, closeModal, toggleChecklistItem, userPosition } = useEspace();
+  const { currentEspace, modalArtefactId, closeModal, toggleChecklistItem, userPosition, removeArtefact } = useEspace();
 
   const artefact = modalArtefactId
     ? currentEspace.artefacts.find((a) => a.id === modalArtefactId) ?? null
@@ -107,6 +107,9 @@ export function ArtefactModal() {
             </svg>
             Généré par Getgents · gabarit standard
           </span>
+          <button className={styles.btnGhost} onClick={() => removeArtefact(artefact.id)}>
+            Retirer de l&apos;espace
+          </button>
           <button className={styles.btnGhost} onClick={() => alert("Export PDF — non implémenté dans ce commit.")}>
             Exporter en PDF
           </button>
