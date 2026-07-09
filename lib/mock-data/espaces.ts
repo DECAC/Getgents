@@ -146,6 +146,13 @@ export const ESPACES: EspacesMap = {
         { day: 5, city: "Nice", night: "Retour · nuit à Nice", x: 387, y: 304 },
       ],
     },
+    themeTabs: [
+      {
+        id: "theme-demo-hebergement",
+        label: "Hébergement",
+        moduleIds: ["map", "artef-vernazza-preview", "tab-reservations"],
+      },
+    ],
     memory: `Road trip familial à travers les Alpes et la Riviera, du 12 au 19 juillet 2026.\nFoyer : 2 adultes, 2 enfants (6 et 9 ans). Préférence sans gluten pour l'aîné — à prendre en compte à chaque étape restauration.\nBudget : 2 800 € hors carburant et péages. Alerte prévue à 80 %.\n\nItinéraire en validation : Lyon (J1) → Annecy (J2) → Turin (J3) → Cinque Terre / La Spezia (J4, 2 nuits) → Nice (J5).\nDécisions prises : étapes Lyon, Annecy, Turin confirmées ; Cinque Terre ajoutée à votre demande ; accès aux villages en train depuis La Spezia retenu pour ne pas conduire sur place.\nHébergement encore à confirmer sur l'ensemble du parcours.\n\nAucune réservation ni paiement n'est effectué en votre nom.`,
     conversations: [
       {

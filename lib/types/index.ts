@@ -77,7 +77,8 @@ export type ConversationRole =
   | "artef-visual"
   | "artef-pointer"
   | "artef-new"
-  | "artef-proposal";
+  | "artef-proposal"
+  | "theme-proposal";
 
 export interface ConversationThread {
   id: string;
@@ -100,6 +101,24 @@ export interface ArtefactProposal {
   mapPoints?: MapPoint[];
 }
 
+/**
+ * Onglet thématique regroupant un ou plusieurs modules du canvas (onglets
+ * structurels, carte, artefacts) — voir ModuleCanvas.tsx pour la convention
+ * d'id des modules (`tab-<id>`, `map`, `artef-<id>`). Un module n'appartient
+ * qu'à un seul onglet thématique à la fois.
+ */
+export interface ThemeTab {
+  id: string;
+  label: string;
+  moduleIds: string[];
+}
+
+/** Action proposée par l'assistant sur les onglets thématiques, à valider par l'utilisateur. */
+export type ThemeTabProposalAction =
+  | { action: "create"; label: string; moduleIds: string[] }
+  | { action: "rename"; tabId: string; label: string }
+  | { action: "delete"; tabId: string };
+
 export interface ConversationMessage {
   id?: string;
   role: ConversationRole;
@@ -117,6 +136,8 @@ export interface ConversationMessage {
   questions?: { q: string; options: string[]; multi?: boolean }[];
   proposal?: ArtefactProposal;
   proposalStatus?: "pending" | "added" | "dismissed";
+  themeProposal?: ThemeTabProposalAction;
+  themeProposalStatus?: "pending" | "applied" | "dismissed";
   reasoning?: string;
 }
 
@@ -166,6 +187,8 @@ export interface Espace {
   activeConversationId: string;
   files: UserFile[];
   artefacts: Artefact[];
+  /** Onglets thématiques regroupant des modules du canvas — optionnel, défaut [] à la lecture. */
+  themeTabs?: ThemeTab[];
   systemPrompt?: string;
   chatModelId?: string;
   /** Serveurs MCP (transport Streamable HTTP) configurés dans le builder. */

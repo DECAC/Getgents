@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback, Fragment } from "react";
-import type { Espace, EspaceTab } from "@/lib/types";
+import type { Espace, EspaceTab, Artefact, TimelineStep, ReservationItem, BudgetCategory } from "@/lib/types";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { TimelineTab } from "./tabs/TimelineTab";
 import { ReservationsTab } from "./tabs/ReservationsTab";
@@ -40,16 +40,19 @@ interface ModuleDef {
   preferredLayout?: ModuleLayout;
 }
 
+/** Un onglet affiché dans la vue par thème : soit un thème dynamique (plusieurs modules), soit un module isolé. */
+interface ViewTab {
+  id: string;
+  label: string;
+  isTheme: boolean;
+  moduleIds: string[];
+}
+
 function tabContent(tab: EspaceTab) {
   if (tab.kind === "timeline") return <TimelineTab tab={tab} embedded />;
   if (tab.kind === "resv") return <ReservationsTab tab={tab} />;
   if (tab.kind === "chart") return <BudgetTab tab={tab} />;
   return null;
-}
-
-function defaultLayout(id: string): ModuleLayout {
-  if (id.startsWith("tab-") || id === "map") return { cols: GRID_COLUMNS, height: 480 };
-  return { cols: 2, height: 180 };
 }
 
 function clampCols(cols: number): number {
@@ -58,6 +61,49 @@ function clampCols(cols: number): number {
 
 function clampHeight(height: number): number {
   return Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.round(height)));
+}
+
+/**
+ * Bornes resserrées pour les tailles de départ (à distinguer des bornes de
+ * redimensionnement MIN/MAX_HEIGHT) : on vise une taille "juste", ni écrasée
+ * ni disproportionnée, que l'utilisateur peut ensuite agrandir ou réduire
+ * librement via la poignée de redimensionnement.
+ */
+function clampPreferredHeight(height: number): number {
+  return Math.min(420, Math.max(160, Math.round(height)));
+}
+
+/** Taille de départ pour un onglet "Itinéraire" : dépend du nombre d'étapes. */
+function timelineLayout(steps: TimelineStep[] | undefined): ModuleLayout {
+  return { cols: 5, height: clampPreferredHeight(150 + (steps?.length ?? 0) * 58) };
+}
+
+/** Taille de départ pour un onglet "Réservations" : dépend du nombre de propositions. */
+function reservationsLayout(items: ReservationItem[] | undefined): ModuleLayout {
+  return { cols: 4, height: clampPreferredHeight(130 + (items?.length ?? 0) * 92) };
+}
+
+/** Taille de départ pour un onglet "Budget" : dépend du nombre de catégories suivies. */
+function budgetLayout(categories: BudgetCategory[] | undefined): ModuleLayout {
+  return { cols: 3, height: clampPreferredHeight(230 + (categories?.length ?? 0) * 18) };
+}
+
+/** La carte reste une vue schématique compacte par défaut, plutôt que pleine largeur. */
+function mapLayout(): ModuleLayout {
+  return { cols: 5, height: 320 };
+}
+
+/** Taille de départ pour un artefact généré en conversation : dépend de sa nature et de son contenu. */
+function artefactLayout(a: Artefact): ModuleLayout {
+  if (a.checklistItems?.length) {
+    return { cols: 3, height: clampPreferredHeight(110 + a.checklistItems.length * 34) };
+  }
+  if (a.chartData?.length) return { cols: 4, height: 300 };
+  if (a.mapPoints?.length) return { cols: 4, height: 300 };
+
+  const plainTextLength = (a.body ?? "").replace(/<[^>]+>/g, " ").trim().length;
+  if (a.visual) return { cols: 3, height: clampPreferredHeight(170 + plainTextLength / 5) };
+  return { cols: 4, height: clampPreferredHeight(160 + plainTextLength / 4) };
 }
 
 interface DropZoneProps {
@@ -90,6 +136,8 @@ function DropZone({ index, active, onDragOver, onDrop, onDragLeave }: DropZonePr
 export function ModuleCanvas({ espace }: { espace: Espace }) {
   const { openArtefactModal, toggleChecklistItem } = useEspace();
 
+  const [viewMode, setViewMode] = useState<"modules" | "themes">("modules");
+  const [activeViewTabId, setActiveViewTabId] = useState<string | null>(null);
   const [order, setOrder] = useState<string[]>([]);
   const [conf, setConf] = useState<Record<string, ModuleLayout>>({});
   const [savedConf, setSavedConf] = useState<Record<string, ModuleLayout> | null>(null);
@@ -110,6 +158,12 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       title: tab.name,
       sub: tab.sub,
       kind: "tab",
+      preferredLayout:
+        tab.kind === "timeline"
+          ? timelineLayout(tab.steps)
+          : tab.kind === "resv"
+            ? reservationsLayout(tab.items)
+            : budgetLayout(tab.categories),
       render: () => tabContent(tab),
     })),
     ...(espace.map
@@ -118,6 +172,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
           title: espace.map.title,
           sub: espace.map.hint,
           kind: "map" as const,
+          preferredLayout: mapLayout(),
           render: () => <MapTab map={espace.map!} />,
         }]
       : []),
@@ -126,7 +181,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       title: a.title,
       sub: `${a.type} · ${a.date}`,
       kind: "artefact",
-      preferredLayout: a.mapPoints ? { cols: 4, height: 300 } : undefined,
+      preferredLayout: artefactLayout(a),
       openModal: () => openArtefactModal(a.id),
       render: () => (
         <>
@@ -141,32 +196,35 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     })),
   ];
 
-  const orderedModules = [
-    ...order.map((id) => modules.find((m) => m.id === id)).filter((m): m is ModuleDef => !!m),
-    ...modules.filter((m) => !order.includes(m.id)),
-  ];
+  function orderList(list: ModuleDef[]): ModuleDef[] {
+    return [
+      ...order.map((id) => list.find((m) => m.id === id)).filter((m): m is ModuleDef => !!m),
+      ...list.filter((m) => !order.includes(m.id)),
+    ];
+  }
 
-  const insertAt = useCallback((targetIndex: number) => {
+  const insertAt = useCallback((displayedList: ModuleDef[], targetIndex: number) => {
     const source = dragId.current;
     dragId.current = null;
     setDropIndex(null);
-    if (!source) return;
+    if (!source || !displayedList.some((m) => m.id === source)) return;
 
-    setOrder(() => {
-      const ids = orderedModules.map((m) => m.id);
+    setOrder((prevOrder) => {
+      const ids = displayedList.map((m) => m.id);
       const from = ids.indexOf(source);
-      if (from < 0) return ids;
+      if (from < 0) return prevOrder;
       ids.splice(from, 1);
       const adjusted = from < targetIndex ? targetIndex - 1 : targetIndex;
       ids.splice(Math.max(0, adjusted), 0, source);
-      return ids;
+      // Le sous-ensemble réordonné passe en tête, le reste garde son ordre relatif précédent.
+      const rest = prevOrder.filter((id) => !ids.includes(id));
+      return [...ids, ...rest];
     });
-  }, [orderedModules]);
+  }, []);
 
   function getLayout(id: string): ModuleLayout {
     if (conf[id]) return conf[id];
-    const preferred = modules.find((m) => m.id === id)?.preferredLayout;
-    return preferred ?? defaultLayout(id);
+    return modules.find((m) => m.id === id)?.preferredLayout ?? { cols: 4, height: 260 };
   }
 
   function beginResize(e: React.PointerEvent<HTMLSpanElement>, id: string) {
@@ -208,11 +266,11 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     resizeState.current = null;
   }
 
-  function collapseAllToList() {
+  function collapseAllToList(list: ModuleDef[]) {
     setConf((prev) => {
       setSavedConf(prev);
       const next = { ...prev };
-      orderedModules.forEach((m) => {
+      list.forEach((m) => {
         next[m.id] = { cols: GRID_COLUMNS, height: COMPACT_HEIGHT };
       });
       return next;
@@ -223,9 +281,6 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     setConf(savedConf ?? {});
     setSavedConf(null);
   }
-
-  const allList =
-    orderedModules.length > 0 && orderedModules.every((m) => getLayout(m.id).height <= COMPACT_HEIGHT);
 
   if (!modules.length) {
     return (
@@ -239,11 +294,166 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     );
   }
 
+  // --- Vue par onglets thématiques ---
+  const themeTabs = espace.themeTabs ?? [];
+  const groupedModuleIds = new Set(themeTabs.flatMap((t) => t.moduleIds));
+  const viewTabs: ViewTab[] = [
+    ...modules
+      .filter((m) => !groupedModuleIds.has(m.id))
+      .map((m): ViewTab => ({ id: m.id, label: m.title, isTheme: false, moduleIds: [m.id] })),
+    ...themeTabs.map((t): ViewTab => ({ id: t.id, label: t.label, isTheme: true, moduleIds: t.moduleIds })),
+  ];
+  const resolvedActiveTabId =
+    (activeViewTabId && viewTabs.some((v) => v.id === activeViewTabId) ? activeViewTabId : null) ??
+    viewTabs[0]?.id ??
+    null;
+  const activeViewTab = viewTabs.find((v) => v.id === resolvedActiveTabId) ?? null;
+
+  const visibleList =
+    viewMode === "modules"
+      ? modules
+      : activeViewTab
+        ? activeViewTab.moduleIds.map((id) => modules.find((m) => m.id === id)).filter((m): m is ModuleDef => !!m)
+        : [];
+
+  const orderedVisible = orderList(visibleList);
+  const allList = orderedVisible.length > 0 && orderedVisible.every((m) => getLayout(m.id).height <= COMPACT_HEIGHT);
+
+  function renderGrid(list: ModuleDef[]) {
+    return (
+      <div className={styles.canvas}>
+        {list.map((m, i) => {
+          const layout = getLayout(m.id);
+          const isCompact = layout.height <= COMPACT_HEIGHT;
+
+          return (
+            <Fragment key={m.id}>
+              <DropZone
+                index={i}
+                active={dropIndex === i}
+                onDragOver={setDropIndex}
+                onDrop={(idx) => insertAt(list, idx)}
+                onDragLeave={() => setDropIndex(null)}
+              />
+              <section
+                className={[styles.card, isCompact ? styles.cardCompact : ""].filter(Boolean).join(" ")}
+                style={{
+                  gridColumn: `span ${layout.cols}`,
+                  height: `${layout.height}px`,
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  const before = e.clientY < rect.top + rect.height / 2;
+                  setDropIndex(before ? i : i + 1);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  const before = e.clientY < rect.top + rect.height / 2;
+                  insertAt(list, before ? i : i + 1);
+                }}
+              >
+                <header
+                  className={styles.cardHead}
+                  draggable
+                  onDragStart={(e) => {
+                    dragId.current = m.id;
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragEnd={() => {
+                    dragId.current = null;
+                    setDropIndex(null);
+                  }}
+                  title="Glisser pour réorganiser"
+                >
+                  <span className={styles.gripIcon} aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="8" cy="6" r="1.6" /><circle cx="16" cy="6" r="1.6" />
+                      <circle cx="8" cy="12" r="1.6" /><circle cx="16" cy="12" r="1.6" />
+                      <circle cx="8" cy="18" r="1.6" /><circle cx="16" cy="18" r="1.6" />
+                    </svg>
+                  </span>
+                  <span className={styles.cardTitleWrap}>
+                    <span className={styles.cardTitle}>{m.title}</span>
+                    {m.sub && <span className={styles.cardSub}>{m.sub}</span>}
+                  </span>
+                  <span className={styles.cardActions}>
+                    {m.openModal && (
+                      <button
+                        type="button"
+                        className={styles.actionBtn}
+                        onClick={m.openModal}
+                        title="Ouvrir en grand"
+                        aria-label="Ouvrir en grand"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                          <path d="M15 3h6v6M10 14 21 3" />
+                        </svg>
+                      </button>
+                    )}
+                  </span>
+                </header>
+                {!isCompact && <div className={styles.cardBody}>{m.render()}</div>}
+                <span
+                  className={styles.resizeHandle}
+                  onPointerDown={(e) => beginResize(e, m.id)}
+                  onPointerMove={onResizeMove}
+                  onPointerUp={endResize}
+                  onPointerCancel={endResize}
+                  title="Glisser pour redimensionner"
+                  aria-hidden="true"
+                >
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+                    <path d="M8.5 1.5 1.5 8.5" />
+                    <path d="M8.5 5 5 8.5" />
+                  </svg>
+                </span>
+              </section>
+            </Fragment>
+          );
+        })}
+        <DropZone
+          index={list.length}
+          active={dropIndex === list.length}
+          onDragOver={setDropIndex}
+          onDrop={(idx) => insertAt(list, idx)}
+          onDragLeave={() => setDropIndex(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={styles.wrap}>
       <div className={styles.toolbar}>
+        <div className={styles.viewSwitch} role="tablist" aria-label="Style d'affichage">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === "modules"}
+            className={[styles.viewSwitchBtn, viewMode === "modules" ? styles.viewSwitchBtnOn : ""]
+              .filter(Boolean)
+              .join(" ")}
+            onClick={() => setViewMode("modules")}
+          >
+            Vue modules
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === "themes"}
+            className={[styles.viewSwitchBtn, viewMode === "themes" ? styles.viewSwitchBtnOn : ""]
+              .filter(Boolean)
+              .join(" ")}
+            onClick={() => setViewMode("themes")}
+          >
+            Vue par thème
+          </button>
+        </div>
         <span className={styles.toolbarCount}>
-          {orderedModules.length} module{orderedModules.length > 1 ? "s" : ""}
+          {orderedVisible.length} module{orderedVisible.length > 1 ? "s" : ""}
         </span>
         <div className={styles.toolbarActions}>
           {savedConf && allList && (
@@ -261,7 +471,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
             className={[styles.toolbarBtn, styles.toolbarBtnPrimary, allList ? styles.toolbarBtnDisabled : ""]
               .filter(Boolean)
               .join(" ")}
-            onClick={collapseAllToList}
+            onClick={() => collapseAllToList(orderedVisible)}
             disabled={allList}
             title="Afficher tous les modules en vue liste compacte"
           >
@@ -272,107 +482,36 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
           </button>
         </div>
       </div>
-      <div className={styles.canvas}>
-      {orderedModules.map((m, i) => {
-        const layout = getLayout(m.id);
-        const isCompact = layout.height <= COMPACT_HEIGHT;
 
-        return (
-          <Fragment key={m.id}>
-            <DropZone
-              index={i}
-              active={dropIndex === i}
-              onDragOver={setDropIndex}
-              onDrop={insertAt}
-              onDragLeave={() => setDropIndex(null)}
-            />
-            <section
-              className={[styles.card, isCompact ? styles.cardCompact : ""].filter(Boolean).join(" ")}
-              style={{
-                gridColumn: `span ${layout.cols}`,
-                height: `${layout.height}px`,
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const before = e.clientY < rect.top + rect.height / 2;
-                setDropIndex(before ? i : i + 1);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const before = e.clientY < rect.top + rect.height / 2;
-                insertAt(before ? i : i + 1);
-              }}
+      {viewMode === "themes" && (
+        <div className={styles.viewTabs} role="tablist" aria-label="Onglets thématiques">
+          {viewTabs.map((vt) => (
+            <div
+              key={vt.id}
+              className={[styles.viewTab, vt.id === resolvedActiveTabId ? styles.viewTabActive : ""]
+                .filter(Boolean)
+                .join(" ")}
             >
-              <header
-                className={styles.cardHead}
-                draggable
-                onDragStart={(e) => {
-                  dragId.current = m.id;
-                  e.dataTransfer.effectAllowed = "move";
-                }}
-                onDragEnd={() => {
-                  dragId.current = null;
-                  setDropIndex(null);
-                }}
-                title="Glisser pour réorganiser"
+              <button
+                type="button"
+                role="tab"
+                aria-selected={vt.id === resolvedActiveTabId}
+                className={styles.viewTabLabel}
+                onClick={() => setActiveViewTabId(vt.id)}
+                title={vt.label}
               >
-                <span className={styles.gripIcon} aria-hidden="true">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="8" cy="6" r="1.6" /><circle cx="16" cy="6" r="1.6" />
-                    <circle cx="8" cy="12" r="1.6" /><circle cx="16" cy="12" r="1.6" />
-                    <circle cx="8" cy="18" r="1.6" /><circle cx="16" cy="18" r="1.6" />
-                  </svg>
-                </span>
-                <span className={styles.cardTitleWrap}>
-                  <span className={styles.cardTitle}>{m.title}</span>
-                  {m.sub && <span className={styles.cardSub}>{m.sub}</span>}
-                </span>
-                <span className={styles.cardActions}>
-                  {m.openModal && (
-                    <button
-                      type="button"
-                      className={styles.actionBtn}
-                      onClick={m.openModal}
-                      title="Ouvrir en grand"
-                      aria-label="Ouvrir en grand"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                        <path d="M15 3h6v6M10 14 21 3" />
-                      </svg>
-                    </button>
-                  )}
-                </span>
-              </header>
-              {!isCompact && <div className={styles.cardBody}>{m.render()}</div>}
-              <span
-                className={styles.resizeHandle}
-                onPointerDown={(e) => beginResize(e, m.id)}
-                onPointerMove={onResizeMove}
-                onPointerUp={endResize}
-                onPointerCancel={endResize}
-                title="Glisser pour redimensionner"
-                aria-hidden="true"
-              >
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-                  <path d="M8.5 1.5 1.5 8.5" />
-                  <path d="M8.5 5 5 8.5" />
-                </svg>
-              </span>
-            </section>
-          </Fragment>
-        );
-      })}
-      <DropZone
-        index={orderedModules.length}
-        active={dropIndex === orderedModules.length}
-        onDragOver={setDropIndex}
-        onDrop={insertAt}
-        onDragLeave={() => setDropIndex(null)}
-      />
-      </div>
+                {vt.label}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {visibleList.length === 0 ? (
+        <p className={styles.emptyText}>Cet onglet ne contient plus aucun module.</p>
+      ) : (
+        renderGrid(orderedVisible)
+      )}
     </div>
   );
 }
