@@ -233,6 +233,35 @@
   padding: 10px 13px;
   margin-bottom: 16px;
 }
+.suggestionRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line-soft, var(--line));
+  cursor: pointer;
+}
+.suggestionRow input {
+  margin-top: 3px;
+  accent-color: var(--plum);
+}
+.suggestionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.suggestionDesc {
+  font-size: 11.5px;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.suggestionEval {
+  font-size: 10.5px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .connectorDismissed {
   font-size: 11.5px;
   color: var(--faint);

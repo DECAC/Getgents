@@ -145,6 +145,16 @@ export interface ConversationMessage {
   /** Connecteur préparé par l'assistant du builder, à valider par le créateur. */
   connectorProposal?: { kind: "dataset" | "mcp"; name: string; url: string };
   connectorProposalStatus?: "pending" | "added" | "dismissed";
+  /** Connecteurs candidats découverts par recherche web, à sélectionner par le créateur. */
+  connectorSuggestions?: {
+    kind: "dataset" | "mcp" | "api-rest";
+    name: string;
+    url: string;
+    description: string;
+    security: string;
+    stability: string;
+  }[];
+  connectorSuggestionsStatus?: "pending" | "applied" | "dismissed";
   reasoning?: string;
 }
 

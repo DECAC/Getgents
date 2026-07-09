@@ -16,9 +16,19 @@ function stripTags(html: string): string {
 }
 
 export function BuilderAssistantPanel() {
-  const { currentDraft, sendBuilderMessage, applyBuilderSuggestion, assignModel, confirmConnectorProposal, switchTab } =
-    useBuilder();
+  const {
+    currentDraft,
+    sendBuilderMessage,
+    applyBuilderSuggestion,
+    assignModel,
+    confirmConnectorProposal,
+    confirmConnectorSuggestions,
+    switchTab,
+  } = useBuilder();
   const [composerText, setComposerText] = useState("");
+  // Sélection des connecteurs candidats, par message : URL → cochée (tout
+  // est coché par défaut, le créateur décoche ce qu'il ne veut pas).
+  const [suggestionChecks, setSuggestionChecks] = useState<Record<string, Record<string, boolean>>>({});
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
@@ -91,6 +101,69 @@ export function BuilderAssistantPanel() {
   }
 
   function renderMessage(m: ConversationMessage, i: number) {
+    if (m.role === "connector-proposal" && m.connectorSuggestions?.length) {
+      const list = m.connectorSuggestions;
+      const msgId = m.id ?? "";
+      if (m.connectorSuggestionsStatus === "applied") {
+        return (
+          <button key={i} className={styles.connectorDone} onClick={() => switchTab("connectors")}>
+            ✓ Connecteurs configurés — voir l&apos;onglet Connecteurs
+          </button>
+        );
+      }
+      if (m.connectorSuggestionsStatus === "dismissed") {
+        return (
+          <div key={i} className={styles.connectorDismissed}>
+            Suggestions de connecteurs ignorées
+          </div>
+        );
+      }
+      const checks = suggestionChecks[msgId] ?? Object.fromEntries(list.map((s) => [s.url, true]));
+      const selectedUrls = list.filter((s) => checks[s.url]).map((s) => s.url);
+      return (
+        <div key={i} className={styles.connectorCard}>
+          <div className={styles.connectorKind}>🔎 Connecteurs identifiés (recherche web)</div>
+          {list.map((s) => (
+            <label key={s.url} className={styles.suggestionRow}>
+              <input
+                type="checkbox"
+                checked={!!checks[s.url]}
+                onChange={(e) =>
+                  setSuggestionChecks((prev) => ({ ...prev, [msgId]: { ...checks, [s.url]: e.target.checked } }))
+                }
+              />
+              <span className={styles.suggestionInfo}>
+                <span className={styles.connectorName}>
+                  {s.kind === "dataset" ? "🗺️" : s.kind === "mcp" ? "🔗" : "🌐"} {s.name}
+                </span>
+                {s.description && <span className={styles.suggestionDesc}>{s.description}</span>}
+                <span className={styles.suggestionEval}>🛡️ {s.security}</span>
+                <span className={styles.suggestionEval}>⚖️ {s.stability}</span>
+                <span className={styles.connectorUrl}>{s.url}</span>
+              </span>
+            </label>
+          ))}
+          <div className={styles.connectorActions}>
+            <button
+              type="button"
+              className={styles.connectorAddBtn}
+              disabled={!selectedUrls.length}
+              onClick={() => confirmConnectorSuggestions(msgId, selectedUrls)}
+            >
+              Configurer la sélection ({selectedUrls.length})
+            </button>
+            <button
+              type="button"
+              className={styles.connectorDismissBtn}
+              onClick={() => confirmConnectorSuggestions(msgId, [])}
+            >
+              Tout ignorer
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     if (m.role === "connector-proposal" && m.connectorProposal) {
       const p = m.connectorProposal;
       const kindLabel = p.kind === "dataset" ? "Dataset open data" : "Serveur MCP";

@@ -5,7 +5,14 @@ import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, Know
 import type { ConversationMessage } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
-import { CONNECTOR_PROMPT_INSTRUCTION, extractConnectorSignal, detectConnectorInText, type ConnectorProposal } from "@/lib/connectorSignal";
+import {
+  CONNECTOR_PROMPT_INSTRUCTION,
+  CONNECTOR_DISCOVERY_INSTRUCTION,
+  extractConnectorSignal,
+  extractConnectorSuggestions,
+  detectConnectorInText,
+  type ConnectorProposal,
+} from "@/lib/connectorSignal";
 import { writePublishedGent, draftToEspace, patchPublishedGentName } from "@/lib/publishedGents";
 import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
@@ -44,6 +51,8 @@ interface BuilderContextValue {
   sendBuilderMessage: (text: string) => void;
   applyBuilderSuggestion: (suggestion: string) => void;
   confirmConnectorProposal: (messageId: string, decision: "add" | "dismiss") => void;
+  /** Configure les connecteurs sélectionnés parmi les candidats découverts (urls), ou tout ignorer ([]). */
+  confirmConnectorSuggestions: (messageId: string, selectedUrls: string[]) => void;
   isThinking: boolean;
 }
 
@@ -250,7 +259,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         draft.systemPrompt
           ? `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
           : `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace.`
-      }${connectorsNote}\n\n${MODEL_RECOMMENDATION_INSTRUCTION}\n\n${CONNECTOR_PROMPT_INSTRUCTION}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
+      }${connectorsNote}\n\n${MODEL_RECOMMENDATION_INSTRUCTION}\n\n${CONNECTOR_PROMPT_INSTRUCTION}\n\n${CONNECTOR_DISCOVERY_INSTRUCTION}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
       history = draft.builderConversation
         .filter((m) => m.role === "agent" || m.role === "user")
         .map((m) => ({
@@ -281,6 +290,9 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         model: chatModelId,
         messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: text }],
         max_tokens: 2048,
+        // Recherche web en tâche de fond : l'assistant s'en sert pour
+        // découvrir des connecteurs candidats (datasets, MCP, API).
+        webSearch: true,
       },
       (fullSoFar) => {
         const displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
@@ -288,14 +300,33 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       }
     )
       .then(({ text: fullRaw }) => {
-        const afterConnector = extractConnectorSignal(fullRaw);
+        const afterSuggestions = extractConnectorSuggestions(fullRaw);
+        const afterConnector = extractConnectorSignal(afterSuggestions.text);
         const { text: reply, questions } = extractQuestions(afterConnector.text);
         updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply), questions }));
 
-        // Proposition de connecteur : signal du modèle, ou détection
+        // Connecteurs candidats découverts par recherche web : liste de
+        // sélection à valider par le créateur.
+        const suggestions = afterSuggestions.suggestions.filter((s) => !existingConnectorUrls.includes(s.url));
+        if (suggestions.length) {
+          setDrafts((p) => {
+            const d = p[id];
+            const msg = {
+              id: `connlist-${Date.now()}`,
+              role: "connector-proposal" as const,
+              connectorSuggestions: suggestions,
+              connectorSuggestionsStatus: "pending" as const,
+              t: "à l'instant",
+            };
+            return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+          });
+        }
+
+        // Proposition de connecteur unique : signal du modèle, ou détection
         // déterministe de secours sur le message du créateur (URL de dataset).
         let proposal: ConnectorProposal | null = afterConnector.connector ?? detectConnectorInText(text);
         if (proposal && existingConnectorUrls.includes(proposal.url)) proposal = null;
+        if (proposal && suggestions.some((s) => s.url === proposal!.url)) proposal = null;
         if (proposal) {
           const finalProposal = proposal;
           setDrafts((p) => {
@@ -349,6 +380,32 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     });
   }, [currentId]);
 
+  // Configure les connecteurs sélectionnés parmi les candidats découverts.
+  const confirmConnectorSuggestions = useCallback((messageId: string, selectedUrls: string[]) => {
+    setDrafts((prev) => {
+      const draft = prev[currentId];
+      const msg = draft.builderConversation.find((m) => m.id === messageId);
+      if (!msg?.connectorSuggestions) return prev;
+
+      const selected = msg.connectorSuggestions.filter((s) => selectedUrls.includes(s.url));
+      const connectors = [
+        ...draft.connectors,
+        ...selected.map((s, i) => ({
+          id: `tool-${Date.now()}-${i}`,
+          toolKind: s.kind,
+          name: s.name,
+          detail: s.url,
+        })),
+      ];
+      const builderConversation = draft.builderConversation.map((m) =>
+        m.id === messageId
+          ? { ...m, connectorSuggestionsStatus: selected.length ? ("applied" as const) : ("dismissed" as const) }
+          : m
+      );
+      return { ...prev, [currentId]: { ...draft, connectors, builderConversation, updatedAt: "à l'instant" } };
+    });
+  }, [currentId]);
+
   const applyBuilderSuggestion = useCallback((suggestion: string) => {
     setDrafts((prev) => {
       const draft = prev[currentId];
@@ -383,6 +440,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         sendBuilderMessage,
         applyBuilderSuggestion,
         confirmConnectorProposal,
+        confirmConnectorSuggestions,
         isThinking,
       }}
     >
