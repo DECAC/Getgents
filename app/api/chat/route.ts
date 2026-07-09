@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { McpClient, type McpTool } from "@/lib/server/mcp";
+import { McpClient } from "@/lib/server/mcp";
+import { searchNearby } from "@/lib/server/opendatasoft";
+import { parseDatasetUrl, type DatasetRef } from "@/lib/opendatasoft";
 
 // Surchargeable en test/dev pour pointer vers un mock local.
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
@@ -13,6 +15,7 @@ interface ChatBody {
   stream?: boolean;
   reasoning?: { enabled?: boolean };
   mcpServers?: { name: string; url: string }[];
+  datasets?: { name: string; url: string }[];
   webSearch?: boolean;
 }
 
@@ -38,9 +41,15 @@ export async function POST(req: NextRequest) {
   const mcpServers = (body.mcpServers ?? []).filter(
     (s) => typeof s?.url === "string" && /^https?:\/\//.test(s.url)
   );
+  const datasets = (body.datasets ?? [])
+    .map((d) => {
+      const ref = typeof d?.url === "string" ? parseDatasetUrl(d.url) : null;
+      return ref ? { ...ref, label: d.name } : null;
+    })
+    .filter((d): d is DatasetRef & { label: string } => d !== null);
 
-  if (mcpServers.length > 0 && body.stream) {
-    return mcpToolLoopResponse(body, mcpServers, key);
+  if ((mcpServers.length > 0 || datasets.length > 0) && body.stream) {
+    return toolLoopResponse(body, mcpServers, datasets, key);
   }
 
   const upstream = await fetch(OPENROUTER_API, {
@@ -49,6 +58,7 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       ...body,
       mcpServers: undefined,
+      datasets: undefined,
       webSearch: undefined,
       // Plugin de recherche web d'OpenRouter : le fournisseur annote la
       // réponse avec des résultats web récents, quel que soit le modèle.
@@ -88,14 +98,24 @@ function sseHeaders(): Record<string, string> {
   };
 }
 
+/** Un outil exécutable côté serveur, quel que soit son transport (MCP, dataset…). */
+interface ServerTool {
+  exec: (args: Record<string, unknown>) => Promise<{ text: string; ok: boolean }>;
+}
+
 /**
- * Boucle d'agent avec outils MCP : les tours intermédiaires (appels d'outils)
- * sont exécutés côté serveur, chaque appel étant signalé au client par un
- * événement SSE `tool_event` ; la réponse finale est renvoyée en deltas SSE
- * au même format qu'OpenRouter, donc le lecteur streaming existant côté
- * client fonctionne sans changement de contrat.
+ * Boucle d'agent avec outils serveur (MCP et datasets open data) : les tours
+ * intermédiaires (appels d'outils) sont exécutés côté serveur, chaque appel
+ * étant signalé au client par un événement SSE `tool_event` ; la réponse
+ * finale est renvoyée en deltas SSE au même format qu'OpenRouter, donc le
+ * lecteur streaming existant côté client fonctionne sans changement de contrat.
  */
-function mcpToolLoopResponse(body: ChatBody, servers: { name: string; url: string }[], key: string) {
+function toolLoopResponse(
+  body: ChatBody,
+  servers: { name: string; url: string }[],
+  datasets: (DatasetRef & { label: string })[],
+  key: string
+) {
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -105,8 +125,9 @@ function mcpToolLoopResponse(body: ChatBody, servers: { name: string; url: strin
       const sendToolEvent = (ev: Record<string, unknown>) => send({ tool_event: ev });
 
       try {
-        // 1. Connexion aux serveurs MCP + découverte des outils.
-        const registry = new Map<string, { client: McpClient; tool: McpTool }>();
+        // 1. Construction du registre d'outils : serveurs MCP (découverte) et
+        // datasets open data (un outil synthétique de recherche par proximité).
+        const registry = new Map<string, ServerTool>();
         const openaiTools: unknown[] = [];
 
         for (const srv of servers) {
@@ -116,7 +137,12 @@ function mcpToolLoopResponse(body: ChatBody, servers: { name: string; url: strin
             const tools = await client.listTools();
             for (const tool of tools) {
               const fq = `${srv.name.replace(/[^a-zA-Z0-9_]/g, "_")}__${tool.name}`.slice(0, 64);
-              registry.set(fq, { client, tool });
+              registry.set(fq, {
+                exec: async (args) => {
+                  const result = await client.callTool(tool.name, args);
+                  return { text: result.text, ok: !result.isError };
+                },
+              });
               openaiTools.push({
                 type: "function",
                 function: {
@@ -130,6 +156,44 @@ function mcpToolLoopResponse(body: ChatBody, servers: { name: string; url: strin
           } catch (err) {
             sendToolEvent({ status: "connect_error", server: srv.name, message: (err as Error).message });
           }
+        }
+
+        for (const ds of datasets) {
+          const fq = `dataset_${ds.datasetId.replace(/[^a-zA-Z0-9_]/g, "_")}__nearby`.slice(0, 64);
+          registry.set(fq, {
+            exec: async (args) => {
+              const lat = Number(args.lat);
+              const lon = Number(args.lon);
+              if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                return { text: "Paramètres lat/lon manquants ou invalides.", ok: false };
+              }
+              const text = await searchNearby(ds, {
+                lat,
+                lon,
+                radiusM: typeof args.radius_m === "number" ? args.radius_m : undefined,
+                limit: typeof args.limit === "number" ? args.limit : undefined,
+              });
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          openaiTools.push({
+            type: "function",
+            function: {
+              name: fq,
+              description: `Recherche dans le jeu de données ouvert « ${ds.label} » (${ds.datasetId}, portail ${ds.domain}) les enregistrements les plus proches d'une position GPS, triés par distance.`,
+              parameters: {
+                type: "object",
+                properties: {
+                  lat: { type: "number", description: "Latitude WGS84 de l'utilisateur" },
+                  lon: { type: "number", description: "Longitude WGS84 de l'utilisateur" },
+                  radius_m: { type: "number", description: "Rayon de recherche en mètres (défaut 1500)" },
+                  limit: { type: "number", description: "Nombre maximum de résultats (défaut 5)" },
+                },
+                required: ["lat", "lon"],
+              },
+            },
+          });
+          sendToolEvent({ status: "connected", server: ds.label, toolCount: 1 });
         }
 
         const messages: Record<string, unknown>[] = [...(body.messages ?? [])];
@@ -195,9 +259,9 @@ function mcpToolLoopResponse(body: ChatBody, servers: { name: string; url: strin
               ok = false;
             } else {
               try {
-                const result = await entry.client.callTool(entry.tool.name, args);
+                const result = await entry.exec(args);
                 resultText = result.text.slice(0, TOOL_RESULT_MAX_CHARS);
-                ok = !result.isError;
+                ok = result.ok;
               } catch (err) {
                 resultText = `Erreur d'appel : ${(err as Error).message}`;
                 ok = false;

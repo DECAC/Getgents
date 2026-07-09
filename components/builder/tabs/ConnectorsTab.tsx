@@ -4,14 +4,23 @@ import { useMemo, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { McpConfigModal } from "../McpConfigModal";
+import { DatasetConfigModal } from "../DatasetConfigModal";
+import { parseDatasetUrl } from "@/lib/opendatasoft";
 import type { ConnectorToolKind } from "@/lib/types/builder";
 import styles from "./ConnectorsTab.module.css";
 
-// Seul un serveur MCP avec une URL http(s) est réellement appelé en
-// production (boucle d'outils dans /api/chat) — tous les autres types sont
-// affichés dans l'espace publié mais ne déclenchent aucun appel réel.
+// Seuls un serveur MCP avec une URL http(s) et un dataset open data reconnu
+// sont réellement appelés en production (boucle d'outils dans /api/chat) —
+// tous les autres types sont affichés dans l'espace publié mais ne
+// déclenchent aucun appel réel.
 function isRealConnector(instance: { toolKind: ConnectorToolKind; detail?: string }): boolean {
-  return instance.toolKind === "mcp" && !!instance.detail && /^https?:\/\//.test(instance.detail);
+  if (instance.toolKind === "mcp") {
+    return !!instance.detail && /^https?:\/\//.test(instance.detail);
+  }
+  if (instance.toolKind === "dataset") {
+    return !!instance.detail && parseDatasetUrl(instance.detail) !== null;
+  }
+  return false;
 }
 
 // Les 4 types mis en avant en accès rapide, comme les raccourcis de création
@@ -22,6 +31,7 @@ const FEATURED_STYLE: Record<ConnectorToolKind, string> = {
   "flux-assistant": "sage",
   invite: "plum",
   mcp: "ink",
+  dataset: "gold",
   connecteur: "sage",
   "connecteur-predefini": "sage",
   "connecteur-personnalise": "sage",
@@ -33,6 +43,7 @@ export function ConnectorsTab() {
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<ConnectorToolKind | "all">("all");
   const [mcpModalOpen, setMcpModalOpen] = useState(false);
+  const [datasetModalOpen, setDatasetModalOpen] = useState(false);
 
   const typeByKind = Object.fromEntries(CONNECTOR_TOOL_TYPES.map((t) => [t.kind, t]));
   const featuredTypes = FEATURED_KINDS.map((kind) => typeByKind[kind]).filter(Boolean);
@@ -52,6 +63,10 @@ export function ConnectorsTab() {
   function handleAddClick(kind: ConnectorToolKind) {
     if (kind === "mcp") {
       setMcpModalOpen(true);
+      return;
+    }
+    if (kind === "dataset") {
+      setDatasetModalOpen(true);
       return;
     }
     addToolInstance(kind);
@@ -193,12 +208,23 @@ export function ConnectorsTab() {
           <path d="M12 8v4M12 16h.01" />
         </svg>
         <span>
-          Seul un serveur <b>MCP</b> configuré avec une URL (ex. datagouv) est réellement appelé par
-          le gent — badge <b>● Connecté</b>. Les autres types (connecteur, API REST, flux
+          Seuls un serveur <b>MCP</b> configuré avec une URL (ex. datagouv) et un{" "}
+          <b>dataset open data</b> reconnu sont réellement appelés par le gent — badge{" "}
+          <b>● Connecté</b>. Les autres types (connecteur, API REST, flux
           d&apos;assistant…) sont affichés côté utilisateur à titre d&apos;aperçu — badge{" "}
           <b>○ Simulé</b> — sans déclencher d&apos;appel réel dans cette maquette.
         </span>
       </div>
+
+      {datasetModalOpen && (
+        <DatasetConfigModal
+          onClose={() => setDatasetModalOpen(false)}
+          onSubmit={({ name, url }) => {
+            addToolInstance("dataset", { name, detail: url });
+            setDatasetModalOpen(false);
+          }}
+        />
+      )}
 
       {mcpModalOpen && (
         <McpConfigModal

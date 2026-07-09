@@ -193,6 +193,8 @@ export interface Espace {
   chatModelId?: string;
   /** Serveurs MCP (transport Streamable HTTP) configurés dans le builder. */
   mcpServers?: { name: string; url: string }[];
+  /** Datasets open data (portails Opendatasoft) interrogeables par proximité. */
+  datasets?: { name: string; url: string }[];
   /** Recherche web activée pour ce gent (plugin web OpenRouter). */
   webSearch?: boolean;
 }

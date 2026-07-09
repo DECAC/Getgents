@@ -134,7 +134,7 @@ function DropZone({ index, active, onDragOver, onDrop, onDragLeave }: DropZonePr
 }
 
 export function ModuleCanvas({ espace }: { espace: Espace }) {
-  const { openArtefactModal, toggleChecklistItem } = useEspace();
+  const { openArtefactModal, toggleChecklistItem, userPosition } = useEspace();
 
   const [viewMode, setViewMode] = useState<"modules" | "themes">("modules");
   const [activeViewTabId, setActiveViewTabId] = useState<string | null>(null);
@@ -186,7 +186,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       render: () => (
         <>
           {a.chartData && <MiniBarChart data={a.chartData} />}
-          {a.mapPoints && <MapArtefact points={a.mapPoints} />}
+          {a.mapPoints && <MapArtefact points={a.mapPoints} userPosition={userPosition} />}
           {a.checklistItems && (
             <ChecklistView items={a.checklistItems} onToggle={(i) => toggleChecklistItem(a.id, i)} />
           )}

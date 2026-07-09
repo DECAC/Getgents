@@ -13,7 +13,16 @@ const IGN_WMTS =
 
 const IGN_ATTRIBUTION = '&copy; <a href="https://cartes.gouv.fr">IGN — cartes.gouv.fr</a>';
 
-export function MapArtefact({ points, height = 260 }: { points: MapPoint[]; height?: number }) {
+export function MapArtefact({
+  points,
+  height = 260,
+  userPosition,
+}: {
+  points: MapPoint[];
+  height?: number;
+  /** Position de l'utilisateur (partagée avec consentement) — marqueur distinct. */
+  userPosition?: { lat: number; lon: number } | null;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,11 +53,28 @@ export function MapArtefact({ points, height = 260 }: { points: MapPoint[]; heig
         L.marker([p.lat, p.lon], { icon }).addTo(map!).bindPopup(p.label);
       }
 
+      if (userPosition) {
+        const userIcon = L.divIcon({
+          className: "",
+          html: '<div style="width:16px;height:16px;border-radius:50%;background:#2f6fde;border:3px solid #fff;box-shadow:0 0 0 4px rgba(47,111,222,0.25)"></div>',
+          iconSize: [16, 16],
+          iconAnchor: [8, 8],
+        });
+        L.marker([userPosition.lat, userPosition.lon], { icon: userIcon })
+          .addTo(map!)
+          .bindPopup("Votre position");
+      }
+
       if (latLngs.length > 1) {
         L.polyline(latLngs, { color: "#6d4c7d", weight: 2.5, opacity: 0.55, dashArray: "6 6" }).addTo(map);
-        map.fitBounds(L.latLngBounds(latLngs), { padding: [28, 28] });
+      }
+
+      // Le cadrage inclut la position de l'utilisateur, mais pas le tracé.
+      const bounds = userPosition ? [...latLngs, [userPosition.lat, userPosition.lon] as [number, number]] : latLngs;
+      if (bounds.length > 1) {
+        map.fitBounds(L.latLngBounds(bounds), { padding: [28, 28] });
       } else {
-        map.setView(latLngs[0], 12);
+        map.setView(bounds[0], 12);
       }
     });
 
@@ -56,7 +82,7 @@ export function MapArtefact({ points, height = 260 }: { points: MapPoint[]; heig
       cancelled = true;
       map?.remove();
     };
-  }, [points]);
+  }, [points, userPosition]);
 
   if (!points.length) return null;
 

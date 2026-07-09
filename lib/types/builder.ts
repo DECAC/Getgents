@@ -35,6 +35,7 @@ export type ConnectorToolKind =
   | "invite"
   | "api-rest"
   | "mcp"
+  | "dataset"
   | "ordinateur";
 
 export interface ConnectorToolType {

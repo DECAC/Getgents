@@ -1,0 +1,83 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 25, 23, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 300;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 20px;
+  width: min(360px, 100%);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.title {
+  font-family: "Inter", sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+
+.address {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.appBtn {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.appBtn:hover {
+  border-color: var(--plum);
+  background: var(--plum-tint);
+}
+.appBtn svg {
+  color: var(--faint);
+}
+
+.appIc {
+  font-size: 17px;
+  flex: none;
+}
+
+.appName {
+  flex: 1;
+}
+
+.cancelBtn {
+  width: 100%;
+  padding: 9px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  background: transparent;
+}
+.cancelBtn:hover {
+  color: var(--ink);
+}

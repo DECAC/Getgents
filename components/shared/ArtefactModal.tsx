@@ -41,7 +41,7 @@ function VisualGrid() {
 }
 
 export function ArtefactModal() {
-  const { currentEspace, modalArtefactId, closeModal, toggleChecklistItem } = useEspace();
+  const { currentEspace, modalArtefactId, closeModal, toggleChecklistItem, userPosition } = useEspace();
 
   const artefact = modalArtefactId
     ? currentEspace.artefacts.find((a) => a.id === modalArtefactId) ?? null
@@ -90,7 +90,7 @@ export function ArtefactModal() {
             </div>
           )}
           {artefact.chartData && <MiniBarChart data={artefact.chartData} />}
-          {artefact.mapPoints && <MapArtefact points={artefact.mapPoints} height={380} />}
+          {artefact.mapPoints && <MapArtefact points={artefact.mapPoints} height={380} userPosition={userPosition} />}
           {artefact.checklistItems && (
             <ChecklistView
               items={artefact.checklistItems}

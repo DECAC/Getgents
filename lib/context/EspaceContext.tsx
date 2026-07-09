@@ -49,6 +49,8 @@ function applyThemeTabAction(themeTabs: ThemeTab[], action: ThemeTabProposalActi
 
 type ActiveTab = number | "map";
 
+export type GeoStatus = "idle" | "pending" | "granted" | "denied";
+
 // Placeholder utilisé le temps qu'un gent tout juste publié (stocké côté client
 // dans localStorage) soit chargé — évite un crash pendant le rendu serveur ou
 // la première peinture cliente, qui n'ont pas accès à localStorage.
@@ -106,6 +108,10 @@ interface EspaceContextValue {
   updateMemory: (text: string) => void;
   sendMessage: (text: string) => void;
   isThinking: boolean;
+  /** Position partagée par l'utilisateur (consentement explicite) — null sinon. */
+  userPosition: { lat: number; lon: number } | null;
+  geoStatus: GeoStatus;
+  requestGeolocation: () => void;
   confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss") => void;
   confirmThemeProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
   toggleChecklistItem: (artefactId: string, itemIndex: number) => void;
@@ -131,8 +137,30 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   const [modalArtefactId, setModalArtefactId] = useState<string | null>(null);
   const [modalResvId, setModalResvId] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
+  const [userPosition, setUserPosition] = useState<{ lat: number; lon: number } | null>(null);
+  const [geoStatus, setGeoStatus] = useState<GeoStatus>("idle");
   const currentIdRef = useRef(currentId);
   currentIdRef.current = currentId;
+  const userPositionRef = useRef(userPosition);
+  userPositionRef.current = userPosition;
+
+  // Géolocalisation à consentement explicite : déclenchée uniquement par un
+  // clic utilisateur, puis validée une seconde fois par la permission navigateur.
+  const requestGeolocation = useCallback(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoStatus("denied");
+      return;
+    }
+    setGeoStatus("pending");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserPosition({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        setGeoStatus("granted");
+      },
+      () => setGeoStatus("denied"),
+      { enableHighAccuracy: true, timeout: 10_000 }
+    );
+  }, []);
 
   // Recharge les gents publiés depuis ce navigateur (localStorage) — n'existe
   // pas encore côté serveur/premier rendu, d'où le placeholder FALLBACK_ESPACE.
@@ -219,12 +247,15 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     let chatModelId = "anthropic/claude-sonnet-5";
     let threadId = "";
     let mcpServers: { name: string; url: string }[] | undefined;
+    let datasets: { name: string; url: string }[] | undefined;
     let webSearch: boolean | undefined;
+    const position = userPositionRef.current;
 
     setEspaces((prev) => {
       const espace = prev[id];
       threadId = espace.activeConversationId;
       mcpServers = espace.mcpServers;
+      datasets = espace.datasets;
       webSearch = espace.webSearch;
       const thread = espace.conversations.find((t) => t.id === threadId);
       const priorMessages = [...(thread?.messages ?? []), userMsg];
@@ -236,8 +267,11 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       const basePrompt =
         espace.systemPrompt?.trim() || `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`;
       const memoryNote = espace.memory ? `\n\nMémoire de l'espace : ${espace.memory}` : "";
+      const positionNote = position
+        ? `\n\nPosition de l'utilisateur (partagée avec son consentement) : latitude ${position.lat}, longitude ${position.lon}.`
+        : "";
       systemPrompt =
-        `${basePrompt}${memoryNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
+        `${basePrompt}${memoryNote}${positionNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
         `\n\n${THEME_TAB_PROMPT_INSTRUCTION}\n\n${describeModulesForPrompt(espace)}`;
       chatModelId = espace.chatModelId ?? chatModelId;
 
@@ -286,6 +320,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         max_tokens: 2048,
         reasoning: { enabled: true },
         mcpServers,
+        datasets,
         webSearch,
       },
       (fullSoFar, reasoningSoFar) => {
@@ -623,6 +658,9 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         updateMemory,
         sendMessage,
         isThinking,
+        userPosition,
+        geoStatus,
+        requestGeolocation,
         confirmArtefactProposal,
         confirmThemeProposal,
         toggleChecklistItem,

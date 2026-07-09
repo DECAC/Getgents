@@ -5,6 +5,7 @@ import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
+import { MapAppModal, type MapDestination } from "@/components/shared/MapAppModal";
 import type { ConversationMessage, Espace } from "@/lib/types";
 import { setAssistWidthFromPointer } from "@/lib/assistResize";
 import { threadPreview, threadLastActivity } from "@/lib/conversationUtils";
@@ -49,12 +50,15 @@ export function AssistantPanel() {
     startNewConversation,
     switchConversation,
     isThinking,
+    geoStatus,
+    requestGeolocation,
   } = useEspace();
 
   const [cdView, setCdView] = useState<"chat" | "hist">("chat");
   const [composerText, setComposerText] = useState("");
   const [expandedReasoning, setExpandedReasoning] = useState<Record<number, boolean>>({});
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [mapDestination, setMapDestination] = useState<MapDestination | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
@@ -129,6 +133,22 @@ export function AssistantPanel() {
     setComposerText(e.target.value);
     e.target.style.height = "auto";
     e.target.style.height = Math.min(e.target.scrollHeight, 90) + "px";
+  }
+
+  // Intercepte les clics sur les adresses cliquables émises par le gent
+  // (<a href="geo:lat,lon" data-address="…">) pour ouvrir le choix
+  // d'application de cartographie au lieu de suivre le lien brut.
+  function handleBodyClick(e: React.MouseEvent) {
+    const link = (e.target as HTMLElement).closest?.('a[href^="geo:"]') as HTMLAnchorElement | null;
+    if (!link) return;
+    e.preventDefault();
+    const m = link.getAttribute("href")?.match(/^geo:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (!m) return;
+    setMapDestination({
+      lat: parseFloat(m[1]),
+      lon: parseFloat(m[2]),
+      address: link.getAttribute("data-address") ?? link.textContent ?? undefined,
+    });
   }
 
   function jumpToTab(tabId: string) {
@@ -557,7 +577,7 @@ export function AssistantPanel() {
         </button>
       </div>
 
-      <div className={styles.body} ref={bodyRef}>
+      <div className={styles.body} ref={bodyRef} onClick={handleBodyClick}>
         {cdView === "hist"
           ? renderHist()
           : activeConversation.messages.length
@@ -571,6 +591,25 @@ export function AssistantPanel() {
 
       {cdView === "chat" && (
         <div className={styles.composerWrap}>
+          {!!currentEspace.datasets?.length && (
+            <div className={styles.geoRow}>
+              <button
+                type="button"
+                className={[styles.geoChip, geoStatus === "granted" ? styles.geoChipOn : ""].filter(Boolean).join(" ")}
+                onClick={requestGeolocation}
+                disabled={geoStatus === "pending"}
+                title="Votre position n'est partagée qu'après votre accord (permission du navigateur) et sert uniquement à trouver les lieux les plus proches."
+              >
+                {geoStatus === "granted"
+                  ? "📍 Position partagée"
+                  : geoStatus === "pending"
+                    ? "📍 Localisation…"
+                    : geoStatus === "denied"
+                      ? "📍 Position refusée — réessayer"
+                      : "📍 Partager ma position"}
+              </button>
+            </div>
+          )}
           <div className={[styles.composer, !composerText.trim() ? styles.composerOff : ""].join(" ")}>
             <textarea
               ref={textareaRef}
@@ -598,6 +637,8 @@ export function AssistantPanel() {
           </div>
         </div>
       )}
+
+      {mapDestination && <MapAppModal destination={mapDestination} onClose={() => setMapDestination(null)} />}
     </section>
   );
 }

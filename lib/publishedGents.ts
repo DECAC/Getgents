@@ -2,6 +2,7 @@ import type { Espace, EspacesMap, Tool, UserFile } from "@/lib/types";
 import type { GentDraft } from "@/lib/types/builder";
 import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { formatConversationStartedAt, newConversationId } from "@/lib/conversationUtils";
+import { parseDatasetUrl } from "@/lib/opendatasoft";
 
 // Pont client-only entre le Builder et le côté utilisateur : il n'y a pas de
 // backend dans cette maquette, donc un gent publié n'est visible que dans le
@@ -99,6 +100,21 @@ export function draftToEspace(draft: GentDraft): Espace {
       "Utilise-les dès que la question porte sur des données qu'ils couvrent, plutôt que de répondre de mémoire, et cite la source des données obtenues.";
   }
 
+  // Les connecteurs « dataset » deviennent des outils de recherche par
+  // proximité (API Opendatasoft) exécutés côté serveur dans /api/chat.
+  const datasets = draft.connectors
+    .filter((c) => c.toolKind === "dataset" && typeof c.detail === "string" && parseDatasetUrl(c.detail) !== null)
+    .map((c) => ({ name: c.name, url: c.detail as string }));
+
+  if (datasets.length) {
+    systemPrompt +=
+      `\n\nTu disposes d'outils de recherche géographique sur des données ouvertes : ${datasets.map((d) => d.name).join(", ")}. ` +
+      "Pour guider l'utilisateur vers le lieu le plus proche : demande-lui d'abord de partager sa position (bouton « Partager ma position » sous le champ de saisie) — n'appelle jamais l'outil avec une position devinée. " +
+      "Une fois sa position connue (indiquée dans le contexte), appelle l'outil avec lat/lon, puis présente les résultats du plus proche au plus éloigné avec leur adresse et leurs caractéristiques utiles (horaires, accès PMR…). " +
+      "Rends chaque adresse cliquable en l'émettant sous la forme <a href=\"geo:LAT,LON\" data-address=\"ADRESSE COMPLÈTE\">ADRESSE</a>. " +
+      "Propose aussi un artefact carte des résultats quand il y en a plusieurs.";
+  }
+
   return {
     icon: draft.icon,
     name: draft.name,
@@ -120,6 +136,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     systemPrompt,
     chatModelId,
     mcpServers: mcpServers.length ? mcpServers : undefined,
+    datasets: datasets.length ? datasets : undefined,
     webSearch: draft.webSearch || undefined,
   };
 }

@@ -149,6 +149,13 @@ export const CONNECTOR_TOOL_TYPES: ConnectorToolType[] = [
     description: "Connectez-vous à un serveur MCP pour accéder aux outils et aux ressources.",
   },
   {
+    kind: "dataset",
+    name: "Dataset open data",
+    icon: "🗺️",
+    description:
+      "Collez l'URL d'un jeu de données ouvert (opendata.paris.fr, data.gouv.fr…) : le gent pourra y chercher les enregistrements les plus proches d'une position.",
+  },
+  {
     kind: "ordinateur",
     name: "Utilisation de l'ordinateur",
     icon: "🖥️",
@@ -287,6 +294,44 @@ Cet espace traite des données sensibles : reste factuel, sobre, et évite toute
         role: "agent",
         text: "<p>Espace sensible détecté — pensez à activer le badge « Données sensibles » et à limiter les connecteurs au strict nécessaire.</p>",
         t: "lun.",
+      },
+    ],
+  },
+
+  // Cas d'usage « builder non technique » : prompt décrit en langage naturel
+  // + un simple connecteur dataset (URL collée) — voir plan sanisettes.
+  "sanisettes-paris": {
+    id: "sanisettes-paris",
+    name: "Toilettes publiques Paris",
+    icon: "🚻",
+    objective:
+      "Guider l'utilisateur vers les toilettes publiques les plus proches à Paris, à partir des données ouvertes de la Ville.",
+    systemPrompt: `Ton rôle est d'assister les users dans le guidage vers les toilettes publiques les plus proches. Voici les données de localisation : le jeu de données ouvert « sanisettesparis » de la Ville de Paris (connecté comme outil).
+
+Le user doit pouvoir être guidé après avoir accepté de partager sa localisation. Tu peux afficher une carte, ou simplement lui donner l'adresse des toilettes les plus proches, avec les infos utiles (horaires, accès PMR, relais bébé).`,
+    status: "draft",
+    updatedAt: "à l'instant",
+    modelAssignments: [
+      { capability: "chat", modelId: "anthropic/claude-sonnet-5" },
+      { capability: "reasoning", modelId: null },
+      { capability: "image", modelId: null },
+      { capability: "tts", modelId: null },
+      { capability: "stt", modelId: null },
+    ],
+    knowledgeSources: [],
+    connectors: [
+      {
+        id: "tool-1",
+        toolKind: "dataset",
+        name: "Toilettes publiques Paris (sanisettes)",
+        detail: "https://opendata.paris.fr/explore/dataset/sanisettesparis/map/",
+      },
+    ],
+    builderConversation: [
+      {
+        role: "agent",
+        text: "<p>Votre dataset « sanisettesparis » est connecté : le gent pourra chercher les toilettes les plus proches d'une position partagée par l'utilisateur. Testez puis publiez quand vous êtes prêt.</p>",
+        t: "à l'instant",
       },
     ],
   },
