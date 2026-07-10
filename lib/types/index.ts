@@ -80,7 +80,8 @@ export type ConversationRole =
   | "artef-proposal"
   | "theme-proposal"
   | "geo-request"
-  | "connector-proposal";
+  | "connector-proposal"
+  | "config-proposal";
 
 export interface ConversationThread {
   id: string;
@@ -155,6 +156,17 @@ export interface ConversationMessage {
     stability: string;
   }[];
   connectorSuggestionsStatus?: "pending" | "applied" | "dismissed";
+  /** Configuration complète du gent proposée par l'assistant du builder. */
+  configProposal?: {
+    name?: string;
+    objective?: string;
+    systemPrompt?: string;
+    webSearch?: boolean;
+    chatModelId?: string;
+    reasoningModelId?: string;
+    connectors?: { kind: "dataset" | "mcp" | "api-rest"; name: string; url: string }[];
+  };
+  configProposalStatus?: "pending" | "applied" | "dismissed";
   reasoning?: string;
 }
 

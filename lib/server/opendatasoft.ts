@@ -18,16 +18,50 @@ export interface NearbySearchParams {
   limit?: number;
 }
 
+// Le nom du champ géographique varie d'un dataset à l'autre (geo_point_2d,
+// geom, coordonnees…) : on le découvre via les métadonnées du dataset, avec
+// un cache mémoire par dataset (durée de vie du process serveur).
+const geoFieldCache = new Map<string, string | null>();
+
+async function resolveGeoField(ref: DatasetRef): Promise<string | null> {
+  const key = `${ref.domain}/${ref.datasetId}`;
+  if (geoFieldCache.has(key)) return geoFieldCache.get(key) ?? null;
+
+  let field: string | null = "geo_point_2d";
+  try {
+    const res = await fetch(
+      `${baseUrl(ref.domain)}/api/explore/v2.1/catalog/datasets/${encodeURIComponent(ref.datasetId)}`,
+      { headers: { Accept: "application/json" } }
+    );
+    if (res.ok) {
+      const meta = (await res.json()) as { fields?: { name?: string; type?: string }[] };
+      const geo = meta.fields?.find((f) => f.type === "geo_point_2d");
+      field = geo?.name ?? null;
+    }
+  } catch {
+    // métadonnées inaccessibles : on tente le nom conventionnel
+  }
+  geoFieldCache.set(key, field);
+  return field;
+}
+
 export async function searchNearby(
   ref: DatasetRef,
   { lat, lon, radiusM = 1500, limit = 5 }: NearbySearchParams,
 ): Promise<string> {
+  const geoField = await resolveGeoField(ref);
+  if (!geoField) {
+    return JSON.stringify({
+      error: `Le dataset ${ref.datasetId} ne contient pas de champ géographique (geo_point_2d) — recherche par proximité impossible.`,
+    });
+  }
+
   const radius = Math.min(Math.max(Math.round(radiusM), 50), 20_000);
   const n = Math.min(Math.max(Math.round(limit), 1), 20);
   const point = `geom'POINT(${lon} ${lat})'`;
   const params = new URLSearchParams({
-    where: `within_distance(geo_point_2d, ${point}, ${radius}m)`,
-    order_by: `distance(geo_point_2d, ${point})`,
+    where: `within_distance(${geoField}, ${point}, ${radius}m)`,
+    order_by: `distance(${geoField}, ${point})`,
     limit: String(n),
   });
   const url = `${baseUrl(ref.domain)}/api/explore/v2.1/catalog/datasets/${encodeURIComponent(
