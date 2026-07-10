@@ -13,6 +13,7 @@ import {
   detectConnectorInText,
   type ConnectorProposal,
 } from "@/lib/connectorSignal";
+import { GENT_CONFIG_PROMPT_INSTRUCTION, extractGentConfigSignal, type GentConfigProposal } from "@/lib/gentConfigSignal";
 import { writePublishedGent, draftToEspace, patchPublishedGentName } from "@/lib/publishedGents";
 import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
@@ -51,6 +52,8 @@ interface BuilderContextValue {
   sendBuilderMessage: (text: string) => void;
   applyBuilderSuggestion: (suggestion: string) => void;
   confirmConnectorProposal: (messageId: string, decision: "add" | "dismiss") => void;
+  /** Applique (ou ignore) une configuration complète proposée par l'assistant. */
+  applyGentConfig: (messageId: string, decision: "apply" | "dismiss") => void;
   /** Configure les connecteurs sélectionnés parmi les candidats découverts (urls), ou tout ignorer ([]). */
   confirmConnectorSuggestions: (messageId: string, selectedUrls: string[]) => void;
   isThinking: boolean;
@@ -73,7 +76,7 @@ const MODEL_CATALOG_SUMMARY = MODEL_CATALOG.map(
 
 const MODEL_RECOMMENDATION_INSTRUCTION =
   `Voici le catalogue des modèles disponibles pour ce gent (une seule clé API OpenRouter donne accès à tous) :\n${MODEL_CATALOG_SUMMARY}\n\n` +
-  "Dès que l'objectif ou les instructions données par le créateur laissent deviner un besoin particulier (raisonnement complexe, génération d'image, restitution vocale, budget serré, gros volume de texte...), recommande explicitement, capacité par capacité, le ou les modèles les plus adaptés parmi cette liste, en une phrase de justification. Le créateur les active ensuite lui-même via les listes déroulantes de la section « Modèles », dans l'onglet Prompt — tu ne peux pas les assigner à sa place.";
+  "Dès que l'objectif ou les instructions données par le créateur laissent deviner un besoin particulier (raisonnement complexe, génération d'image, restitution vocale, budget serré, gros volume de texte...), recommande explicitement, capacité par capacité, le ou les modèles les plus adaptés parmi cette liste, en une phrase de justification, et propose leur assignation via le bloc GENT_CONFIG (voir instruction dédiée).";
 
 const BUILDER_ASSISTANT_REPLIES = [
   "Bien noté. J'ai reformulé ce point dans un langage plus directif pour le modèle — regardez le prompt mis à jour.",
@@ -259,7 +262,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         draft.systemPrompt
           ? `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
           : `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace.`
-      }${connectorsNote}\n\n${MODEL_RECOMMENDATION_INSTRUCTION}\n\n${CONNECTOR_PROMPT_INSTRUCTION}\n\n${CONNECTOR_DISCOVERY_INSTRUCTION}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
+      }${connectorsNote}\n\n${MODEL_RECOMMENDATION_INSTRUCTION}\n\n${GENT_CONFIG_PROMPT_INSTRUCTION}\n\n${CONNECTOR_PROMPT_INSTRUCTION}\n\n${CONNECTOR_DISCOVERY_INSTRUCTION}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
       history = draft.builderConversation
         .filter((m) => m.role === "agent" || m.role === "user")
         .map((m) => ({
@@ -300,14 +303,34 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       }
     )
       .then(({ text: fullRaw }) => {
-        const afterSuggestions = extractConnectorSuggestions(fullRaw);
+        const afterConfig = extractGentConfigSignal(fullRaw);
+        const afterSuggestions = extractConnectorSuggestions(afterConfig.text);
         const afterConnector = extractConnectorSignal(afterSuggestions.text);
         const { text: reply, questions } = extractQuestions(afterConnector.text);
         updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply), questions }));
 
+        // Configuration complète proposée : carte « Appliquer la configuration ».
+        if (afterConfig.config) {
+          const config = afterConfig.config;
+          setDrafts((p) => {
+            const d = p[id];
+            const msg = {
+              id: `config-${Date.now()}`,
+              role: "config-proposal" as const,
+              configProposal: config,
+              configProposalStatus: "pending" as const,
+              t: "à l'instant",
+            };
+            return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+          });
+        }
+
         // Connecteurs candidats découverts par recherche web : liste de
-        // sélection à valider par le créateur.
-        const suggestions = afterSuggestions.suggestions.filter((s) => !existingConnectorUrls.includes(s.url));
+        // sélection à valider par le créateur. Ignorée si une configuration
+        // complète a été proposée dans le même message (elle prime).
+        const suggestions = afterConfig.config
+          ? []
+          : afterSuggestions.suggestions.filter((s) => !existingConnectorUrls.includes(s.url));
         if (suggestions.length) {
           setDrafts((p) => {
             const d = p[id];
@@ -325,6 +348,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         // Proposition de connecteur unique : signal du modèle, ou détection
         // déterministe de secours sur le message du créateur (URL de dataset).
         let proposal: ConnectorProposal | null = afterConnector.connector ?? detectConnectorInText(text);
+        if (afterConfig.config) proposal = null;
         if (proposal && existingConnectorUrls.includes(proposal.url)) proposal = null;
         if (proposal && suggestions.some((s) => s.url === proposal!.url)) proposal = null;
         if (proposal) {
@@ -377,6 +401,51 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
           : m
       );
       return { ...prev, [currentId]: { ...draft, connectors, builderConversation, updatedAt: "à l'instant" } };
+    });
+  }, [currentId]);
+
+  // Applique en une fois la configuration proposée par l'assistant (nom,
+  // objectif, prompt, modèles, recherche web, connecteurs).
+  const applyGentConfig = useCallback((messageId: string, decision: "apply" | "dismiss") => {
+    setDrafts((prev) => {
+      const draft = prev[currentId];
+      const msg = draft.builderConversation.find((m) => m.id === messageId);
+      const cfg: GentConfigProposal | undefined = msg?.configProposal;
+      if (!cfg) return prev;
+
+      let next = { ...draft, updatedAt: "à l'instant" };
+      if (decision === "apply") {
+        if (cfg.name) next.name = cfg.name;
+        if (cfg.objective) next.objective = cfg.objective;
+        if (cfg.systemPrompt) next.systemPrompt = cfg.systemPrompt;
+        if (cfg.webSearch !== undefined) next.webSearch = cfg.webSearch;
+        if (cfg.chatModelId || cfg.reasoningModelId) {
+          next.modelAssignments = next.modelAssignments.map((a) => {
+            if (a.capability === "chat" && cfg.chatModelId) return { ...a, modelId: cfg.chatModelId };
+            if (a.capability === "reasoning" && cfg.reasoningModelId) return { ...a, modelId: cfg.reasoningModelId };
+            return a;
+          });
+        }
+        if (cfg.connectors?.length) {
+          const existingUrls = next.connectors.map((c) => c.detail);
+          next.connectors = [
+            ...next.connectors,
+            ...cfg.connectors
+              .filter((c) => !existingUrls.includes(c.url))
+              .map((c, i) => ({ id: `tool-${Date.now()}-${i}`, toolKind: c.kind, name: c.name, detail: c.url })),
+          ];
+        }
+        if (cfg.name && draft.status === "published") {
+          patchPublishedGentName(currentId, cfg.name);
+        }
+      }
+
+      next.builderConversation = next.builderConversation.map((m) =>
+        m.id === messageId
+          ? { ...m, configProposalStatus: decision === "apply" ? ("applied" as const) : ("dismissed" as const) }
+          : m
+      );
+      return { ...prev, [currentId]: next };
     });
   }, [currentId]);
 
@@ -441,6 +510,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         applyBuilderSuggestion,
         confirmConnectorProposal,
         confirmConnectorSuggestions,
+        applyGentConfig,
         isThinking,
       }}
     >

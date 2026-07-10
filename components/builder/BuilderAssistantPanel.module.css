@@ -74,6 +74,22 @@
   color: var(--muted);
 }
 
+.reportBtn {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--bg);
+  white-space: nowrap;
+}
+.reportBtn:hover {
+  border-color: var(--plum);
+  color: var(--plum);
+}
+
 .scope {
   display: flex;
   align-items: center;
@@ -233,6 +249,21 @@
   padding: 10px 13px;
   margin-bottom: 16px;
 }
+.configList {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.configList b {
+  color: var(--plum);
+  font-weight: 700;
+}
+
 .suggestionRow {
   display: flex;
   align-items: flex-start;

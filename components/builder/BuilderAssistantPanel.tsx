@@ -7,6 +7,7 @@ import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import type { ConversationMessage } from "@/lib/types";
 import { setBuilderAssistWidthFromPointer, canResizeAssist } from "@/lib/assistResize";
+import { buildBuilderReport, downloadReport } from "@/lib/testReport";
 import styles from "./BuilderAssistantPanel.module.css";
 
 const CHAT_MODELS = MODEL_CATALOG.filter((m) => m.capability === "chat");
@@ -23,6 +24,7 @@ export function BuilderAssistantPanel() {
     assignModel,
     confirmConnectorProposal,
     confirmConnectorSuggestions,
+    applyGentConfig,
     switchTab,
   } = useBuilder();
   const [composerText, setComposerText] = useState("");
@@ -101,6 +103,67 @@ export function BuilderAssistantPanel() {
   }
 
   function renderMessage(m: ConversationMessage, i: number) {
+    if (m.role === "config-proposal" && m.configProposal) {
+      const cfg = m.configProposal;
+      const model = (id?: string) => MODEL_CATALOG.find((mm) => mm.id === id)?.label ?? id;
+      if (m.configProposalStatus === "applied") {
+        return (
+          <div key={i} className={styles.connectorDone}>
+            ✓ Configuration appliquée au gent{cfg.name ? ` — ${cfg.name}` : ""}
+          </div>
+        );
+      }
+      if (m.configProposalStatus === "dismissed") {
+        return (
+          <div key={i} className={styles.connectorDismissed}>
+            Configuration proposée ignorée
+          </div>
+        );
+      }
+      return (
+        <div key={i} className={styles.connectorCard}>
+          <div className={styles.connectorKind}>⚙️ Configuration proposée</div>
+          <ul className={styles.configList}>
+            {cfg.name && <li><b>Nom :</b> {cfg.name}</li>}
+            {cfg.objective && <li><b>Objectif :</b> {cfg.objective}</li>}
+            {cfg.systemPrompt && (
+              <li>
+                <b>Prompt système :</b>{" "}
+                {cfg.systemPrompt.length > 180 ? `${cfg.systemPrompt.slice(0, 180)}…` : cfg.systemPrompt}
+              </li>
+            )}
+            {cfg.chatModelId && <li><b>Modèle conversationnel :</b> {model(cfg.chatModelId)}</li>}
+            {cfg.reasoningModelId && <li><b>Modèle de raisonnement :</b> {model(cfg.reasoningModelId)}</li>}
+            {cfg.webSearch !== undefined && (
+              <li><b>Recherche web :</b> {cfg.webSearch ? "activée" : "désactivée"}</li>
+            )}
+            {cfg.connectors?.map((c) => (
+              <li key={c.url}>
+                <b>Connecteur :</b> {c.kind === "dataset" ? "🗺️" : c.kind === "mcp" ? "🔗" : "🌐"} {c.name}
+                <span className={styles.connectorUrl}> {c.url}</span>
+              </li>
+            ))}
+          </ul>
+          <div className={styles.connectorActions}>
+            <button
+              type="button"
+              className={styles.connectorAddBtn}
+              onClick={() => applyGentConfig(m.id ?? "", "apply")}
+            >
+              Appliquer la configuration
+            </button>
+            <button
+              type="button"
+              className={styles.connectorDismissBtn}
+              onClick={() => applyGentConfig(m.id ?? "", "dismiss")}
+            >
+              Ignorer
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     if (m.role === "connector-proposal" && m.connectorSuggestions?.length) {
       const list = m.connectorSuggestions;
       const msgId = m.id ?? "";
@@ -245,6 +308,14 @@ export function BuilderAssistantPanel() {
           <h3 className={styles.headTitle}>Assistant du builder</h3>
           <div className={styles.headSub}>Vous aide à concevoir {currentDraft.name || "ce gent"}</div>
         </div>
+        <button
+          type="button"
+          className={styles.reportBtn}
+          onClick={() => downloadReport(buildBuilderReport(currentDraft), currentDraft.name)}
+          title="Télécharger le rapport de test de cette session (configuration + transcript, markdown)"
+        >
+          📄 Rapport
+        </button>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderBottom: "1px solid var(--line)" }}>

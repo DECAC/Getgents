@@ -83,6 +83,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.reportBtn {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--bg);
+  white-space: nowrap;
+}
+.reportBtn:hover {
+  border-color: var(--plum);
+  color: var(--plum);
+}
 .closeBtn {
   width: 30px;
   height: 30px;

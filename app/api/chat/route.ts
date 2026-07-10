@@ -180,7 +180,7 @@ function toolLoopResponse(
             type: "function",
             function: {
               name: fq,
-              description: `Recherche dans le jeu de données ouvert « ${ds.label} » (${ds.datasetId}, portail ${ds.domain}) les enregistrements les plus proches d'une position GPS, triés par distance.`,
+              description: `Recherche dans le jeu de données ouvert « ${ds.label} » (${ds.datasetId}, portail ${ds.domain}) les enregistrements les plus proches d'une position GPS, triés par distance. Exploite les champs utiles du résultat (nom, adresse, horaires, prix…) dans ta réponse.`,
               parameters: {
                 type: "object",
                 properties: {
