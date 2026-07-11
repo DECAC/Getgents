@@ -34,6 +34,7 @@ export async function streamChatCompletion(
     reasoning?: { enabled?: boolean };
     mcpServers?: { name: string; url: string }[];
     datasets?: { name: string; url: string }[];
+    prim?: boolean;
     webSearch?: boolean;
   },
   onToken: (fullTextSoFar: string, fullReasoningSoFar: string) => void,

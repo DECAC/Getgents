@@ -156,6 +156,13 @@ export const CONNECTOR_TOOL_TYPES: ConnectorToolType[] = [
       "Collez l'URL d'un jeu de données ouvert (opendata.paris.fr, data.gouv.fr…) : le gent pourra y chercher les enregistrements les plus proches d'une position.",
   },
   {
+    kind: "prim",
+    name: "IDFM PRIM (transports IDF)",
+    icon: "🚌",
+    description:
+      "API officielle Île-de-France Mobilités : arrêts à proximité d'une position et prochains passages en temps réel (bus, métro, tram, RER). Authentifiée — la clé API (PRIM_API_KEY) est configurée côté serveur, jamais dans le navigateur.",
+  },
+  {
     kind: "ordinateur",
     name: "Utilisation de l'ordinateur",
     icon: "🖥️",

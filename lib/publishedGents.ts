@@ -115,6 +115,15 @@ export function draftToEspace(draft: GentDraft): Espace {
       "Propose aussi un artefact carte des résultats quand il y en a plusieurs.";
   }
 
+  // Connecteur IDFM PRIM : deux outils transit temps réel côté serveur.
+  const prim = draft.connectors.some((c) => c.toolKind === "prim");
+  if (prim) {
+    systemPrompt +=
+      "\n\nTu disposes des outils temps réel Île-de-France Mobilités (PRIM) : prim_stops_nearby(lat, lon) pour trouver les arrêts autour d'une position, puis prim_next_departures(stop_id) pour les prochains passages. " +
+      "Pour guider vers un transport : obtiens d'abord une position (géolocalisation consentie ou lieu précis fourni), appelle prim_stops_nearby, confirme le nom de l'arrêt retenu, puis appelle prim_next_departures avec son stop_id. " +
+      "Présente chaque passage : « Ligne [X] → [direction] : HH:MM » en précisant si l'horaire est temps réel ou théorique (champ temps_reel). N'invente jamais un horaire.";
+  }
+
   return {
     icon: draft.icon,
     name: draft.name,
@@ -137,6 +146,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     chatModelId,
     mcpServers: mcpServers.length ? mcpServers : undefined,
     datasets: datasets.length ? datasets : undefined,
+    prim: prim || undefined,
     webSearch: draft.webSearch || undefined,
   };
 }

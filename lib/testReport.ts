@@ -18,6 +18,7 @@ function modelLabel(id?: string | null): string {
 function connectorBadge(toolKind: string, detail?: string): string {
   if (toolKind === "mcp" && detail && /^https?:\/\//.test(detail)) return "● réel";
   if (toolKind === "dataset" && detail && parseDatasetUrl(detail)) return "● réel";
+  if (toolKind === "prim") return "● réel (clé serveur requise)";
   return "○ simulé";
 }
 
