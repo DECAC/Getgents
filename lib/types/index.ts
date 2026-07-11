@@ -164,7 +164,7 @@ export interface ConversationMessage {
     webSearch?: boolean;
     chatModelId?: string;
     reasoningModelId?: string;
-    connectors?: { kind: "dataset" | "mcp" | "api-rest"; name: string; url: string }[];
+    connectors?: { kind: "dataset" | "mcp" | "api-rest" | "prim"; name: string; url: string }[];
   };
   configProposalStatus?: "pending" | "applied" | "dismissed";
   reasoning?: string;
@@ -224,6 +224,8 @@ export interface Espace {
   mcpServers?: { name: string; url: string }[];
   /** Datasets open data (portails Opendatasoft) interrogeables par proximité. */
   datasets?: { name: string; url: string }[];
+  /** Connecteur IDFM PRIM actif (transports IDF, clé API côté serveur). */
+  prim?: boolean;
   /** Recherche web activée pour ce gent (plugin web OpenRouter). */
   webSearch?: boolean;
 }

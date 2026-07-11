@@ -20,6 +20,9 @@ function isRealConnector(instance: { toolKind: ConnectorToolKind; detail?: strin
   if (instance.toolKind === "dataset") {
     return !!instance.detail && parseDatasetUrl(instance.detail) !== null;
   }
+  // PRIM : réellement appelé côté serveur ; nécessite PRIM_API_KEY sur
+  // l'hébergement (sinon l'outil renvoie une erreur explicite au gent).
+  if (instance.toolKind === "prim") return true;
   return false;
 }
 
@@ -32,6 +35,7 @@ const FEATURED_STYLE: Record<ConnectorToolKind, string> = {
   invite: "plum",
   mcp: "ink",
   dataset: "gold",
+  prim: "sage",
   connecteur: "sage",
   "connecteur-predefini": "sage",
   "connecteur-personnalise": "sage",
@@ -69,6 +73,13 @@ export function ConnectorsTab() {
     }
     if (kind === "dataset") {
       setDatasetModalOpen(true);
+      return;
+    }
+    if (kind === "prim") {
+      addToolInstance("prim", {
+        name: "IDFM PRIM — transports IDF",
+        detail: "https://prim.iledefrance-mobilites.fr/marketplace",
+      });
       return;
     }
     addToolInstance(kind);
@@ -129,6 +140,12 @@ export function ConnectorsTab() {
                         <div><dt>Dataset</dt><dd>{ref.datasetId}</dd></div>
                         <div><dt>Outil exposé au modèle</dt><dd><code>dataset_{ref.datasetId.replace(/[^a-zA-Z0-9_]/g, "_")}__nearby(lat, lon)</code></dd></div>
                         <div><dt>Capacité</dt><dd>Recherche des enregistrements les plus proches d&apos;une position (API Opendatasoft Explore v2.1, tri par distance)</dd></div>
+                      </>
+                    ) : instance.toolKind === "prim" ? (
+                      <>
+                        <div><dt>API</dt><dd>Île-de-France Mobilités PRIM (Navitia, temps réel)</dd></div>
+                        <div><dt>Outils exposés au modèle</dt><dd><code>prim_stops_nearby(lat, lon)</code> · <code>prim_next_departures(stop_id)</code></dd></div>
+                        <div><dt>Authentification</dt><dd>Clé API côté serveur uniquement — variable d&apos;environnement <code>PRIM_API_KEY</code> sur l&apos;hébergement (jamais dans le navigateur)</dd></div>
                       </>
                     ) : (
                       <>

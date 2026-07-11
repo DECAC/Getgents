@@ -271,6 +271,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     const threadId = espace.activeConversationId;
     const mcpServers = espace.mcpServers;
     const datasets = espace.datasets;
+    const prim = espace.prim;
     const webSearch = espace.webSearch;
     const thread = espace.conversations.find((t) => t.id === threadId);
     const history = [...(thread?.messages ?? []), userMsg]
@@ -292,14 +293,15 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     })} (heure de Paris). Utilise exclusivement cette horloge pour toute heure, durée d'attente ou délai que tu annonces.`;
     // Garde-fou anti-hallucination : sans source réelle, interdiction de
     // présenter des données comme du temps réel.
-    const hasRealSource = !!espace.datasets?.length || !!espace.mcpServers?.length || !!espace.webSearch;
+    const hasRealSource =
+      !!espace.datasets?.length || !!espace.mcpServers?.length || !!espace.webSearch || !!espace.prim;
     const honestyNote = hasRealSource
       ? ""
       : "\n\nIMPORTANT : tu n'as accès à AUCUNE source de données temps réel (aucun connecteur actif, recherche web désactivée). Ne présente jamais d'horaires, de prix, de disponibilités ou de passages comme des données réelles ou « en temps réel » — tu ne peux pas les connaître. Dis-le clairement à l'utilisateur, donne au mieux des indications générales explicitement marquées comme non vérifiées, et suggère au créateur du gent de connecter une source de données réelle.";
     const positionNote = position
       ? `\n\nPosition de l'utilisateur (partagée avec son consentement) : latitude ${position.lat}, longitude ${position.lon}.`
       : "";
-    const geolocNote = espace.datasets?.length ? `\n\n${GEOLOC_PROMPT_INSTRUCTION}` : "";
+    const geolocNote = espace.datasets?.length || espace.prim ? `\n\n${GEOLOC_PROMPT_INSTRUCTION}` : "";
     const systemPrompt =
       `${basePrompt}${timeNote}${honestyNote}${memoryNote}${positionNote}${geolocNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
       `\n\n${THEME_TAB_PROMPT_INSTRUCTION}\n\n${describeModulesForPrompt(espace)}`;
@@ -353,6 +355,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         reasoning: { enabled: true },
         mcpServers,
         datasets,
+        prim,
         webSearch,
       },
       (fullSoFar, reasoningSoFar) => {

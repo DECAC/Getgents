@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { McpClient } from "@/lib/server/mcp";
 import { searchNearby } from "@/lib/server/opendatasoft";
+import { stopsNearby, nextDepartures } from "@/lib/server/prim";
 import { parseDatasetUrl, type DatasetRef } from "@/lib/opendatasoft";
 
 // Surchargeable en test/dev pour pointer vers un mock local.
@@ -16,6 +17,7 @@ interface ChatBody {
   reasoning?: { enabled?: boolean };
   mcpServers?: { name: string; url: string }[];
   datasets?: { name: string; url: string }[];
+  prim?: boolean;
   webSearch?: boolean;
 }
 
@@ -48,8 +50,8 @@ export async function POST(req: NextRequest) {
     })
     .filter((d): d is DatasetRef & { label: string } => d !== null);
 
-  if ((mcpServers.length > 0 || datasets.length > 0) && body.stream) {
-    return toolLoopResponse(body, mcpServers, datasets, key);
+  if ((mcpServers.length > 0 || datasets.length > 0 || body.prim) && body.stream) {
+    return toolLoopResponse(body, mcpServers, datasets, !!body.prim, key);
   }
 
   const upstream = await fetch(OPENROUTER_API, {
@@ -114,6 +116,7 @@ function toolLoopResponse(
   body: ChatBody,
   servers: { name: string; url: string }[],
   datasets: (DatasetRef & { label: string })[],
+  prim: boolean,
   key: string
 ) {
   const encoder = new TextEncoder();
@@ -194,6 +197,62 @@ function toolLoopResponse(
             },
           });
           sendToolEvent({ status: "connected", server: ds.label, toolCount: 1 });
+        }
+
+        if (prim) {
+          registry.set("prim_stops_nearby", {
+            exec: async (args) => {
+              const lat = Number(args.lat);
+              const lon = Number(args.lon);
+              if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                return { text: "Paramètres lat/lon manquants ou invalides.", ok: false };
+              }
+              const text = await stopsNearby(lat, lon, typeof args.radius_m === "number" ? args.radius_m : undefined);
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          registry.set("prim_next_departures", {
+            exec: async (args) => {
+              const stopId = typeof args.stop_id === "string" ? args.stop_id : "";
+              const text = await nextDepartures(stopId);
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          openaiTools.push(
+            {
+              type: "function",
+              function: {
+                name: "prim_stops_nearby",
+                description:
+                  "Île-de-France Mobilités (PRIM) : arrêts de transport (bus, métro, tram, RER) les plus proches d'une position GPS, avec leur stop_id et leurs lignes.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    lat: { type: "number", description: "Latitude WGS84" },
+                    lon: { type: "number", description: "Longitude WGS84" },
+                    radius_m: { type: "number", description: "Rayon en mètres (défaut 500)" },
+                  },
+                  required: ["lat", "lon"],
+                },
+              },
+            },
+            {
+              type: "function",
+              function: {
+                name: "prim_next_departures",
+                description:
+                  "Île-de-France Mobilités (PRIM) : prochains passages (temps réel quand disponible) à un arrêt donné — utilise un stop_id renvoyé par prim_stops_nearby.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    stop_id: { type: "string", description: "Identifiant d'arrêt Navitia (stop_point:…)" },
+                  },
+                  required: ["stop_id"],
+                },
+              },
+            }
+          );
+          sendToolEvent({ status: "connected", server: "IDFM PRIM", toolCount: 2 });
         }
 
         const messages: Record<string, unknown>[] = [...(body.messages ?? [])];

@@ -8,10 +8,12 @@ import { parseDatasetUrl } from "@/lib/opendatasoft";
 const GENT_CONFIG_RE = /<!--GENT_CONFIG:\s*(\{[\s\S]*?\})\s*-->/;
 
 export interface GentConfigConnector {
-  kind: "dataset" | "mcp" | "api-rest";
+  kind: "dataset" | "mcp" | "api-rest" | "prim";
   name: string;
   url: string;
 }
+
+const PRIM_DEFAULT_URL = "https://prim.iledefrance-mobilites.fr/marketplace";
 
 export interface GentConfigProposal {
   name?: string;
@@ -26,7 +28,7 @@ export interface GentConfigProposal {
 export const GENT_CONFIG_PROMPT_INSTRUCTION =
   "Tu peux configurer le gent à la place du créateur, sous réserve de sa validation. Dès que tu proposes un prompt système, un nom, un objectif, un modèle, l'activation de la recherche web ou des connecteurs, termine ta réponse (sur sa propre ligne) par exactement un bloc " +
   '<!--GENT_CONFIG: {"name":"…","objective":"…","systemPrompt":"…","webSearch":true,"chatModelId":"…","reasoningModelId":"…","connectors":[{"kind":"dataset","name":"…","url":"https://…"}]}--> ' +
-  "en n'incluant QUE les champs que tu proposes de changer (tous optionnels ; chatModelId/reasoningModelId doivent venir du catalogue de modèles ci-dessus ; kind parmi dataset/mcp/api-rest, URL réelles uniquement). " +
+  "en n'incluant QUE les champs que tu proposes de changer (tous optionnels ; chatModelId/reasoningModelId doivent venir du catalogue de modèles ci-dessus ; kind parmi dataset/mcp/api-rest/prim, URL réelles uniquement — \"prim\" est le connecteur intégré Île-de-France Mobilités pour les transports IDF temps réel, url facultative). " +
   "Une carte « Appliquer la configuration » s'affiche alors : le créateur valide en un clic et tout est appliqué au gent (nom, prompt, modèles, connecteurs…). " +
   "Règles impératives : n'annonce JAMAIS que tu configures ou vas configurer quelque chose sans émettre ce bloc dans le MÊME message ; si le créateur accepte verbalement une proposition faite plus tôt, ré-émets immédiatement le bloc GENT_CONFIG complet correspondant ; ne renvoie jamais le créateur vers une configuration manuelle (onglets, listes déroulantes) pour ce que ce bloc sait faire.";
 
@@ -38,8 +40,10 @@ function str(v: unknown, max: number): string | undefined {
 
 function validateConnector(c: unknown): GentConfigConnector | null {
   const p = c as Partial<GentConfigConnector>;
-  if (!p || typeof p.name !== "string" || typeof p.url !== "string") return null;
-  if (!["dataset", "mcp", "api-rest"].includes(p.kind as string)) return null;
+  if (!p || typeof p.name !== "string") return null;
+  if (!["dataset", "mcp", "api-rest", "prim"].includes(p.kind as string)) return null;
+  if (p.kind === "prim") return { kind: "prim", name: p.name, url: PRIM_DEFAULT_URL };
+  if (typeof p.url !== "string") return null;
   if (p.kind === "dataset" && !parseDatasetUrl(p.url)) return null;
   if (p.kind !== "dataset" && !/^https?:\/\//.test(p.url)) return null;
   return { kind: p.kind as GentConfigConnector["kind"], name: p.name, url: p.url };
