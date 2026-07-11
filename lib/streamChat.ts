@@ -6,7 +6,15 @@ export interface ChatMessage {
 export interface StreamChatResult {
   text: string;
   reasoning: string;
+  /** Vrai si le modèle a atteint max_tokens avant de terminer sa réponse. */
+  truncated: boolean;
 }
+
+/** Plafonds de tokens de sortie — le builder produit des réponses longues (prompt, connecteurs, bloc GENT_CONFIG). */
+export const CHAT_MAX_TOKENS = {
+  espace: 4096,
+  builder: 8192,
+} as const;
 
 /** Événement émis par la route quand le gent utilise un outil MCP. */
 export interface ToolEvent {
@@ -62,6 +70,7 @@ export async function streamChatCompletion(
   let buffer = "";
   let full = "";
   let fullReasoning = "";
+  let truncated = false;
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -82,6 +91,8 @@ export async function streamChatCompletion(
           continue;
         }
         const delta = json?.choices?.[0]?.delta;
+        const finishReason: string | undefined = json?.choices?.[0]?.finish_reason;
+        if (finishReason === "length") truncated = true;
         const content: string | undefined = delta?.content;
         const reasoningDetails: { type?: string; text?: string }[] | undefined = delta?.reasoning_details;
         const legacyReasoning: string | undefined = delta?.reasoning;
@@ -110,5 +121,5 @@ export async function streamChatCompletion(
     }
   }
 
-  return { text: full, reasoning: fullReasoning };
+  return { text: full, reasoning: fullReasoning, truncated };
 }
