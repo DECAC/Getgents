@@ -50,6 +50,11 @@ function applyThemeTabAction(themeTabs: ThemeTab[], action: ThemeTabProposalActi
 
 type ActiveTab = number | "map";
 
+/** Heure réelle du message (HH:MM) — utilisée par les rapports et l'audit. */
+function nowTime(): string {
+  return new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
 export type GeoStatus = "idle" | "pending" | "granted" | "denied";
 
 // Placeholder utilisé le temps qu'un gent tout juste publié (stocké côté client
@@ -255,8 +260,8 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
 
   const sendMessage = useCallback((text: string) => {
     const id = currentIdRef.current;
-    const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" };
-    const agentPlaceholder = { role: "agent" as const, text: "", t: "à l'instant" };
+    const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: nowTime() };
+    const agentPlaceholder = { role: "agent" as const, text: "", t: nowTime() };
 
     // Capture synchrone depuis le miroir espacesRef : sendMessage peut être
     // appelé hors d'un événement React (callback de géolocalisation), où les
@@ -278,12 +283,25 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     const basePrompt =
       espace.systemPrompt?.trim() || `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`;
     const memoryNote = espace.memory ? `\n\nMémoire de l'espace : ${espace.memory}` : "";
+    // Le modèle n'a pas d'horloge : sans cette note, il invente l'heure
+    // courante (ex. « dans 2 min (14:35) » alors qu'il est 11h01).
+    const timeNote = `\n\nDate et heure actuelles : ${new Date().toLocaleString("fr-FR", {
+      timeZone: "Europe/Paris",
+      dateStyle: "full",
+      timeStyle: "short",
+    })} (heure de Paris). Utilise exclusivement cette horloge pour toute heure, durée d'attente ou délai que tu annonces.`;
+    // Garde-fou anti-hallucination : sans source réelle, interdiction de
+    // présenter des données comme du temps réel.
+    const hasRealSource = !!espace.datasets?.length || !!espace.mcpServers?.length || !!espace.webSearch;
+    const honestyNote = hasRealSource
+      ? ""
+      : "\n\nIMPORTANT : tu n'as accès à AUCUNE source de données temps réel (aucun connecteur actif, recherche web désactivée). Ne présente jamais d'horaires, de prix, de disponibilités ou de passages comme des données réelles ou « en temps réel » — tu ne peux pas les connaître. Dis-le clairement à l'utilisateur, donne au mieux des indications générales explicitement marquées comme non vérifiées, et suggère au créateur du gent de connecter une source de données réelle.";
     const positionNote = position
       ? `\n\nPosition de l'utilisateur (partagée avec son consentement) : latitude ${position.lat}, longitude ${position.lon}.`
       : "";
     const geolocNote = espace.datasets?.length ? `\n\n${GEOLOC_PROMPT_INSTRUCTION}` : "";
     const systemPrompt =
-      `${basePrompt}${memoryNote}${positionNote}${geolocNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
+      `${basePrompt}${timeNote}${honestyNote}${memoryNote}${positionNote}${geolocNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
       `\n\n${THEME_TAB_PROMPT_INSTRUCTION}\n\n${describeModulesForPrompt(espace)}`;
     const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
 
@@ -320,7 +338,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         const convs = e.conversations.map((t) => {
           if (t.id !== threadId) return t;
           const msgs = [...t.messages];
-          msgs.splice(Math.max(msgs.length - 1, 0), 0, { role: "tool" as const, kind, what, ok, t: "à l'instant" });
+          msgs.splice(Math.max(msgs.length - 1, 0), 0, { role: "tool" as const, kind, what, ok, t: nowTime() });
           return { ...t, messages: msgs };
         });
         return { ...p, [id]: { ...e, conversations: convs } };
@@ -370,7 +388,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
                     ...t,
                     messages: [
                       ...t.messages,
-                      { id: geoMsgId, role: "geo-request" as const, geoRequestStatus: "pending" as const, t: "à l'instant" },
+                      { id: geoMsgId, role: "geo-request" as const, geoRequestStatus: "pending" as const, t: nowTime() },
                     ],
                   }
                 : t
@@ -400,7 +418,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
                 role: "artef-proposal" as const,
                 proposal: sig,
                 proposalStatus: "pending" as const,
-                t: "à l'instant",
+                t: nowTime(),
               });
               return { ...t, messages: msgs };
             });
@@ -427,7 +445,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
                 role: "theme-proposal" as const,
                 themeProposal: action,
                 themeProposalStatus: "pending" as const,
-                t: "à l'instant",
+                t: nowTime(),
               });
               return { ...t, messages: msgs };
             });
@@ -447,7 +465,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         updateLastMessage(() => ({
           role: "agent" as const,
           text: `<p>Erreur de connexion au service IA${err?.message ? ` : ${err.message}` : ""}.</p>`,
-          t: "à l'instant",
+          t: nowTime(),
         }));
       })
       .finally(() => setIsThinking(false));
