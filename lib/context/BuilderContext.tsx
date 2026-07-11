@@ -17,7 +17,7 @@ import { GENT_CONFIG_PROMPT_INSTRUCTION, extractGentConfigSignal, type GentConfi
 import { writePublishedGent, draftToEspace, patchPublishedGentName } from "@/lib/publishedGents";
 import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
-import { streamChatCompletion } from "@/lib/streamChat";
+import { streamChatCompletion, CHAT_MAX_TOKENS } from "@/lib/streamChat";
 
 export type BuilderTab = "prompt" | "connectors" | "artefacts" | "audit";
 
@@ -326,7 +326,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       {
         model: chatModelId,
         messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: text }],
-        max_tokens: 2048,
+        max_tokens: CHAT_MAX_TOKENS.builder,
         // Recherche web en tâche de fond : l'assistant s'en sert pour
         // découvrir des connecteurs candidats (datasets, MCP, API).
         webSearch: true,
@@ -336,12 +336,15 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw) }));
       }
     )
-      .then(({ text: fullRaw }) => {
+      .then(({ text: fullRaw, truncated }) => {
         const afterConfig = extractGentConfigSignal(fullRaw);
         const afterSuggestions = extractConnectorSuggestions(afterConfig.text);
         const afterConnector = extractConnectorSignal(afterSuggestions.text);
         const { text: reply, questions } = extractQuestions(afterConnector.text);
-        updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply), questions }));
+        const truncationNote = truncated
+          ? "\n\n⚠️ *Réponse interrompue (limite de longueur atteinte). Relancez ou demandez « continue » pour obtenir la suite.*"
+          : "";
+        updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply + truncationNote), questions }));
 
         // Configuration complète proposée : carte « Appliquer la configuration ».
         if (afterConfig.config) {
