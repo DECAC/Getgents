@@ -27,6 +27,25 @@
   min-width: 0;
 }
 
+.builderLink {
+  flex: none;
+  align-self: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--bg);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.builderLink:hover {
+  border-color: var(--plum);
+  color: var(--plum);
+  background: var(--plum-tint);
+}
+
 .title {
   font-family: "Inter", sans-serif;
   font-size: 21px;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useRef, type ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
 import type { ConversationMessage } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG } from "@/lib/mock-data/builder";
@@ -84,6 +84,20 @@ const BUILDER_ASSISTANT_REPLIES = [
   "Cela ressemble à une action engageante (compte tiers). Pensez à ajouter le connecteur correspondant et à documenter l'invariant de confirmation dans le prompt.",
 ];
 
+// Persistance des brouillons dans le navigateur : sans elle, un gent créé
+// puis testé côté user disparaissait du gent studio au retour (état mémoire).
+const DRAFTS_STORAGE_KEY = "getgents:gent-drafts";
+
+function readStoredDrafts(): GentDraftsMap {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(DRAFTS_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as GentDraftsMap) : {};
+  } catch {
+    return {};
+  }
+}
+
 function seedDrafts(initialId: string): GentDraftsMap {
   const drafts: GentDraftsMap = JSON.parse(JSON.stringify(GENT_DRAFTS));
   if (!drafts[initialId]) {
@@ -105,6 +119,26 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   const [isThinking, setIsThinking] = useState(false);
   const currentIdRef = useRef(currentId);
   currentIdRef.current = currentId;
+  const draftsLoadedRef = useRef(false);
+
+  // Recharge les brouillons persistés (localStorage) puis sauvegarde chaque
+  // changement — le premier rendu serveur n'y a pas accès, d'où le useEffect.
+  useEffect(() => {
+    const stored = readStoredDrafts();
+    if (Object.keys(stored).length) {
+      setDrafts((prev) => ({ ...prev, ...stored }));
+    }
+    draftsLoadedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!draftsLoadedRef.current || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
+    } catch {
+      // quota dépassé / navigation privée : le studio reste utilisable en mémoire
+    }
+  }, [drafts]);
 
   const currentDraft = drafts[currentId];
 
