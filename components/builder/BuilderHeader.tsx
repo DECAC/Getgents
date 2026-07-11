@@ -45,6 +45,16 @@ const TABS: { id: BuilderTab; label: string; icon: JSX.Element }[] = [
       </svg>
     ),
   },
+  {
+    id: "audit",
+    label: "Audit",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="11" cy="11" r="7" />
+        <path d="M21 21l-4.3-4.3M8 11h6M11 8v6" />
+      </svg>
+    ),
+  },
 ];
 
 export function BuilderHeader() {

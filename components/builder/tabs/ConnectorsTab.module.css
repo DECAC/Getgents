@@ -8,7 +8,60 @@
   font-size: 14.5px;
   font-weight: 700;
   letter-spacing: -0.01em;
-  margin: 0 0 10px;
+  margin: 0 0 4px;
+}
+
+.sectionSub {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.staticName {
+  font-weight: 600;
+  font-size: 13.5px;
+  letter-spacing: -0.01em;
+  flex: 1;
+}
+
+.factList {
+  margin: 6px 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.factList div {
+  display: flex;
+  gap: 8px;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.factList dt {
+  flex: none;
+  min-width: 150px;
+  color: var(--faint);
+  font-weight: 600;
+}
+.factList dd {
+  margin: 0;
+  color: var(--ink);
+  word-break: break-word;
+}
+.factList code {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10.5px;
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+.hiddenNote {
+  font-size: 11.5px;
+  color: var(--faint);
+  padding: 8px 12px;
+  background: var(--bg);
+  border-radius: 10px;
 }
 
 .list {

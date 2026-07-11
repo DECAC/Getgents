@@ -8,6 +8,20 @@
   position: relative;
 }
 
+/* Conversation étendue en plein écran */
+.panelFullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  border-left: none;
+}
+.panelFullscreen .body,
+.panelFullscreen .composerWrap {
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+}
+
 /* Resize handle — sur le bord gauche puisque ce panneau est en dernière colonne */
 .resizeHandle {
   position: absolute;

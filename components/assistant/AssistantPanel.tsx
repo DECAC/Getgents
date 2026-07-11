@@ -60,6 +60,7 @@ export function AssistantPanel() {
   const [expandedReasoning, setExpandedReasoning] = useState<Record<number, boolean>>({});
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [mapDestination, setMapDestination] = useState<MapDestination | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
@@ -577,8 +578,12 @@ export function AssistantPanel() {
   }
 
   return (
-    <section className={styles.panel} aria-label="Assistant" aria-modal="false">
-      <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner" />
+    <section
+      className={[styles.panel, fullscreen ? styles.panelFullscreen : ""].filter(Boolean).join(" ")}
+      aria-label="Assistant"
+      aria-modal="false"
+    >
+      {!fullscreen && <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner" />}
 
       <div className={styles.head}>
         <div className={styles.headIc}>{currentEspace.icon}</div>
@@ -593,6 +598,15 @@ export function AssistantPanel() {
           title="Télécharger le rapport de test de cet espace (configuration + conversations, markdown)"
         >
           📄 Rapport
+        </button>
+        <button
+          type="button"
+          className={styles.reportBtn}
+          onClick={() => setFullscreen((v) => !v)}
+          title={fullscreen ? "Quitter le plein écran" : "Étendre la conversation en plein écran"}
+          aria-label={fullscreen ? "Quitter le plein écran" : "Plein écran"}
+        >
+          {fullscreen ? "🗗" : "⛶"}
         </button>
         <button className={styles.closeBtn} onClick={closeAssistant} aria-label="Fermer l'assistant">
           ✕
