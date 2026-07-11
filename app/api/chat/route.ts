@@ -209,7 +209,7 @@ function toolLoopResponse(
             body: JSON.stringify({
               model: body.model,
               messages,
-              max_tokens: body.max_tokens ?? 2048,
+              max_tokens: body.max_tokens ?? 4096,
               ...(withTools ? { tools: openaiTools } : {}),
               ...(body.webSearch ? { plugins: [{ id: "web" }] } : {}),
             }),

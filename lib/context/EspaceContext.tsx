@@ -23,7 +23,7 @@ import { extractThemeTabSignal, describeModulesForPrompt, THEME_TAB_PROMPT_INSTR
 import { extractGeolocRequest, GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
 import { readPublishedGents, writePublishedGent } from "@/lib/publishedGents";
 import { renderMarkdown } from "@/lib/markdown";
-import { streamChatCompletion } from "@/lib/streamChat";
+import { streamChatCompletion, CHAT_MAX_TOKENS } from "@/lib/streamChat";
 
 const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
   report: { type: "Rapport", icon: "📄" },
@@ -349,7 +349,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       {
         model: chatModelId,
         messages: [{ role: "system", content: systemPrompt }, ...history],
-        max_tokens: 2048,
+        max_tokens: CHAT_MAX_TOKENS.espace,
         reasoning: { enabled: true },
         mcpServers,
         datasets,
@@ -368,12 +368,15 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         }
       }
     )
-      .then(({ text: fullRaw, reasoning }) => {
+      .then(({ text: fullRaw, reasoning, truncated }) => {
         const afterQuestions = extractQuestions(fullRaw);
         const afterArtefact = extractArtefactSignal(afterQuestions.text);
         const afterTheme = extractThemeTabSignal(afterArtefact.text);
         const afterGeo = extractGeolocRequest(afterTheme.text);
-        const finalHtml = renderMarkdown(afterGeo.text);
+        const truncationSuffix = truncated
+          ? "\n\n⚠️ *Réponse interrompue (limite de longueur atteinte). Relancez ou demandez « continue » pour obtenir la suite.*"
+          : "";
+        const finalHtml = renderMarkdown(afterGeo.text + truncationSuffix);
 
         // Demande de position émise par le gent : carte de consentement dans
         // le fil (jamais de géolocalisation sans validation explicite).
