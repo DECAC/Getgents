@@ -9,7 +9,8 @@ import { MapAppModal, type MapDestination } from "@/components/shared/MapAppModa
 import type { ConversationMessage, Espace } from "@/lib/types";
 import { setAssistWidthFromPointer } from "@/lib/assistResize";
 import { threadPreview, threadLastActivity } from "@/lib/conversationUtils";
-import { buildEspaceReport, downloadReport } from "@/lib/testReport";
+import { buildEspaceReport } from "@/lib/testReport";
+import { ReportMenu } from "@/components/shared/ReportMenu";
 import styles from "./AssistantPanel.module.css";
 
 const PROPOSAL_KIND_LABEL: Record<string, string> = {
@@ -591,14 +592,7 @@ export function AssistantPanel() {
           <h3 className={styles.headTitle}>{currentEspace.gent}</h3>
           <div className={styles.headSub}>{currentEspace.name}</div>
         </div>
-        <button
-          type="button"
-          className={styles.reportBtn}
-          onClick={() => downloadReport(buildEspaceReport(currentEspace), currentEspace.name)}
-          title="Télécharger le rapport de test de cet espace (configuration + conversations, markdown)"
-        >
-          📄 Rapport
-        </button>
+        <ReportMenu getMarkdown={() => buildEspaceReport(currentEspace)} baseName={currentEspace.name} />
         <button
           type="button"
           className={styles.reportBtn}

@@ -114,6 +114,28 @@ export function buildEspaceReport(espace: Espace): string {
   return lines.join("\n");
 }
 
+/** Copie le rapport dans le presse-papiers (secours execCommand si clipboard indisponible). */
+export async function copyReport(markdown: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(markdown);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = markdown;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
 /** Télécharge le rapport côté navigateur sous forme de fichier .md. */
 export function downloadReport(markdown: string, baseName: string): void {
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");

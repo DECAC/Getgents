@@ -7,7 +7,8 @@ import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import type { ConversationMessage } from "@/lib/types";
 import { setBuilderAssistWidthFromPointer, canResizeAssist } from "@/lib/assistResize";
-import { buildBuilderReport, downloadReport } from "@/lib/testReport";
+import { buildBuilderReport } from "@/lib/testReport";
+import { ReportMenu } from "@/components/shared/ReportMenu";
 import styles from "./BuilderAssistantPanel.module.css";
 
 const CHAT_MODELS = MODEL_CATALOG.filter((m) => m.capability === "chat");
@@ -313,14 +314,7 @@ export function BuilderAssistantPanel() {
           <h3 className={styles.headTitle}>Assistant du builder</h3>
           <div className={styles.headSub}>Vous aide à concevoir {currentDraft.name || "ce gent"}</div>
         </div>
-        <button
-          type="button"
-          className={styles.reportBtn}
-          onClick={() => downloadReport(buildBuilderReport(currentDraft), currentDraft.name)}
-          title="Télécharger le rapport de test de cette session (configuration + transcript, markdown)"
-        >
-          📄 Rapport
-        </button>
+        <ReportMenu getMarkdown={() => buildBuilderReport(currentDraft)} baseName={currentDraft.name} />
         <button
           type="button"
           className={styles.reportBtn}

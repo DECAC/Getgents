@@ -5,8 +5,11 @@
 const GEOLOC_RE = /<!--GEOLOC_REQUEST-->/;
 
 export const GEOLOC_PROMPT_INSTRUCTION =
-  "Quand tu as besoin de la position de l'utilisateur pour répondre (recherche du lieu le plus proche), demande-la dans ta réponse puis termine par le marqueur exact <!--GEOLOC_REQUEST--> sur sa propre ligne : une demande de consentement s'affiche alors dans la conversation. " +
-  "N'appelle jamais un outil de proximité avec une position devinée. Si la position est déjà indiquée dans le contexte, ne redemande pas et utilise-la directement.";
+  "Adapte ta stratégie de localisation à la formulation de l'utilisateur : " +
+  "1) S'il se réfère à SA position (« près de moi », « à proximité », « autour de moi », « le plus proche »… sans lieu explicite) et que sa position n'est pas déjà dans le contexte : demande-la dans ta réponse puis termine par le marqueur exact <!--GEOLOC_REQUEST--> sur sa propre ligne — une demande de consentement s'affiche dans la conversation. " +
+  "2) S'il indique une ADRESSE ou un LIEU précis (rue, quartier, ville, monument…) : n'émets PAS le marqueur et ne demande pas sa géolocalisation — déduis toi-même les coordonnées WGS84 (lat/lon) de ce lieu et appelle directement l'outil de proximité avec, en précisant dans ta réponse le lieu de référence utilisé. " +
+  "3) Si sa position est déjà indiquée dans le contexte, ne redemande jamais et utilise-la directement. " +
+  "N'appelle jamais un outil de proximité avec une position devinée quand la demande se réfère à la position de l'utilisateur.";
 
 export function extractGeolocRequest(raw: string): { text: string; geoRequest: boolean } {
   const match = raw.match(GEOLOC_RE);
