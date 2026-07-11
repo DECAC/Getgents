@@ -21,7 +21,7 @@ import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggesti
 import { extractArtefactSignal, ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
 import { extractThemeTabSignal, describeModulesForPrompt, THEME_TAB_PROMPT_INSTRUCTION } from "@/lib/themeTabSignal";
 import { extractGeolocRequest, GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
-import { readPublishedGents } from "@/lib/publishedGents";
+import { readPublishedGents, writePublishedGent } from "@/lib/publishedGents";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion } from "@/lib/streamChat";
 
@@ -179,6 +179,16 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       setEspaces((prev) => ({ ...prev, ...published }));
     }
   }, []);
+
+  // Persiste l'activité des gents publiés (conversations, artefacts…) dans
+  // localStorage : c'est ce qui alimente l'onglet Audit côté builder.
+  useEffect(() => {
+    const espace = espaces[currentId];
+    if (!espace) return;
+    if (readPublishedGents()[currentId]) {
+      writePublishedGent(currentId, espace);
+    }
+  }, [espaces, currentId]);
 
   const currentEspace = espaces[currentId];
   const activeConversation = getActiveConversation(

@@ -28,6 +28,7 @@ export function BuilderAssistantPanel() {
     switchTab,
   } = useBuilder();
   const [composerText, setComposerText] = useState("");
+  const [fullscreen, setFullscreen] = useState(false);
   // Sélection des connecteurs candidats, par message : URL → cochée (tout
   // est coché par défaut, le créateur décoche ce qu'il ne veut pas).
   const [suggestionChecks, setSuggestionChecks] = useState<Record<string, Record<string, boolean>>>({});
@@ -299,8 +300,12 @@ export function BuilderAssistantPanel() {
   }
 
   return (
-    <section className={styles.panel} aria-label="Assistant du builder" id="builder-assistant">
-      <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner" />
+    <section
+      className={[styles.panel, fullscreen ? styles.panelFullscreen : ""].filter(Boolean).join(" ")}
+      aria-label="Assistant du builder"
+      id="builder-assistant"
+    >
+      {!fullscreen && <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner" />}
 
       <div className={styles.head}>
         <div className={styles.headIc}>🛠️</div>
@@ -315,6 +320,15 @@ export function BuilderAssistantPanel() {
           title="Télécharger le rapport de test de cette session (configuration + transcript, markdown)"
         >
           📄 Rapport
+        </button>
+        <button
+          type="button"
+          className={styles.reportBtn}
+          onClick={() => setFullscreen((v) => !v)}
+          title={fullscreen ? "Quitter le plein écran" : "Étendre la conversation en plein écran"}
+          aria-label={fullscreen ? "Quitter le plein écran" : "Plein écran"}
+        >
+          {fullscreen ? "🗗" : "⛶"}
         </button>
       </div>
 

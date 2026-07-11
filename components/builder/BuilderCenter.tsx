@@ -5,6 +5,7 @@ import { BuilderHeader } from "./BuilderHeader";
 import { PromptTab } from "./tabs/PromptTab";
 import { ConnectorsTab } from "./tabs/ConnectorsTab";
 import { ArtefactsTab } from "./tabs/ArtefactsTab";
+import { AuditTab } from "./tabs/AuditTab";
 import styles from "./BuilderCenter.module.css";
 
 export function BuilderCenter() {
@@ -13,6 +14,7 @@ export function BuilderCenter() {
   function renderContent() {
     if (activeTab === "connectors") return <ConnectorsTab />;
     if (activeTab === "artefacts") return <ArtefactsTab />;
+    if (activeTab === "audit") return <AuditTab />;
     return <PromptTab />;
   }
 

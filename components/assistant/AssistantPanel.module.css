@@ -83,6 +83,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Conversation étendue en plein écran */
+.panelFullscreen {
+  position: fixed !important;
+  inset: 0;
+  z-index: 400;
+  width: auto !important;
+  border-left: none;
+}
+.panelFullscreen .body,
+.panelFullscreen .composerWrap {
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+}
+
 .reportBtn {
   flex: none;
   font-size: 11px;

@@ -21,7 +21,8 @@ function connectorBadge(toolKind: string, detail?: string): string {
   return "○ simulé";
 }
 
-function renderMessageLine(m: ConversationMessage): string {
+/** Ligne lisible décrivant un message quel que soit son rôle (réutilisée par l'onglet Audit). */
+export function describeMessage(m: ConversationMessage): string {
   const t = m.t ? ` (${m.t})` : "";
   switch (m.role) {
     case "user":
@@ -77,7 +78,7 @@ export function buildBuilderReport(draft: GentDraft): string {
   lines.push("");
   lines.push("## Transcript de la conversation avec l'assistant du builder");
   for (const m of draft.builderConversation) {
-    lines.push(`- ${renderMessageLine(m)}`);
+    lines.push(`- ${describeMessage(m)}`);
   }
   return lines.join("\n");
 }
@@ -106,7 +107,7 @@ export function buildEspaceReport(espace: Espace): string {
     if (!thread.messages.length) return;
     lines.push(`## Conversation ${espace.conversations.length - idx} (${thread.startedAt})`);
     for (const m of thread.messages) {
-      lines.push(`- ${renderMessageLine(m)}`);
+      lines.push(`- ${describeMessage(m)}`);
     }
     lines.push("");
   });

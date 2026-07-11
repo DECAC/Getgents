@@ -46,6 +46,8 @@ export function ConnectorsTab() {
   const [datasetModalOpen, setDatasetModalOpen] = useState(false);
 
   const typeByKind = Object.fromEntries(CONNECTOR_TOOL_TYPES.map((t) => [t.kind, t]));
+  const realConnectors = currentDraft.connectors.filter(isRealConnector);
+  const simulatedCount = currentDraft.connectors.length - realConnectors.length;
   const featuredTypes = FEATURED_KINDS.map((kind) => typeByKind[kind]).filter(Boolean);
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -74,17 +76,29 @@ export function ConnectorsTab() {
 
   return (
     <div className={styles.wrap}>
-      <h4 className={styles.sectionTitle}>Outils configurés pour ce gent</h4>
-      {currentDraft.connectors.length === 0 ? (
-        <div className={styles.empty}>
-          Aucun outil pour l&apos;instant. Ajoutez-en un depuis la section ci-dessous pour commencer
-          à le configurer.
+      <h4 className={styles.sectionTitle}>Sources de données réelles du gent</h4>
+      <p className={styles.sectionSub}>
+        Seules les sources <b>réellement appelées en production</b> sont listées ici — aucune donnée
+        simulée. C&apos;est exactement ce que le gent utilise pour répondre.
+      </p>
+      {realConnectors.length === 0 && !currentDraft.webSearch ? (
+        <div className={styles.list}>
+          <div className={styles.empty}>
+            Aucune source de données réelle pour l&apos;instant. Ajoutez un serveur MCP ou un dataset
+            open data ci-dessous, ou activez la recherche web dans l&apos;onglet Prompt.
+          </div>
+          {simulatedCount > 0 && (
+            <div className={styles.hiddenNote}>
+              {simulatedCount} outil{simulatedCount > 1 ? "s" : ""} simulé{simulatedCount > 1 ? "s" : ""} (aperçu
+              uniquement, aucun appel réel) masqué{simulatedCount > 1 ? "s" : ""} de cette vue.
+            </div>
+          )}
         </div>
       ) : (
         <div className={styles.list}>
-          {currentDraft.connectors.map((instance) => {
+          {realConnectors.map((instance) => {
             const type = typeByKind[instance.toolKind];
-            const real = isRealConnector(instance);
+            const ref = instance.toolKind === "dataset" && instance.detail ? parseDatasetUrl(instance.detail) : null;
             return (
               <div className={styles.row} key={instance.id}>
                 <div className={styles.ic}>{type?.icon ?? "🔌"}</div>
@@ -101,18 +115,28 @@ export function ConnectorsTab() {
                       aria-label={`Nom de l'outil ${instance.name}`}
                     />
                     <span
-                      className={[styles.statusBadge, real ? styles.statusReal : styles.statusSimulated].join(" ")}
-                      title={
-                        real
-                          ? "Ce serveur MCP est réellement appelé par le gent en production."
-                          : "Affiché côté utilisateur mais ne déclenche aucun appel réel dans cette maquette."
-                      }
+                      className={[styles.statusBadge, styles.statusReal].join(" ")}
+                      title="Cette source est réellement appelée par le gent en production."
                     >
-                      {real ? "● Connecté" : "○ Simulé"}
+                      ● Connecté
                     </span>
                   </div>
                   <div className={styles.typeTag}>{type?.name ?? instance.toolKind}</div>
-                  <div className={styles.desc}>{type?.description}</div>
+                  <dl className={styles.factList}>
+                    {ref ? (
+                      <>
+                        <div><dt>Portail</dt><dd>{ref.domain}</dd></div>
+                        <div><dt>Dataset</dt><dd>{ref.datasetId}</dd></div>
+                        <div><dt>Outil exposé au modèle</dt><dd><code>dataset_{ref.datasetId.replace(/[^a-zA-Z0-9_]/g, "_")}__nearby(lat, lon)</code></dd></div>
+                        <div><dt>Capacité</dt><dd>Recherche des enregistrements les plus proches d&apos;une position (API Opendatasoft Explore v2.1, tri par distance)</dd></div>
+                      </>
+                    ) : (
+                      <>
+                        <div><dt>Point de terminaison</dt><dd>{instance.detail}</dd></div>
+                        <div><dt>Transport</dt><dd>MCP Streamable HTTP — outils découverts à la connexion, appelés dans la boucle d&apos;outils de /api/chat</dd></div>
+                      </>
+                    )}
+                  </dl>
                   {instance.detail && <div className={styles.detail}>{instance.detail}</div>}
                 </div>
                 <button
@@ -125,6 +149,28 @@ export function ConnectorsTab() {
               </div>
             );
           })}
+          {currentDraft.webSearch && (
+            <div className={styles.row}>
+              <div className={styles.ic}>🌐</div>
+              <div className={styles.info}>
+                <div className={styles.nameRow}>
+                  <span className={styles.staticName}>Recherche web</span>
+                  <span className={[styles.statusBadge, styles.statusReal].join(" ")}>● Actif</span>
+                </div>
+                <div className={styles.typeTag}>Source web temps réel</div>
+                <dl className={styles.factList}>
+                  <div><dt>Mécanisme</dt><dd>Plugin web OpenRouter — résultats web récents injectés à chaque réponse</dd></div>
+                  <div><dt>Activation</dt><dd>Onglet Prompt → « Recherche web »</dd></div>
+                </dl>
+              </div>
+            </div>
+          )}
+          {simulatedCount > 0 && (
+            <div className={styles.hiddenNote}>
+              {simulatedCount} outil{simulatedCount > 1 ? "s" : ""} simulé{simulatedCount > 1 ? "s" : ""} (aperçu
+              uniquement, aucun appel réel) masqué{simulatedCount > 1 ? "s" : ""} de cette vue.
+            </div>
+          )}
         </div>
       )}
 
@@ -208,11 +254,10 @@ export function ConnectorsTab() {
           <path d="M12 8v4M12 16h.01" />
         </svg>
         <span>
-          Seuls un serveur <b>MCP</b> configuré avec une URL (ex. datagouv) et un{" "}
-          <b>dataset open data</b> reconnu sont réellement appelés par le gent — badge{" "}
-          <b>● Connecté</b>. Les autres types (connecteur, API REST, flux
-          d&apos;assistant…) sont affichés côté utilisateur à titre d&apos;aperçu — badge{" "}
-          <b>○ Simulé</b> — sans déclencher d&apos;appel réel dans cette maquette.
+          Cette vue ne liste que les sources <b>réellement appelées</b> par le gent : serveurs{" "}
+          <b>MCP</b> avec URL, <b>datasets open data</b> reconnus et <b>recherche web</b>. Les
+          autres types ajoutés ci-dessous (connecteur, API REST, flux d&apos;assistant…) restent
+          simulés dans cette maquette et n&apos;apparaissent pas dans la liste.
         </span>
       </div>
 
