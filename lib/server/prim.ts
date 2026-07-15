@@ -22,7 +22,10 @@ export async function stopsNearby(lat: number, lon: number, radiusM = 500): Prom
   const radius = Math.min(Math.max(Math.round(radiusM), 100), 2000);
   const url = `${PRIM_BASE}/v2/navitia/coverage/fr-idf/coord/${lon}%3B${lat}/places_nearby?type%5B%5D=stop_point&distance=${radius}&count=10`;
   const res = await fetch(url, { headers: h });
-  if (!res.ok) return JSON.stringify({ error: `PRIM a répondu ${res.status} (arrêts à proximité).` });
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => "")).slice(0, 300);
+    return JSON.stringify({ error: `PRIM a répondu ${res.status} (arrêts à proximité). Détail : ${detail}` });
+  }
   const data = (await res.json()) as {
     places_nearby?: { distance?: string; stop_point?: { id?: string; name?: string; lines?: { code?: string; name?: string }[] } }[];
   };
@@ -40,12 +43,19 @@ export async function stopsNearby(lat: number, lon: number, radiusM = 500): Prom
 export async function nextDepartures(stopId: string): Promise<string> {
   const h = headers();
   if (!h) return MISSING_KEY_MSG;
-  if (!/^stop_point:/.test(stopId)) {
+  // Validation stricte puis identifiant passé BRUT : la passerelle PRIM
+  // rejette (400) les deux-points encodés en %3A par encodeURIComponent.
+  if (!/^stop_point:[A-Za-z0-9:_.\-]+$/.test(stopId)) {
     return JSON.stringify({ error: "stop_id invalide — utilise un identifiant renvoyé par l'outil d'arrêts à proximité." });
   }
-  const url = `${PRIM_BASE}/v2/navitia/coverage/fr-idf/stop_points/${encodeURIComponent(stopId)}/departures?count=8&data_freshness=realtime`;
+  const url = `${PRIM_BASE}/v2/navitia/coverage/fr-idf/stop_points/${stopId}/departures?count=8&data_freshness=realtime`;
   const res = await fetch(url, { headers: h });
-  if (!res.ok) return JSON.stringify({ error: `PRIM a répondu ${res.status} (prochains passages).` });
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => "")).slice(0, 300);
+    return JSON.stringify({
+      error: `PRIM a répondu ${res.status} (prochains passages, arrêt ${stopId}). Détail : ${detail}. Ne réessaie pas en boucle : si l'erreur persiste sur 2 arrêts, informe l'utilisateur et propose une alternative.`,
+    });
+  }
   const data = (await res.json()) as {
     departures?: {
       display_informations?: { label?: string; direction?: string; commercial_mode?: string };

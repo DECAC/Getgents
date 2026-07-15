@@ -257,6 +257,10 @@ function toolLoopResponse(
 
         const messages: Record<string, unknown>[] = [...(body.messages ?? [])];
         let sentContent = false;
+        // Disjoncteur : au 3e échec d'un même outil dans la requête, on
+        // court-circuite les appels suivants au lieu de laisser le modèle
+        // réessayer en boucle.
+        const toolFailures = new Map<string, number>();
 
         // 2. Boucle d'appels : le modèle décide quand utiliser les outils.
         // Au dernier tour, les outils sont retirés pour forcer une réponse.
@@ -316,6 +320,9 @@ function toolLoopResponse(
             if (!entry) {
               resultText = `Outil inconnu : ${tc.function.name}`;
               ok = false;
+            } else if ((toolFailures.get(tc.function.name) ?? 0) >= 3) {
+              resultText = `Outil ${tc.function.name} désactivé pour cette réponse après 3 échecs consécutifs. N'appelle plus cet outil : réponds à l'utilisateur avec les informations déjà obtenues, explique l'indisponibilité et propose une alternative.`;
+              ok = false;
             } else {
               try {
                 const result = await entry.exec(args);
@@ -327,6 +334,7 @@ function toolLoopResponse(
               }
             }
 
+            if (!ok) toolFailures.set(tc.function.name, (toolFailures.get(tc.function.name) ?? 0) + 1);
             sendToolEvent({ status: "done", call: tc.function.name, ok });
             messages.push({ role: "tool", tool_call_id: tc.id, content: resultText });
           }
