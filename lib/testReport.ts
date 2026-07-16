@@ -31,7 +31,9 @@ export function describeMessage(m: ConversationMessage): string {
     case "agent":
       return `**Assistant**${t} : ${stripHtml(m.text ?? "")}${m.reasoning ? `\n  - _raisonnement_ : ${m.reasoning.slice(0, 400)}` : ""}`;
     case "tool":
-      return `🔧 **Appel d'outil**${t} : [${m.kind}] ${m.what} → ${m.ok === false ? "ÉCHEC" : "OK"}`;
+      return `🔧 **Appel d'outil**${t} : [${m.kind}] ${m.what} → ${m.ok === false ? "ÉCHEC" : "OK"}${
+        m.ok === false && m.toolDetail ? `\n  - _détail_ : ${m.toolDetail}` : ""
+      }`;
     case "geo-request":
       return `📍 **Demande de position**${t} → statut : ${m.geoRequestStatus ?? "?"}`;
     case "artef-proposal":

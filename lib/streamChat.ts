@@ -24,6 +24,8 @@ export interface ToolEvent {
   call?: string;
   args?: Record<string, unknown>;
   ok?: boolean;
+  /** Extrait du résultat en cas d'échec (diagnostic visible dans chat/audit/rapport). */
+  detail?: string;
   message?: string;
 }
 

@@ -130,6 +130,8 @@ export interface ConversationMessage {
   kind?: string;
   what?: string;
   ok?: boolean;
+  /** Détail du résultat d'un appel d'outil en échec (diagnostic). */
+  toolDetail?: string;
   ref?: string;
   tab?: string;
   icon?: string;
