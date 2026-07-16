@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { McpClient } from "@/lib/server/mcp";
 import { searchNearby } from "@/lib/server/opendatasoft";
 import { stopsNearby, nextDepartures } from "@/lib/server/prim";
+import { accounts as powensAccounts, transactions as powensTransactions } from "@/lib/server/powens";
 import { parseDatasetUrl, type DatasetRef } from "@/lib/opendatasoft";
 
 // Surchargeable en test/dev pour pointer vers un mock local.
@@ -18,6 +19,7 @@ interface ChatBody {
   mcpServers?: { name: string; url: string }[];
   datasets?: { name: string; url: string }[];
   prim?: boolean;
+  powens?: boolean;
   webSearch?: boolean;
 }
 
@@ -50,8 +52,8 @@ export async function POST(req: NextRequest) {
     })
     .filter((d): d is DatasetRef & { label: string } => d !== null);
 
-  if ((mcpServers.length > 0 || datasets.length > 0 || body.prim) && body.stream) {
-    return toolLoopResponse(body, mcpServers, datasets, !!body.prim, key);
+  if ((mcpServers.length > 0 || datasets.length > 0 || body.prim || body.powens) && body.stream) {
+    return toolLoopResponse(body, mcpServers, datasets, !!body.prim, !!body.powens, key);
   }
 
   const upstream = await fetch(OPENROUTER_API, {
@@ -117,6 +119,7 @@ function toolLoopResponse(
   servers: { name: string; url: string }[],
   datasets: (DatasetRef & { label: string })[],
   prim: boolean,
+  powens: boolean,
   key: string
 ) {
   const encoder = new TextEncoder();
@@ -253,6 +256,51 @@ function toolLoopResponse(
             }
           );
           sendToolEvent({ status: "connected", server: "IDFM PRIM", toolCount: 2 });
+        }
+
+        if (powens) {
+          registry.set("powens_accounts", {
+            exec: async () => {
+              const text = await powensAccounts();
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          registry.set("powens_transactions", {
+            exec: async (args) => {
+              const text = await powensTransactions(
+                typeof args.min_date === "string" ? args.min_date : undefined,
+                typeof args.limit === "number" ? args.limit : undefined
+              );
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          openaiTools.push(
+            {
+              type: "function",
+              function: {
+                name: "powens_accounts",
+                description:
+                  "Powens (agrégation bancaire, MODE SANDBOX) : liste les comptes bancaires de test liés et leurs soldes.",
+                parameters: { type: "object", properties: {} },
+              },
+            },
+            {
+              type: "function",
+              function: {
+                name: "powens_transactions",
+                description:
+                  "Powens (MODE SANDBOX) : transactions bancaires de test, triées de la plus récente à la plus ancienne. Utilise min_date (AAAA-MM-JJ) pour borner la période.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    min_date: { type: "string", description: "Date minimum AAAA-MM-JJ (optionnel)" },
+                    limit: { type: "number", description: "Nombre maximum de transactions (défaut 100, max 500)" },
+                  },
+                },
+              },
+            }
+          );
+          sendToolEvent({ status: "connected", server: "Powens (sandbox)", toolCount: 2 });
         }
 
         const messages: Record<string, unknown>[] = [...(body.messages ?? [])];

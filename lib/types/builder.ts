@@ -37,6 +37,7 @@ export type ConnectorToolKind =
   | "mcp"
   | "dataset"
   | "prim"
+  | "powens"
   | "ordinateur";
 
 export interface ConnectorToolType {

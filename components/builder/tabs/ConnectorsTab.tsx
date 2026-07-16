@@ -9,8 +9,8 @@ import { parseDatasetUrl } from "@/lib/opendatasoft";
 import type { ConnectorToolKind } from "@/lib/types/builder";
 import styles from "./ConnectorsTab.module.css";
 
-/** Types réellement appelés en production (MCP, dataset open data, PRIM). */
-const REAL_KINDS: ConnectorToolKind[] = ["mcp", "dataset", "prim"];
+/** Types réellement appelés en production (MCP, dataset open data, PRIM, Powens sandbox). */
+const REAL_KINDS: ConnectorToolKind[] = ["mcp", "dataset", "prim", "powens"];
 
 function isRealConnector(instance: { toolKind: ConnectorToolKind; detail?: string }): boolean {
   if (instance.toolKind === "mcp") {
@@ -20,6 +20,7 @@ function isRealConnector(instance: { toolKind: ConnectorToolKind; detail?: strin
     return !!instance.detail && parseDatasetUrl(instance.detail) !== null;
   }
   if (instance.toolKind === "prim") return true;
+  if (instance.toolKind === "powens") return true;
   return false;
 }
 
@@ -29,6 +30,7 @@ function metaLine(instance: { toolKind: ConnectorToolKind; detail?: string }): s
     if (ref) return `${ref.domain} · ${ref.datasetId}`;
   }
   if (instance.toolKind === "prim") return "PRIM (temps réel) — transports IDF";
+  if (instance.toolKind === "powens") return "Powens SANDBOX — secrets côté serveur (POWENS_*)";
   if (instance.detail) return instance.detail;
   return null;
 }
@@ -62,6 +64,12 @@ export function ConnectorsTab() {
         detail: "https://prim.iledefrance-mobilites.fr/marketplace",
       });
     }
+    if (kind === "powens") {
+      addToolInstance("powens", {
+        name: "Powens — comptes & transactions (sandbox)",
+        detail: "https://webview.powens.com (sandbox)",
+      });
+    }
   }
 
   return (
@@ -87,6 +95,11 @@ export function ConnectorsTab() {
                     </div>
                     <div className={styles.typeTag}>{type?.name ?? instance.toolKind}</div>
                     {meta ? <div className={styles.metaLine}>{meta}</div> : null}
+                    {instance.toolKind === "powens" && (
+                      <a className={styles.rowAction} href="/api/powens/connect" target="_blank" rel="noopener noreferrer">
+                        🔗 Lier un compte bancaire sandbox (webview de consentement)
+                      </a>
+                    )}
                   </div>
                   <button
                     className={styles.removeBtn}

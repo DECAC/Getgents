@@ -124,6 +124,15 @@ export function draftToEspace(draft: GentDraft): Espace {
       "Présente chaque passage : « Ligne [X] → [direction] : HH:MM » en précisant si l'horaire est temps réel ou théorique (champ temps_reel). N'invente jamais un horaire.";
   }
 
+  // Connecteur Powens (sandbox) : comptes & transactions bancaires de test.
+  const powens = draft.connectors.some((c) => c.toolKind === "powens");
+  if (powens) {
+    systemPrompt +=
+      "\n\nTu disposes des outils bancaires Powens (MODE SANDBOX — données de test, jamais de vraies données) : powens_accounts() pour lister les comptes et soldes, powens_transactions(min_date?, limit?) pour l'historique de transactions. " +
+      "Analyse uniquement les données renvoyées par ces outils — n'invente jamais une transaction ni un montant. Masque tout identifiant de compte sensible (ex. FR76****1234). " +
+      "Si les outils renvoient une erreur de configuration ou zéro compte, explique que le créateur doit configurer les variables POWENS_* côté serveur puis lier une banque sandbox via l'onglet Connecteurs.";
+  }
+
   return {
     icon: draft.icon,
     name: draft.name,
@@ -147,6 +156,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     mcpServers: mcpServers.length ? mcpServers : undefined,
     datasets: datasets.length ? datasets : undefined,
     prim: prim || undefined,
+    powens: powens || undefined,
     webSearch: draft.webSearch || undefined,
   };
 }

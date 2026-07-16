@@ -142,7 +142,7 @@ export function BuilderAssistantPanel() {
             {cfg.connectors?.map((c) => (
               <li key={c.url}>
                 <b>Connecteur :</b>{" "}
-                {c.kind === "dataset" ? "🗺️" : c.kind === "mcp" ? "🔗" : c.kind === "prim" ? "🚌" : "🌐"} {c.name}
+                {c.kind === "dataset" ? "🗺️" : c.kind === "mcp" ? "🔗" : c.kind === "prim" ? "🚌" : c.kind === "powens" ? "🏦" : "🌐"} {c.name}
                 <span className={styles.connectorUrl}> {c.url}</span>
               </li>
             ))}

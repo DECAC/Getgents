@@ -272,6 +272,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     const mcpServers = espace.mcpServers;
     const datasets = espace.datasets;
     const prim = espace.prim;
+    const powens = espace.powens;
     const webSearch = espace.webSearch;
     const thread = espace.conversations.find((t) => t.id === threadId);
     const history = [...(thread?.messages ?? []), userMsg]
@@ -294,7 +295,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     // Garde-fou anti-hallucination : sans source réelle, interdiction de
     // présenter des données comme du temps réel.
     const hasRealSource =
-      !!espace.datasets?.length || !!espace.mcpServers?.length || !!espace.webSearch || !!espace.prim;
+      !!espace.datasets?.length || !!espace.mcpServers?.length || !!espace.webSearch || !!espace.prim || !!espace.powens;
     const honestyNote = hasRealSource
       ? ""
       : "\n\nIMPORTANT : tu n'as accès à AUCUNE source de données temps réel (aucun connecteur actif, recherche web désactivée). Ne présente jamais d'horaires, de prix, de disponibilités ou de passages comme des données réelles ou « en temps réel » — tu ne peux pas les connaître. Dis-le clairement à l'utilisateur, donne au mieux des indications générales explicitement marquées comme non vérifiées, et suggère au créateur du gent de connecter une source de données réelle.";
@@ -363,6 +364,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         mcpServers,
         datasets,
         prim,
+        powens,
         webSearch,
       },
       (fullSoFar, reasoningSoFar) => {
@@ -374,7 +376,13 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
           const call = ev.call ?? "";
           // Étiquette selon la nature réelle de la source (le transport n'est
           // pas toujours MCP : PRIM et datasets sont des outils intégrés).
-          const kind = call.startsWith("prim_") ? "PRIM" : call.startsWith("dataset_") ? "Dataset" : "MCP";
+          const kind = call.startsWith("prim_")
+            ? "PRIM"
+            : call.startsWith("powens_")
+              ? "Powens"
+              : call.startsWith("dataset_")
+                ? "Dataset"
+                : "MCP";
           const [server, tool] = call.split("__");
           pushToolMessage(kind, tool ? `${server} · ${tool}` : call, ev.ok !== false, ev.detail);
         } else if (ev.status === "connect_error") {

@@ -8,12 +8,13 @@ import { parseDatasetUrl } from "@/lib/opendatasoft";
 const GENT_CONFIG_RE = /<!--GENT_CONFIG:\s*(\{[\s\S]*?\})\s*-->/;
 
 export interface GentConfigConnector {
-  kind: "dataset" | "mcp" | "api-rest" | "prim";
+  kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens";
   name: string;
   url: string;
 }
 
 const PRIM_DEFAULT_URL = "https://prim.iledefrance-mobilites.fr/marketplace";
+const POWENS_DEFAULT_URL = "https://webview.powens.com (sandbox)";
 
 export interface GentConfigProposal {
   name?: string;
@@ -28,7 +29,7 @@ export interface GentConfigProposal {
 export const GENT_CONFIG_PROMPT_INSTRUCTION =
   "Tu peux configurer le gent à la place du créateur, sous réserve de sa validation. Dès que tu proposes un prompt système, un nom, un objectif, un modèle, l'activation de la recherche web ou des connecteurs, termine ta réponse (sur sa propre ligne) par exactement un bloc " +
   '<!--GENT_CONFIG: {"name":"…","objective":"…","systemPrompt":"…","webSearch":true,"chatModelId":"…","reasoningModelId":"…","connectors":[{"kind":"dataset","name":"…","url":"https://…"}]}--> ' +
-  "en n'incluant QUE les champs que tu proposes de changer (tous optionnels ; chatModelId/reasoningModelId doivent venir du catalogue de modèles ci-dessus ; kind parmi dataset/mcp/api-rest/prim, URL réelles uniquement — \"prim\" est le connecteur intégré Île-de-France Mobilités pour les transports IDF temps réel, url facultative). " +
+  "en n'incluant QUE les champs que tu proposes de changer (tous optionnels ; chatModelId/reasoningModelId doivent venir du catalogue de modèles ci-dessus ; kind parmi dataset/mcp/api-rest/prim, URL réelles uniquement — \"prim\" est le connecteur intégré Île-de-France Mobilités (transports IDF temps réel) et \"powens\" le connecteur intégré d'agrégation bancaire Powens en MODE SANDBOX, url facultative pour ces deux-là). " +
   "Une carte « Appliquer la configuration » s'affiche alors : le créateur valide en un clic et tout est appliqué au gent (nom, prompt, modèles, connecteurs…). " +
   "Règles impératives : n'annonce JAMAIS que tu configures ou vas configurer quelque chose sans émettre ce bloc dans le MÊME message ; si le créateur accepte verbalement une proposition faite plus tôt, ré-émets immédiatement le bloc GENT_CONFIG complet correspondant ; ne renvoie jamais le créateur vers une configuration manuelle (onglets, listes déroulantes) pour ce que ce bloc sait faire. " +
   "Économie de longueur : ne recopie PAS l'intégralité du prompt système dans le texte visible — résume tes choix en quelques puces courtes, le contenu complet vit uniquement dans le bloc GENT_CONFIG (le créateur le verra dans la carte de validation et l'onglet Prompt). Tout connecteur que tu annonces DOIT figurer dans le champ connectors de ce même bloc.";
@@ -42,8 +43,9 @@ function str(v: unknown, max: number): string | undefined {
 function validateConnector(c: unknown): GentConfigConnector | null {
   const p = c as Partial<GentConfigConnector>;
   if (!p || typeof p.name !== "string") return null;
-  if (!["dataset", "mcp", "api-rest", "prim"].includes(p.kind as string)) return null;
+  if (!["dataset", "mcp", "api-rest", "prim", "powens"].includes(p.kind as string)) return null;
   if (p.kind === "prim") return { kind: "prim", name: p.name, url: PRIM_DEFAULT_URL };
+  if (p.kind === "powens") return { kind: "powens", name: p.name, url: POWENS_DEFAULT_URL };
   if (typeof p.url !== "string") return null;
   if (p.kind === "dataset" && !parseDatasetUrl(p.url)) return null;
   if (p.kind !== "dataset" && !/^https?:\/\//.test(p.url)) return null;

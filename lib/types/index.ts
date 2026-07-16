@@ -166,7 +166,7 @@ export interface ConversationMessage {
     webSearch?: boolean;
     chatModelId?: string;
     reasoningModelId?: string;
-    connectors?: { kind: "dataset" | "mcp" | "api-rest" | "prim"; name: string; url: string }[];
+    connectors?: { kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens"; name: string; url: string }[];
   };
   configProposalStatus?: "pending" | "applied" | "dismissed";
   reasoning?: string;
@@ -228,6 +228,8 @@ export interface Espace {
   datasets?: { name: string; url: string }[];
   /** Connecteur IDFM PRIM actif (transports IDF, clé API côté serveur). */
   prim?: boolean;
+  /** Connecteur Powens actif (agrégation bancaire sandbox, secrets côté serveur). */
+  powens?: boolean;
   /** Recherche web activée pour ce gent (plugin web OpenRouter). */
   webSearch?: boolean;
 }

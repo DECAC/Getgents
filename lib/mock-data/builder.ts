@@ -163,6 +163,13 @@ export const CONNECTOR_TOOL_TYPES: ConnectorToolType[] = [
       "API officielle Île-de-France Mobilités : arrêts à proximité d'une position et prochains passages en temps réel (bus, métro, tram, RER). Authentifiée — la clé API (PRIM_API_KEY) est configurée côté serveur, jamais dans le navigateur.",
   },
   {
+    kind: "powens",
+    name: "Powens — agrégation bancaire (sandbox)",
+    icon: "🏦",
+    description:
+      "Comptes et transactions bancaires via l'API Powens en MODE SANDBOX (données de test uniquement). Identifiants côté serveur (POWENS_DOMAIN, POWENS_CLIENT_ID, POWENS_CLIENT_SECRET) ; la banque sandbox se lie via la webview de consentement.",
+  },
+  {
     kind: "ordinateur",
     name: "Utilisation de l'ordinateur",
     icon: "🖥️",

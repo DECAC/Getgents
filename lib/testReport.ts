@@ -19,6 +19,7 @@ function connectorBadge(toolKind: string, detail?: string): string {
   if (toolKind === "mcp" && detail && /^https?:\/\//.test(detail)) return "● réel";
   if (toolKind === "dataset" && detail && parseDatasetUrl(detail)) return "● réel";
   if (toolKind === "prim") return "● réel (clé serveur requise)";
+  if (toolKind === "powens") return "● réel — SANDBOX (secrets serveur requis)";
   return "○ simulé";
 }
 
@@ -97,6 +98,7 @@ export function buildEspaceReport(espace: Espace): string {
   lines.push(`- **Serveurs MCP** : ${espace.mcpServers?.map((s) => `${s.name} (${s.url})`).join(", ") || "aucun"}`);
   lines.push(`- **Datasets** : ${espace.datasets?.map((d) => `${d.name} (${d.url})`).join(", ") || "aucun"}`);
   lines.push(`- **Connecteur IDFM PRIM** : ${espace.prim ? "actif (transit temps réel, clé côté serveur)" : "inactif"}`);
+  lines.push(`- **Connecteur Powens** : ${espace.powens ? "actif — MODE SANDBOX (agrégation bancaire de test, secrets côté serveur)" : "inactif"}`);
   lines.push(`- **Mémoire de l'espace** : ${espace.memory || "—"}`);
   lines.push(`- **Artefacts présents** : ${espace.artefacts.map((a) => `${a.type} « ${a.title} »`).join(", ") || "aucun"}`);
   lines.push("");
