@@ -18,6 +18,14 @@ import { writePublishedGent, draftToEspace, patchPublishedGentName } from "@/lib
 import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS } from "@/lib/streamChat";
+import {
+  DRAFTS_STORAGE_KEY,
+  freshDraftFromTemplate,
+  createDraftId,
+  draftsForPersistence,
+  mergeStoredDrafts,
+  seedDrafts,
+} from "@/lib/builderDraftStorage";
 
 export type BuilderTab = "prompt" | "connectors" | "artefacts" | "audit";
 
@@ -84,32 +92,6 @@ const BUILDER_ASSISTANT_REPLIES = [
   "Cela ressemble à une action engageante (compte tiers). Pensez à ajouter le connecteur correspondant et à documenter l'invariant de confirmation dans le prompt.",
 ];
 
-// Persistance des brouillons dans le navigateur : sans elle, un gent créé
-// puis testé côté user disparaissait du gent studio au retour (état mémoire).
-const DRAFTS_STORAGE_KEY = "getgents:gent-drafts";
-
-function readStoredDrafts(): GentDraftsMap {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(DRAFTS_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as GentDraftsMap) : {};
-  } catch {
-    return {};
-  }
-}
-
-function seedDrafts(initialId: string): GentDraftsMap {
-  const drafts: GentDraftsMap = JSON.parse(JSON.stringify(GENT_DRAFTS));
-  if (!drafts[initialId]) {
-    drafts[initialId] = {
-      ...JSON.parse(JSON.stringify(drafts["nouveau-gent"])),
-      id: initialId,
-      updatedAt: "à l'instant",
-    };
-  }
-  return drafts;
-}
-
 export function BuilderProvider({ children, initialId }: { children: ReactNode; initialId: string }) {
   const [drafts, setDrafts] = useState<GentDraftsMap>(() => seedDrafts(initialId));
   const [currentId, setCurrentId] = useState(initialId);
@@ -124,17 +106,14 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   // Recharge les brouillons persistés (localStorage) puis sauvegarde chaque
   // changement — le premier rendu serveur n'y a pas accès, d'où le useEffect.
   useEffect(() => {
-    const stored = readStoredDrafts();
-    if (Object.keys(stored).length) {
-      setDrafts((prev) => ({ ...prev, ...stored }));
-    }
+    setDrafts((prev) => mergeStoredDrafts(prev));
     draftsLoadedRef.current = true;
   }, []);
 
   useEffect(() => {
     if (!draftsLoadedRef.current || typeof window === "undefined") return;
     try {
-      window.localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(drafts));
+      window.localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(draftsForPersistence(drafts)));
     } catch {
       // quota dépassé / navigation privée : le studio reste utilisable en mémoire
     }
@@ -152,14 +131,10 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   const toggleRail = useCallback(() => setRailCollapsed((v) => !v), []);
 
   const createDraft = useCallback((): string => {
-    const id = `draft-${Date.now()}`;
+    const id = createDraftId();
     setDrafts((prev) => ({
       ...prev,
-      [id]: {
-        ...JSON.parse(JSON.stringify(prev["nouveau-gent"])),
-        id,
-        updatedAt: "à l'instant",
-      },
+      [id]: freshDraftFromTemplate(id),
     }));
     return id;
   }, []);

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { GENT_DRAFTS } from "@/lib/mock-data/builder";
+import { allocateNewDraft } from "@/lib/builderDraftStorage";
 import styles from "./BuilderDashboard.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -21,7 +22,8 @@ export function BuilderDashboard() {
   const drafts = Object.values(GENT_DRAFTS).filter((d) => d.id !== "nouveau-gent");
 
   function handleCreate() {
-    router.push("/builder/nouveau-gent");
+    const id = allocateNewDraft();
+    router.push(`/builder/${id}`);
   }
 
   return (
