@@ -11,6 +11,27 @@ function headers(): Record<string, string> | null {
   return { apikey: key, Accept: "application/json" };
 }
 
+/**
+ * La racine Navitia de PRIM est déjà scopée sur l'Île-de-France : le chemin
+ * avec /coverage/fr-idf provoque « unknown type: coverage » sur certains
+ * endpoints. On essaie les variantes dans l'ordre et on garde la première
+ * qui répond 2xx (le détail de la dernière erreur est conservé).
+ */
+async function fetchNavitia(
+  paths: string[],
+  h: Record<string, string>
+): Promise<{ res: Response | null; lastDetail: string; lastStatus: number }> {
+  let lastDetail = "";
+  let lastStatus = 0;
+  for (const p of paths) {
+    const res = await fetch(`${PRIM_BASE}${p}`, { headers: h });
+    if (res.ok) return { res, lastDetail, lastStatus };
+    lastStatus = res.status;
+    lastDetail = (await res.text().catch(() => "")).slice(0, 300);
+  }
+  return { res: null, lastDetail, lastStatus };
+}
+
 const MISSING_KEY_MSG = JSON.stringify({
   error:
     "Clé API PRIM absente côté serveur (variable d'environnement PRIM_API_KEY). Le créateur du gent doit la configurer sur l'hébergement — https://prim.iledefrance-mobilites.fr pour obtenir une clé.",
@@ -20,11 +41,13 @@ export async function stopsNearby(lat: number, lon: number, radiusM = 500): Prom
   const h = headers();
   if (!h) return MISSING_KEY_MSG;
   const radius = Math.min(Math.max(Math.round(radiusM), 100), 2000);
-  const url = `${PRIM_BASE}/v2/navitia/coverage/fr-idf/coord/${lon}%3B${lat}/places_nearby?type%5B%5D=stop_point&distance=${radius}&count=10`;
-  const res = await fetch(url, { headers: h });
-  if (!res.ok) {
-    const detail = (await res.text().catch(() => "")).slice(0, 300);
-    return JSON.stringify({ error: `PRIM a répondu ${res.status} (arrêts à proximité). Détail : ${detail}` });
+  const query = `coord/${lon}%3B${lat}/places_nearby?type%5B%5D=stop_point&distance=${radius}&count=10`;
+  const { res, lastDetail, lastStatus } = await fetchNavitia(
+    [`/v2/navitia/coverage/fr-idf/${query}`, `/v2/navitia/${query}`],
+    h
+  );
+  if (!res) {
+    return JSON.stringify({ error: `PRIM a répondu ${lastStatus} (arrêts à proximité). Détail : ${lastDetail}` });
   }
   const data = (await res.json()) as {
     places_nearby?: { distance?: string; stop_point?: { id?: string; name?: string; lines?: { code?: string; name?: string }[] } }[];
@@ -93,15 +116,17 @@ export async function nextDepartures(stopId: string): Promise<string> {
   if (!/^stop_point:[A-Za-z0-9:_.\-]+$/.test(stopId)) {
     return JSON.stringify({ error: "stop_id invalide — utilise un identifiant renvoyé par l'outil d'arrêts à proximité." });
   }
-  const url = `${PRIM_BASE}/v2/navitia/coverage/fr-idf/stop_points/${stopId}/departures?count=8&data_freshness=realtime`;
-  const res = await fetch(url, { headers: h });
-  if (!res.ok) {
-    const detail = (await res.text().catch(() => "")).slice(0, 300);
+  const query = `stop_points/${stopId}/departures?count=8&data_freshness=realtime`;
+  const { res, lastDetail, lastStatus } = await fetchNavitia(
+    [`/v2/navitia/${query}`, `/v2/navitia/coverage/fr-idf/${query}`],
+    h
+  );
+  if (!res) {
     // Plan B : SIRI Lite stop-monitoring, l'API temps réel officielle de PRIM.
     const siri = await siriStopMonitoring(stopId, h).catch(() => null);
     if (siri) return siri;
     return JSON.stringify({
-      error: `PRIM a répondu ${res.status} (prochains passages, arrêt ${stopId}). Détail : ${detail}. Ne réessaie pas en boucle : si l'erreur persiste sur 2 arrêts, informe l'utilisateur et propose une alternative.`,
+      error: `PRIM a répondu ${lastStatus} (prochains passages, arrêt ${stopId}). Détail : ${lastDetail}. Ne réessaie pas en boucle : si l'erreur persiste sur 2 arrêts, informe l'utilisateur et propose une alternative.`,
     });
   }
   const data = (await res.json()) as {
