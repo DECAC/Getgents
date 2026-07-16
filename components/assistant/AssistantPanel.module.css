@@ -395,6 +395,18 @@
   font-size: 14px;
 }
 
+.toolDetail {
+  margin-top: 5px;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.45;
+  color: #b4463a;
+  background: #f9efed;
+  border-radius: 8px;
+  padding: 7px 10px;
+  word-break: break-word;
+}
+
 /* Artef visual */
 .artefVisual {
   margin-left: 39px;

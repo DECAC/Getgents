@@ -40,6 +40,51 @@ export async function stopsNearby(lat: number, lon: number, radiusM = 500): Prom
   return JSON.stringify({ stops });
 }
 
+/**
+ * Repli SIRI Lite : stop-monitoring PRIM avec le MonitoringRef STIF dérivé de
+ * l'identifiant Navitia (stop_point:IDFM:463641 → STIF:StopPoint:Q:463641:).
+ * Retourne null si indisponible (le message d'erreur Navitia est alors renvoyé).
+ */
+async function siriStopMonitoring(stopId: string, h: Record<string, string>): Promise<string | null> {
+  const num = stopId.match(/^stop_point:IDFM:(\d+)$/)?.[1];
+  if (!num) return null;
+  const ref = `STIF:StopPoint:Q:${num}:`;
+  const res = await fetch(`${PRIM_BASE}/stop-monitoring?MonitoringRef=${encodeURIComponent(ref)}`, { headers: h });
+  if (!res.ok) return null;
+  const data = (await res.json()) as {
+    Siri?: {
+      ServiceDelivery?: {
+        StopMonitoringDelivery?: {
+          MonitoredStopVisit?: {
+            MonitoredVehicleJourney?: {
+              PublishedLineName?: { value?: string }[];
+              DestinationName?: { value?: string }[];
+              MonitoredCall?: { ExpectedDepartureTime?: string; AimedDepartureTime?: string };
+            };
+          }[];
+        }[];
+      };
+    };
+  };
+  const visits = data.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]?.MonitoredStopVisit ?? [];
+  if (!visits.length) return null;
+  const departures = visits.slice(0, 8).map((v) => {
+    const j = v.MonitoredVehicleJourney;
+    const expected = j?.MonitoredCall?.ExpectedDepartureTime;
+    const iso = expected ?? j?.MonitoredCall?.AimedDepartureTime ?? "";
+    const heure = iso
+      ? new Date(iso).toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" })
+      : "";
+    return {
+      ligne: j?.PublishedLineName?.[0]?.value,
+      direction: j?.DestinationName?.[0]?.value,
+      heure,
+      temps_reel: !!expected,
+    };
+  });
+  return JSON.stringify({ departures, source: "SIRI stop-monitoring" });
+}
+
 export async function nextDepartures(stopId: string): Promise<string> {
   const h = headers();
   if (!h) return MISSING_KEY_MSG;
@@ -52,6 +97,9 @@ export async function nextDepartures(stopId: string): Promise<string> {
   const res = await fetch(url, { headers: h });
   if (!res.ok) {
     const detail = (await res.text().catch(() => "")).slice(0, 300);
+    // Plan B : SIRI Lite stop-monitoring, l'API temps réel officielle de PRIM.
+    const siri = await siriStopMonitoring(stopId, h).catch(() => null);
+    if (siri) return siri;
     return JSON.stringify({
       error: `PRIM a répondu ${res.status} (prochains passages, arrêt ${stopId}). Détail : ${detail}. Ne réessaie pas en boucle : si l'erreur persiste sur 2 arrêts, informe l'utilisateur et propose une alternative.`,
     });

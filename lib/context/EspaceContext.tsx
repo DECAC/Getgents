@@ -334,13 +334,20 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
 
     // Insère un message "outil" juste avant la bulle agent en cours de frappe,
     // pour montrer en direct les appels MCP effectués par le gent.
-    function pushToolMessage(kind: string, what: string, ok: boolean) {
+    function pushToolMessage(kind: string, what: string, ok: boolean, toolDetail?: string) {
       setEspaces((p) => {
         const e = p[id];
         const convs = e.conversations.map((t) => {
           if (t.id !== threadId) return t;
           const msgs = [...t.messages];
-          msgs.splice(Math.max(msgs.length - 1, 0), 0, { role: "tool" as const, kind, what, ok, t: nowTime() });
+          msgs.splice(Math.max(msgs.length - 1, 0), 0, {
+            role: "tool" as const,
+            kind,
+            what,
+            ok,
+            toolDetail,
+            t: nowTime(),
+          });
           return { ...t, messages: msgs };
         });
         return { ...p, [id]: { ...e, conversations: convs } };
@@ -365,7 +372,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       (ev) => {
         if (ev.status === "done") {
           const [server, tool] = (ev.call ?? "").split("__");
-          pushToolMessage("MCP", `${server ?? "serveur"} · ${tool ?? ev.call}`, ev.ok !== false);
+          pushToolMessage("MCP", `${server ?? "serveur"} · ${tool ?? ev.call}`, ev.ok !== false, ev.detail);
         } else if (ev.status === "connect_error") {
           pushToolMessage("MCP", `Connexion impossible à ${ev.server} — ${ev.message ?? "erreur"}`, false);
         }

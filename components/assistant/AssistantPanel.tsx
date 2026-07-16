@@ -248,6 +248,7 @@ export function AssistantPanel() {
             <span className={styles.toolWhat}>{m.what}</span>
             <span className={styles.toolOk}>{m.ok === false ? "✕" : "✓"}</span>
           </div>
+          {m.ok === false && m.toolDetail && <div className={styles.toolDetail}>{m.toolDetail}</div>}
         </div>
       );
     }

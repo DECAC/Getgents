@@ -335,7 +335,13 @@ function toolLoopResponse(
             }
 
             if (!ok) toolFailures.set(tc.function.name, (toolFailures.get(tc.function.name) ?? 0) + 1);
-            sendToolEvent({ status: "done", call: tc.function.name, ok });
+            sendToolEvent({
+              status: "done",
+              call: tc.function.name,
+              ok,
+              // Diagnostic visible côté client uniquement en cas d'échec.
+              ...(ok ? {} : { detail: resultText.slice(0, 400) }),
+            });
             messages.push({ role: "tool", tool_call_id: tc.id, content: resultText });
           }
         }
