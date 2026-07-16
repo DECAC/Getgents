@@ -12,7 +12,22 @@ interface Props {
 export function QuickReplyQuestions({ questions, onSubmit }: Props) {
   const [selections, setSelections] = useState<Record<number, string[]>>({});
 
-  function toggleOption(qIdx: number, option: string, multi: boolean) {
+  const singleRadioQuestion = questions.length === 1 && !questions[0].multi;
+
+  function submitAnswer(qIdx: number, selected: string[]) {
+    const q = questions[qIdx];
+    const numbered = questions.length > 1;
+    const line = `${numbered ? `${qIdx + 1}. ` : ""}${q.q} → ${selected.join(", ")}`;
+    onSubmit(line);
+    setSelections({});
+  }
+
+  function selectOption(qIdx: number, option: string, multi: boolean) {
+    if (!multi && questions.length === 1) {
+      submitAnswer(qIdx, [option]);
+      return;
+    }
+
     setSelections((prev) => {
       const current = prev[qIdx] ?? [];
       if (multi) {
@@ -21,7 +36,7 @@ export function QuickReplyQuestions({ questions, onSubmit }: Props) {
           : [...current, option];
         return { ...prev, [qIdx]: next };
       }
-      return { ...prev, [qIdx]: current.includes(option) ? [] : [option] };
+      return { ...prev, [qIdx]: [option] };
     });
   }
 
@@ -43,33 +58,41 @@ export function QuickReplyQuestions({ questions, onSubmit }: Props) {
   const numbered = questions.length > 1;
 
   return (
-    <div className={styles.wrap}>
+    <div className={styles.wrap} role="group" aria-label="Réponses proposées">
       {questions.map((q, i) => (
-        <div key={i} className={styles.question}>
-          <div className={styles.qLabel}>
+        <fieldset key={i} className={styles.question}>
+          <legend className={styles.qLabel}>
             {numbered ? <span className={styles.qNum}>{i + 1}</span> : null}
             {q.q}
-          </div>
-          <div className={styles.options}>
+          </legend>
+          <div className={q.multi ? styles.optionsCheck : styles.optionsRadio}>
             {q.options.map((opt) => {
               const isOn = (selections[i] ?? []).includes(opt);
+              const inputType = q.multi ? "checkbox" : "radio";
+              const inputName = q.multi ? undefined : `quick-reply-${i}`;
+
               return (
-                <button
+                <label
                   key={opt}
-                  type="button"
-                  className={[styles.chip, isOn ? styles.chipOn : ""].filter(Boolean).join(" ")}
-                  onClick={() => toggleOption(i, opt, !!q.multi)}
+                  className={[styles.optionRow, isOn ? styles.optionRowOn : ""].filter(Boolean).join(" ")}
                 >
-                  {opt}
-                </button>
+                  <input
+                    type={inputType}
+                    name={inputName}
+                    className={styles.optionInput}
+                    checked={isOn}
+                    onChange={() => selectOption(i, opt, !!q.multi)}
+                  />
+                  <span className={styles.optionLabel}>{opt}</span>
+                </label>
               );
             })}
           </div>
-        </div>
+        </fieldset>
       ))}
-      {hasAnySelection && (
+      {!singleRadioQuestion && hasAnySelection && (
         <button type="button" className={styles.submitBtn} onClick={handleSubmit}>
-          Envoyer mes réponses
+          Envoyer {questions.length > 1 ? "mes réponses" : "ma réponse"}
         </button>
       )}
     </div>

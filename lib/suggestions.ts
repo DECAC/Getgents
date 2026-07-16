@@ -14,9 +14,11 @@ export interface QuestionBlock {
 }
 
 export const SUGGESTIONS_PROMPT_INSTRUCTION =
-  "Quand ta réponse pose une ou plusieurs questions fermées (l'utilisateur peut répondre en choisissant parmi quelques options courtes), termine ta réponse (après le texte visible, sur sa propre ligne) par un bloc : " +
-  '<!--QUESTIONS: [{"q":"Intitulé de la question 1","options":["Option A","Option B","Option C"],"multi":false},{"q":"Intitulé de la question 2","options":["Option A","Option B"],"multi":true}]--> ' +
-  "avec une entrée par question posée, dans l'ordre où tu les poses, 2 à 5 options courtes en français par question, et \"multi\": true seulement si plusieurs choix simultanés ont du sens pour cette question précise (sinon false). N'ajoute ce bloc que si au moins une vraie question fermée a été posée ; sinon ne l'ajoute pas.";
+  "Dès que tu poses une question fermée (l'utilisateur doit choisir parmi quelques options précises — arrêt, date, lieu, oui/non, etc.), tu DOIS terminer ta réponse (après le texte visible, sur sa propre ligne, jamais dans le corps du message) par un bloc : " +
+  '<!--QUESTIONS: [{"q":"Intitulé exact de la question","options":["Option A","Option B","Option C"],"multi":false}]--> ' +
+  "Règles impératives : (1) une entrée par question posée, dans l'ordre ; (2) 2 à 5 options courtes en français, reprenant les choix que tu viens d'énumérer (même libellés) ; (3) \"multi\": false par défaut (boutons radio) — \"multi\": true seulement si plusieurs choix simultanés ont du sens ; (4) ne liste PAS les options en puces ou tirets dans le texte visible quand tu émets ce bloc — résume le contexte en une phrase puis pose la question (ex. « Voici les arrêts trouvés à proximité. Quel arrêt choisissez-vous pour vous rendre à La Défense ? » + bloc avec les trois noms d'arrêt) ; l'interface affichera des boutons radio cliquables à partir du bloc. " +
+  "Exemple : après avoir trouvé trois arrêts, termine par <!--QUESTIONS: [{\"q\":\"Quel arrêt choisissez-vous pour vous rendre à La Défense ?\",\"options\":[\"La Colline (192 m)\",\"Pont de Saint-Cloud - Rive Gauche (266 m)\",\"Parc de Saint-Cloud (276–365 m)\"],\"multi\":false}]-->. " +
+  "N'ajoute ce bloc que si au moins une vraie question fermée a été posée.";
 
 export function extractQuestions(raw: string): { text: string; questions: QuestionBlock[] } {
   const match = raw.match(QUESTIONS_RE);
