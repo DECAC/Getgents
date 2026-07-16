@@ -382,12 +382,16 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         }
       }
     )
-      .then(({ text: fullRaw, reasoning }) => {
+      .then(({ text: fullRaw, reasoning, truncated }) => {
         const afterQuestions = extractQuestions(fullRaw);
         const afterArtefact = extractArtefactSignal(afterQuestions.text);
         const afterTheme = extractThemeTabSignal(afterArtefact.text);
         const afterGeo = extractGeolocRequest(afterTheme.text);
-        const finalHtml = renderMarkdown(afterGeo.text);
+        const finalHtml =
+          renderMarkdown(afterGeo.text) +
+          (truncated
+            ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — demandez la suite ou une version plus courte.</em></p>'
+            : "");
 
         // Demande de position émise par le gent : carte de consentement dans
         // le fil (jamais de géolocalisation sans validation explicite).

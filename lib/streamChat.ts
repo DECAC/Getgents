@@ -6,6 +6,8 @@ export interface ChatMessage {
 export interface StreamChatResult {
   text: string;
   reasoning: string;
+  /** true si le modèle a été coupé par la limite de tokens (finish_reason=length). */
+  truncated: boolean;
 }
 
 /** Événement émis par la route quand le gent utilise un outil MCP. */
@@ -65,6 +67,7 @@ export async function streamChatCompletion(
   let buffer = "";
   let full = "";
   let fullReasoning = "";
+  let truncated = false;
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -84,6 +87,7 @@ export async function streamChatCompletion(
           onToolEvent(json.tool_event as ToolEvent);
           continue;
         }
+        if (json?.choices?.[0]?.finish_reason === "length") truncated = true;
         const delta = json?.choices?.[0]?.delta;
         const content: string | undefined = delta?.content;
         const reasoningDetails: { type?: string; text?: string }[] | undefined = delta?.reasoning_details;
@@ -113,5 +117,5 @@ export async function streamChatCompletion(
     }
   }
 
-  return { text: full, reasoning: fullReasoning };
+  return { text: full, reasoning: fullReasoning, truncated };
 }
