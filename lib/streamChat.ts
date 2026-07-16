@@ -6,7 +6,7 @@ export interface ChatMessage {
 export interface StreamChatResult {
   text: string;
   reasoning: string;
-  /** Vrai si le modèle a atteint max_tokens avant de terminer sa réponse. */
+  /** Vrai si le modèle a atteint max_tokens avant de terminer sa réponse (finish_reason=length). */
   truncated: boolean;
 }
 
@@ -93,9 +93,8 @@ export async function streamChatCompletion(
           onToolEvent(json.tool_event as ToolEvent);
           continue;
         }
+        if (json?.choices?.[0]?.finish_reason === "length") truncated = true;
         const delta = json?.choices?.[0]?.delta;
-        const finishReason: string | undefined = json?.choices?.[0]?.finish_reason;
-        if (finishReason === "length") truncated = true;
         const content: string | undefined = delta?.content;
         const reasoningDetails: { type?: string; text?: string }[] | undefined = delta?.reasoning_details;
         const legacyReasoning: string | undefined = delta?.reasoning;

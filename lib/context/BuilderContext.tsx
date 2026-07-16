@@ -326,6 +326,8 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       {
         model: chatModelId,
         messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: text }],
+        // Les réponses du builder embarquent souvent un prompt système complet
+        // + un bloc GENT_CONFIG : un plafond trop bas tronquait les propositions.
         max_tokens: CHAT_MAX_TOKENS.builder,
         // Recherche web en tâche de fond : l'assistant s'en sert pour
         // découvrir des connecteurs candidats (datasets, MCP, API).
@@ -342,9 +344,9 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         const afterConnector = extractConnectorSignal(afterSuggestions.text);
         const { text: reply, questions } = extractQuestions(afterConnector.text);
         const truncationNote = truncated
-          ? "\n\n⚠️ *Réponse interrompue (limite de longueur atteinte). Relancez ou demandez « continue » pour obtenir la suite.*"
+          ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — demandez « continue » ou reformulez plus court ; une proposition de configuration incomplète ne doit pas être appliquée.</em></p>'
           : "";
-        updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply + truncationNote), questions }));
+        updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply) + truncationNote, questions }));
 
         // Configuration complète proposée : carte « Appliquer la configuration ».
         if (afterConfig.config) {
