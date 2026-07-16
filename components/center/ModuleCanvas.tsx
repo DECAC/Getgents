@@ -34,6 +34,8 @@ interface ModuleDef {
   title: string;
   sub?: string;
   kind: "tab" | "map" | "artefact";
+  /** Id de l'artefact sous-jacent (modules artefact uniquement), pour l'animation d'arrivée. */
+  artefactId?: string;
   render: () => React.ReactNode;
   openModal?: () => void;
   /** Retire le module de l'espace (artefacts uniquement). */
@@ -136,7 +138,8 @@ function DropZone({ index, active, onDragOver, onDrop, onDragLeave }: DropZonePr
 }
 
 export function ModuleCanvas({ espace }: { espace: Espace }) {
-  const { openArtefactModal, toggleChecklistItem, userPosition, removeArtefact } = useEspace();
+  const { openArtefactModal, toggleChecklistItem, userPosition, removeArtefact, recentlyAddedArtefactId } =
+    useEspace();
 
   const [viewMode, setViewMode] = useState<"modules" | "themes">("modules");
   const [activeViewTabId, setActiveViewTabId] = useState<string | null>(null);
@@ -183,6 +186,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       title: a.title,
       sub: `${a.type} · ${a.date}`,
       kind: "artefact",
+      artefactId: a.id,
       preferredLayout: artefactLayout(a),
       openModal: () => openArtefactModal(a.id),
       onRemove: () => removeArtefact(a.id),
@@ -328,6 +332,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
         {list.map((m, i) => {
           const layout = getLayout(m.id);
           const isCompact = layout.height <= COMPACT_HEIGHT;
+          const isJustAdded = !!m.artefactId && m.artefactId === recentlyAddedArtefactId;
 
           return (
             <Fragment key={m.id}>
@@ -339,7 +344,10 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                 onDragLeave={() => setDropIndex(null)}
               />
               <section
-                className={[styles.card, isCompact ? styles.cardCompact : ""].filter(Boolean).join(" ")}
+                data-artefact-id={m.artefactId}
+                className={[styles.card, isCompact ? styles.cardCompact : "", isJustAdded ? styles.cardJustAdded : ""]
+                  .filter(Boolean)
+                  .join(" ")}
                 style={{
                   gridColumn: `span ${layout.cols}`,
                   height: `${layout.height}px`,
@@ -411,6 +419,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                     )}
                   </span>
                 </header>
+                {isJustAdded && <span className={styles.newBadge} aria-hidden="true">Nouveau</span>}
                 {!isCompact && <div className={styles.cardBody}>{m.render()}</div>}
                 <span
                   className={styles.resizeHandle}
@@ -469,7 +478,10 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
           </button>
         </div>
         <span className={styles.toolbarCount}>
-          {orderedVisible.length} module{orderedVisible.length > 1 ? "s" : ""}
+          <span key={orderedVisible.length} className={styles.toolbarCountNum}>
+            {orderedVisible.length}
+          </span>{" "}
+          module{orderedVisible.length > 1 ? "s" : ""}
         </span>
         <div className={styles.toolbarActions}>
           {savedConf && allList && (

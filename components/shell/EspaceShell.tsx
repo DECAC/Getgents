@@ -8,6 +8,7 @@ import { Center } from "@/components/center/Center";
 import { Aside } from "@/components/aside/Aside";
 import { ArtefactModal } from "@/components/shared/ArtefactModal";
 import { ResvModal } from "@/components/shared/ResvModal";
+import { ArtefactFlight } from "@/components/shared/ArtefactFlight";
 import styles from "./EspaceShell.module.css";
 
 function ShellInner() {
@@ -51,6 +52,7 @@ function ShellInner() {
       </div>
       <ArtefactModal />
       <ResvModal />
+      <ArtefactFlight />
     </>
   );
 }

@@ -1,0 +1,36 @@
+.ghost {
+  position: fixed;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid color-mix(in srgb, var(--sage) 55%, var(--line));
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+  pointer-events: none;
+  will-change: top, left, width, height, opacity;
+  transition:
+    top 0.58s cubic-bezier(0.22, 0.61, 0.36, 1),
+    left 0.58s cubic-bezier(0.22, 0.61, 0.36, 1),
+    width 0.58s cubic-bezier(0.22, 0.61, 0.36, 1),
+    height 0.58s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.58s ease;
+}
+
+.ghostIcon {
+  font-size: 18px;
+  flex: none;
+}
+
+.ghostTitle {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -57,6 +57,22 @@ function nowTime(): string {
 
 export type GeoStatus = "idle" | "pending" | "granted" | "denied";
 
+/** Rectangle source (dans le viewport) d'où part l'artefact vers le canvas. */
+export interface RectLike {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+/** Animation « vol vers le canvas » d'un artefact fraîchement confirmé. */
+export interface ArtefactFlight {
+  id: string;
+  icon: string;
+  title: string;
+  from: RectLike;
+}
+
 // Placeholder utilisé le temps qu'un gent tout juste publié (stocké côté client
 // dans localStorage) soit chargé — évite un crash pendant le rendu serveur ou
 // la première peinture cliente, qui n'ont pas accès à localStorage.
@@ -121,7 +137,12 @@ interface EspaceContextValue {
   /** Réponse de l'utilisateur à une demande de position émise par le gent dans le fil. */
   confirmGeoRequest: (messageId: string, decision: "share" | "deny") => void;
   removeArtefact: (artefactId: string) => void;
-  confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss") => void;
+  confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss", sourceRect?: RectLike) => void;
+  /** Id d'un artefact tout juste ajouté (matérialisation + badge « Nouveau »), null sinon. */
+  recentlyAddedArtefactId: string | null;
+  /** Animation « vol vers le canvas » en cours, null sinon. */
+  artefactFlight: ArtefactFlight | null;
+  clearArtefactFlight: () => void;
   confirmThemeProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
   toggleChecklistItem: (artefactId: string, itemIndex: number) => void;
   startNewConversation: () => void;
@@ -148,6 +169,9 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   const [isThinking, setIsThinking] = useState(false);
   const [userPosition, setUserPosition] = useState<{ lat: number; lon: number } | null>(null);
   const [geoStatus, setGeoStatus] = useState<GeoStatus>("idle");
+  const [recentlyAddedArtefactId, setRecentlyAddedArtefactId] = useState<string | null>(null);
+  const [artefactFlight, setArtefactFlight] = useState<ArtefactFlight | null>(null);
+  const recentlyAddedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentIdRef = useRef(currentId);
   currentIdRef.current = currentId;
   const userPositionRef = useRef(userPosition);
@@ -549,62 +573,76 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     });
   }, []);
 
-  const confirmArtefactProposal = useCallback((proposalId: string, decision: "add" | "dismiss") => {
-    const id = currentIdRef.current;
-    setEspaces((prev) => {
-      const espace = prev[id];
+  const clearArtefactFlight = useCallback(() => setArtefactFlight(null), []);
+
+  const confirmArtefactProposal = useCallback(
+    (proposalId: string, decision: "add" | "dismiss", sourceRect?: RectLike) => {
+      const id = currentIdRef.current;
+      const espaceNow = espacesRef.current[id];
       let targetMsg: ConversationMessage | undefined;
-      let targetThreadId: string | undefined;
-      for (const t of espace.conversations) {
+      for (const t of espaceNow.conversations) {
         const found = t.messages.find((m) => m.id === proposalId);
         if (found) {
           targetMsg = found;
-          targetThreadId = t.id;
           break;
         }
       }
-      if (!targetMsg?.proposal) return prev;
+      if (!targetMsg?.proposal) return;
 
-      let artefacts = espace.artefacts;
-      let newArtefactId: string | undefined;
-      if (decision === "add") {
-        const sig = targetMsg.proposal;
-        const meta = ARTEFACT_KIND_META[sig.kind] ?? { type: "Artefact", icon: "📄" };
-        newArtefactId = `artef-${Date.now()}`;
-        const newArtefact: Artefact = {
-          id: newArtefactId,
-          title: sig.title,
-          type: meta.type,
-          icon: meta.icon,
-          date: "à l'instant",
-          body: sig.body ? renderMarkdown(sig.body) : undefined,
-          chartData: sig.chartData,
-          checklistItems: sig.items?.map((label) => ({ label, checked: false })),
-          mapPoints: sig.mapPoints,
-        };
-        artefacts = [newArtefact, ...espace.artefacts];
+      const sig = targetMsg.proposal;
+      const meta = decision === "add" ? ARTEFACT_KIND_META[sig.kind] ?? { type: "Artefact", icon: "📄" } : null;
+      const newArtefactId = decision === "add" ? `artef-${Date.now()}` : undefined;
+
+      setEspaces((prev) => {
+        const espace = prev[id];
+        let artefacts = espace.artefacts;
+        if (decision === "add" && newArtefactId && meta) {
+          const newArtefact: Artefact = {
+            id: newArtefactId,
+            title: sig.title,
+            type: meta.type,
+            icon: meta.icon,
+            date: "à l'instant",
+            body: sig.body ? renderMarkdown(sig.body) : undefined,
+            chartData: sig.chartData,
+            checklistItems: sig.items?.map((label) => ({ label, checked: false })),
+            mapPoints: sig.mapPoints,
+          };
+          artefacts = [newArtefact, ...espace.artefacts];
+        }
+
+        const conversations = espace.conversations.map((t) => ({
+          ...t,
+          messages: t.messages.map((m) =>
+            m.id === proposalId
+              ? {
+                  ...m,
+                  proposalStatus: decision === "add" ? ("added" as const) : ("dismissed" as const),
+                  ref: newArtefactId,
+                }
+              : m
+          ),
+        }));
+
+        return { ...prev, [id]: { ...espace, artefacts, conversations } };
+      });
+
+      // Signaux d'animation : matérialisation + badge « Nouveau » (5 s) et,
+      // si l'on connaît le point de départ, vol de la carte vers le canvas.
+      if (decision === "add" && newArtefactId && meta) {
+        setRecentlyAddedArtefactId(newArtefactId);
+        if (recentlyAddedTimer.current) clearTimeout(recentlyAddedTimer.current);
+        recentlyAddedTimer.current = setTimeout(
+          () => setRecentlyAddedArtefactId((cur) => (cur === newArtefactId ? null : cur)),
+          5200
+        );
+        if (sourceRect) {
+          setArtefactFlight({ id: newArtefactId, icon: meta.icon, title: sig.title, from: sourceRect });
+        }
       }
-
-      const conversations = espace.conversations.map((t) =>
-        t.id === targetThreadId
-          ? {
-              ...t,
-              messages: t.messages.map((m) =>
-                m.id === proposalId
-                  ? {
-                      ...m,
-                      proposalStatus: decision === "add" ? ("added" as const) : ("dismissed" as const),
-                      ref: newArtefactId,
-                    }
-                  : m
-              ),
-            }
-          : t
-      );
-
-      return { ...prev, [id]: { ...espace, artefacts, conversations } };
-    });
-  }, []);
+    },
+    []
+  );
 
   const confirmThemeProposal = useCallback((proposalId: string, decision: "apply" | "dismiss") => {
     const id = currentIdRef.current;
@@ -798,6 +836,9 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         confirmGeoRequest,
         removeArtefact,
         confirmArtefactProposal,
+        recentlyAddedArtefactId,
+        artefactFlight,
+        clearArtefactFlight,
         confirmThemeProposal,
         toggleChecklistItem,
         startNewConversation,
