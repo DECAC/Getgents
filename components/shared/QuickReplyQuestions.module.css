@@ -6,6 +6,9 @@
 }
 
 .question {
+  margin: 0;
+  padding: 0;
+  border: none;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -18,6 +21,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 0;
 }
 
 .qNum {
@@ -34,30 +38,45 @@
   flex: none;
 }
 
-.options {
+.optionsRadio,
+.optionsCheck {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.chip {
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--plum-tint);
+.optionRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.optionRow:hover {
+  border-color: var(--plum-tint);
   background: var(--plum-tint);
-  color: var(--plum);
+}
+.optionRowOn {
+  border-color: var(--plum);
+  background: var(--plum-tint);
+}
+
+.optionInput {
+  margin-top: 2px;
+  flex: none;
+  accent-color: var(--plum);
+  cursor: pointer;
+}
+
+.optionLabel {
   font-size: 12.5px;
   font-weight: 500;
-  white-space: normal;
-  text-align: left;
-}
-.chip:hover {
-  background: var(--plum);
-  color: #fff;
-}
-.chipOn {
-  background: var(--plum);
-  color: #fff;
+  color: var(--ink);
+  line-height: 1.4;
 }
 
 .submitBtn {
