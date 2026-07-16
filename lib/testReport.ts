@@ -96,6 +96,7 @@ export function buildEspaceReport(espace: Espace): string {
   lines.push(`- **Recherche web** : ${espace.webSearch ? "activée" : "désactivée"}`);
   lines.push(`- **Serveurs MCP** : ${espace.mcpServers?.map((s) => `${s.name} (${s.url})`).join(", ") || "aucun"}`);
   lines.push(`- **Datasets** : ${espace.datasets?.map((d) => `${d.name} (${d.url})`).join(", ") || "aucun"}`);
+  lines.push(`- **Connecteur IDFM PRIM** : ${espace.prim ? "actif (transit temps réel, clé côté serveur)" : "inactif"}`);
   lines.push(`- **Mémoire de l'espace** : ${espace.memory || "—"}`);
   lines.push(`- **Artefacts présents** : ${espace.artefacts.map((a) => `${a.type} « ${a.title} »`).join(", ") || "aucun"}`);
   lines.push("");
