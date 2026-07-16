@@ -371,8 +371,12 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       },
       (ev) => {
         if (ev.status === "done") {
-          const [server, tool] = (ev.call ?? "").split("__");
-          pushToolMessage("MCP", `${server ?? "serveur"} · ${tool ?? ev.call}`, ev.ok !== false, ev.detail);
+          const call = ev.call ?? "";
+          // Étiquette selon la nature réelle de la source (le transport n'est
+          // pas toujours MCP : PRIM et datasets sont des outils intégrés).
+          const kind = call.startsWith("prim_") ? "PRIM" : call.startsWith("dataset_") ? "Dataset" : "MCP";
+          const [server, tool] = call.split("__");
+          pushToolMessage(kind, tool ? `${server} · ${tool}` : call, ev.ok !== false, ev.detail);
         } else if (ev.status === "connect_error") {
           pushToolMessage("MCP", `Connexion impossible à ${ev.server} — ${ev.message ?? "erreur"}`, false);
         }
