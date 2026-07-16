@@ -18,11 +18,68 @@
   line-height: 1.5;
 }
 
+.section {
+  margin-bottom: 22px;
+}
+
 .staticName {
   font-weight: 600;
   font-size: 13.5px;
   letter-spacing: -0.01em;
   flex: 1;
+}
+
+.metaLine {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.inactiveGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.inactiveCard {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 13px 14px;
+}
+
+.inactiveTop {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.inactiveIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--card);
+  flex: none;
+}
+
+.inactiveName {
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: -0.01em;
+}
+
+.inactiveDesc {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .factList {

@@ -43,15 +43,19 @@ const FEATURED_STYLE: Record<ConnectorToolKind, string> = {
 };
 
 export function ConnectorsTab() {
-  const { currentDraft, addToolInstance, renameToolInstance, removeToolInstance } = useBuilder();
+  const { currentDraft, addToolInstance, removeToolInstance } = useBuilder();
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<ConnectorToolKind | "all">("all");
   const [mcpModalOpen, setMcpModalOpen] = useState(false);
   const [datasetModalOpen, setDatasetModalOpen] = useState(false);
 
   const typeByKind = Object.fromEntries(CONNECTOR_TOOL_TYPES.map((t) => [t.kind, t]));
-  const realConnectors = currentDraft.connectors.filter(isRealConnector);
-  const simulatedCount = currentDraft.connectors.length - realConnectors.length;
+  const enabledConnectors = currentDraft.connectors;
+  const enabledKinds = new Set(enabledConnectors.map((c) => c.toolKind));
+  const inactiveTypes = CONNECTOR_TOOL_TYPES.filter((t) => !enabledKinds.has(t.kind));
+
+  const realConnectors = enabledConnectors.filter(isRealConnector);
+  const simulatedCount = enabledConnectors.length - realConnectors.length;
   const featuredTypes = FEATURED_KINDS.map((kind) => typeByKind[kind]).filter(Boolean);
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -87,16 +91,16 @@ export function ConnectorsTab() {
 
   return (
     <div className={styles.wrap}>
-      <h4 className={styles.sectionTitle}>Sources de données réelles du gent</h4>
+      <h4 className={styles.sectionTitle}>1 — Connecteurs activés dans le gent</h4>
       <p className={styles.sectionSub}>
-        Seules les sources <b>réellement appelées en production</b> sont listées ici — aucune donnée
-        simulée. C&apos;est exactement ce que le gent utilise pour répondre.
+        Connecteurs ajoutés au gent. <b>● Connecté</b> = réellement appelés en production, <b>○ Simulé</b> =
+        configuré mais non exécutable en production (aperçu / simulation).
       </p>
-      {realConnectors.length === 0 && !currentDraft.webSearch ? (
+      {enabledConnectors.length === 0 && !currentDraft.webSearch ? (
         <div className={styles.list}>
           <div className={styles.empty}>
-            Aucune source de données réelle pour l&apos;instant. Ajoutez un serveur MCP ou un dataset
-            open data ci-dessous, ou activez la recherche web dans l&apos;onglet Prompt.
+            Aucun connecteur n&apos;a encore été ajouté au gent. Ajoutez un serveur MCP ou un dataset open
+            data ci-dessous, ou activez la recherche web dans l&apos;onglet Prompt.
           </div>
           {simulatedCount > 0 && (
             <div className={styles.hiddenNote}>
@@ -107,7 +111,7 @@ export function ConnectorsTab() {
         </div>
       ) : (
         <div className={styles.list}>
-          {realConnectors.map((instance) => {
+          {enabledConnectors.map((instance) => {
             const type = typeByKind[instance.toolKind];
             const ref = instance.toolKind === "dataset" && instance.detail ? parseDatasetUrl(instance.detail) : null;
             return (
@@ -115,46 +119,31 @@ export function ConnectorsTab() {
                 <div className={styles.ic}>{type?.icon ?? "🔌"}</div>
                 <div className={styles.info}>
                   <div className={styles.nameRow}>
-                    <input
-                      className={styles.nameInput}
-                      defaultValue={instance.name}
-                      onBlur={(e) => {
-                        const value = e.target.value.trim();
-                        if (value && value !== instance.name) renameToolInstance(instance.id, value);
-                        else e.target.value = instance.name;
-                      }}
-                      aria-label={`Nom de l'outil ${instance.name}`}
-                    />
+                    <span className={styles.staticName}>{instance.name}</span>
                     <span
-                      className={[styles.statusBadge, styles.statusReal].join(" ")}
-                      title="Cette source est réellement appelée par le gent en production."
+                      className={[
+                        styles.statusBadge,
+                        isRealConnector(instance) ? styles.statusReal : styles.statusSimulated,
+                      ].join(" ")}
+                      title={
+                        isRealConnector(instance)
+                          ? "Cette source est réellement appelée par le gent en production."
+                          : "Connecteur configuré mais non exécutable en production (aperçu / simulé)."
+                      }
                     >
-                      ● Connecté
+                      {isRealConnector(instance) ? "● Connecté" : "○ Simulé"}
                     </span>
                   </div>
                   <div className={styles.typeTag}>{type?.name ?? instance.toolKind}</div>
-                  <dl className={styles.factList}>
-                    {ref ? (
-                      <>
-                        <div><dt>Portail</dt><dd>{ref.domain}</dd></div>
-                        <div><dt>Dataset</dt><dd>{ref.datasetId}</dd></div>
-                        <div><dt>Outil exposé au modèle</dt><dd><code>dataset_{ref.datasetId.replace(/[^a-zA-Z0-9_]/g, "_")}__nearby(lat, lon)</code></dd></div>
-                        <div><dt>Capacité</dt><dd>Recherche des enregistrements les plus proches d&apos;une position (API Opendatasoft Explore v2.1, tri par distance)</dd></div>
-                      </>
-                    ) : instance.toolKind === "prim" ? (
-                      <>
-                        <div><dt>API</dt><dd>Île-de-France Mobilités PRIM (Navitia, temps réel)</dd></div>
-                        <div><dt>Outils exposés au modèle</dt><dd><code>prim_stops_nearby(lat, lon)</code> · <code>prim_next_departures(stop_id)</code></dd></div>
-                        <div><dt>Authentification</dt><dd>Clé API côté serveur uniquement — variable d&apos;environnement <code>PRIM_API_KEY</code> sur l&apos;hébergement (jamais dans le navigateur)</dd></div>
-                      </>
-                    ) : (
-                      <>
-                        <div><dt>Point de terminaison</dt><dd>{instance.detail}</dd></div>
-                        <div><dt>Transport</dt><dd>MCP Streamable HTTP — outils découverts à la connexion, appelés dans la boucle d&apos;outils de /api/chat</dd></div>
-                      </>
-                    )}
-                  </dl>
-                  {instance.detail && <div className={styles.detail}>{instance.detail}</div>}
+                  {ref ? (
+                    <div className={styles.metaLine}>
+                      {ref.domain} · {ref.datasetId}
+                    </div>
+                  ) : instance.toolKind === "prim" ? (
+                    <div className={styles.metaLine}>PRIM (temps réel) — transports IDF</div>
+                  ) : instance.detail ? (
+                    <div className={styles.metaLine}>{instance.detail}</div>
+                  ) : null}
                 </div>
                 <button
                   className={styles.removeBtn}
@@ -191,9 +180,32 @@ export function ConnectorsTab() {
         </div>
       )}
 
+      <div className={styles.section}>
+        <h4 className={styles.sectionTitle}>2 — Connecteurs inactifs mais activables</h4>
+        <p className={styles.sectionSub}>
+          Liste exhaustive des types disponibles que vous n’avez pas encore ajoutés au gent.
+        </p>
+
+        {inactiveTypes.length === 0 ? (
+          <div className={styles.empty}>Vous avez activé tous les types disponibles.</div>
+        ) : (
+          <div className={styles.inactiveGrid}>
+            {inactiveTypes.map((t) => (
+              <div className={styles.inactiveCard} key={t.kind}>
+                <div className={styles.inactiveTop}>
+                  <div className={styles.inactiveIcon}>{t.icon}</div>
+                  <div className={styles.inactiveName}>{t.name}</div>
+                </div>
+                <div className={styles.inactiveDesc}>{t.description}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className={styles.addPanel}>
-        <h4 className={styles.addTitle}>Ajouter un outil</h4>
-        <p className={styles.addSub}>Créez un outil en choisissant son type ci-dessous.</p>
+        <h4 className={styles.addTitle}>3 — Ajouter un connecteur</h4>
+        <p className={styles.addSub}>Recherchez un connecteur ci-dessous puis cliquez sur <b>+ Ajouter</b>.</p>
 
         <div className={styles.searchRow}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
