@@ -11,11 +11,15 @@ const REQUEST_TIMEOUT_MS = 15_000;
  * d'environnement serveur si elle est notée `env:NOM` ou `${NOM}`.
  * Permet de garder un vrai secret côté serveur plutôt que dans le navigateur.
  */
-function resolveSecret(value: string): string {
+function resolveSecretInfo(value: string): { value: string; envName: string | null } {
   const trimmed = value.trim();
   const envMatch = trimmed.match(/^env:([A-Z0-9_]+)$/i) || trimmed.match(/^\$\{([A-Z0-9_]+)\}$/i);
-  if (envMatch) return process.env[envMatch[1]] ?? "";
-  return trimmed;
+  if (envMatch) return { value: process.env[envMatch[1]] ?? "", envName: envMatch[1] };
+  return { value: trimmed, envName: null };
+}
+
+function resolveSecret(value: string): string {
+  return resolveSecretInfo(value).value;
 }
 
 function isPlainString(v: unknown): v is string {
@@ -50,7 +54,20 @@ export async function callRestApi(
 
   // Authentification par clé API (en-tête ou paramètre de requête).
   if (config.auth?.mode === "api-key" && config.auth.fieldName.trim()) {
-    const key = resolveSecret(config.auth.value);
+    const { value: key, envName } = resolveSecretInfo(config.auth.value);
+    // Clé absente : message explicite plutôt que de laisser l'API renvoyer un
+    // 401 opaque — c'est la cause d'échec la plus fréquente en test.
+    if (!key) {
+      return {
+        text: envName
+          ? `Clé API absente : la variable d'environnement « ${envName} » n'est pas définie côté serveur. ` +
+            `Définissez-la (par exemple dans un fichier .env.local à la racine du projet : ${envName}=votre_clé) puis redémarrez le serveur, ` +
+            `ou saisissez directement la clé dans le champ « Clé d'API » du connecteur (builder → onglet Connecteurs).`
+          : `Clé API absente : saisissez la clé dans le champ « Clé d'API » du connecteur (builder → onglet Connecteurs), ` +
+            `ou utilisez env:NOM_DE_VARIABLE avec la variable définie côté serveur.`,
+        ok: false,
+      };
+    }
     if (config.auth.placement === "header") {
       headers[config.auth.fieldName.trim()] = key;
     } else {
