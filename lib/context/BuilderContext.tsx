@@ -80,6 +80,41 @@ interface BuilderContextValue {
 
 const BuilderContext = createContext<BuilderContextValue | null>(null);
 
+/** Une valeur « à fournir » : vide, ou référence à une variable d'environnement. */
+function isEnvOrEmpty(v: string | undefined): boolean {
+  const t = (v ?? "").trim();
+  return t === "" || /^env:/i.test(t) || /^\$\{/.test(t);
+}
+
+/**
+ * Fusionne une nouvelle config REST proposée par l'assistant avec l'existante,
+ * en préservant les secrets déjà saisis par l'utilisateur (clé d'auth et
+ * valeurs de paramètres) : sinon une correction de structure écraserait la clé
+ * que le créateur vient de coller par un placeholder env:.
+ */
+function mergeRestConfigSecrets(next: RestApiToolConfig, prev?: RestApiToolConfig): RestApiToolConfig {
+  if (!prev) return next;
+  const merged: RestApiToolConfig = { ...next };
+
+  if (
+    merged.auth?.mode === "api-key" &&
+    prev.auth?.mode === "api-key" &&
+    merged.auth.fieldName === prev.auth.fieldName &&
+    isEnvOrEmpty(merged.auth.value) &&
+    !isEnvOrEmpty(prev.auth.value)
+  ) {
+    merged.auth = { ...merged.auth, value: prev.auth.value };
+  }
+
+  merged.queryParams = merged.queryParams.map((q) => {
+    if (!isEnvOrEmpty(q.value)) return q;
+    const prevQ = prev.queryParams.find((p) => p.name === q.name);
+    return prevQ && !isEnvOrEmpty(prevQ.value) ? { ...q, value: prevQ.value } : q;
+  });
+
+  return merged;
+}
+
 const MODEL_CAPABILITY_LABEL: Record<string, string> = {
   chat: "Conversation",
   reasoning: "Raisonnement approfondi",
@@ -481,23 +516,43 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
           });
         }
         if (cfg.connectors?.length) {
-          const existing = new Set(next.connectors.map((c) => c.restConfig?.baseUrl ?? c.detail));
-          next.connectors = [
-            ...next.connectors,
-            ...cfg.connectors
-              .filter((c) => !existing.has(c.kind === "api-rest" && c.restConfig ? c.restConfig.baseUrl : c.url))
-              .map((c, i) =>
-                c.kind === "api-rest" && c.restConfig
-                  ? {
-                      id: `tool-${Date.now()}-${i}`,
-                      toolKind: c.kind,
-                      name: c.name,
-                      detail: `${c.restConfig.method} ${c.restConfig.baseUrl}`,
-                      restConfig: c.restConfig,
-                    }
-                  : { id: `tool-${Date.now()}-${i}`, toolKind: c.kind, name: c.name, detail: c.url }
-              ),
-          ];
+          // Met à jour un connecteur existant (même URL) au lieu de l'ignorer :
+          // c'est ainsi que les corrections de config de l'assistant (ex.
+          // déplacer app_id en paramètre fixe) prennent réellement effet.
+          const connectors = [...next.connectors];
+          cfg.connectors.forEach((c, i) => {
+            const isRest = c.kind === "api-rest" && !!c.restConfig;
+            const identity = isRest ? c.restConfig!.baseUrl : c.url;
+            const existingIdx = connectors.findIndex((ec) =>
+              isRest
+                ? ec.toolKind === "api-rest" && ec.restConfig?.baseUrl === identity
+                : (ec.restConfig?.baseUrl ?? ec.detail) === identity
+            );
+            if (existingIdx >= 0) {
+              const mergedRest =
+                isRest && c.restConfig
+                  ? mergeRestConfigSecrets(c.restConfig, connectors[existingIdx].restConfig)
+                  : connectors[existingIdx].restConfig;
+              connectors[existingIdx] = {
+                ...connectors[existingIdx],
+                toolKind: c.kind,
+                name: c.name,
+                detail: mergedRest ? `${mergedRest.method} ${mergedRest.baseUrl}` : c.url,
+                restConfig: mergedRest,
+              };
+            } else if (isRest && c.restConfig) {
+              connectors.push({
+                id: `tool-${Date.now()}-${i}`,
+                toolKind: c.kind,
+                name: c.name,
+                detail: `${c.restConfig.method} ${c.restConfig.baseUrl}`,
+                restConfig: c.restConfig,
+              });
+            } else {
+              connectors.push({ id: `tool-${Date.now()}-${i}`, toolKind: c.kind, name: c.name, detail: c.url });
+            }
+          });
+          next.connectors = connectors;
         }
         if (cfg.name && draft.status === "published") {
           patchPublishedGentName(currentId, cfg.name);
