@@ -5,29 +5,36 @@ import { useBuilder } from "@/lib/context/BuilderContext";
 import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { McpConfigModal } from "../McpConfigModal";
 import { DatasetConfigModal } from "../DatasetConfigModal";
+import { RestApiConfigModal } from "../RestApiConfigModal";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
-import type { ConnectorToolKind } from "@/lib/types/builder";
+import type { ConnectorToolKind, GentToolInstance } from "@/lib/types/builder";
 import styles from "./ConnectorsTab.module.css";
 
-/** Types réellement appelés en production (MCP, dataset open data, PRIM, Powens sandbox). */
-const REAL_KINDS: ConnectorToolKind[] = ["mcp", "dataset", "prim", "powens"];
+/** Types réellement appelés en production (MCP, dataset open data, API REST, PRIM, Powens sandbox). */
+const REAL_KINDS: ConnectorToolKind[] = ["mcp", "dataset", "api-rest", "prim", "powens"];
 
-function isRealConnector(instance: { toolKind: ConnectorToolKind; detail?: string }): boolean {
+function isRealConnector(instance: GentToolInstance): boolean {
   if (instance.toolKind === "mcp") {
     return !!instance.detail && /^https?:\/\//.test(instance.detail);
   }
   if (instance.toolKind === "dataset") {
     return !!instance.detail && parseDatasetUrl(instance.detail) !== null;
   }
+  if (instance.toolKind === "api-rest") {
+    return !!instance.restConfig && /^https?:\/\//.test(instance.restConfig.baseUrl);
+  }
   if (instance.toolKind === "prim") return true;
   if (instance.toolKind === "powens") return true;
   return false;
 }
 
-function metaLine(instance: { toolKind: ConnectorToolKind; detail?: string }): string | null {
+function metaLine(instance: GentToolInstance): string | null {
   if (instance.toolKind === "dataset" && instance.detail) {
     const ref = parseDatasetUrl(instance.detail);
     if (ref) return `${ref.domain} · ${ref.datasetId}`;
+  }
+  if (instance.toolKind === "api-rest" && instance.restConfig) {
+    return `${instance.restConfig.method} ${instance.restConfig.baseUrl}`;
   }
   if (instance.toolKind === "prim") return "PRIM (temps réel) — transports IDF";
   if (instance.toolKind === "powens") return "Powens SANDBOX — secrets côté serveur (POWENS_*)";
@@ -36,10 +43,12 @@ function metaLine(instance: { toolKind: ConnectorToolKind; detail?: string }): s
 }
 
 export function ConnectorsTab() {
-  const { currentDraft, addToolInstance, removeToolInstance } = useBuilder();
+  const { currentDraft, addToolInstance, updateToolInstance, removeToolInstance } = useBuilder();
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [mcpModalOpen, setMcpModalOpen] = useState(false);
   const [datasetModalOpen, setDatasetModalOpen] = useState(false);
+  const [restModalOpen, setRestModalOpen] = useState(false);
+  const [editRestId, setEditRestId] = useState<string | null>(null);
 
   const typeByKind = Object.fromEntries(CONNECTOR_TOOL_TYPES.map((t) => [t.kind, t]));
   const activated = currentDraft.connectors.filter(isRealConnector);
@@ -56,6 +65,10 @@ export function ConnectorsTab() {
     }
     if (kind === "dataset") {
       setDatasetModalOpen(true);
+      return;
+    }
+    if (kind === "api-rest") {
+      setRestModalOpen(true);
       return;
     }
     if (kind === "prim") {
@@ -99,6 +112,18 @@ export function ConnectorsTab() {
                       <a className={styles.rowAction} href="/api/powens/connect" target="_blank" rel="noopener noreferrer">
                         🔗 Lier un compte bancaire sandbox (webview de consentement)
                       </a>
+                    )}
+                    {instance.toolKind === "api-rest" && instance.restConfig && (
+                      <button
+                        type="button"
+                        className={styles.rowAction}
+                        onClick={() => {
+                          setEditRestId(instance.id);
+                          setRestModalOpen(true);
+                        }}
+                      >
+                        ✏️ Modifier la configuration (URL, clé, paramètres)
+                      </button>
                     )}
                   </div>
                   <button
@@ -193,6 +218,38 @@ export function ConnectorsTab() {
           }}
         />
       )}
+
+      {restModalOpen && (() => {
+        const editing = editRestId ? currentDraft.connectors.find((c) => c.id === editRestId) : undefined;
+        const initial =
+          editing && editing.restConfig ? { name: editing.name, config: editing.restConfig } : undefined;
+        const close = () => {
+          setRestModalOpen(false);
+          setEditRestId(null);
+        };
+        return (
+          <RestApiConfigModal
+            initial={initial}
+            onClose={close}
+            onSubmit={({ name, config }) => {
+              if (editRestId) {
+                updateToolInstance(editRestId, {
+                  name,
+                  detail: `${config.method} ${config.baseUrl}`,
+                  restConfig: config,
+                });
+              } else {
+                addToolInstance("api-rest", {
+                  name,
+                  detail: `${config.method} ${config.baseUrl}`,
+                  restConfig: config,
+                });
+              }
+              close();
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

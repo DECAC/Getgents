@@ -24,6 +24,7 @@ import { extractGeolocRequest, GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSig
 import { readPublishedGents, writePublishedGent } from "@/lib/publishedGents";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS } from "@/lib/streamChat";
+import { buildJumpFormPrompt } from "@/lib/jumpFormSignal";
 
 const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
   report: { type: "Rapport", icon: "📄" },
@@ -113,6 +114,8 @@ interface EspaceContextValue {
   closeModal: () => void;
   updateMemory: (text: string) => void;
   sendMessage: (text: string) => void;
+  /** Envoie une demande composée à partir d'un formulaire jump (voir jumpFormSignal). */
+  submitJumpForm: (values: Record<string, string>) => void;
   isThinking: boolean;
   /** Position partagée par l'utilisateur (consentement explicite) — null sinon. */
   userPosition: { lat: number; lon: number } | null;
@@ -273,6 +276,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     const datasets = espace.datasets;
     const prim = espace.prim;
     const powens = espace.powens;
+    const restApis = espace.restApis;
     const webSearch = espace.webSearch;
     const thread = espace.conversations.find((t) => t.id === threadId);
     const history = [...(thread?.messages ?? []), userMsg]
@@ -295,7 +299,12 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     // Garde-fou anti-hallucination : sans source réelle, interdiction de
     // présenter des données comme du temps réel.
     const hasRealSource =
-      !!espace.datasets?.length || !!espace.mcpServers?.length || !!espace.webSearch || !!espace.prim || !!espace.powens;
+      !!espace.datasets?.length ||
+      !!espace.mcpServers?.length ||
+      !!espace.webSearch ||
+      !!espace.prim ||
+      !!espace.powens ||
+      !!espace.restApis?.length;
     const honestyNote = hasRealSource
       ? ""
       : "\n\nIMPORTANT : tu n'as accès à AUCUNE source de données temps réel (aucun connecteur actif, recherche web désactivée). Ne présente jamais d'horaires, de prix, de disponibilités ou de passages comme des données réelles ou « en temps réel » — tu ne peux pas les connaître. Dis-le clairement à l'utilisateur, donne au mieux des indications générales explicitement marquées comme non vérifiées, et suggère au créateur du gent de connecter une source de données réelle.";
@@ -365,6 +374,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         datasets,
         prim,
         powens,
+        restApis,
         webSearch,
       },
       (fullSoFar, reasoningSoFar) => {
@@ -382,7 +392,9 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
               ? "Powens"
               : call.startsWith("dataset_")
                 ? "Dataset"
-                : "MCP";
+                : call.startsWith("rest_")
+                  ? "API REST"
+                  : "MCP";
           const [server, tool] = call.split("__");
           pushToolMessage(kind, tool ? `${server} · ${tool}` : call, ev.ok !== false, ev.detail);
         } else if (ev.status === "connect_error") {
@@ -496,6 +508,18 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       })
       .finally(() => setIsThinking(false));
   }, []);
+
+  // Compose une demande à partir d'un formulaire jump puis l'envoie au gent.
+  const submitJumpForm = useCallback(
+    (values: Record<string, string>) => {
+      const espace = espacesRef.current[currentIdRef.current];
+      const form = espace?.jumpForm;
+      if (!form) return;
+      const prompt = buildJumpFormPrompt(form, values);
+      if (prompt.trim()) sendMessage(prompt);
+    },
+    [sendMessage]
+  );
 
   // Met à jour le statut d'une carte de demande de position dans le fil.
   const setGeoRequestStatus = useCallback((messageId: string, status: NonNullable<ConversationMessage["geoRequestStatus"]>) => {
@@ -800,6 +824,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         closeModal,
         updateMemory,
         sendMessage,
+        submitJumpForm,
         isThinking,
         userPosition,
         geoStatus,

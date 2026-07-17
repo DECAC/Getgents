@@ -18,6 +18,7 @@ function modelLabel(id?: string | null): string {
 function connectorBadge(toolKind: string, detail?: string): string {
   if (toolKind === "mcp" && detail && /^https?:\/\//.test(detail)) return "● réel";
   if (toolKind === "dataset" && detail && parseDatasetUrl(detail)) return "● réel";
+  if (toolKind === "api-rest") return "● réel (API REST configurée)";
   if (toolKind === "prim") return "● réel (clé serveur requise)";
   if (toolKind === "powens") return "● réel — SANDBOX (secrets serveur requis)";
   return "○ simulé";
@@ -51,6 +52,10 @@ export function describeMessage(m: ConversationMessage): string {
       return `🔌 **Proposition de connecteur**${t} : [${m.connectorProposal?.kind}] ${m.connectorProposal?.name} — ${m.connectorProposal?.url} → ${m.connectorProposalStatus ?? "pending"}`;
     case "config-proposal":
       return `⚙️ **Configuration proposée**${t} : ${JSON.stringify(m.configProposal)} → ${m.configProposalStatus ?? "pending"}`;
+    case "jump-form-proposal":
+      return `🗂️ **Formulaire jump proposé**${t} : « ${m.jumpFormProposal?.title ?? "?"} » (${
+        m.jumpFormProposal?.fields.map((f) => f.label).join(", ") ?? ""
+      }) → ${m.jumpFormProposalStatus ?? "pending"}`;
     default:
       return `**${m.role}**${t} : ${stripHtml(m.text ?? "")}`;
   }
@@ -73,6 +78,11 @@ export function buildBuilderReport(draft: GentDraft): string {
   }
   if (draft.knowledgeSources.length) {
     lines.push(`- **Sources de connaissance** : ${draft.knowledgeSources.map((s) => `${s.kind}:${s.label}`).join(", ")}`);
+  }
+  if (draft.jumpForm) {
+    lines.push(
+      `- **Formulaire jump** : « ${draft.jumpForm.title} » (${draft.jumpForm.fields.map((f) => f.label).join(", ")})`
+    );
   }
   lines.push("");
   lines.push("## Prompt système");
@@ -97,8 +107,20 @@ export function buildEspaceReport(espace: Espace): string {
   lines.push(`- **Recherche web** : ${espace.webSearch ? "activée" : "désactivée"}`);
   lines.push(`- **Serveurs MCP** : ${espace.mcpServers?.map((s) => `${s.name} (${s.url})`).join(", ") || "aucun"}`);
   lines.push(`- **Datasets** : ${espace.datasets?.map((d) => `${d.name} (${d.url})`).join(", ") || "aucun"}`);
+  lines.push(
+    `- **API REST personnalisées** : ${
+      espace.restApis?.map((r) => `${r.name} (${r.config.method} ${r.config.baseUrl})`).join(", ") || "aucune"
+    }`
+  );
   lines.push(`- **Connecteur IDFM PRIM** : ${espace.prim ? "actif (transit temps réel, clé côté serveur)" : "inactif"}`);
   lines.push(`- **Connecteur Powens** : ${espace.powens ? "actif — MODE SANDBOX (agrégation bancaire de test, secrets côté serveur)" : "inactif"}`);
+  lines.push(
+    `- **Formulaire jump** : ${
+      espace.jumpForm
+        ? `« ${espace.jumpForm.title} » (${espace.jumpForm.fields.map((f) => f.label).join(", ")})`
+        : "aucun"
+    }`
+  );
   lines.push(`- **Mémoire de l'espace** : ${espace.memory || "—"}`);
   lines.push(`- **Artefacts présents** : ${espace.artefacts.map((a) => `${a.type} « ${a.title} »`).join(", ") || "aucun"}`);
   lines.push("");

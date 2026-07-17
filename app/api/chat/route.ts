@@ -3,7 +3,9 @@ import { McpClient } from "@/lib/server/mcp";
 import { searchNearby } from "@/lib/server/opendatasoft";
 import { stopsNearby, nextDepartures } from "@/lib/server/prim";
 import { accounts as powensAccounts, transactions as powensTransactions } from "@/lib/server/powens";
+import { callRestApi } from "@/lib/server/restApi";
 import { parseDatasetUrl, type DatasetRef } from "@/lib/opendatasoft";
+import type { RestApiConnector } from "@/lib/types";
 
 // Surchargeable en test/dev pour pointer vers un mock local.
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
@@ -20,6 +22,7 @@ interface ChatBody {
   datasets?: { name: string; url: string }[];
   prim?: boolean;
   powens?: boolean;
+  restApis?: RestApiConnector[];
   webSearch?: boolean;
 }
 
@@ -52,8 +55,15 @@ export async function POST(req: NextRequest) {
     })
     .filter((d): d is DatasetRef & { label: string } => d !== null);
 
-  if ((mcpServers.length > 0 || datasets.length > 0 || body.prim || body.powens) && body.stream) {
-    return toolLoopResponse(body, mcpServers, datasets, !!body.prim, !!body.powens, key);
+  const restApis = (body.restApis ?? []).filter(
+    (r) => r && typeof r.name === "string" && r.config && typeof r.config.baseUrl === "string"
+  );
+
+  if (
+    (mcpServers.length > 0 || datasets.length > 0 || body.prim || body.powens || restApis.length > 0) &&
+    body.stream
+  ) {
+    return toolLoopResponse(body, mcpServers, datasets, !!body.prim, !!body.powens, restApis, key);
   }
 
   const upstream = await fetch(OPENROUTER_API, {
@@ -120,6 +130,7 @@ function toolLoopResponse(
   datasets: (DatasetRef & { label: string })[],
   prim: boolean,
   powens: boolean,
+  restApis: RestApiConnector[],
   key: string
 ) {
   const encoder = new TextEncoder();
@@ -301,6 +312,45 @@ function toolLoopResponse(
             }
           );
           sendToolEvent({ status: "connected", server: "Powens (sandbox)", toolCount: 2 });
+        }
+
+        // Connecteurs API REST personnalisés : chaque connecteur devient un
+        // outil dont le schéma est déduit des paramètres déclarés par le
+        // créateur ; l'appel HTTP réel est exécuté côté serveur.
+        const usedRestNames = new Set<string>();
+        for (const rest of restApis) {
+          let fq = `rest_${rest.name.replace(/[^a-zA-Z0-9_]/g, "_")}`.slice(0, 60).replace(/_+$/, "");
+          if (!fq || fq === "rest") fq = "rest_api";
+          let unique = fq;
+          let n = 2;
+          while (usedRestNames.has(unique)) unique = `${fq}_${n++}`.slice(0, 64);
+          usedRestNames.add(unique);
+
+          const properties: Record<string, unknown> = {};
+          const required: string[] = [];
+          for (const p of rest.config.modelParams ?? []) {
+            if (!p.name?.trim()) continue;
+            properties[p.name.trim()] = {
+              type: "string",
+              description: p.example ? `${p.description} (ex. ${p.example})` : p.description,
+            };
+            if (p.required) required.push(p.name.trim());
+          }
+
+          registry.set(unique, {
+            exec: async (args) => callRestApi(rest.config, args),
+          });
+          openaiTools.push({
+            type: "function",
+            function: {
+              name: unique,
+              description:
+                `API REST « ${rest.name} » configurée par le créateur. ${rest.config.description}` +
+                (rest.config.responseHint ? ` Exploitation de la réponse : ${rest.config.responseHint}` : ""),
+              parameters: { type: "object", properties, ...(required.length ? { required } : {}) },
+            },
+          });
+          sendToolEvent({ status: "connected", server: rest.name, toolCount: 1 });
         }
 
         const messages: Record<string, unknown>[] = [...(body.messages ?? [])];

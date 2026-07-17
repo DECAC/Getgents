@@ -213,6 +213,26 @@
   padding-top: 30px;
 }
 
+.jumpFormWrap {
+  margin: 4px 0 16px;
+}
+
+.jumpFormToggle {
+  margin: 0 14px 8px;
+  align-self: flex-start;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.jumpFormToggle:hover {
+  border-color: var(--plum);
+  color: var(--plum);
+}
+
 /* Messages */
 .msg {
   margin-bottom: 20px;

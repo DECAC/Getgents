@@ -26,6 +26,7 @@ export function BuilderAssistantPanel() {
     confirmConnectorProposal,
     confirmConnectorSuggestions,
     applyGentConfig,
+    applyJumpForm,
     switchTab,
   } = useBuilder();
   const [composerText, setComposerText] = useState("");
@@ -143,7 +144,25 @@ export function BuilderAssistantPanel() {
               <li key={c.url}>
                 <b>Connecteur :</b>{" "}
                 {c.kind === "dataset" ? "🗺️" : c.kind === "mcp" ? "🔗" : c.kind === "prim" ? "🚌" : c.kind === "powens" ? "🏦" : "🌐"} {c.name}
-                <span className={styles.connectorUrl}> {c.url}</span>
+                {c.kind === "api-rest" && c.restConfig ? (
+                  <>
+                    <span className={styles.connectorUrl}>
+                      {" "}
+                      {c.restConfig.method} {c.restConfig.baseUrl}
+                    </span>
+                    {c.restConfig.modelParams?.length ? (
+                      <span className={styles.connectorUrl}>
+                        {" "}
+                        · paramètres : {c.restConfig.modelParams.map((p) => p.name).join(", ")}
+                      </span>
+                    ) : null}
+                    {c.restConfig.auth?.mode === "api-key" ? (
+                      <span className={styles.connectorUrl}> · clé : {c.restConfig.auth.value || "à définir"}</span>
+                    ) : null}
+                  </>
+                ) : (
+                  <span className={styles.connectorUrl}> {c.url}</span>
+                )}
               </li>
             ))}
           </ul>
@@ -159,6 +178,57 @@ export function BuilderAssistantPanel() {
               type="button"
               className={styles.connectorDismissBtn}
               onClick={() => applyGentConfig(m.id ?? "", "dismiss")}
+            >
+              Ignorer
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (m.role === "jump-form-proposal" && m.jumpFormProposal) {
+      const form = m.jumpFormProposal;
+      if (m.jumpFormProposalStatus === "applied") {
+        return (
+          <div key={i} className={styles.connectorDone}>
+            ✓ Formulaire jump ajouté — « {form.title} » ({form.fields.length} champ
+            {form.fields.length > 1 ? "s" : ""}). Il apparaîtra au démarrage d&apos;une conversation côté utilisateur.
+          </div>
+        );
+      }
+      if (m.jumpFormProposalStatus === "dismissed") {
+        return (
+          <div key={i} className={styles.connectorDismissed}>
+            Formulaire jump ignoré
+          </div>
+        );
+      }
+      return (
+        <div key={i} className={styles.connectorCard}>
+          <div className={styles.connectorKind}>🗂️ Formulaire jump proposé</div>
+          <div className={styles.connectorName}>{form.title}</div>
+          {form.description && <div className={styles.connectorUrl}>{form.description}</div>}
+          <ul className={styles.configList}>
+            {form.fields.map((f) => (
+              <li key={f.id}>
+                <b>{f.label}</b>
+                {f.required ? " *" : ""} — {f.kind}
+                {f.kind === "select" && f.options?.length ? ` (${f.options.join(", ")})` : ""}
+              </li>
+            ))}
+          </ul>
+          <div className={styles.connectorActions}>
+            <button
+              type="button"
+              className={styles.connectorAddBtn}
+              onClick={() => applyJumpForm(m.id ?? "", "apply")}
+            >
+              Ajouter ce formulaire
+            </button>
+            <button
+              type="button"
+              className={styles.connectorDismissBtn}
+              onClick={() => applyJumpForm(m.id ?? "", "dismiss")}
             >
               Ignorer
             </button>

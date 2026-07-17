@@ -4,6 +4,7 @@
 // explicite du créateur (carte « Appliquer la configuration »).
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
+import type { RestApiToolConfig, RestApiAuth } from "@/lib/types";
 
 const GENT_CONFIG_RE = /<!--GENT_CONFIG:\s*(\{[\s\S]*?\})\s*-->/;
 
@@ -11,6 +12,8 @@ export interface GentConfigConnector {
   kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens";
   name: string;
   url: string;
+  /** Configuration complète pour un connecteur API REST (kind === "api-rest"). */
+  restConfig?: RestApiToolConfig;
 }
 
 const PRIM_DEFAULT_URL = "https://prim.iledefrance-mobilites.fr/marketplace";
@@ -30,6 +33,9 @@ export const GENT_CONFIG_PROMPT_INSTRUCTION =
   "Tu peux configurer le gent à la place du créateur, sous réserve de sa validation. Dès que tu proposes un prompt système, un nom, un objectif, un modèle, l'activation de la recherche web ou des connecteurs, termine ta réponse (sur sa propre ligne) par exactement un bloc " +
   '<!--GENT_CONFIG: {"name":"…","objective":"…","systemPrompt":"…","webSearch":true,"chatModelId":"…","reasoningModelId":"…","connectors":[{"kind":"dataset","name":"…","url":"https://…"}]}--> ' +
   "en n'incluant QUE les champs que tu proposes de changer (tous optionnels ; chatModelId/reasoningModelId doivent venir du catalogue de modèles ci-dessus ; kind parmi dataset/mcp/api-rest/prim, URL réelles uniquement — \"prim\" est le connecteur intégré Île-de-France Mobilités (transports IDF temps réel) et \"powens\" le connecteur intégré d'agrégation bancaire Powens en MODE SANDBOX, url facultative pour ces deux-là). " +
+  "Pour un connecteur \"api-rest\" (n'importe quelle API REST à brancher toi-même, ex. SerpApi Google Flights), n'utilise PAS le champ url : fournis un objet restConfig complet, ainsi : " +
+  '{"kind":"api-rest","name":"Nom lisible","restConfig":{"method":"GET","baseUrl":"https://serpapi.com/search","description":"À quoi sert l\'outil et quand l\'appeler","queryParams":[{"name":"engine","value":"google_flights"}],"auth":{"mode":"api-key","placement":"query","fieldName":"api_key","value":"env:SERPAPI_KEY"},"modelParams":[{"name":"departure_id","description":"Code IATA de l\'aéroport de départ","required":true,"example":"CDG"}],"responseHint":"Utilise le tableau best_flights"}}. ' +
+  "Règles pour restConfig : method GET ou POST ; baseUrl est une URL réelle sans les paramètres ; queryParams sont les valeurs fixes toujours envoyées ; auth.mode \"api-key\" ou \"none\" et, pour une clé secrète, mets TOUJOURS value \"env:NOM_DE_VARIABLE\" (jamais une vraie clé inventée) ; modelParams sont les paramètres que le gent remplira à chaque appel d'après la conversation. " +
   "Une carte « Appliquer la configuration » s'affiche alors : le créateur valide en un clic et tout est appliqué au gent (nom, prompt, modèles, connecteurs…). " +
   "Règles impératives : n'annonce JAMAIS que tu configures ou vas configurer quelque chose sans émettre ce bloc dans le MÊME message ; si le créateur accepte verbalement une proposition faite plus tôt, ré-émets immédiatement le bloc GENT_CONFIG complet correspondant ; ne renvoie jamais le créateur vers une configuration manuelle (onglets, listes déroulantes) pour ce que ce bloc sait faire. " +
   "Économie de longueur : ne recopie PAS l'intégralité du prompt système dans le texte visible — résume tes choix en quelques puces courtes, le contenu complet vit uniquement dans le bloc GENT_CONFIG (le créateur le verra dans la carte de validation et l'onglet Prompt). Tout connecteur que tu annonces DOIT figurer dans le champ connectors de ce même bloc.";
@@ -40,12 +46,74 @@ function str(v: unknown, max: number): string | undefined {
   return typeof v === "string" && v.trim() ? v.slice(0, max) : undefined;
 }
 
+function asStr(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+/** Valide/normalise un objet restConfig proposé par le modèle. */
+function validateRestConfig(v: unknown): RestApiToolConfig | null {
+  const c = v as Partial<RestApiToolConfig> | undefined;
+  if (!c || typeof c.baseUrl !== "string" || !/^https?:\/\//.test(c.baseUrl)) return null;
+
+  const kv = (arr: unknown) =>
+    Array.isArray(arr)
+      ? arr
+          .filter((p) => p && typeof (p as { name?: unknown }).name === "string")
+          .map((p) => ({ name: asStr((p as { name: unknown }).name), value: asStr((p as { value?: unknown }).value) }))
+          .filter((p) => p.name.trim() !== "")
+          .slice(0, 20)
+      : [];
+
+  const authRaw = c.auth as Partial<RestApiAuth> | undefined;
+  const auth: RestApiAuth =
+    authRaw && authRaw.mode === "api-key"
+      ? {
+          mode: "api-key",
+          placement: authRaw.placement === "header" ? "header" : "query",
+          fieldName: asStr(authRaw.fieldName),
+          value: asStr(authRaw.value),
+        }
+      : { mode: "none", placement: "query", fieldName: "", value: "" };
+
+  const modelParams = Array.isArray(c.modelParams)
+    ? c.modelParams
+        .filter((p) => p && typeof (p as { name?: unknown }).name === "string")
+        .map((p) => {
+          const o = p as { name: unknown; description?: unknown; required?: unknown; example?: unknown };
+          return {
+            name: asStr(o.name),
+            description: asStr(o.description),
+            required: !!o.required,
+            example: typeof o.example === "string" && o.example.trim() ? o.example : undefined,
+          };
+        })
+        .filter((p) => p.name.trim() !== "")
+        .slice(0, 20)
+    : [];
+
+  return {
+    method: c.method === "POST" ? "POST" : "GET",
+    baseUrl: c.baseUrl,
+    description: asStr(c.description),
+    queryParams: kv(c.queryParams),
+    headers: kv(c.headers),
+    auth,
+    modelParams,
+    responseHint: typeof c.responseHint === "string" && c.responseHint.trim() ? c.responseHint : undefined,
+  };
+}
+
 function validateConnector(c: unknown): GentConfigConnector | null {
   const p = c as Partial<GentConfigConnector>;
   if (!p || typeof p.name !== "string") return null;
   if (!["dataset", "mcp", "api-rest", "prim", "powens"].includes(p.kind as string)) return null;
   if (p.kind === "prim") return { kind: "prim", name: p.name, url: PRIM_DEFAULT_URL };
   if (p.kind === "powens") return { kind: "powens", name: p.name, url: POWENS_DEFAULT_URL };
+  if (p.kind === "api-rest") {
+    const restConfig = validateRestConfig(p.restConfig);
+    if (!restConfig) return null;
+    return { kind: "api-rest", name: p.name, url: restConfig.baseUrl, restConfig };
+  }
   if (typeof p.url !== "string") return null;
   if (p.kind === "dataset" && !parseDatasetUrl(p.url)) return null;
   if (p.kind !== "dataset" && !/^https?:\/\//.test(p.url)) return null;

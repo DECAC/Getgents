@@ -2,18 +2,20 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
-import type { ConversationMessage } from "@/lib/types";
+import type { ConversationMessage, RestApiToolConfig, JumpForm } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 import {
   CONNECTOR_PROMPT_INSTRUCTION,
   CONNECTOR_DISCOVERY_INSTRUCTION,
+  REST_API_MANUAL_INSTRUCTION,
   extractConnectorSignal,
   extractConnectorSuggestions,
   detectConnectorInText,
   type ConnectorProposal,
 } from "@/lib/connectorSignal";
 import { GENT_CONFIG_PROMPT_INSTRUCTION, extractGentConfigSignal, type GentConfigProposal } from "@/lib/gentConfigSignal";
+import { JUMP_FORM_PROMPT_INSTRUCTION, extractJumpFormSignal } from "@/lib/jumpFormSignal";
 import { writePublishedGent, draftToEspace, patchPublishedGentName } from "@/lib/publishedGents";
 import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
@@ -51,8 +53,15 @@ interface BuilderContextValue {
   addKnowledgeSource: (kind: KnowledgeSourceKind, label: string, meta: string) => void;
   removeKnowledgeSource: (sourceId: string) => void;
 
-  addToolInstance: (toolKind: ConnectorToolKind, options?: { name?: string; detail?: string }) => void;
+  addToolInstance: (
+    toolKind: ConnectorToolKind,
+    options?: { name?: string; detail?: string; restConfig?: RestApiToolConfig }
+  ) => void;
   renameToolInstance: (instanceId: string, name: string) => void;
+  updateToolInstance: (
+    instanceId: string,
+    patch: { name?: string; detail?: string; restConfig?: RestApiToolConfig }
+  ) => void;
   removeToolInstance: (instanceId: string) => void;
 
   toggleWebSearch: () => void;
@@ -64,6 +73,8 @@ interface BuilderContextValue {
   applyGentConfig: (messageId: string, decision: "apply" | "dismiss") => void;
   /** Configure les connecteurs sélectionnés parmi les candidats découverts (urls), ou tout ignorer ([]). */
   confirmConnectorSuggestions: (messageId: string, selectedUrls: string[]) => void;
+  /** Applique (ou ignore) un formulaire jump proposé par l'assistant. */
+  applyJumpForm: (messageId: string, decision: "apply" | "dismiss") => void;
   isThinking: boolean;
 }
 
@@ -201,7 +212,8 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     });
   }, [currentId]);
 
-  const addToolInstance = useCallback((toolKind: ConnectorToolKind, options?: { name?: string; detail?: string }) => {
+  const addToolInstance = useCallback(
+    (toolKind: ConnectorToolKind, options?: { name?: string; detail?: string; restConfig?: RestApiToolConfig }) => {
     setDrafts((prev) => {
       const draft = prev[currentId];
       const type = CONNECTOR_TOOL_TYPES.find((t) => t.kind === toolKind);
@@ -211,7 +223,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         const countSameKind = draft.connectors.filter((c) => c.toolKind === toolKind).length;
         name = countSameKind === 0 ? type.name : `${type.name} (${countSameKind + 1})`;
       }
-      const instance = { id: `tool-${Date.now()}`, toolKind, name, detail: options?.detail };
+      const instance = { id: `tool-${Date.now()}`, toolKind, name, detail: options?.detail, restConfig: options?.restConfig };
       return {
         ...prev,
         [currentId]: { ...draft, connectors: [...draft.connectors, instance], updatedAt: "à l'instant" },
@@ -226,6 +238,17 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       return { ...prev, [currentId]: { ...draft, connectors, updatedAt: "à l'instant" } };
     });
   }, [currentId]);
+
+  const updateToolInstance = useCallback(
+    (instanceId: string, patch: { name?: string; detail?: string; restConfig?: RestApiToolConfig }) => {
+      setDrafts((prev) => {
+        const draft = prev[currentId];
+        const connectors = draft.connectors.map((c) => (c.id === instanceId ? { ...c, ...patch } : c));
+        return { ...prev, [currentId]: { ...draft, connectors, updatedAt: "à l'instant" } };
+      });
+    },
+    [currentId]
+  );
 
   const removeToolInstance = useCallback((instanceId: string) => {
     setDrafts((prev) => {
@@ -271,7 +294,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         draft.systemPrompt
           ? `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
           : `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace.`
-      }${connectorsNote}\n\n${MODEL_RECOMMENDATION_INSTRUCTION}\n\n${GENT_CONFIG_PROMPT_INSTRUCTION}\n\n${CONNECTOR_PROMPT_INSTRUCTION}\n\n${CONNECTOR_DISCOVERY_INSTRUCTION}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
+      }${connectorsNote}\n\n${MODEL_RECOMMENDATION_INSTRUCTION}\n\n${GENT_CONFIG_PROMPT_INSTRUCTION}\n\n${CONNECTOR_PROMPT_INSTRUCTION}\n\n${CONNECTOR_DISCOVERY_INSTRUCTION}\n\n${REST_API_MANUAL_INSTRUCTION}\n\n${JUMP_FORM_PROMPT_INSTRUCTION}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
       history = draft.builderConversation
         .filter((m) => m.role === "agent" || m.role === "user")
         .map((m) => ({
@@ -317,7 +340,8 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         const afterConfig = extractGentConfigSignal(fullRaw);
         const afterSuggestions = extractConnectorSuggestions(afterConfig.text);
         const afterConnector = extractConnectorSignal(afterSuggestions.text);
-        const { text: reply, questions } = extractQuestions(afterConnector.text);
+        const afterJumpForm = extractJumpFormSignal(afterConnector.text);
+        const { text: reply, questions } = extractQuestions(afterJumpForm.text);
         const truncationNote = truncated
           ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — demandez « continue » ou reformulez plus court ; une proposition de configuration incomplète ne doit pas être appliquée.</em></p>'
           : "";
@@ -333,6 +357,22 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
               role: "config-proposal" as const,
               configProposal: config,
               configProposalStatus: "pending" as const,
+              t: "à l'instant",
+            };
+            return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+          });
+        }
+
+        // Formulaire jump proposé : carte « Ajouter ce formulaire ».
+        if (afterJumpForm.form) {
+          const form = afterJumpForm.form;
+          setDrafts((p) => {
+            const d = p[id];
+            const msg = {
+              id: `jumpform-${Date.now()}`,
+              role: "jump-form-proposal" as const,
+              jumpFormProposal: form,
+              jumpFormProposalStatus: "pending" as const,
               t: "à l'instant",
             };
             return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
@@ -441,12 +481,22 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
           });
         }
         if (cfg.connectors?.length) {
-          const existingUrls = next.connectors.map((c) => c.detail);
+          const existing = new Set(next.connectors.map((c) => c.restConfig?.baseUrl ?? c.detail));
           next.connectors = [
             ...next.connectors,
             ...cfg.connectors
-              .filter((c) => !existingUrls.includes(c.url))
-              .map((c, i) => ({ id: `tool-${Date.now()}-${i}`, toolKind: c.kind, name: c.name, detail: c.url })),
+              .filter((c) => !existing.has(c.kind === "api-rest" && c.restConfig ? c.restConfig.baseUrl : c.url))
+              .map((c, i) =>
+                c.kind === "api-rest" && c.restConfig
+                  ? {
+                      id: `tool-${Date.now()}-${i}`,
+                      toolKind: c.kind,
+                      name: c.name,
+                      detail: `${c.restConfig.method} ${c.restConfig.baseUrl}`,
+                      restConfig: c.restConfig,
+                    }
+                  : { id: `tool-${Date.now()}-${i}`, toolKind: c.kind, name: c.name, detail: c.url }
+              ),
           ];
         }
         if (cfg.name && draft.status === "published") {
@@ -489,6 +539,30 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     });
   }, [currentId]);
 
+  // Applique (ou ignore) un formulaire jump proposé par l'assistant.
+  const applyJumpForm = useCallback((messageId: string, decision: "apply" | "dismiss") => {
+    setDrafts((prev) => {
+      const draft = prev[currentId];
+      const msg = draft.builderConversation.find((m) => m.id === messageId);
+      const form: JumpForm | undefined = msg?.jumpFormProposal;
+      if (!form) return prev;
+      const builderConversation = draft.builderConversation.map((m) =>
+        m.id === messageId
+          ? { ...m, jumpFormProposalStatus: decision === "apply" ? ("applied" as const) : ("dismissed" as const) }
+          : m
+      );
+      return {
+        ...prev,
+        [currentId]: {
+          ...draft,
+          jumpForm: decision === "apply" ? form : draft.jumpForm,
+          builderConversation,
+          updatedAt: "à l'instant",
+        },
+      };
+    });
+  }, [currentId]);
+
   const applyBuilderSuggestion = useCallback((suggestion: string) => {
     setDrafts((prev) => {
       const draft = prev[currentId];
@@ -518,6 +592,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         removeKnowledgeSource,
         addToolInstance,
         renameToolInstance,
+        updateToolInstance,
         removeToolInstance,
         toggleWebSearch,
         sendBuilderMessage,
@@ -525,6 +600,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         confirmConnectorProposal,
         confirmConnectorSuggestions,
         applyGentConfig,
+        applyJumpForm,
         isThinking,
       }}
     >

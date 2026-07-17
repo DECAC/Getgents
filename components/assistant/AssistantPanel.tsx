@@ -4,6 +4,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
+import { JumpFormCard } from "@/components/shared/JumpFormCard";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { MapAppModal, type MapDestination } from "@/components/shared/MapAppModal";
 import type { ConversationMessage, Espace } from "@/lib/types";
@@ -47,6 +48,7 @@ export function AssistantPanel() {
     switchTab,
     openArtefactModal,
     sendMessage,
+    submitJumpForm,
     confirmArtefactProposal,
     confirmThemeProposal,
     startNewConversation,
@@ -57,6 +59,7 @@ export function AssistantPanel() {
   } = useEspace();
 
   const [cdView, setCdView] = useState<"chat" | "hist">("chat");
+  const [jumpFormOpen, setJumpFormOpen] = useState(false);
   const [composerText, setComposerText] = useState("");
   const [expandedReasoning, setExpandedReasoning] = useState<Record<number, boolean>>({});
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -649,16 +652,44 @@ export function AssistantPanel() {
       </div>
 
       <div className={styles.body} ref={bodyRef} onClick={handleBodyClick}>
-        {cdView === "hist"
-          ? renderHist()
-          : activeConversation.messages.length
-          ? activeConversation.messages.map((m, i) => renderMessage(m, i))
-          : (
-            <div className={styles.empty}>
-              Nouvel échange — écrivez votre premier message. Le contenu du gent (itinéraire, réservations…) reste inchangé.
-            </div>
-          )}
+        {cdView === "hist" ? (
+          renderHist()
+        ) : (
+          <>
+            {activeConversation.messages.length
+              ? activeConversation.messages.map((m, i) => renderMessage(m, i))
+              : !currentEspace.jumpForm && (
+                  <div className={styles.empty}>
+                    Nouvel échange — écrivez votre premier message. Le contenu du gent (itinéraire, réservations…) reste
+                    inchangé.
+                  </div>
+                )}
+            {currentEspace.jumpForm && (activeConversation.messages.length === 0 || jumpFormOpen) && (
+              <div className={styles.jumpFormWrap}>
+                <JumpFormCard
+                  form={currentEspace.jumpForm}
+                  disabled={isThinking}
+                  onSubmit={(values) => {
+                    submitJumpForm(values);
+                    setJumpFormOpen(false);
+                  }}
+                />
+              </div>
+            )}
+          </>
+        )}
       </div>
+
+      {cdView === "chat" && currentEspace.jumpForm && activeConversation.messages.length > 0 && (
+        <button
+          type="button"
+          className={styles.jumpFormToggle}
+          onClick={() => setJumpFormOpen((v) => !v)}
+          aria-expanded={jumpFormOpen}
+        >
+          🗂️ {jumpFormOpen ? "Masquer le formulaire" : currentEspace.jumpForm.title}
+        </button>
+      )}
 
       {cdView === "chat" && (
         <div className={styles.composerWrap}>

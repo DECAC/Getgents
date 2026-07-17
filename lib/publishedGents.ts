@@ -1,4 +1,4 @@
-import type { Espace, EspacesMap, Tool, UserFile } from "@/lib/types";
+import type { Espace, EspacesMap, Tool, UserFile, RestApiConnector } from "@/lib/types";
 import type { GentDraft } from "@/lib/types/builder";
 import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { formatConversationStartedAt, newConversationId } from "@/lib/conversationUtils";
@@ -124,6 +124,26 @@ export function draftToEspace(draft: GentDraft): Espace {
       "Présente chaque passage : « Ligne [X] → [direction] : HH:MM » en précisant si l'horaire est temps réel ou théorique (champ temps_reel). N'invente jamais un horaire.";
   }
 
+  // Connecteurs API REST personnalisés : appels HTTP réels côté serveur, avec
+  // paramètres fixes, clé API et paramètres remplis par le modèle.
+  const restApis: RestApiConnector[] = draft.connectors
+    .filter((c) => c.toolKind === "api-rest" && c.restConfig && /^https?:\/\//.test(c.restConfig.baseUrl))
+    .map((c) => ({ name: c.name, config: c.restConfig! }));
+
+  if (restApis.length) {
+    const listed = restApis
+      .map((r) => {
+        const params = (r.config.modelParams ?? []).map((p) => p.name).filter(Boolean);
+        const paramNote = params.length ? ` (paramètres : ${params.join(", ")})` : "";
+        return `« ${r.name} » — ${r.config.description}${paramNote}`;
+      })
+      .join(" ; ");
+    systemPrompt +=
+      `\n\nTu disposes de connecteurs API REST configurés par le créateur : ${listed}. ` +
+      "Appelle l'outil correspondant dès que la question relève de son domaine, en renseignant ses paramètres à partir de la demande de l'utilisateur (demande les informations manquantes avant d'appeler). " +
+      "Fonde ta réponse uniquement sur les données réellement renvoyées par l'API — n'invente jamais un résultat. Si l'appel échoue, explique-le clairement.";
+  }
+
   // Connecteur Powens (sandbox) : comptes & transactions bancaires de test.
   const powens = draft.connectors.some((c) => c.toolKind === "powens");
   if (powens) {
@@ -157,6 +177,8 @@ export function draftToEspace(draft: GentDraft): Espace {
     datasets: datasets.length ? datasets : undefined,
     prim: prim || undefined,
     powens: powens || undefined,
+    restApis: restApis.length ? restApis : undefined,
+    jumpForm: draft.jumpForm,
     webSearch: draft.webSearch || undefined,
   };
 }

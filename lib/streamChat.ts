@@ -1,3 +1,5 @@
+import type { RestApiConnector } from "@/lib/types";
+
 export interface ChatMessage {
   role: string;
   content: string;
@@ -46,6 +48,7 @@ export async function streamChatCompletion(
     datasets?: { name: string; url: string }[];
     prim?: boolean;
     powens?: boolean;
+    restApis?: RestApiConnector[];
     webSearch?: boolean;
   },
   onToken: (fullTextSoFar: string, fullReasoningSoFar: string) => void,

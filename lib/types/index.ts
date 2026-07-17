@@ -81,7 +81,40 @@ export type ConversationRole =
   | "theme-proposal"
   | "geo-request"
   | "connector-proposal"
-  | "config-proposal";
+  | "config-proposal"
+  | "jump-form-proposal";
+
+/**
+ * « Formulaire jump » : un petit formulaire de champs affiché côté utilisateur
+ * pour lancer le gent dès la première saisie, sans avoir à rédiger un prompt.
+ * L'assistant du builder le propose quand le cas d'usage est assez précis
+ * (ex. Assistant Vols → départ, arrivée, date).
+ */
+export type JumpFormFieldKind = "text" | "textarea" | "date" | "select";
+
+export interface JumpFormField {
+  id: string;
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  kind: JumpFormFieldKind;
+  /** Options pour un champ de type "select". */
+  options?: string[];
+}
+
+export interface JumpForm {
+  id: string;
+  title: string;
+  description?: string;
+  submitLabel?: string;
+  fields: JumpFormField[];
+  /**
+   * Gabarit du prompt envoyé au gent, avec des marqueurs {{id_du_champ}}
+   * remplacés par les valeurs saisies. Si absent, un texte « Libellé : valeur »
+   * est composé automatiquement.
+   */
+  promptTemplate?: string;
+}
 
 export interface ConversationThread {
   id: string;
@@ -166,9 +199,17 @@ export interface ConversationMessage {
     webSearch?: boolean;
     chatModelId?: string;
     reasoningModelId?: string;
-    connectors?: { kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens"; name: string; url: string }[];
+    connectors?: {
+      kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens";
+      name: string;
+      url: string;
+      restConfig?: RestApiToolConfig;
+    }[];
   };
   configProposalStatus?: "pending" | "applied" | "dismissed";
+  /** Formulaire jump proposé par l'assistant du builder, à valider par le créateur. */
+  jumpFormProposal?: JumpForm;
+  jumpFormProposalStatus?: "pending" | "applied" | "dismissed";
   reasoning?: string;
 }
 
@@ -198,6 +239,59 @@ export interface EspaceMetric {
   suffix?: string;
   label: string;
   warn?: boolean;
+}
+
+export type RestApiMethod = "GET" | "POST";
+
+/** Paire clé/valeur fixe (paramètre de requête ou en-tête). */
+export interface RestApiKeyValue {
+  name: string;
+  value: string;
+}
+
+/** Paramètre rempli par le modèle au moment de l'appel (ex. departure_id). */
+export interface RestApiModelParam {
+  name: string;
+  description: string;
+  required: boolean;
+  example?: string;
+}
+
+export interface RestApiAuth {
+  mode: "none" | "api-key";
+  placement: "header" | "query";
+  /** Nom de l'en-tête (ex. X-API-Key) ou du paramètre (ex. api_key). */
+  fieldName: string;
+  /**
+   * Valeur de la clé. Littérale (stockée dans le navigateur pour cette maquette)
+   * ou référence à une variable d'environnement serveur : `env:NOM` ou `${NOM}`.
+   */
+  value: string;
+}
+
+/**
+ * Configuration complète d'un connecteur « API REST » saisie à la main dans le
+ * builder. Elle permet d'appeler n'importe quelle API (ex. SerpApi Google
+ * Flights) : URL de base, méthode, paramètres fixes, clé API et paramètres que
+ * le modèle renseigne dynamiquement à chaque appel.
+ */
+export interface RestApiToolConfig {
+  method: RestApiMethod;
+  baseUrl: string;
+  /** Décrit à quoi sert l'outil et quand l'appeler — exposé au modèle. */
+  description: string;
+  queryParams: RestApiKeyValue[];
+  headers: RestApiKeyValue[];
+  auth: RestApiAuth;
+  modelParams: RestApiModelParam[];
+  /** Indice facultatif sur la façon d'exploiter la réponse JSON. */
+  responseHint?: string;
+}
+
+/** Un connecteur API REST prêt à l'emploi côté espace (nom + config). */
+export interface RestApiConnector {
+  name: string;
+  config: RestApiToolConfig;
 }
 
 export interface Espace {
@@ -230,6 +324,10 @@ export interface Espace {
   prim?: boolean;
   /** Connecteur Powens actif (agrégation bancaire sandbox, secrets côté serveur). */
   powens?: boolean;
+  /** Connecteurs API REST personnalisés configurés à la main dans le builder. */
+  restApis?: RestApiConnector[];
+  /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
+  jumpForm?: JumpForm;
   /** Recherche web activée pour ce gent (plugin web OpenRouter). */
   webSearch?: boolean;
 }
