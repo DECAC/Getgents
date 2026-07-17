@@ -52,6 +52,10 @@ export function describeMessage(m: ConversationMessage): string {
       return `🔌 **Proposition de connecteur**${t} : [${m.connectorProposal?.kind}] ${m.connectorProposal?.name} — ${m.connectorProposal?.url} → ${m.connectorProposalStatus ?? "pending"}`;
     case "config-proposal":
       return `⚙️ **Configuration proposée**${t} : ${JSON.stringify(m.configProposal)} → ${m.configProposalStatus ?? "pending"}`;
+    case "jump-form-proposal":
+      return `🗂️ **Formulaire jump proposé**${t} : « ${m.jumpFormProposal?.title ?? "?"} » (${
+        m.jumpFormProposal?.fields.map((f) => f.label).join(", ") ?? ""
+      }) → ${m.jumpFormProposalStatus ?? "pending"}`;
     default:
       return `**${m.role}**${t} : ${stripHtml(m.text ?? "")}`;
   }
@@ -74,6 +78,11 @@ export function buildBuilderReport(draft: GentDraft): string {
   }
   if (draft.knowledgeSources.length) {
     lines.push(`- **Sources de connaissance** : ${draft.knowledgeSources.map((s) => `${s.kind}:${s.label}`).join(", ")}`);
+  }
+  if (draft.jumpForm) {
+    lines.push(
+      `- **Formulaire jump** : « ${draft.jumpForm.title} » (${draft.jumpForm.fields.map((f) => f.label).join(", ")})`
+    );
   }
   lines.push("");
   lines.push("## Prompt système");
@@ -105,6 +114,13 @@ export function buildEspaceReport(espace: Espace): string {
   );
   lines.push(`- **Connecteur IDFM PRIM** : ${espace.prim ? "actif (transit temps réel, clé côté serveur)" : "inactif"}`);
   lines.push(`- **Connecteur Powens** : ${espace.powens ? "actif — MODE SANDBOX (agrégation bancaire de test, secrets côté serveur)" : "inactif"}`);
+  lines.push(
+    `- **Formulaire jump** : ${
+      espace.jumpForm
+        ? `« ${espace.jumpForm.title} » (${espace.jumpForm.fields.map((f) => f.label).join(", ")})`
+        : "aucun"
+    }`
+  );
   lines.push(`- **Mémoire de l'espace** : ${espace.memory || "—"}`);
   lines.push(`- **Artefacts présents** : ${espace.artefacts.map((a) => `${a.type} « ${a.title} »`).join(", ") || "aucun"}`);
   lines.push("");

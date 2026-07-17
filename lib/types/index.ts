@@ -81,7 +81,40 @@ export type ConversationRole =
   | "theme-proposal"
   | "geo-request"
   | "connector-proposal"
-  | "config-proposal";
+  | "config-proposal"
+  | "jump-form-proposal";
+
+/**
+ * « Formulaire jump » : un petit formulaire de champs affiché côté utilisateur
+ * pour lancer le gent dès la première saisie, sans avoir à rédiger un prompt.
+ * L'assistant du builder le propose quand le cas d'usage est assez précis
+ * (ex. Assistant Vols → départ, arrivée, date).
+ */
+export type JumpFormFieldKind = "text" | "textarea" | "date" | "select";
+
+export interface JumpFormField {
+  id: string;
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  kind: JumpFormFieldKind;
+  /** Options pour un champ de type "select". */
+  options?: string[];
+}
+
+export interface JumpForm {
+  id: string;
+  title: string;
+  description?: string;
+  submitLabel?: string;
+  fields: JumpFormField[];
+  /**
+   * Gabarit du prompt envoyé au gent, avec des marqueurs {{id_du_champ}}
+   * remplacés par les valeurs saisies. Si absent, un texte « Libellé : valeur »
+   * est composé automatiquement.
+   */
+  promptTemplate?: string;
+}
 
 export interface ConversationThread {
   id: string;
@@ -174,6 +207,9 @@ export interface ConversationMessage {
     }[];
   };
   configProposalStatus?: "pending" | "applied" | "dismissed";
+  /** Formulaire jump proposé par l'assistant du builder, à valider par le créateur. */
+  jumpFormProposal?: JumpForm;
+  jumpFormProposalStatus?: "pending" | "applied" | "dismissed";
   reasoning?: string;
 }
 
@@ -290,6 +326,8 @@ export interface Espace {
   powens?: boolean;
   /** Connecteurs API REST personnalisés configurés à la main dans le builder. */
   restApis?: RestApiConnector[];
+  /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
+  jumpForm?: JumpForm;
   /** Recherche web activée pour ce gent (plugin web OpenRouter). */
   webSearch?: boolean;
 }

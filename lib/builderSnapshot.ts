@@ -23,6 +23,7 @@ export function draftContentSnapshot(draft: GentDraft): string {
     knowledgeSources: draft.knowledgeSources,
     connectors: draft.connectors,
     webSearch: draft.webSearch,
+    jumpForm: draft.jumpForm,
   });
 }
 

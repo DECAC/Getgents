@@ -178,6 +178,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     prim: prim || undefined,
     powens: powens || undefined,
     restApis: restApis.length ? restApis : undefined,
+    jumpForm: draft.jumpForm,
     webSearch: draft.webSearch || undefined,
   };
 }

@@ -24,6 +24,7 @@ import { extractGeolocRequest, GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSig
 import { readPublishedGents, writePublishedGent } from "@/lib/publishedGents";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS } from "@/lib/streamChat";
+import { buildJumpFormPrompt } from "@/lib/jumpFormSignal";
 
 const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
   report: { type: "Rapport", icon: "📄" },
@@ -113,6 +114,8 @@ interface EspaceContextValue {
   closeModal: () => void;
   updateMemory: (text: string) => void;
   sendMessage: (text: string) => void;
+  /** Envoie une demande composée à partir d'un formulaire jump (voir jumpFormSignal). */
+  submitJumpForm: (values: Record<string, string>) => void;
   isThinking: boolean;
   /** Position partagée par l'utilisateur (consentement explicite) — null sinon. */
   userPosition: { lat: number; lon: number } | null;
@@ -506,6 +509,18 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       .finally(() => setIsThinking(false));
   }, []);
 
+  // Compose une demande à partir d'un formulaire jump puis l'envoie au gent.
+  const submitJumpForm = useCallback(
+    (values: Record<string, string>) => {
+      const espace = espacesRef.current[currentIdRef.current];
+      const form = espace?.jumpForm;
+      if (!form) return;
+      const prompt = buildJumpFormPrompt(form, values);
+      if (prompt.trim()) sendMessage(prompt);
+    },
+    [sendMessage]
+  );
+
   // Met à jour le statut d'une carte de demande de position dans le fil.
   const setGeoRequestStatus = useCallback((messageId: string, status: NonNullable<ConversationMessage["geoRequestStatus"]>) => {
     const id = currentIdRef.current;
@@ -809,6 +824,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         closeModal,
         updateMemory,
         sendMessage,
+        submitJumpForm,
         isThinking,
         userPosition,
         geoStatus,

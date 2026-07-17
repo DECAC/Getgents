@@ -1,4 +1,4 @@
-import type { ConversationMessage, RestApiToolConfig } from "@/lib/types";
+import type { ConversationMessage, RestApiToolConfig, JumpForm } from "@/lib/types";
 
 /**
  * Capacités de modèles disponibles via l'API unique OpenRouter.
@@ -98,6 +98,8 @@ export interface GentDraft {
   builderConversation: ConversationMessage[];
   /** Autorise le gent publié à faire des recherches web (plugin OpenRouter). */
   webSearch?: boolean;
+  /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
+  jumpForm?: JumpForm;
   /** Empreinte du contenu au moment de la dernière publication (voir builderSnapshot.ts). */
   publishedSnapshot?: string;
 }
