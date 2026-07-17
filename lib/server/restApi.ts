@@ -35,7 +35,10 @@ function maskUrl(u: URL, extraSecretNames: Set<string>): string {
   const extra = new Set(Array.from(extraSecretNames).map((s) => s.toLowerCase()));
   for (const name of Array.from(clone.searchParams.keys())) {
     if (extra.has(name.toLowerCase()) || SECRETISH_PARAM.test(name)) {
-      clone.searchParams.set(name, "***");
+      // « (vide) » rend visible une clé/identifiant manquant (cause fréquente
+      // d'AUTH_FAIL) sans jamais exposer la valeur réelle.
+      const val = clone.searchParams.get(name);
+      clone.searchParams.set(name, val && val.trim() ? "***" : "(vide)");
     }
   }
   return clone.toString();
