@@ -273,6 +273,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     const datasets = espace.datasets;
     const prim = espace.prim;
     const powens = espace.powens;
+    const restApis = espace.restApis;
     const webSearch = espace.webSearch;
     const thread = espace.conversations.find((t) => t.id === threadId);
     const history = [...(thread?.messages ?? []), userMsg]
@@ -295,7 +296,12 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     // Garde-fou anti-hallucination : sans source réelle, interdiction de
     // présenter des données comme du temps réel.
     const hasRealSource =
-      !!espace.datasets?.length || !!espace.mcpServers?.length || !!espace.webSearch || !!espace.prim || !!espace.powens;
+      !!espace.datasets?.length ||
+      !!espace.mcpServers?.length ||
+      !!espace.webSearch ||
+      !!espace.prim ||
+      !!espace.powens ||
+      !!espace.restApis?.length;
     const honestyNote = hasRealSource
       ? ""
       : "\n\nIMPORTANT : tu n'as accès à AUCUNE source de données temps réel (aucun connecteur actif, recherche web désactivée). Ne présente jamais d'horaires, de prix, de disponibilités ou de passages comme des données réelles ou « en temps réel » — tu ne peux pas les connaître. Dis-le clairement à l'utilisateur, donne au mieux des indications générales explicitement marquées comme non vérifiées, et suggère au créateur du gent de connecter une source de données réelle.";
@@ -365,6 +371,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         datasets,
         prim,
         powens,
+        restApis,
         webSearch,
       },
       (fullSoFar, reasoningSoFar) => {
@@ -382,7 +389,9 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
               ? "Powens"
               : call.startsWith("dataset_")
                 ? "Dataset"
-                : "MCP";
+                : call.startsWith("rest_")
+                  ? "API REST"
+                  : "MCP";
           const [server, tool] = call.split("__");
           pushToolMessage(kind, tool ? `${server} · ${tool}` : call, ev.ok !== false, ev.detail);
         } else if (ev.status === "connect_error") {

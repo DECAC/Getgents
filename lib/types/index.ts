@@ -200,6 +200,59 @@ export interface EspaceMetric {
   warn?: boolean;
 }
 
+export type RestApiMethod = "GET" | "POST";
+
+/** Paire clé/valeur fixe (paramètre de requête ou en-tête). */
+export interface RestApiKeyValue {
+  name: string;
+  value: string;
+}
+
+/** Paramètre rempli par le modèle au moment de l'appel (ex. departure_id). */
+export interface RestApiModelParam {
+  name: string;
+  description: string;
+  required: boolean;
+  example?: string;
+}
+
+export interface RestApiAuth {
+  mode: "none" | "api-key";
+  placement: "header" | "query";
+  /** Nom de l'en-tête (ex. X-API-Key) ou du paramètre (ex. api_key). */
+  fieldName: string;
+  /**
+   * Valeur de la clé. Littérale (stockée dans le navigateur pour cette maquette)
+   * ou référence à une variable d'environnement serveur : `env:NOM` ou `${NOM}`.
+   */
+  value: string;
+}
+
+/**
+ * Configuration complète d'un connecteur « API REST » saisie à la main dans le
+ * builder. Elle permet d'appeler n'importe quelle API (ex. SerpApi Google
+ * Flights) : URL de base, méthode, paramètres fixes, clé API et paramètres que
+ * le modèle renseigne dynamiquement à chaque appel.
+ */
+export interface RestApiToolConfig {
+  method: RestApiMethod;
+  baseUrl: string;
+  /** Décrit à quoi sert l'outil et quand l'appeler — exposé au modèle. */
+  description: string;
+  queryParams: RestApiKeyValue[];
+  headers: RestApiKeyValue[];
+  auth: RestApiAuth;
+  modelParams: RestApiModelParam[];
+  /** Indice facultatif sur la façon d'exploiter la réponse JSON. */
+  responseHint?: string;
+}
+
+/** Un connecteur API REST prêt à l'emploi côté espace (nom + config). */
+export interface RestApiConnector {
+  name: string;
+  config: RestApiToolConfig;
+}
+
 export interface Espace {
   icon: string;
   name: string;
@@ -230,6 +283,8 @@ export interface Espace {
   prim?: boolean;
   /** Connecteur Powens actif (agrégation bancaire sandbox, secrets côté serveur). */
   powens?: boolean;
+  /** Connecteurs API REST personnalisés configurés à la main dans le builder. */
+  restApis?: RestApiConnector[];
   /** Recherche web activée pour ce gent (plugin web OpenRouter). */
   webSearch?: boolean;
 }

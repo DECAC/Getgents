@@ -2,12 +2,13 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
-import type { ConversationMessage } from "@/lib/types";
+import type { ConversationMessage, RestApiToolConfig } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 import {
   CONNECTOR_PROMPT_INSTRUCTION,
   CONNECTOR_DISCOVERY_INSTRUCTION,
+  REST_API_MANUAL_INSTRUCTION,
   extractConnectorSignal,
   extractConnectorSuggestions,
   detectConnectorInText,
@@ -51,7 +52,10 @@ interface BuilderContextValue {
   addKnowledgeSource: (kind: KnowledgeSourceKind, label: string, meta: string) => void;
   removeKnowledgeSource: (sourceId: string) => void;
 
-  addToolInstance: (toolKind: ConnectorToolKind, options?: { name?: string; detail?: string }) => void;
+  addToolInstance: (
+    toolKind: ConnectorToolKind,
+    options?: { name?: string; detail?: string; restConfig?: RestApiToolConfig }
+  ) => void;
   renameToolInstance: (instanceId: string, name: string) => void;
   removeToolInstance: (instanceId: string) => void;
 
@@ -201,7 +205,8 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     });
   }, [currentId]);
 
-  const addToolInstance = useCallback((toolKind: ConnectorToolKind, options?: { name?: string; detail?: string }) => {
+  const addToolInstance = useCallback(
+    (toolKind: ConnectorToolKind, options?: { name?: string; detail?: string; restConfig?: RestApiToolConfig }) => {
     setDrafts((prev) => {
       const draft = prev[currentId];
       const type = CONNECTOR_TOOL_TYPES.find((t) => t.kind === toolKind);
@@ -211,7 +216,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         const countSameKind = draft.connectors.filter((c) => c.toolKind === toolKind).length;
         name = countSameKind === 0 ? type.name : `${type.name} (${countSameKind + 1})`;
       }
-      const instance = { id: `tool-${Date.now()}`, toolKind, name, detail: options?.detail };
+      const instance = { id: `tool-${Date.now()}`, toolKind, name, detail: options?.detail, restConfig: options?.restConfig };
       return {
         ...prev,
         [currentId]: { ...draft, connectors: [...draft.connectors, instance], updatedAt: "à l'instant" },
@@ -271,7 +276,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         draft.systemPrompt
           ? `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
           : `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace.`
-      }${connectorsNote}\n\n${MODEL_RECOMMENDATION_INSTRUCTION}\n\n${GENT_CONFIG_PROMPT_INSTRUCTION}\n\n${CONNECTOR_PROMPT_INSTRUCTION}\n\n${CONNECTOR_DISCOVERY_INSTRUCTION}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
+      }${connectorsNote}\n\n${MODEL_RECOMMENDATION_INSTRUCTION}\n\n${GENT_CONFIG_PROMPT_INSTRUCTION}\n\n${CONNECTOR_PROMPT_INSTRUCTION}\n\n${CONNECTOR_DISCOVERY_INSTRUCTION}\n\n${REST_API_MANUAL_INSTRUCTION}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
       history = draft.builderConversation
         .filter((m) => m.role === "agent" || m.role === "user")
         .map((m) => ({

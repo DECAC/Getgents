@@ -1,4 +1,4 @@
-import type { ConversationMessage } from "@/lib/types";
+import type { ConversationMessage, RestApiToolConfig } from "@/lib/types";
 
 /**
  * Capacités de modèles disponibles via l'API unique OpenRouter.
@@ -54,6 +54,8 @@ export interface GentToolInstance {
   name: string;
   /** Résumé court de la configuration saisie (ex. URL du serveur MCP). */
   detail?: string;
+  /** Configuration complète pour un connecteur « API REST » (toolKind === "api-rest"). */
+  restConfig?: RestApiToolConfig;
 }
 
 export type KnowledgeSourceKind = "file" | "url" | "text";

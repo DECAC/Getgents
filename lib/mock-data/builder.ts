@@ -140,7 +140,7 @@ export const CONNECTOR_TOOL_TYPES: ConnectorToolType[] = [
     name: "API REST",
     icon: "🌐",
     description:
-      "Définissez une connexion à une API REST et sélectionnez un ou plusieurs points de terminaison et méthodes d'API à ajouter en tant qu'outils.",
+      "Connectez n'importe quelle API en la configurant entièrement à la main : URL, méthode, paramètres fixes, clé d'API et paramètres remplis par le gent (ex. SerpApi Google Flights). L'API est réellement appelée par le gent une fois publié.",
   },
   {
     kind: "mcp",

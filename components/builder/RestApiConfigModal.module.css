@@ -1,0 +1,92 @@
+.kvRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.paramRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.paramHead {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.rowDelete {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  flex: none;
+  font-size: 14px;
+}
+.rowDelete:hover {
+  background: var(--card);
+  color: var(--plum);
+}
+
+.addRowBtn {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--line);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.addRowBtn:hover {
+  border-color: var(--plum);
+  color: var(--plum);
+}
+
+.reqCheck {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.reqCheck input {
+  accent-color: var(--plum);
+  width: 15px;
+  height: 15px;
+}
+
+.warnBox {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  font-size: 11.5px;
+  color: #9a3412;
+  line-height: 1.5;
+}
+
+.sectionLabel {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+.sectionSub {
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: -2px;
+}

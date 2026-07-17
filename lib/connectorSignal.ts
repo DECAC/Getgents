@@ -34,6 +34,10 @@ export const CONNECTOR_DISCOVERY_INSTRUCTION =
   "Une liste de sélection s'affiche alors : le créateur choisit les connecteurs à configurer automatiquement. Ne lui demande jamais de configuration manuelle. " +
   "N'inclus pas les connecteurs déjà configurés. Si tu n'as rien trouvé de fiable, n'émets pas le bloc.";
 
+export const REST_API_MANUAL_INSTRUCTION =
+  "Un connecteur « API REST » entièrement configurable à la main existe dans l'onglet Connecteurs du builder (« + Ajouter un connecteur » → « API REST »). Il permet d'appeler N'IMPORTE QUELLE API (ex. SerpApi Google Flights) : URL de base, méthode (GET/POST), paramètres fixes (ex. engine=google_flights), clé API en en-tête ou en paramètre de requête (avec l'option env:NOM_DE_VARIABLE pour garder le secret côté serveur), et paramètres remplis dynamiquement par le gent à chaque appel (ex. departure_id, arrival_id, outbound_date). " +
+  "Quand le créateur veut brancher une API précise avec une clé et des paramètres, ne réponds JAMAIS que la plateforme ne le permet pas ni que cela nécessite un développement : guide-le pas à pas pour remplir ce connecteur — dis-lui concrètement, d'après l'URL/la doc fournie, quelle URL de base, quels paramètres fixes, quelle clé API (et son emplacement) et quels paramètres dynamiques saisir. Précise que l'API sera réellement appelée par le gent une fois le connecteur ajouté et le gent publié.";
+
 export const CONNECTOR_PROMPT_INSTRUCTION =
   "Si le message du créateur contient l'URL d'un jeu de données ouvert (portail Opendatasoft : opendata.paris.fr, data.gouv.fr… — chemin /explore/dataset/<id>) ou d'un serveur MCP, configure le connecteur à sa place : termine ta réponse (sur sa propre ligne) par exactement un bloc " +
   '<!--CONNECTOR: {"kind":"dataset","name":"Nom lisible du connecteur","url":"https://…"}--> ' +
