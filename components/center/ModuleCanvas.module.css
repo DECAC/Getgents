@@ -145,6 +145,18 @@
   animation: moduleIn 0.3s ease;
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
+/* Filet d'accent : signe distinctif des modules, rappelle la palette du produit */
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--plum), var(--sage) 55%, var(--gold));
+  opacity: 0.65;
+  pointer-events: none;
+}
 .card:hover {
   border-color: color-mix(in srgb, var(--line) 60%, var(--sage));
 }

@@ -68,26 +68,221 @@ body.col-resizing {
   user-select: none;
 }
 
-/* Shared doc styles used inside modal body (sanitized HTML) */
+/* ------------------------------------------------------------------ */
+/* Rendu des artefacts (modal + modules du canvas) — HTML assaini.     */
+/* Objectif : un document soigné, hiérarchisé et contrasté, loin du    */
+/* rendu markdown brut.                                                */
+/* ------------------------------------------------------------------ */
+.gendoc {
+  font-size: 13.5px;
+  line-height: 1.62;
+  color: var(--ink);
+}
+
+/* Titres : hiérarchie nette, barre d'accent sur les sections */
+.gendoc h1,
+.gendoc h2,
+.gendoc h3,
 .gendoc h4 {
   font-family: "Inter", sans-serif;
-  font-size: 15px;
-  margin: 18px 0 7px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  margin: 22px 0 10px;
 }
+.gendoc h1 { font-size: 19px; font-weight: 700; }
+.gendoc h2 { font-size: 17px; font-weight: 700; }
+.gendoc h3,
+.gendoc h4 {
+  font-size: 14.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.gendoc h3::before,
+.gendoc h4::before {
+  content: "";
+  width: 4px;
+  height: 16px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--plum), var(--sage));
+  flex: none;
+}
+.gendoc h1:first-child,
+.gendoc h2:first-child,
+.gendoc h3:first-child,
 .gendoc h4:first-child {
   margin-top: 0;
 }
+
 .gendoc p {
   margin: 0 0 10px;
 }
+
+/* Premier paragraphe : chapo légèrement plus grand */
+.gendoc > p:first-child {
+  font-size: 14.5px;
+  color: var(--ink);
+}
+
 .gendoc ul,
 .gendoc ol {
-  margin: 0 0 12px;
-  padding-left: 18px;
+  margin: 0 0 14px;
+  padding-left: 0;
+  list-style: none;
 }
-.gendoc li {
-  margin-bottom: 6px;
+.gendoc ul li {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 7px;
+}
+.gendoc ul li::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sage);
+}
+.gendoc ol {
+  counter-reset: gendoc-ol;
+}
+.gendoc ol li {
+  position: relative;
+  padding-left: 32px;
+  margin-bottom: 8px;
+  counter-increment: gendoc-ol;
+}
+.gendoc ol li::before {
+  content: counter(gendoc-ol);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 21px;
+  height: 21px;
+  border-radius: 7px;
+  background: var(--plum-tint);
+  color: var(--plum);
+  font-size: 11px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+/* Tableaux : carte arrondie, en-tête teinté, zébrage, survol */
+.gendoc table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 6px 0 16px;
+  font-size: 12.5px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  display: block;
+  overflow-x: auto;
+}
+.gendoc thead th {
+  background: linear-gradient(180deg, var(--plum-tint), var(--card));
+  color: var(--plum);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.gendoc tbody td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+.gendoc tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+.gendoc tbody tr:last-child td {
+  border-bottom: none;
+}
+.gendoc tbody tr:hover td {
+  background: var(--sage-tint);
+}
+
+/* Liens : puces-boutons (ex. « Voir l'offre ») au lieu de liens soulignés bruts */
+.gendoc a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--plum-tint);
+  color: var(--plum);
+  font-weight: 600;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.gendoc a::after {
+  content: "↗";
+  font-size: 10.5px;
+}
+.gendoc a:hover {
+  background: var(--plum);
+  color: #fff;
+}
+
+/* Chiffres/termes forts : surlignage discret */
+.gendoc strong {
+  font-weight: 700;
+  background: linear-gradient(transparent 62%, var(--gold-tint) 62%);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.gendoc td strong,
+.gendoc th strong {
+  background: none;
+}
+
+.gendoc blockquote {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--sage);
+  background: var(--sage-tint);
+  border-radius: 0 10px 10px 0;
+  color: var(--ink);
+}
+
+.gendoc hr {
+  border: none;
+  height: 1px;
+  background: var(--line);
+  margin: 18px 0;
+}
+
+.gendoc code {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+.gendoc pre {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  margin: 0 0 14px;
+}
+.gendoc pre code {
+  border: none;
+  background: none;
+  padding: 0;
 }
 .gendoc .row {
   display: flex;
