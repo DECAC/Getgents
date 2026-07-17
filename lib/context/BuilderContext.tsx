@@ -57,6 +57,10 @@ interface BuilderContextValue {
     options?: { name?: string; detail?: string; restConfig?: RestApiToolConfig }
   ) => void;
   renameToolInstance: (instanceId: string, name: string) => void;
+  updateToolInstance: (
+    instanceId: string,
+    patch: { name?: string; detail?: string; restConfig?: RestApiToolConfig }
+  ) => void;
   removeToolInstance: (instanceId: string) => void;
 
   toggleWebSearch: () => void;
@@ -231,6 +235,17 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       return { ...prev, [currentId]: { ...draft, connectors, updatedAt: "à l'instant" } };
     });
   }, [currentId]);
+
+  const updateToolInstance = useCallback(
+    (instanceId: string, patch: { name?: string; detail?: string; restConfig?: RestApiToolConfig }) => {
+      setDrafts((prev) => {
+        const draft = prev[currentId];
+        const connectors = draft.connectors.map((c) => (c.id === instanceId ? { ...c, ...patch } : c));
+        return { ...prev, [currentId]: { ...draft, connectors, updatedAt: "à l'instant" } };
+      });
+    },
+    [currentId]
+  );
 
   const removeToolInstance = useCallback((instanceId: string) => {
     setDrafts((prev) => {
@@ -533,6 +548,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         removeKnowledgeSource,
         addToolInstance,
         renameToolInstance,
+        updateToolInstance,
         removeToolInstance,
         toggleWebSearch,
         sendBuilderMessage,

@@ -43,11 +43,12 @@ function metaLine(instance: GentToolInstance): string | null {
 }
 
 export function ConnectorsTab() {
-  const { currentDraft, addToolInstance, removeToolInstance } = useBuilder();
+  const { currentDraft, addToolInstance, updateToolInstance, removeToolInstance } = useBuilder();
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [mcpModalOpen, setMcpModalOpen] = useState(false);
   const [datasetModalOpen, setDatasetModalOpen] = useState(false);
   const [restModalOpen, setRestModalOpen] = useState(false);
+  const [editRestId, setEditRestId] = useState<string | null>(null);
 
   const typeByKind = Object.fromEntries(CONNECTOR_TOOL_TYPES.map((t) => [t.kind, t]));
   const activated = currentDraft.connectors.filter(isRealConnector);
@@ -111,6 +112,18 @@ export function ConnectorsTab() {
                       <a className={styles.rowAction} href="/api/powens/connect" target="_blank" rel="noopener noreferrer">
                         🔗 Lier un compte bancaire sandbox (webview de consentement)
                       </a>
+                    )}
+                    {instance.toolKind === "api-rest" && instance.restConfig && (
+                      <button
+                        type="button"
+                        className={styles.rowAction}
+                        onClick={() => {
+                          setEditRestId(instance.id);
+                          setRestModalOpen(true);
+                        }}
+                      >
+                        ✏️ Modifier la configuration (URL, clé, paramètres)
+                      </button>
                     )}
                   </div>
                   <button
@@ -206,15 +219,37 @@ export function ConnectorsTab() {
         />
       )}
 
-      {restModalOpen && (
-        <RestApiConfigModal
-          onClose={() => setRestModalOpen(false)}
-          onSubmit={({ name, config }) => {
-            addToolInstance("api-rest", { name, detail: `${config.method} ${config.baseUrl}`, restConfig: config });
-            setRestModalOpen(false);
-          }}
-        />
-      )}
+      {restModalOpen && (() => {
+        const editing = editRestId ? currentDraft.connectors.find((c) => c.id === editRestId) : undefined;
+        const initial =
+          editing && editing.restConfig ? { name: editing.name, config: editing.restConfig } : undefined;
+        const close = () => {
+          setRestModalOpen(false);
+          setEditRestId(null);
+        };
+        return (
+          <RestApiConfigModal
+            initial={initial}
+            onClose={close}
+            onSubmit={({ name, config }) => {
+              if (editRestId) {
+                updateToolInstance(editRestId, {
+                  name,
+                  detail: `${config.method} ${config.baseUrl}`,
+                  restConfig: config,
+                });
+              } else {
+                addToolInstance("api-rest", {
+                  name,
+                  detail: `${config.method} ${config.baseUrl}`,
+                  restConfig: config,
+                });
+              }
+              close();
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

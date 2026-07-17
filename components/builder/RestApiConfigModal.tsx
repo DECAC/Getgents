@@ -8,6 +8,8 @@ import styles from "./RestApiConfigModal.module.css";
 interface Props {
   onClose: () => void;
   onSubmit: (values: { name: string; config: RestApiToolConfig }) => void;
+  /** Config existante à modifier (le formulaire s'ouvre pré-rempli). */
+  initial?: { name: string; config: RestApiToolConfig };
 }
 
 type AuthMode = "none" | "api-key";
@@ -29,20 +31,34 @@ const uid = () => `row-${seq++}`;
  * paramètres que le modèle renseignera à chaque appel (ex. SerpApi Google
  * Flights). Aucune connaissance technique de la plateforme requise.
  */
-export function RestApiConfigModal({ onClose, onSubmit }: Props) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [baseUrl, setBaseUrl] = useState("");
-  const [method, setMethod] = useState<RestApiMethod>("GET");
-  const [queryParams, setQueryParams] = useState<DraftKeyValue[]>([{ key: uid(), name: "", value: "" }]);
-  const [authMode, setAuthMode] = useState<AuthMode>("api-key");
-  const [placement, setPlacement] = useState<KeyPlacement>("query");
-  const [fieldName, setFieldName] = useState("api_key");
-  const [keyValue, setKeyValue] = useState("");
-  const [modelParams, setModelParams] = useState<DraftParam[]>([
-    { key: uid(), name: "", description: "", required: true, example: "" },
-  ]);
-  const [responseHint, setResponseHint] = useState("");
+export function RestApiConfigModal({ onClose, onSubmit, initial }: Props) {
+  const init = initial?.config;
+  const isEdit = !!initial;
+  const [name, setName] = useState(initial?.name ?? "");
+  const [description, setDescription] = useState(init?.description ?? "");
+  const [baseUrl, setBaseUrl] = useState(init?.baseUrl ?? "");
+  const [method, setMethod] = useState<RestApiMethod>(init?.method ?? "GET");
+  const [queryParams, setQueryParams] = useState<DraftKeyValue[]>(
+    init?.queryParams?.length
+      ? init.queryParams.map((q) => ({ key: uid(), name: q.name, value: q.value }))
+      : [{ key: uid(), name: "", value: "" }]
+  );
+  const [authMode, setAuthMode] = useState<AuthMode>(init?.auth?.mode === "none" ? "none" : "api-key");
+  const [placement, setPlacement] = useState<KeyPlacement>(init?.auth?.placement === "header" ? "header" : "query");
+  const [fieldName, setFieldName] = useState(init?.auth?.fieldName ?? "api_key");
+  const [keyValue, setKeyValue] = useState(init?.auth?.value ?? "");
+  const [modelParams, setModelParams] = useState<DraftParam[]>(
+    init?.modelParams?.length
+      ? init.modelParams.map((p) => ({
+          key: uid(),
+          name: p.name,
+          description: p.description,
+          required: p.required,
+          example: p.example ?? "",
+        }))
+      : [{ key: uid(), name: "", description: "", required: true, example: "" }]
+  );
+  const [responseHint, setResponseHint] = useState(init?.responseHint ?? "");
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -107,7 +123,7 @@ export function RestApiConfigModal({ onClose, onSubmit }: Props) {
       <div className={modal.modal}>
         <div className={modal.head}>
           <h3 className={modal.title} id="rest-modal-title">
-            Ajouter un connecteur API REST
+            {isEdit ? "Modifier le connecteur API REST" : "Ajouter un connecteur API REST"}
           </h3>
           <button className={modal.closeBtn} onClick={onClose} aria-label="Fermer">
             ✕
@@ -367,7 +383,7 @@ export function RestApiConfigModal({ onClose, onSubmit }: Props) {
             Retour
           </button>
           <button className={modal.btnPrim} onClick={handleSubmit} disabled={!canSubmit}>
-            Ajouter le connecteur
+            {isEdit ? "Enregistrer les modifications" : "Ajouter le connecteur"}
           </button>
         </div>
       </div>
