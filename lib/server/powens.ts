@@ -5,10 +5,40 @@
 // les conversations de la maquette ne sont ni chiffrées ni isolées par
 // utilisateur.
 
+// Tolère les formats fréquents de POWENS_DOMAIN : « mondomaine »,
+// « mondomaine.biapi.pro », « https://mondomaine.biapi.pro/2.0 »…
+function normalizedDomain(): string | null {
+  let d = process.env.POWENS_DOMAIN?.trim();
+  if (!d) return null;
+  d = d.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  d = d.replace(/\.biapi\.pro$/, "");
+  return d || null;
+}
+
 function baseUrl(): string | null {
   if (process.env.POWENS_BASE_OVERRIDE) return process.env.POWENS_BASE_OVERRIDE;
-  const domain = process.env.POWENS_DOMAIN;
+  const domain = normalizedDomain();
   return domain ? `https://${domain}.biapi.pro/2.0` : null;
+}
+
+/** fetch avec erreur réseau explicite (hôte tenté + cause) au lieu d'un « fetch failed » opaque. */
+async function safeFetch(url: string, init?: RequestInit): Promise<Response | { netError: string }> {
+  try {
+    return await fetch(url, init);
+  } catch (err) {
+    const cause = (err as { cause?: { message?: string; code?: string } }).cause;
+    const reason = cause?.code ?? cause?.message ?? (err as Error).message;
+    const host = (() => {
+      try {
+        return new URL(url).host;
+      } catch {
+        return url;
+      }
+    })();
+    return {
+      netError: `Impossible de joindre ${host} (${reason}). Vérifiez POWENS_DOMAIN sur l'hébergement : attendu la partie {domain} seule de https://{domain}.biapi.pro (sans « .biapi.pro » ni « https:// »).`,
+    };
+  }
 }
 
 const MISSING_CONF_MSG = JSON.stringify({
@@ -29,11 +59,12 @@ async function getUserToken(): Promise<{ token: string } | { error: string }> {
   const clientSecret = process.env.POWENS_CLIENT_SECRET;
   if (!base || !clientId || !clientSecret) return { error: MISSING_CONF_MSG };
 
-  const res = await fetch(`${base}/auth/init`, {
+  const res = await safeFetch(`${base}/auth/init`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ client_id: clientId, client_secret: clientSecret }),
   });
+  if ("netError" in res) return { error: JSON.stringify({ error: res.netError }) };
   if (!res.ok) {
     const detail = (await res.text().catch(() => "")).slice(0, 300);
     return { error: JSON.stringify({ error: `Powens /auth/init a répondu ${res.status}. Détail : ${detail}` }) };
@@ -49,7 +80,10 @@ async function powensGet(path: string): Promise<string> {
   if (!base) return MISSING_CONF_MSG;
   const auth = await getUserToken();
   if ("error" in auth) return auth.error;
-  const res = await fetch(`${base}${path}`, { headers: { Authorization: `Bearer ${auth.token}`, Accept: "application/json" } });
+  const res = await safeFetch(`${base}${path}`, {
+    headers: { Authorization: `Bearer ${auth.token}`, Accept: "application/json" },
+  });
+  if ("netError" in res) return JSON.stringify({ error: res.netError });
   if (!res.ok) {
     const detail = (await res.text().catch(() => "")).slice(0, 300);
     return JSON.stringify({
@@ -78,15 +112,16 @@ export function transactions(minDate?: string, limit = 100): Promise<string> {
  */
 export async function connectWebviewUrl(redirectUri: string): Promise<{ url: string } | { error: string }> {
   const base = baseUrl();
-  const domain = process.env.POWENS_DOMAIN;
+  const domain = normalizedDomain();
   const clientId = process.env.POWENS_CLIENT_ID;
   if (!base || !clientId) return { error: MISSING_CONF_MSG };
   const auth = await getUserToken();
   if ("error" in auth) return { error: auth.error };
 
-  const res = await fetch(`${base}/auth/token/code`, {
+  const res = await safeFetch(`${base}/auth/token/code`, {
     headers: { Authorization: `Bearer ${auth.token}`, Accept: "application/json" },
   });
+  if ("netError" in res) return { error: JSON.stringify({ error: res.netError }) };
   if (!res.ok) {
     const detail = (await res.text().catch(() => "")).slice(0, 300);
     return { error: JSON.stringify({ error: `Powens /auth/token/code a répondu ${res.status}. Détail : ${detail}` }) };
