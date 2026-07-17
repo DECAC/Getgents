@@ -51,7 +51,7 @@ export function SafeHTMLDoc({ html, className }: SafeHTMLProps) {
       const DOMPurify = mod.default;
       const clean = DOMPurify.sanitize(html, {
         ALLOWED_TAGS: [
-          "p", "b", "strong", "i", "em", "ul", "ol", "li", "h4", "h3", "span", "div", "br",
+          "p", "b", "strong", "i", "em", "ul", "ol", "li", "h1", "h2", "h3", "h4", "span", "div", "br",
           "code", "pre", "a", "blockquote", "table", "thead", "tbody", "tr", "td", "th", "hr",
         ],
         ALLOWED_ATTR: ["class", "style", "href", "target", "rel"],

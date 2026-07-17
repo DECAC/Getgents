@@ -75,7 +75,8 @@ export function ArtefactModal() {
           <div>
             <h3 className={styles.title} id="modal-title">{artefact.title}</h3>
             <div className={styles.meta}>
-              {artefact.type} · {artefact.date}
+              <span className={styles.typePill}>{artefact.type}</span>
+              <span>{artefact.date}</span>
             </div>
           </div>
           <button className={styles.closeBtn} onClick={closeModal} aria-label="Fermer">
