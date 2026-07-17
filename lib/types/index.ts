@@ -166,7 +166,12 @@ export interface ConversationMessage {
     webSearch?: boolean;
     chatModelId?: string;
     reasoningModelId?: string;
-    connectors?: { kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens"; name: string; url: string }[];
+    connectors?: {
+      kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens";
+      name: string;
+      url: string;
+      restConfig?: RestApiToolConfig;
+    }[];
   };
   configProposalStatus?: "pending" | "applied" | "dismissed";
   reasoning?: string;

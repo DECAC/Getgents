@@ -143,7 +143,25 @@ export function BuilderAssistantPanel() {
               <li key={c.url}>
                 <b>Connecteur :</b>{" "}
                 {c.kind === "dataset" ? "🗺️" : c.kind === "mcp" ? "🔗" : c.kind === "prim" ? "🚌" : c.kind === "powens" ? "🏦" : "🌐"} {c.name}
-                <span className={styles.connectorUrl}> {c.url}</span>
+                {c.kind === "api-rest" && c.restConfig ? (
+                  <>
+                    <span className={styles.connectorUrl}>
+                      {" "}
+                      {c.restConfig.method} {c.restConfig.baseUrl}
+                    </span>
+                    {c.restConfig.modelParams?.length ? (
+                      <span className={styles.connectorUrl}>
+                        {" "}
+                        · paramètres : {c.restConfig.modelParams.map((p) => p.name).join(", ")}
+                      </span>
+                    ) : null}
+                    {c.restConfig.auth?.mode === "api-key" ? (
+                      <span className={styles.connectorUrl}> · clé : {c.restConfig.auth.value || "à définir"}</span>
+                    ) : null}
+                  </>
+                ) : (
+                  <span className={styles.connectorUrl}> {c.url}</span>
+                )}
               </li>
             ))}
           </ul>

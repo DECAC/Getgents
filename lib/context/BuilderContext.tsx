@@ -446,12 +446,22 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
           });
         }
         if (cfg.connectors?.length) {
-          const existingUrls = next.connectors.map((c) => c.detail);
+          const existing = new Set(next.connectors.map((c) => c.restConfig?.baseUrl ?? c.detail));
           next.connectors = [
             ...next.connectors,
             ...cfg.connectors
-              .filter((c) => !existingUrls.includes(c.url))
-              .map((c, i) => ({ id: `tool-${Date.now()}-${i}`, toolKind: c.kind, name: c.name, detail: c.url })),
+              .filter((c) => !existing.has(c.kind === "api-rest" && c.restConfig ? c.restConfig.baseUrl : c.url))
+              .map((c, i) =>
+                c.kind === "api-rest" && c.restConfig
+                  ? {
+                      id: `tool-${Date.now()}-${i}`,
+                      toolKind: c.kind,
+                      name: c.name,
+                      detail: `${c.restConfig.method} ${c.restConfig.baseUrl}`,
+                      restConfig: c.restConfig,
+                    }
+                  : { id: `tool-${Date.now()}-${i}`, toolKind: c.kind, name: c.name, detail: c.url }
+              ),
           ];
         }
         if (cfg.name && draft.status === "published") {
