@@ -438,7 +438,7 @@ function toolLoopResponse(
               call: tc.function.name,
               ok,
               // Diagnostic visible côté client uniquement en cas d'échec.
-              ...(ok ? {} : { detail: resultText.slice(0, 400) }),
+              ...(ok ? {} : { detail: resultText.slice(0, 600) }),
             });
             messages.push({ role: "tool", tool_call_id: tc.id, content: resultText });
           }

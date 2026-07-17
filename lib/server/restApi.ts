@@ -26,6 +26,33 @@ function isPlainString(v: unknown): v is string {
   return typeof v === "string" && v.length > 0;
 }
 
+// Noms de paramètres considérés comme sensibles → masqués dans les diagnostics.
+const SECRETISH_PARAM = /(key|secret|token|password|pwd|auth|app_?id|apikey|client_?id)/i;
+
+/** URL lisible pour le diagnostic, avec les valeurs sensibles remplacées par ***. */
+function maskUrl(u: URL, extraSecretNames: Set<string>): string {
+  const clone = new URL(u.toString());
+  const extra = new Set(Array.from(extraSecretNames).map((s) => s.toLowerCase()));
+  for (const name of Array.from(clone.searchParams.keys())) {
+    if (extra.has(name.toLowerCase()) || SECRETISH_PARAM.test(name)) {
+      clone.searchParams.set(name, "***");
+    }
+  }
+  return clone.toString();
+}
+
+/** Résume un corps d'erreur : titre d'une page HTML, ou extrait du texte/JSON. */
+function summarizeErrorBody(text: string): string {
+  const trimmed = text.trim();
+  if (/^<(!doctype|html|\?xml)/i.test(trimmed)) {
+    const title = trimmed.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim();
+    return title
+      ? `réponse HTML du serveur « ${title} » (ce n'est pas du JSON : requête rejetée avant l'application, souvent une URL/paramètre invalide ou des identifiants refusés)`
+      : "réponse HTML du serveur (pas de JSON — requête probablement rejetée avant l'application)";
+  }
+  return trimmed.slice(0, 500) || "(réponse vide)";
+}
+
 /**
  * Construit et exécute la requête. `args` sont les paramètres fournis par le
  * modèle (mappés par nom sur les modelParams). Renvoie le corps de réponse en
@@ -87,6 +114,14 @@ export async function callRestApi(
     }
   }
 
+  // URL réellement appelée, secrets masqués — jointe aux diagnostics pour que
+  // le créateur (et le modèle) voient les paramètres envoyés et se corrigent.
+  const secretNames = new Set<string>();
+  if (config.auth?.mode === "api-key" && config.auth.placement === "query" && config.auth.fieldName.trim()) {
+    secretNames.add(config.auth.fieldName.trim());
+  }
+  const masked = maskUrl(url, secretNames);
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -98,12 +133,18 @@ export async function callRestApi(
     const res = await fetch(url.toString(), init);
     const text = await res.text();
     if (!res.ok) {
-      return { text: `Erreur HTTP ${res.status} : ${text.slice(0, 800)}`, ok: false };
+      return {
+        text:
+          `Erreur HTTP ${res.status} — URL appelée : ${masked}${config.method === "POST" ? ` (corps JSON : ${JSON.stringify(bodyPayload).slice(0, 300)})` : ""}. ` +
+          `Détail : ${summarizeErrorBody(text)}. ` +
+          `Conseils : vérifie que chaque paramètre a une valeur valide pour cette API (un nom de ville/région ou un code seul, une date au bon format — pas une phrase libre), retire les paramètres optionnels douteux, et confirme les identifiants (teste l'URL ci-dessus dans un navigateur avec tes vraies clés). Ne répète pas le même appel à l'identique.`,
+        ok: false,
+      };
     }
     return { text, ok: true };
   } catch (err) {
     const message = (err as Error).name === "AbortError" ? "délai dépassé (15 s)" : (err as Error).message;
-    return { text: `Échec de l'appel API : ${message}`, ok: false };
+    return { text: `Échec de l'appel API (${masked}) : ${message}`, ok: false };
   } finally {
     clearTimeout(timeout);
   }
