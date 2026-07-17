@@ -350,6 +350,130 @@ Le user doit pouvoir être guidé après avoir accepté de partager sa localisat
     ],
   },
 
+  // Gent de référence : veille emploi via l'API Adzuna (connecteur API REST
+  // correctement configuré — app_id/app_key en identifiants fixes, jamais
+  // devinés) + formulaire jump pour lancer une recherche en un clic. Sert
+  // d'exemple concret d'un gent branché sur une API tierce authentifiée.
+  "radar-emploi": {
+    id: "radar-emploi",
+    name: "Radar Emploi",
+    icon: "🧭",
+    objective:
+      "Veiller le marché de l'emploi selon des critères précis (poste, lieu, salaire, type de contrat) via l'API Adzuna.",
+    systemPrompt: `Tu es un assistant de veille du marché de l'emploi. Ton rôle est d'aider l'utilisateur à surveiller les offres d'emploi correspondant à des critères précis : intitulé de poste, localisation, salaire minimum, type de contrat, secteur.
+
+Comportement :
+1. Si les critères ne sont pas clairs ou complets, demande-les explicitement avant toute recherche (intitulé, lieu, salaire mini si pertinent, type de contrat).
+2. Utilise le connecteur Adzuna pour interroger la base d'offres avec les critères fournis. Renseigne chaque paramètre avec une valeur normalisée (une ville précise pour "where" — jamais une phrase ; "permanent" pour un CDI, "contract" pour un CDD ; salaire en euros annuels bruts). Une seule localisation par appel : pour plusieurs villes, fais plusieurs recherches.
+3. Présente les résultats de façon structurée et lisible : titre du poste, entreprise, lieu, fourchette de salaire, type de contrat, date de publication, et lien vers l'offre (redirect_url).
+4. Écarte les doublons et les offres clairement hors critères.
+5. Si aucune offre ne correspond, indique-le clairement et propose d'élargir un critère (zone, salaire, intitulé).
+6. Ne jamais inventer d'offres, d'entreprises ou de montants : appuie-toi uniquement sur les données renvoyées par l'API. Tu peux compléter par la recherche web pour contextualiser (tendances, actualité d'une entreprise), en citant la source.
+7. Reste concis, professionnel et orienté action (propose des relances ou affinages).`,
+    status: "draft",
+    updatedAt: "il y a 2 jours",
+    modelAssignments: [
+      { capability: "chat", modelId: "anthropic/claude-sonnet-5" },
+      { capability: "reasoning", modelId: null },
+      { capability: "image", modelId: null },
+      { capability: "tts", modelId: null },
+      { capability: "stt", modelId: null },
+    ],
+    knowledgeSources: [],
+    connectors: [
+      {
+        id: "tool-adzuna",
+        toolKind: "api-rest",
+        name: "Adzuna - Recherche d'offres d'emploi",
+        detail: "GET https://api.adzuna.com/v1/api/jobs/fr/search/1",
+        restConfig: {
+          method: "GET",
+          baseUrl: "https://api.adzuna.com/v1/api/jobs/fr/search/1",
+          description:
+            "Recherche des offres d'emploi en France via Adzuna selon mots-clés, lieu, salaire et type de contrat. À appeler dès que l'utilisateur a fourni ses critères de recherche.",
+          // app_id et app_key sont des identifiants FIXES (Adzuna en exige deux),
+          // lus depuis des variables d'environnement serveur — jamais devinés.
+          queryParams: [{ name: "app_id", value: "env:ADZUNA_APP_ID" }],
+          headers: [],
+          auth: { mode: "api-key", placement: "query", fieldName: "app_key", value: "env:ADZUNA_APP_KEY" },
+          modelParams: [
+            { name: "what", description: "Mots-clés du poste recherché", required: true, example: "presales" },
+            {
+              name: "where",
+              description: "Ville ou région précise en France (une seule localisation par appel)",
+              required: false,
+              example: "Paris",
+            },
+            {
+              name: "salary_min",
+              description: "Salaire annuel brut minimum en euros",
+              required: false,
+              example: "100000",
+            },
+            {
+              name: "contract_type",
+              description: "Type de contrat : permanent (CDI), contract (CDD)",
+              required: false,
+              example: "permanent",
+            },
+            {
+              name: "category",
+              description: "Catégorie/secteur Adzuna (ex. it-jobs, sales-jobs)",
+              required: false,
+              example: "sales-jobs",
+            },
+            {
+              name: "results_per_page",
+              description: "Nombre de résultats à retourner",
+              required: false,
+              example: "20",
+            },
+            {
+              name: "sort_by",
+              description: "Critère de tri : date, salary, relevance",
+              required: false,
+              example: "date",
+            },
+          ],
+          responseHint:
+            "Utilise le tableau results ; chaque offre contient title, company.display_name, location.display_name, salary_min/salary_max, contract_type, created, redirect_url.",
+        },
+      },
+    ],
+    webSearch: true,
+    jumpForm: {
+      id: "jump-radar-emploi",
+      title: "Nouvelle recherche d'emploi",
+      description: "Renseignez vos critères pour lancer une recherche d'offres.",
+      submitLabel: "Rechercher",
+      fields: [
+        { id: "poste", label: "Intitulé de poste", kind: "text", placeholder: "ex. presales consultant", required: true },
+        { id: "lieu", label: "Localisation", kind: "text", placeholder: "ex. Paris", required: false },
+        {
+          id: "salaire_min",
+          label: "Salaire minimum souhaité (€/an)",
+          kind: "text",
+          placeholder: "ex. 100000",
+          required: false,
+        },
+        {
+          id: "contrat",
+          label: "Type de contrat",
+          kind: "select",
+          required: false,
+          options: ["CDI", "CDD", "Freelance", "Tous"],
+        },
+      ],
+    },
+    builderConversation: [
+      {
+        role: "agent",
+        text: "<p>Ce gent interroge l'API Adzuna pour surveiller les offres d'emploi selon vos critères. Le connecteur est configuré : il ne reste qu'à fournir vos identifiants Adzuna (variables <code>ADZUNA_APP_ID</code> et <code>ADZUNA_APP_KEY</code>) puis à publier.</p>",
+        t: "il y a 2 jours",
+      },
+    ],
+  },
+
   "nouveau-gent": {
     id: "nouveau-gent",
     name: "Nouveau gent",
