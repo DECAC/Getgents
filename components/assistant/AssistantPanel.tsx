@@ -5,6 +5,7 @@ import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
 import { JumpFormCard } from "@/components/shared/JumpFormCard";
+import { extractDocumentText, type ExtractedDoc } from "@/lib/extractDocumentText";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { MapAppModal, type MapDestination } from "@/components/shared/MapAppModal";
 import type { ConversationMessage, Espace } from "@/lib/types";
@@ -61,6 +62,10 @@ export function AssistantPanel() {
   const [cdView, setCdView] = useState<"chat" | "hist">("chat");
   const [jumpFormOpen, setJumpFormOpen] = useState(false);
   const [composerText, setComposerText] = useState("");
+  const [attachment, setAttachment] = useState<ExtractedDoc | null>(null);
+  const [attaching, setAttaching] = useState(false);
+  const [attachError, setAttachError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [expandedReasoning, setExpandedReasoning] = useState<Record<number, boolean>>({});
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [mapDestination, setMapDestination] = useState<MapDestination | null>(null);
@@ -122,11 +127,37 @@ export function AssistantPanel() {
 
   const handleSend = useCallback(() => {
     const txt = composerText.trim();
-    if (!txt) return;
-    sendMessage(txt);
+    if (!txt && !attachment) return;
+    const parts: string[] = [];
+    if (attachment) {
+      parts.push(
+        `Document joint « ${attachment.name} » :\n"""\n${attachment.text}\n"""` +
+          (attachment.truncated ? "\n(document tronqué)" : "")
+      );
+    }
+    if (txt) parts.push(txt);
+    sendMessage(parts.join("\n\n"));
     setComposerText("");
+    setAttachment(null);
+    setAttachError(null);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
-  }, [composerText, sendMessage]);
+  }, [composerText, attachment, sendMessage]);
+
+  const handleFilePick = useCallback(async (file: File | undefined) => {
+    if (!file) return;
+    setAttachError(null);
+    setAttaching(true);
+    try {
+      const doc = await extractDocumentText(file);
+      setAttachment(doc);
+    } catch (err) {
+      setAttachment(null);
+      setAttachError((err as Error).message || "Impossible de lire ce document.");
+    } finally {
+      setAttaching(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }, []);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -693,12 +724,57 @@ export function AssistantPanel() {
 
       {cdView === "chat" && (
         <div className={styles.composerWrap}>
+          {attaching && (
+            <div className={styles.attachLoading}>
+              <span aria-hidden="true">⏳</span> Lecture du document…
+            </div>
+          )}
+          {attachError && <div className={styles.attachError}>{attachError}</div>}
+          {attachment && !attaching && (
+            <div className={styles.attachChip}>
+              <span className={styles.attachChipIcon} aria-hidden="true">📎</span>
+              <div className={styles.attachChipBody}>
+                <div className={styles.attachChipName}>{attachment.name}</div>
+                <div className={styles.attachChipMeta}>
+                  {attachment.text.length.toLocaleString("fr-FR")} caractères
+                  {attachment.truncated ? " (tronqué)" : ""} · joint au prochain message
+                </div>
+              </div>
+              <button
+                type="button"
+                className={styles.attachChipRemove}
+                onClick={() => setAttachment(null)}
+                aria-label="Retirer le document"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+            style={{ display: "none" }}
+            onChange={(e) => handleFilePick(e.target.files?.[0])}
+          />
           <div className={[styles.composer, !composerText.trim() ? styles.composerOff : ""].join(" ")}>
+            <button
+              type="button"
+              className={styles.attachBtn}
+              aria-label="Joindre un document (PDF, Word, texte)"
+              title="Joindre un document (PDF, Word, texte)"
+              disabled={attaching}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+            </button>
             <textarea
               ref={textareaRef}
               className={styles.composerTextarea}
               rows={1}
-              placeholder="Écrire à votre assistant…"
+              placeholder={attachment ? "Ajouter un message (facultatif)…" : "Écrire à votre assistant…"}
               aria-label="Votre message"
               value={composerText}
               onChange={handleTextareaChange}
@@ -707,7 +783,7 @@ export function AssistantPanel() {
             <button
               className={styles.sendBtn}
               aria-label="Envoyer"
-              disabled={!composerText.trim()}
+              disabled={!composerText.trim() && !attachment}
               onClick={handleSend}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

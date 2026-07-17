@@ -36,7 +36,12 @@ textarea {
 }
 
 ::selection {
-  background: var(--sage-tint);
+  background: var(--sage);
+  color: #fff;
+}
+::-moz-selection {
+  background: var(--sage);
+  color: #fff;
 }
 
 :focus-visible {
