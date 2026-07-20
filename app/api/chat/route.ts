@@ -11,6 +11,8 @@ import { accounts as powensAccounts, transactions as powensTransactions } from "
 import { callRestApi } from "@/lib/server/restApi";
 import { parseDatasetUrl, type DatasetRef } from "@/lib/opendatasoft";
 import type { RestApiConnector } from "@/lib/types";
+import type { StatusEvent, ThinkingPhase } from "@/lib/streamChat";
+import { defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 
 // Surchargeable en test/dev pour pointer vers un mock local.
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
@@ -117,6 +119,20 @@ function sseHeaders(): Record<string, string> {
   };
 }
 
+function extractReasoningText(msg: Record<string, unknown> | undefined): string {
+  if (!msg) return "";
+  const details = msg.reasoning_details as { text?: string }[] | undefined;
+  if (Array.isArray(details)) return details.map((d) => d.text ?? "").join("");
+  return typeof msg.reasoning === "string" ? msg.reasoning : "";
+}
+
+function sendReasoningChunks(send: (obj: unknown) => void, reasoning: string) {
+  if (!reasoning) return;
+  for (let i = 0; i < reasoning.length; i += 80) {
+    send({ choices: [{ delta: { reasoning: reasoning.slice(i, i + 80) } }] });
+  }
+}
+
 /** Un outil exécutable côté serveur, quel que soit son transport (MCP, dataset…). */
 interface ServerTool {
   exec: (args: Record<string, unknown>) => Promise<{ text: string; ok: boolean }>;
@@ -145,12 +161,21 @@ function toolLoopResponse(
       const send = (obj: unknown) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
       const sendContent = (content: string) => send({ choices: [{ delta: { content } }] });
       const sendToolEvent = (ev: Record<string, unknown>) => send({ tool_event: ev });
+      const sendStatus = (phase: ThinkingPhase, label?: string, detail?: string) => {
+        const ev: StatusEvent = { phase, label: label ?? defaultStatusLabel(phase, detail) };
+        send({ status_event: ev });
+      };
 
       try {
+        sendStatus("preparing");
         // 1. Construction du registre d'outils : serveurs MCP (découverte) et
-        // datasets open data (un outil synthétique de recherche par proximité).
+        // datasets open data (proximité ou filtres selon métadonnées).
         const registry = new Map<string, ServerTool>();
         const openaiTools: unknown[] = [];
+
+        if (servers.length || datasets.length || prim || powens || restApis.length) {
+          sendStatus("connecting");
+        }
 
         for (const srv of servers) {
           const client = new McpClient(srv.name, srv.url);
@@ -432,15 +457,17 @@ function toolLoopResponse(
         // Au dernier tour, les outils sont retirés pour forcer une réponse.
         for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
           const withTools = registry.size > 0 && round < MAX_TOOL_ROUNDS - 1;
+          sendStatus("thinking");
           const res = await fetch(OPENROUTER_API, {
             method: "POST",
             headers: openrouterHeaders(key),
             body: JSON.stringify({
               model: body.model,
               messages,
-              max_tokens: body.max_tokens ?? 4096,
+              max_tokens: body.max_tokens ?? 12_288,
               ...(withTools ? { tools: openaiTools } : {}),
               ...(body.webSearch ? { plugins: [{ id: "web" }] } : {}),
+              ...(body.reasoning ? { reasoning: body.reasoning } : {}),
             }),
           });
           const data = await res.json();
@@ -453,16 +480,21 @@ function toolLoopResponse(
             break;
           }
 
-          const msg = data?.choices?.[0]?.message;
+          const msg = data?.choices?.[0]?.message as Record<string, unknown> | undefined;
+          const finishReason = data?.choices?.[0]?.finish_reason as string | undefined;
           const toolCalls: { id: string; function: { name: string; arguments: string } }[] =
-            msg?.tool_calls ?? [];
+            (msg?.tool_calls as typeof toolCalls) ?? [];
 
           if (!toolCalls.length) {
-            const content: string = msg?.content ?? "";
-            // Contenu final : renvoyé en petits deltas pour conserver
-            // l'affichage progressif côté client.
+            const reasoning = extractReasoningText(msg);
+            sendReasoningChunks(send, reasoning);
+            const content: string = (msg?.content as string) ?? "";
+            sendStatus("writing");
             for (let i = 0; i < content.length; i += 60) {
               sendContent(content.slice(i, i + 60));
+            }
+            if (finishReason === "length") {
+              send({ choices: [{ finish_reason: "length" }] });
             }
             if (content) sentContent = true;
             break;
@@ -479,6 +511,7 @@ function toolLoopResponse(
               // arguments malformés — l'outil recevra un objet vide
             }
 
+            sendStatus("tool_running", undefined, humanToolCallLabel(tc.function.name));
             sendToolEvent({ status: "running", call: tc.function.name, args });
 
             let resultText: string;

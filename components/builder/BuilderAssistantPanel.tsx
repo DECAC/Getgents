@@ -9,6 +9,7 @@ import type { ConversationMessage } from "@/lib/types";
 import { setBuilderAssistWidthFromPointer, canResizeAssist } from "@/lib/assistResize";
 import { buildBuilderReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
+import { ThinkingIndicator } from "@/components/shared/ThinkingIndicator";
 import styles from "./BuilderAssistantPanel.module.css";
 
 const CHAT_MODELS = MODEL_CATALOG.filter((m) => m.capability === "chat");
@@ -28,9 +29,12 @@ export function BuilderAssistantPanel() {
     applyGentConfig,
     applyJumpForm,
     switchTab,
+    isThinking,
+    thinkingStatus,
   } = useBuilder();
   const [composerText, setComposerText] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
+  const [expandedReasoning, setExpandedReasoning] = useState<Record<number, boolean>>({});
   // Sélection des connecteurs candidats, par message : URL → cochée (tout
   // est coché par défaut, le créateur décoche ce qu'il ne veut pas).
   const [suggestionChecks, setSuggestionChecks] = useState<Record<string, Record<string, boolean>>>({});
@@ -82,7 +86,16 @@ export function BuilderAssistantPanel() {
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
-  }, [currentDraft.builderConversation]);
+  }, [currentDraft.builderConversation, isThinking, thinkingStatus]);
+
+  function toggleReasoning(i: number) {
+    setExpandedReasoning((prev) => ({ ...prev, [i]: !prev[i] }));
+  }
+
+  function isReasoningOpen(i: number, m: ConversationMessage): boolean {
+    if (i in expandedReasoning) return expandedReasoning[i];
+    return isThinking && i === currentDraft.builderConversation.length - 1 && !m.text;
+  }
 
   const handleSend = useCallback(() => {
     const txt = composerText.trim();
@@ -344,10 +357,34 @@ export function BuilderAssistantPanel() {
 
     const isUser = m.role === "user";
     const isLastMessage = i === currentDraft.builderConversation.length - 1;
+    const live = isThinking && isLastMessage && !isUser && !m.text;
+    const open = isReasoningOpen(i, m);
     return (
       <div key={i} className={[styles.msg, isUser ? styles.msgUser : styles.msgAgent].join(" ")}>
         <div className={styles.av}>{isUser ? "V" : "🛠️"}</div>
         <div>
+          {!isUser && (m.reasoning || live) && (
+            <>
+              <button
+                type="button"
+                className={[styles.reasoningToggle, live ? styles.reasoningLive : ""].filter(Boolean).join(" ")}
+                onClick={() => toggleReasoning(i)}
+                aria-expanded={open}
+              >
+                <span className={[styles.reasoningChevron, open ? styles.reasoningChevronOpen : ""].filter(Boolean).join(" ")} aria-hidden="true">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </span>
+                {live ? thinkingStatus ?? "Réflexion en cours…" : "Raisonnement du modèle"}
+              </button>
+              {open && (
+                <div className={styles.reasoningBox}>
+                  {m.reasoning || (live ? "Le modèle analyse votre demande…" : "")}
+                </div>
+              )}
+            </>
+          )}
           <div className={styles.bubble}>
             <SafeHTML html={m.text ?? ""} />
           </div>
@@ -431,6 +468,7 @@ export function BuilderAssistantPanel() {
         ) : (
           <div className={styles.empty}>Décrivez l&apos;objectif de ce gent pour commencer.</div>
         )}
+        {isThinking && <ThinkingIndicator label={thinkingStatus ?? "Réflexion en cours…"} />}
       </div>
 
       <div className={styles.composerWrap}>
