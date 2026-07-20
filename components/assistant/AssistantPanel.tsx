@@ -333,7 +333,7 @@ export function AssistantPanel() {
         );
       }
       return (
-        <div key={i} className={styles.proposalCard}>
+        <div key={i} className={styles.proposalCard} data-proposal-card>
           <div className={styles.proposalHead}>
             <span className={styles.proposalKind}>{PROPOSAL_KIND_LABEL[p.kind] ?? "Artefact"}</span>
             <span className={styles.proposalTitle}>{p.title}</span>
@@ -358,7 +358,15 @@ export function AssistantPanel() {
             <button
               type="button"
               className={styles.proposalAddBtn}
-              onClick={() => confirmArtefactProposal(m.id ?? "", "add")}
+              onClick={(e) => {
+                const card = (e.currentTarget as HTMLElement).closest("[data-proposal-card]");
+                const r = card?.getBoundingClientRect();
+                confirmArtefactProposal(
+                  m.id ?? "",
+                  "add",
+                  r ? { top: r.top, left: r.left, width: r.width, height: r.height } : undefined
+                );
+              }}
             >
               Ajouter à mon espace
             </button>

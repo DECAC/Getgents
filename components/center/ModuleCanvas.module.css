@@ -165,6 +165,77 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Matérialisation d'un artefact fraîchement ajouté : scale + halo qui se dissipe. */
+.cardJustAdded {
+  animation: materialize 0.62s cubic-bezier(0.22, 0.61, 0.36, 1);
+  border-color: color-mix(in srgb, var(--sage) 60%, var(--line));
+}
+@keyframes materialize {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--sage) 45%, transparent);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.015);
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--sage) 22%, transparent);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--sage) 0%, transparent);
+  }
+}
+
+/* Badge « Nouveau » éphémère, en haut à droite de la carte. */
+.newBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--sage-700, #2f6d4f);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+  animation: newBadgeIn 0.35s ease both, newBadgeOut 0.4s ease 4.6s forwards;
+  pointer-events: none;
+}
+@keyframes newBadgeIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.8); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes newBadgeOut {
+  to { opacity: 0; transform: scale(0.8); }
+}
+
+.toolbarCountNum {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--ink);
+  animation: countPop 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@keyframes countPop {
+  0% { transform: translateY(-3px) scale(1.25); color: var(--sage-700, #2f6d4f); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .cardJustAdded,
+  .toolbarCountNum {
+    animation: none !important;
+  }
+  .newBadge {
+    animation: newBadgeOut 0.4s ease 4.6s forwards;
+  }
+}
+
 .cardCompact {
   border-radius: 10px;
 }
