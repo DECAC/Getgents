@@ -139,6 +139,7 @@ const EspaceContext = createContext<EspaceContextValue | null>(null);
 export function EspaceProvider({ children, initialId }: { children: ReactNode; initialId: string }) {
   const [espaces, setEspaces] = useState<EspacesMap>(() => seedEspaces(initialId));
   const [currentId, setCurrentId] = useState(initialId);
+  const [loadedFromStorage, setLoadedFromStorage] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>(0);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
@@ -184,17 +185,21 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     if (Object.keys(published).length) {
       setEspaces((prev) => ({ ...prev, ...published }));
     }
+    setLoadedFromStorage(true);
   }, []);
 
   // Persiste l'activité des gents publiés (conversations, artefacts…) dans
   // localStorage : c'est ce qui alimente l'onglet Audit côté builder.
+  // Important : seulement APRÈS avoir chargé les données depuis localStorage
+  // (sinon on écrase les gents tout juste publiés avec le FALLBACK_ESPACE).
   useEffect(() => {
+    if (!loadedFromStorage) return;
     const espace = espaces[currentId];
     if (!espace) return;
     if (readPublishedGents()[currentId]) {
       writePublishedGent(currentId, espace);
     }
-  }, [espaces, currentId]);
+  }, [espaces, currentId, loadedFromStorage]);
 
   const currentEspace = espaces[currentId];
   const activeConversation = getActiveConversation(
