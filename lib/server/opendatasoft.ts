@@ -1,7 +1,11 @@
 // Client serveur de l'API Opendatasoft Explore v2.1 — recherche par proximité
 // (datasets géolocalisés) ou par filtres (datasets tabulaires type DVF).
 
-import type { DatasetRef } from "@/lib/opendatasoft";
+import {
+  normalizeDatasetRef,
+  type DatasetRef,
+  DVF_CANONICAL_DATASET_ID,
+} from "@/lib/opendatasoft";
 
 function baseUrl(domain: string): string {
   return process.env.OPENDATASOFT_BASE_OVERRIDE ?? `https://${domain}`;
@@ -10,25 +14,21 @@ function baseUrl(domain: string): string {
 export interface NearbySearchParams {
   lat: number;
   lon: number;
-  /** Rayon de recherche en mètres (borné à 20 km). */
   radiusM?: number;
   limit?: number;
 }
 
 export interface TabularSearchParams {
-  /** Code INSEE de la commune (5 chiffres, ex. 22118 pour Matignon — pas le code postal). */
   commune_insee?: string;
-  /** Code département (ex. "22"). */
+  /** Nom de commune (ex. Matignon) — secours si le code INSEE est inconnu. */
+  commune_name?: string;
   dep_code?: string;
-  /** Type de bien pour les jeux DVF : maison ou appartement. */
   property_type?: "maison" | "appartement";
   min_surface_m2?: number;
   max_surface_m2?: number;
   min_price?: number;
   max_price?: number;
-  /** Année minimum de mutation (ex. 2019). */
   since_year?: number;
-  /** Recherche textuelle libre (ODS search()). */
   search_text?: string;
   limit?: number;
 }
@@ -36,36 +36,47 @@ export interface TabularSearchParams {
 export interface DatasetMeta {
   fields: string[];
   geoField: string | null;
+  ok: boolean;
 }
 
 const metaCache = new Map<string, DatasetMeta>();
 
-/** Métadonnées du dataset (champs + éventuel champ géographique), mises en cache. */
+function metaCacheKey(ref: DatasetRef): string {
+  const n = normalizeDatasetRef(ref);
+  return `${n.domain}/${n.datasetId}`;
+}
+
+/** Métadonnées du dataset — ne met pas en cache les échecs (404, réseau). */
 export async function getDatasetMeta(ref: DatasetRef): Promise<DatasetMeta> {
-  const key = `${ref.domain}/${ref.datasetId}`;
+  const normalized = normalizeDatasetRef(ref);
+  const key = metaCacheKey(normalized);
   if (metaCache.has(key)) return metaCache.get(key)!;
 
-  let meta: DatasetMeta = { fields: [], geoField: null };
+  let meta: DatasetMeta = { fields: [], geoField: null, ok: false };
   try {
     const res = await fetch(
-      `${baseUrl(ref.domain)}/api/explore/v2.1/catalog/datasets/${encodeURIComponent(ref.datasetId)}`,
+      `${baseUrl(normalized.domain)}/api/explore/v2.1/catalog/datasets/${encodeURIComponent(normalized.datasetId)}`,
       { headers: { Accept: "application/json" } }
     );
     if (res.ok) {
       const data = (await res.json()) as { fields?: { name?: string; type?: string }[] };
       const fields = (data.fields ?? []).map((f) => f.name).filter((n): n is string => !!n);
       const geo = (data.fields ?? []).find((f) => f.type === "geo_point_2d");
-      meta = { fields, geoField: geo?.name ?? null };
+      meta = { fields, geoField: geo?.name ?? null, ok: true };
+      metaCache.set(key, meta);
     }
   } catch {
-    // métadonnées inaccessibles
+    // métadonnées inaccessibles — ne pas mettre en cache
   }
-  metaCache.set(key, meta);
   return meta;
 }
 
-function hasField(meta: DatasetMeta, name: string): boolean {
-  return meta.fields.includes(name);
+function hasField(meta: DatasetMeta, ...names: string[]): boolean {
+  return names.some((n) => meta.fields.includes(n));
+}
+
+function firstField(meta: DatasetMeta, ...names: string[]): string | null {
+  return names.find((n) => meta.fields.includes(n)) ?? null;
 }
 
 function escapeOdsString(value: string): string {
@@ -76,10 +87,21 @@ export async function searchNearby(
   ref: DatasetRef,
   { lat, lon, radiusM = 1500, limit = 5 }: NearbySearchParams,
 ): Promise<string> {
-  const { geoField } = await getDatasetMeta(ref);
-  if (!geoField) {
+  const normalized = normalizeDatasetRef(ref);
+  const meta = await getDatasetMeta(normalized);
+  if (!meta.ok) {
     return JSON.stringify({
-      error: `Le dataset ${ref.datasetId} ne contient pas de champ géographique — utilise l'outil __query avec des filtres (commune_insee, type de bien, surface…) plutôt que __nearby.`,
+      error: `Dataset introuvable ou inaccessible : ${normalized.datasetId} sur ${normalized.domain}.`,
+      hint:
+        normalized.datasetId !== DVF_CANONICAL_DATASET_ID
+          ? `Utilise plutôt le dataset DVF officiel : ${DVF_CANONICAL_DATASET_ID}`
+          : undefined,
+    });
+  }
+  if (!meta.geoField) {
+    return JSON.stringify({
+      error: `Le dataset ${normalized.datasetId} ne contient pas de champ géographique — utilise l'outil __query avec commune_insee (code INSEE), dep_code ou commune_name plutôt que __nearby.`,
+      available_fields: meta.fields.slice(0, 25),
     });
   }
 
@@ -87,21 +109,21 @@ export async function searchNearby(
   const n = Math.min(Math.max(Math.round(limit), 1), 20);
   const point = `geom'POINT(${lon} ${lat})'`;
   const params = new URLSearchParams({
-    where: `within_distance(${geoField}, ${point}, ${radius}m)`,
-    order_by: `distance(${geoField}, ${point})`,
+    where: `within_distance(${meta.geoField}, ${point}, ${radius}m)`,
+    order_by: `distance(${meta.geoField}, ${point})`,
     limit: String(n),
   });
-  const url = `${baseUrl(ref.domain)}/api/explore/v2.1/catalog/datasets/${encodeURIComponent(
-    ref.datasetId,
+  const url = `${baseUrl(normalized.domain)}/api/explore/v2.1/catalog/datasets/${encodeURIComponent(
+    normalized.datasetId,
   )}/records?${params}`;
 
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   if (!res.ok) {
-    return JSON.stringify({ error: `Le portail ${ref.domain} a répondu ${res.status}.` });
+    return JSON.stringify({ error: `Le portail ${normalized.domain} a répondu ${res.status}.` });
   }
   const data = (await res.json()) as { total_count?: number; results?: Record<string, unknown>[] };
   return JSON.stringify({
-    dataset: ref.datasetId,
+    dataset: normalized.datasetId,
     total_in_radius: data.total_count ?? data.results?.length ?? 0,
     radius_m: radius,
     results: data.results ?? [],
@@ -111,33 +133,56 @@ export async function searchNearby(
 function buildTabularWhere(meta: DatasetMeta, p: TabularSearchParams): string[] {
   const clauses: string[] = [];
 
-  if (p.commune_insee?.trim() && hasField(meta, "l_codinsee")) {
-    const code = escapeOdsString(p.commune_insee.trim());
-    clauses.push(`search(l_codinsee, '${code}')`);
+  const inseeField = firstField(meta, "l_codinsee", "code_commune", "codinsee", "insee_com");
+  if (p.commune_insee?.trim() && inseeField) {
+    clauses.push(`search(${inseeField}, '${escapeOdsString(p.commune_insee.trim())}')`);
   }
-  if (p.dep_code?.trim() && hasField(meta, "dep_code")) {
-    clauses.push(`dep_code='${escapeOdsString(p.dep_code.trim())}'`);
+
+  const depField = firstField(meta, "dep_code", "code_departement", "dep");
+  if (p.dep_code?.trim() && depField) {
+    clauses.push(`${depField}='${escapeOdsString(p.dep_code.trim())}'`);
   }
+
   if (p.property_type === "maison" && hasField(meta, "nblocmai")) {
     clauses.push("nblocmai > 0");
+  } else if (p.property_type === "maison" && hasField(meta, "type_local")) {
+    clauses.push("search(type_local, 'Maison')");
   } else if (p.property_type === "appartement" && hasField(meta, "nblocapt")) {
     clauses.push("nblocapt > 0");
+  } else if (p.property_type === "appartement" && hasField(meta, "type_local")) {
+    clauses.push("search(type_local, 'Appartement')");
   }
-  if (typeof p.min_surface_m2 === "number" && hasField(meta, "sbati")) {
-    clauses.push(`sbati >= ${p.min_surface_m2}`);
+
+  const surfaceField = firstField(meta, "sbati", "surface_reelle_bati", "surface_totale", "surface");
+  if (typeof p.min_surface_m2 === "number" && surfaceField) {
+    clauses.push(`${surfaceField} >= ${p.min_surface_m2}`);
   }
-  if (typeof p.max_surface_m2 === "number" && hasField(meta, "sbati")) {
-    clauses.push(`sbati <= ${p.max_surface_m2}`);
+  if (typeof p.max_surface_m2 === "number" && surfaceField) {
+    clauses.push(`${surfaceField} <= ${p.max_surface_m2}`);
   }
-  if (typeof p.min_price === "number" && hasField(meta, "valeurfonc")) {
-    clauses.push(`valeurfonc >= ${p.min_price}`);
+
+  const priceField = firstField(meta, "valeurfonc", "valeur_fonciere", "prix");
+  if (typeof p.min_price === "number" && priceField) {
+    clauses.push(`${priceField} >= ${p.min_price}`);
   }
-  if (typeof p.max_price === "number" && hasField(meta, "valeurfonc")) {
-    clauses.push(`valeurfonc <= ${p.max_price}`);
+  if (typeof p.max_price === "number" && priceField) {
+    clauses.push(`${priceField} <= ${p.max_price}`);
   }
-  if (typeof p.since_year === "number" && hasField(meta, "anneemut")) {
-    clauses.push(`anneemut >= '${p.since_year}-01-01'`);
+
+  const dateField = firstField(meta, "datemut", "date_mutation", "anneemut");
+  if (typeof p.since_year === "number" && dateField) {
+    clauses.push(`${dateField} >= '${p.since_year}-01-01'`);
   }
+
+  if (p.commune_name?.trim()) {
+    const communeField = firstField(meta, "nom_commune", "libcom", "commune");
+    if (communeField) {
+      clauses.push(`search(${communeField}, '${escapeOdsString(p.commune_name.trim())}')`);
+    } else {
+      clauses.push(`search('${escapeOdsString(p.commune_name.trim())}')`);
+    }
+  }
+
   if (p.search_text?.trim()) {
     clauses.push(`search('${escapeOdsString(p.search_text.trim())}')`);
   }
@@ -145,23 +190,28 @@ function buildTabularWhere(meta: DatasetMeta, p: TabularSearchParams): string[] 
   return clauses;
 }
 
+function extractPriceSurface(row: Record<string, unknown>): { price: number; surface: number } | null {
+  const price = Number(row.valeurfonc ?? row.valeur_fonciere ?? row.prix);
+  const surface = Number(row.sbati ?? row.surface_reelle_bati ?? row.surface_totale ?? row.surface);
+  if (!Number.isFinite(price) || !Number.isFinite(surface) || surface <= 0) return null;
+  return { price, surface };
+}
+
 function summarizeDvfResults(results: Record<string, unknown>[]): Record<string, unknown> | undefined {
   const rows = results
     .map((r) => {
-      const price = Number(r.valeurfonc);
-      const surface = Number(r.sbati);
-      if (!Number.isFinite(price) || !Number.isFinite(surface) || surface <= 0) return null;
-      return { price, surface, pricePerM2: Math.round(price / surface) };
+      const ps = extractPriceSurface(r);
+      if (!ps) return null;
+      return { ...ps, pricePerM2: Math.round(ps.price / ps.surface) };
     })
     .filter((r): r is { price: number; surface: number; pricePerM2: number } => r !== null);
 
   if (!rows.length) return undefined;
 
   const pricesPerM2 = rows.map((r) => r.pricePerM2);
-  const avg = Math.round(pricesPerM2.reduce((a, b) => a + b, 0) / pricesPerM2.length);
   return {
     transactions_with_surface: rows.length,
-    avg_price_per_m2: avg,
+    avg_price_per_m2: Math.round(pricesPerM2.reduce((a, b) => a + b, 0) / pricesPerM2.length),
     min_price_per_m2: Math.min(...pricesPerM2),
     max_price_per_m2: Math.max(...pricesPerM2),
     avg_price: Math.round(rows.reduce((a, r) => a + r.price, 0) / rows.length),
@@ -171,10 +221,19 @@ function summarizeDvfResults(results: Record<string, unknown>[]): Record<string,
 
 /** Recherche filtrée pour datasets tabulaires (DVF, statistiques…). */
 export async function searchRecords(ref: DatasetRef, params: TabularSearchParams): Promise<string> {
-  const meta = await getDatasetMeta(ref);
+  const normalized = normalizeDatasetRef(ref);
+  const meta = await getDatasetMeta(normalized);
+
+  if (!meta.ok) {
+    return JSON.stringify({
+      error: `Dataset introuvable : ${ref.datasetId} (normalisé → ${normalized.datasetId} sur ${normalized.domain}).`,
+      hint: `Dataset DVF recommandé : ${DVF_CANONICAL_DATASET_ID} sur ${normalized.domain}`,
+    });
+  }
+
   if (meta.geoField) {
     return JSON.stringify({
-      error: `Le dataset ${ref.datasetId} est géolocalisé — utilise l'outil __nearby avec lat/lon plutôt que __query.`,
+      error: `Le dataset ${normalized.datasetId} est géolocalisé — utilise __nearby avec lat/lon plutôt que __query.`,
     });
   }
 
@@ -182,38 +241,47 @@ export async function searchRecords(ref: DatasetRef, params: TabularSearchParams
   if (!clauses.length) {
     return JSON.stringify({
       error:
-        "Aucun filtre valide : fournis au minimum commune_insee (code INSEE à 5 chiffres, pas le code postal), dep_code ou search_text. " +
-        `Champs disponibles : ${meta.fields.slice(0, 30).join(", ")}${meta.fields.length > 30 ? "…" : ""}.`,
+        "Aucun filtre valide : fournis commune_insee (code INSEE 5 chiffres, ex. Matignon → 22118), commune_name, dep_code (ex. 22) ou search_text. " +
+        "Ne confonds pas code postal (22550) et code INSEE (22118).",
+      available_fields: meta.fields.slice(0, 30),
+      example_for_matignon: {
+        commune_insee: "22118",
+        dep_code: "22",
+        property_type: "maison",
+        min_surface_m2: 80,
+        max_surface_m2: 200,
+        since_year: 2019,
+      },
     });
   }
 
   const limit = Math.min(Math.max(Math.round(params.limit ?? 15), 1), 50);
+  const dateField = firstField(meta, "datemut", "date_mutation", "anneemut");
   const qs = new URLSearchParams({
     where: clauses.join(" AND "),
     limit: String(limit),
-    order_by: hasField(meta, "datemut") ? "datemut DESC" : hasField(meta, "anneemut") ? "anneemut DESC" : "",
+    ...(dateField ? { order_by: `${dateField} DESC` } : {}),
   });
-  if (!qs.get("order_by")) qs.delete("order_by");
 
-  const url = `${baseUrl(ref.domain)}/api/explore/v2.1/catalog/datasets/${encodeURIComponent(
-    ref.datasetId,
+  const url = `${baseUrl(normalized.domain)}/api/explore/v2.1/catalog/datasets/${encodeURIComponent(
+    normalized.datasetId,
   )}/records?${qs}`;
 
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     return JSON.stringify({
-      error: `Le portail ${ref.domain} a répondu ${res.status}.`,
+      error: `Le portail ${normalized.domain} a répondu ${res.status}.`,
       detail: body.slice(0, 400),
     });
   }
 
   const data = (await res.json()) as { total_count?: number; results?: Record<string, unknown>[] };
   const results = data.results ?? [];
-  const summary = hasField(meta, "valeurfonc") && hasField(meta, "sbati") ? summarizeDvfResults(results) : undefined;
+  const summary = results.some((r) => extractPriceSurface(r)) ? summarizeDvfResults(results) : undefined;
 
   return JSON.stringify({
-    dataset: ref.datasetId,
+    dataset: normalized.datasetId,
     total_matching: data.total_count ?? results.length,
     filters_applied: clauses,
     ...(summary ? { market_summary: summary } : {}),
@@ -228,18 +296,21 @@ export function buildDatasetRuntimeInstructions(
 ): string {
   const parts: string[] = [];
   for (let i = 0; i < datasets.length; i++) {
-    const ds = datasets[i];
+    const ds = normalizeDatasetRef(datasets[i]);
     const meta = metas[i];
-    if (meta.geoField) {
+    if (!meta.ok) {
       parts.push(
-        `Dataset « ${ds.label} » (${ds.datasetId}) : géolocalisé — outil __nearby avec lat/lon. Demande la position via <!--GEOLOC_REQUEST--> si elle n'est pas déjà dans le contexte.`,
+        `Dataset « ${datasets[i].label} » : ERREUR — dataset introuvable ou URL obsolète. Ne réessaie pas : bascule sur recherche web.`,
       );
+      continue;
+    }
+    if (meta.geoField) {
+      parts.push(`Dataset « ${datasets[i].label} » (${ds.datasetId}) : géolocalisé — outil __nearby avec lat/lon.`);
     } else {
       parts.push(
-        `Dataset « ${ds.label} » (${ds.datasetId}) : tabulaire (sans GPS) — outil __query. ` +
-          "Pour une commune, utilise le code INSEE à 5 chiffres (ex. Matignon 22550 → INSEE 22118), pas le code postal. " +
-          "Filtres utiles : commune_insee, dep_code, property_type (maison/appartement), min/max surface et prix, since_year. " +
-          "Ne demande pas la géolocalisation pour ce dataset.",
+        `Dataset « ${datasets[i].label} » (${ds.datasetId}) : tabulaire DVF — outil __query OBLIGATOIRE avec au minimum commune_insee OU commune_name + dep_code. ` +
+          "Ex. Matignon (22550) → commune_insee=22118, dep_code=22, property_type=maison. " +
+          "N'appelle pas __query sans ces filtres. Maximum 1 appel dataset par analyse.",
       );
     }
   }
