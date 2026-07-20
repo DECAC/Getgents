@@ -152,6 +152,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   const [modalResvId, setModalResvId] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
+  const [storageReady, setStorageReady] = useState(false);
   const [userPosition, setUserPosition] = useState<{ lat: number; lon: number } | null>(null);
   const [geoStatus, setGeoStatus] = useState<GeoStatus>("idle");
   const currentIdRef = useRef(currentId);
@@ -184,22 +185,26 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
 
   // Recharge les gents publiés depuis ce navigateur (localStorage) — n'existe
   // pas encore côté serveur/premier rendu, d'où le placeholder FALLBACK_ESPACE.
+  // On retarde la persistance tant que cette fusion n'est pas faite, sinon on
+  // écrase un gent publié par le placeholder vide au premier rendu.
   useEffect(() => {
     const published = readPublishedGents();
     if (Object.keys(published).length) {
       setEspaces((prev) => ({ ...prev, ...published }));
     }
+    setStorageReady(true);
   }, []);
 
   // Persiste l'activité des gents publiés (conversations, artefacts…) dans
   // localStorage : c'est ce qui alimente l'onglet Audit côté builder.
   useEffect(() => {
+    if (!storageReady) return;
     const espace = espaces[currentId];
     if (!espace) return;
     if (readPublishedGents()[currentId]) {
       writePublishedGent(currentId, espace);
     }
-  }, [espaces, currentId]);
+  }, [espaces, currentId, storageReady]);
 
   const currentEspace = espaces[currentId];
   const activeConversation = getActiveConversation(
