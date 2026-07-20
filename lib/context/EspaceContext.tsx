@@ -31,6 +31,7 @@ const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
   chart: { type: "Graphique", icon: "📊" },
   visual: { type: "Aperçu visuel", icon: "🖼️" },
   map: { type: "Carte", icon: "🗺️" },
+  dashboard: { type: "Tableau de bord", icon: "📈" },
 };
 
 /** Applique une action de thème (create/rename/delete) — un module n'appartient qu'à un seul onglet thématique à la fois. */
@@ -590,6 +591,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
           chartData: sig.chartData,
           checklistItems: sig.items?.map((label) => ({ label, checked: false })),
           mapPoints: sig.mapPoints,
+          dashboard: sig.dashboard,
         };
         artefacts = [newArtefact, ...espace.artefacts];
       }

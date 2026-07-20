@@ -7,7 +7,9 @@
 const ARTEFACT_RE = /<!--ARTEFACT:\s*(\{[\s\S]*?\})\s*-->/;
 const TRUNCATED_MARKER_RE = /<!--ARTEFACT:[\s\S]*$/;
 
-export type ArtefactKind = "report" | "checklist" | "chart" | "visual" | "map";
+import { parseDashboard, DASHBOARD_PROMPT_INSTRUCTION, type DashboardSpec } from "@/lib/dashboardArtefact";
+
+export type ArtefactKind = "report" | "checklist" | "chart" | "visual" | "map" | "dashboard";
 
 export interface ArtefactSignal {
   kind: ArtefactKind;
@@ -16,6 +18,7 @@ export interface ArtefactSignal {
   items?: string[];
   chartData?: { label: string; value: number }[];
   mapPoints?: { label: string; lat: number; lon: number }[];
+  dashboard?: DashboardSpec;
 }
 
 export const ARTEFACT_PROMPT_INSTRUCTION =
@@ -31,7 +34,8 @@ export const ARTEFACT_PROMPT_INSTRUCTION =
   "dès que la réponse mentionne des lieux, un itinéraire, des adresses ou des zones géographiques — fournis des coordonnées WGS84 (lat/lon) précises pour chaque point, la carte est rendue sur fond IGN (cartes.gouv.fr). " +
   "Choisis le kind le plus utile : si plusieurs formats conviennent, privilégie checklist pour l'actionnable et report pour les textes longs. " +
   "Invite brièvement l'utilisateur à l'ajouter à son espace (bouton dans le chat) — ne dis jamais qu'il est déjà ajouté. " +
-  "Vise à proposer un artefact dans la majorité des réponses substantielles (guides, listes, modèles, budgets). N'en ajoute jamais plus d'un par réponse.";
+  "Vise à proposer un artefact dans la majorité des réponses substantielles (guides, listes, modèles, budgets). N'en ajoute jamais plus d'un par réponse.\n\n" +
+  DASHBOARD_PROMPT_INSTRUCTION;
 
 export function extractArtefactSignal(raw: string): { text: string; artefact: ArtefactSignal | null } {
   const match = raw.match(ARTEFACT_RE);
@@ -47,12 +51,13 @@ export function extractArtefactSignal(raw: string): { text: string; artefact: Ar
     if (
       parsed &&
       typeof parsed.title === "string" &&
-      ["report", "checklist", "chart", "visual", "map"].includes(parsed.kind)
+      ["report", "checklist", "chart", "visual", "map", "dashboard"].includes(parsed.kind)
     ) {
       artefact = {
         kind: parsed.kind,
         title: parsed.title,
         body: typeof parsed.body === "string" ? parsed.body : undefined,
+        dashboard: parsed.kind === "dashboard" ? parseDashboard(parsed.dashboard) ?? undefined : undefined,
         items: Array.isArray(parsed.items)
           ? parsed.items.filter((s: unknown): s is string => typeof s === "string").slice(0, 30)
           : undefined,

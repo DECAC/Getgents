@@ -6,6 +6,7 @@ import { SafeHTMLDoc } from "./SafeHTML";
 import { MiniBarChart } from "./MiniBarChart";
 import { ChecklistView } from "./ChecklistView";
 import { MapArtefact } from "./MapArtefact";
+import { DashboardArtefact } from "./dashboard/DashboardArtefact";
 import styles from "./Modal.module.css";
 
 function VisualGrid() {
@@ -58,6 +59,8 @@ export function ArtefactModal() {
 
   if (!artefact) return null;
 
+  const isDashboard = !!artefact.dashboard;
+
   return (
     <div
       className={styles.overlay}
@@ -66,7 +69,7 @@ export function ArtefactModal() {
       aria-labelledby="modal-title"
       onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
     >
-      <div className={styles.modal}>
+      <div className={[styles.modal, isDashboard ? styles.modalWide : ""].filter(Boolean).join(" ")}>
         <div className={styles.head}>
           <div
             className={styles.ti}
@@ -85,6 +88,7 @@ export function ArtefactModal() {
         </div>
 
         <div className={styles.body}>
+          {artefact.dashboard && <DashboardArtefact spec={artefact.dashboard} />}
           {artefact.visual && (
             <div className={styles.visualWrap}>
               <VisualGrid />

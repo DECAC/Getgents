@@ -19,6 +19,7 @@ const PROPOSAL_KIND_LABEL: Record<string, string> = {
   chart: "Graphique",
   visual: "Aperçu visuel",
   map: "Carte",
+  dashboard: "Tableau de bord",
 };
 
 /** Titre lisible d'un module (même convention d'id que ModuleCanvas.tsx : tab-<id>, map, artef-<id>). */
@@ -304,6 +305,11 @@ export function AssistantPanel() {
             <span className={styles.proposalKind}>{PROPOSAL_KIND_LABEL[p.kind] ?? "Artefact"}</span>
             <span className={styles.proposalTitle}>{p.title}</span>
           </div>
+          {p.dashboard && (
+            <div className={styles.proposalBody}>
+              Tableau de bord de {p.dashboard.blocks.length} élément{p.dashboard.blocks.length > 1 ? "s" : ""} (indicateurs, graphiques, tableaux) — s&apos;affiche en plein espace.
+            </div>
+          )}
           {p.chartData && <MiniBarChart data={p.chartData} />}
           {p.mapPoints && (
             <ul className={styles.proposalItems}>

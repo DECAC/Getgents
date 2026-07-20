@@ -1,0 +1,274 @@
+.dashboard {
+  width: 100%;
+}
+
+.subtitle {
+  font-size: 13.5px;
+  color: var(--muted);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+/* Grille 2 colonnes : les blocs pleine largeur s'étalent, les half se juxtaposent */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.spanFull {
+  grid-column: 1 / -1;
+}
+.spanHalf {
+  grid-column: span 1;
+}
+@media (max-width: 720px) {
+  .spanHalf {
+    grid-column: 1 / -1;
+  }
+}
+
+.chartSkeleton {
+  height: 288px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, var(--bg), var(--line-soft), var(--bg));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Carte générique (graphe, kv, table) */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 15px 16px 12px;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+  min-width: 0;
+}
+.cardTitle {
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 12px;
+  color: var(--ink);
+}
+
+/* Titre de section */
+.heading {
+  font-family: "Inter", sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  margin: 6px 0 2px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.heading::before {
+  content: "";
+  width: 4px;
+  height: 17px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--plum), var(--sage));
+  flex: none;
+}
+
+/* Bandeau d'indicateurs */
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.stat {
+  background: linear-gradient(160deg, var(--sage-tint), var(--card) 70%);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 13px 15px;
+}
+.statLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 5px;
+}
+.statValue {
+  font-family: "Inter", sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.statFoot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.statDelta {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+}
+.trend-up { color: #047857; background: #ecfdf5; }
+.trend-down { color: #b91c1c; background: #fef2f2; }
+.trend-flat { color: var(--muted); }
+.statHint {
+  font-size: 11px;
+  color: var(--faint);
+}
+
+/* Encadrés (callout) */
+.callout {
+  display: flex;
+  gap: 12px;
+  padding: 13px 15px;
+  border-radius: 13px;
+  border: 1px solid var(--line);
+  background: var(--card);
+}
+.calloutIcon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+.calloutTitle {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+.calloutBody :global(.gendoc) {
+  font-size: 13px;
+}
+.calloutBody :global(.gendoc p:last-child) {
+  margin-bottom: 0;
+}
+.tone-info { background: #eff6ff; border-color: #bfdbfe; }
+.tone-info .calloutIcon { background: #2563eb; }
+.tone-success { background: #ecfdf5; border-color: #a7f3d0; }
+.tone-success .calloutIcon { background: #059669; }
+.tone-warning { background: #fffbeb; border-color: #fde68a; }
+.tone-warning .calloutIcon { background: #d97706; }
+.tone-critical { background: #fef2f2; border-color: #fecaca; }
+.tone-critical .calloutIcon { background: #dc2626; }
+.tone-neutral { background: var(--bg); border-color: var(--line); }
+.tone-neutral .calloutIcon { background: var(--muted); }
+
+/* Grille étiquette / valeur */
+.kvGrid {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.kvItem {
+  display: grid;
+  grid-template-columns: minmax(120px, 40%) 1fr;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.kvItem:last-child {
+  border-bottom: none;
+}
+.kvItem dt {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.kvItem dd {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+/* Tableau */
+.tableWrap {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+}
+.table thead th {
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--plum);
+  padding: 8px 10px;
+  border-bottom: 1.5px solid var(--line);
+  white-space: nowrap;
+}
+.table tbody td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+.table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.textBlock :global(.gendoc) {
+  font-size: 13.5px;
+}
+
+/* Infobulle de graphe */
+.tooltip {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
+  padding: 8px 11px;
+  font-size: 12px;
+}
+.tooltipLabel {
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 5px;
+}
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 1px 0;
+}
+.tooltipDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+.tooltipName {
+  color: var(--muted);
+  margin-right: 10px;
+}
+.tooltipVal {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}

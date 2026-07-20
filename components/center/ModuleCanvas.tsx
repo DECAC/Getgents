@@ -11,6 +11,7 @@ import { SafeHTMLDoc } from "@/components/shared/SafeHTML";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { ChecklistView } from "@/components/shared/ChecklistView";
 import { MapArtefact } from "@/components/shared/MapArtefact";
+import { DashboardArtefact } from "@/components/shared/dashboard/DashboardArtefact";
 import styles from "./ModuleCanvas.module.css";
 
 interface ModuleLayout {
@@ -97,6 +98,12 @@ function mapLayout(): ModuleLayout {
 
 /** Taille de départ pour un artefact généré en conversation : dépend de sa nature et de son contenu. */
 function artefactLayout(a: Artefact): ModuleLayout {
+  // Un tableau de bord occupe tout l'espace du gent (pleine largeur), avec une
+  // hauteur généreuse pour combiner indicateurs, graphiques et tableaux.
+  if (a.dashboard) {
+    const blocks = a.dashboard.blocks.length;
+    return { cols: GRID_COLUMNS, height: Math.min(1200, 280 + blocks * 130) };
+  }
   if (a.checklistItems?.length) {
     return { cols: 3, height: clampPreferredHeight(110 + a.checklistItems.length * 34) };
   }
@@ -188,6 +195,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       onRemove: () => removeArtefact(a.id),
       render: () => (
         <>
+          {a.dashboard && <DashboardArtefact spec={a.dashboard} />}
           {a.chartData && <MiniBarChart data={a.chartData} />}
           {a.mapPoints && <MapArtefact points={a.mapPoints} userPosition={userPosition} />}
           {a.checklistItems && (
