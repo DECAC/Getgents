@@ -2,7 +2,7 @@
 // créateur colle une URL de dataset open data ou de serveur MCP, l'assistant
 // (ou une détection déterministe côté client, en secours) émet une
 // proposition de connecteur — ajoutée seulement après validation du créateur.
-import { parseDatasetUrl } from "@/lib/opendatasoft";
+import { parseDatasetUrl, DVF_CANONICAL_DATASET_URL } from "@/lib/opendatasoft";
 
 const CONNECTOR_RE = /<!--CONNECTOR:\s*(\{[\s\S]*?\})\s*-->/;
 
@@ -32,7 +32,11 @@ export const CONNECTOR_DISCOVERY_INSTRUCTION =
   '<!--CONNECTORS: [{"kind":"dataset","name":"Nom lisible","url":"https://…","description":"Ce que le connecteur apporte au gent, en une phrase","security":"Évaluation courte : accès public/authentifié, HTTPS, sensibilité des données","stability":"Évaluation courte : source officielle ou non, fraîcheur des données, fiabilité"}]--> ' +
   '("kind" parmi "dataset" pour un portail Opendatasoft, "mcp" pour un serveur MCP, "api-rest" pour une autre API ; 1 à 4 entrées maximum, uniquement des URL réelles trouvées ou connues — jamais inventées). ' +
   "Une liste de sélection s'affiche alors : le créateur choisit les connecteurs à configurer automatiquement. Ne lui demande jamais de configuration manuelle. " +
-  "N'inclus pas les connecteurs déjà configurés. Si tu n'as rien trouvé de fiable, n'émets pas le bloc.";
+  "N'inclus pas les connecteurs déjà configurés. Si tu n'as rien trouvé de fiable, n'émets pas le bloc. " +
+  "Pour les données DVF (transactions immobilières France), utilise UNIQUEMENT cette URL de dataset Opendatasoft vérifiée : " +
+  DVF_CANONICAL_DATASET_URL +
+  " — n'utilise jamais data.opendatasoft.com ni les suffixes @public (URLs obsolètes qui provoquent des 404). " +
+  "L'API api.cquest.org/dvf est une preuve de concept souvent indisponible (502) : propose-la en secours optionnel mais privilégie toujours le dataset Opendatasoft ci-dessus.";
 
 export const REST_API_MANUAL_INSTRUCTION =
   "Tu peux brancher toi-même N'IMPORTE QUELLE API REST (ex. SerpApi Google Flights) pour le créateur : URL de base, méthode (GET/POST), paramètres fixes (ex. engine=google_flights), clé API en en-tête ou en paramètre de requête, et paramètres remplis dynamiquement par le gent à chaque appel (ex. departure_id, arrival_id, outbound_date). " +

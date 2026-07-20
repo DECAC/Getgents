@@ -165,6 +165,10 @@ function toolLoopResponse(
         const ev: StatusEvent = { phase, label: label ?? defaultStatusLabel(phase, detail) };
         send({ status_event: ev });
       };
+      // Ping SSE pendant les boucles d'outils longues — évite les coupures « network error ».
+      const keepAlive = setInterval(() => {
+        sendStatus("thinking", "Traitement en cours…");
+      }, 12_000);
 
       try {
         sendStatus("preparing");
@@ -252,6 +256,7 @@ function toolLoopResponse(
               exec: async (args) => {
                 const text = await searchRecords(ds, {
                   commune_insee: typeof args.commune_insee === "string" ? args.commune_insee : undefined,
+                  commune_name: typeof args.commune_name === "string" ? args.commune_name : undefined,
                   dep_code: typeof args.dep_code === "string" ? args.dep_code : undefined,
                   property_type:
                     args.property_type === "maison" || args.property_type === "appartement"
@@ -275,13 +280,18 @@ function toolLoopResponse(
                 description:
                   `Interroge le jeu de données tabulaire « ${ds.label} » (${ds.datasetId}, portail ${ds.domain}) par filtres. ` +
                   "Pour DVF : transactions immobilières par commune (code INSEE à 5 chiffres, pas le code postal), type de bien, surface, prix. " +
-                  "Le résultat inclut un market_summary (prix/m² moyen, min, max) quand disponible.",
+                  "Le résultat inclut un market_summary (prix/m² moyen, min, max) quand disponible. " +
+                  "OBLIGATOIRE : commune_insee (code INSEE 5 chiffres) ou commune_name + dep_code — ex. Matignon → commune_insee=22118, dep_code=22.",
                 parameters: {
                   type: "object",
                   properties: {
                     commune_insee: {
                       type: "string",
                       description: "Code INSEE commune (5 chiffres, ex. 22118 pour Matignon — pas 22550)",
+                    },
+                    commune_name: {
+                      type: "string",
+                      description: "Nom de la commune si le code INSEE est inconnu (ex. Matignon)",
                     },
                     dep_code: { type: "string", description: "Code département (ex. 22)" },
                     property_type: { type: "string", enum: ["maison", "appartement"] },
@@ -553,6 +563,7 @@ function toolLoopResponse(
       } catch (err) {
         send({ choices: [{ delta: { content: `Erreur de traitement : ${(err as Error).message}` } }] });
       } finally {
+        clearInterval(keepAlive);
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       }

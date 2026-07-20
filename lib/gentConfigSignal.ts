@@ -3,7 +3,7 @@
 // tout dans un bloc unique, appliqué au draft seulement après validation
 // explicite du créateur (carte « Appliquer la configuration »).
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
-import { parseDatasetUrl } from "@/lib/opendatasoft";
+import { parseDatasetUrl, DVF_CANONICAL_DATASET_URL, datasetRefToDetail } from "@/lib/opendatasoft";
 import type { RestApiToolConfig, RestApiAuth } from "@/lib/types";
 
 const GENT_CONFIG_RE = /<!--GENT_CONFIG:\s*(\{[\s\S]*?\})\s*-->/;
@@ -39,7 +39,10 @@ export const GENT_CONFIG_PROMPT_INSTRUCTION =
   "IMPÉRATIF : les identifiants d'authentification (clé d'API, app_id, app_key, client_id, token, secret…) ne doivent JAMAIS figurer dans modelParams — le modèle ne peut pas deviner un identifiant, cela provoque un échec d'authentification. Mets la clé principale dans auth (value \"env:NOM\") et tout identifiant secondaire (ex. app_id pour Adzuna, qui exige app_id ET app_key) dans queryParams avec value \"env:NOM\". modelParams ne contient QUE de vrais critères de recherche (mots-clés, lieu, date, filtres). " +
   "Une carte « Appliquer la configuration » s'affiche alors : le créateur valide en un clic et tout est appliqué au gent (nom, prompt, modèles, connecteurs…). " +
   "Règles impératives : n'annonce JAMAIS que tu configures ou vas configurer quelque chose sans émettre ce bloc dans le MÊME message ; si le créateur accepte verbalement une proposition faite plus tôt, ré-émets immédiatement le bloc GENT_CONFIG complet correspondant ; ne renvoie jamais le créateur vers une configuration manuelle (onglets, listes déroulantes) pour ce que ce bloc sait faire. " +
-  "Économie de longueur : ne recopie PAS l'intégralité du prompt système dans le texte visible — résume tes choix en quelques puces courtes, le contenu complet vit uniquement dans le bloc GENT_CONFIG (le créateur le verra dans la carte de validation et l'onglet Prompt). Tout connecteur que tu annonces DOIT figurer dans le champ connectors de ce même bloc.";
+  "Économie de longueur : ne recopie PAS l'intégralité du prompt système dans le texte visible — résume tes choix en quelques puces courtes, le contenu complet vit uniquement dans le bloc GENT_CONFIG (le créateur le verra dans la carte de validation et l'onglet Prompt). Tout connecteur que tu annonces DOIT figurer dans le champ connectors de ce même bloc. " +
+  "Pour un dataset DVF (transactions immobilières France), URL obligatoire : " +
+  DVF_CANONICAL_DATASET_URL +
+  " (pas data.opendatasoft.com, pas de suffixe @public).";
 
 const VALID_MODEL_IDS = new Set(MODEL_CATALOG.map((m) => m.id));
 
@@ -116,8 +119,12 @@ function validateConnector(c: unknown): GentConfigConnector | null {
     return { kind: "api-rest", name: p.name, url: restConfig.baseUrl, restConfig };
   }
   if (typeof p.url !== "string") return null;
-  if (p.kind === "dataset" && !parseDatasetUrl(p.url)) return null;
-  if (p.kind !== "dataset" && !/^https?:\/\//.test(p.url)) return null;
+  if (p.kind === "dataset") {
+    const ref = parseDatasetUrl(p.url);
+    if (!ref) return null;
+    return { kind: "dataset", name: p.name, url: datasetRefToDetail(ref) };
+  }
+  if (!/^https?:\/\//.test(p.url)) return null;
   return { kind: p.kind as GentConfigConnector["kind"], name: p.name, url: p.url };
 }
 
