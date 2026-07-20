@@ -23,7 +23,7 @@ import { extractThemeTabSignal, describeModulesForPrompt, THEME_TAB_PROMPT_INSTR
 import { extractGeolocRequest, GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
 import { readPublishedGents, writePublishedGent } from "@/lib/publishedGents";
 import { renderMarkdown } from "@/lib/markdown";
-import { streamChatCompletion, CHAT_MAX_TOKENS } from "@/lib/streamChat";
+import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 import { buildJumpFormPrompt } from "@/lib/jumpFormSignal";
 
 const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
@@ -117,6 +117,8 @@ interface EspaceContextValue {
   /** Envoie une demande composée à partir d'un formulaire jump (voir jumpFormSignal). */
   submitJumpForm: (values: Record<string, string>) => void;
   isThinking: boolean;
+  /** Libellé de la phase en cours (réflexion, outil, rédaction…). */
+  thinkingStatus: string | null;
   /** Position partagée par l'utilisateur (consentement explicite) — null sinon. */
   userPosition: { lat: number; lon: number } | null;
   geoStatus: GeoStatus;
@@ -149,6 +151,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   const [modalArtefactId, setModalArtefactId] = useState<string | null>(null);
   const [modalResvId, setModalResvId] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
+  const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
   const [userPosition, setUserPosition] = useState<{ lat: number; lon: number } | null>(null);
   const [geoStatus, setGeoStatus] = useState<GeoStatus>("idle");
   const currentIdRef = useRef(currentId);
@@ -311,7 +314,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     const positionNote = position
       ? `\n\nPosition de l'utilisateur (partagée avec son consentement) : latitude ${position.lat}, longitude ${position.lon}.`
       : "";
-    const geolocNote = espace.datasets?.length || espace.prim ? `\n\n${GEOLOC_PROMPT_INSTRUCTION}` : "";
+    const geolocNote = espace.prim ? `\n\n${GEOLOC_PROMPT_INSTRUCTION}` : "";
     const systemPrompt =
       `${basePrompt}${timeNote}${honestyNote}${memoryNote}${positionNote}${geolocNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
       `\n\n${THEME_TAB_PROMPT_INSTRUCTION}\n\n${describeModulesForPrompt(espace)}`;
@@ -326,6 +329,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     });
 
     setIsThinking(true);
+    setThinkingStatus(defaultStatusLabel("preparing"));
 
     function updateLastMessage(updater: (m: ConversationMessage) => ConversationMessage) {
       setEspaces((p) => {
@@ -382,7 +386,10 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw), reasoning: reasoningSoFar || undefined }));
       },
       (ev) => {
-        if (ev.status === "done") {
+        if (ev.status === "running" && ev.call) {
+          setThinkingStatus(defaultStatusLabel("tool_running", humanToolCallLabel(ev.call)));
+        } else if (ev.status === "done") {
+          setThinkingStatus(defaultStatusLabel("thinking"));
           const call = ev.call ?? "";
           // Étiquette selon la nature réelle de la source (le transport n'est
           // pas toujours MCP : PRIM et datasets sont des outils intégrés).
@@ -400,7 +407,8 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         } else if (ev.status === "connect_error") {
           pushToolMessage("MCP", `Connexion impossible à ${ev.server} — ${ev.message ?? "erreur"}`, false);
         }
-      }
+      },
+      (status) => setThinkingStatus(status.label)
     )
       .then(({ text: fullRaw, reasoning, truncated }) => {
         const afterQuestions = extractQuestions(fullRaw);
@@ -410,7 +418,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         const finalHtml =
           renderMarkdown(afterGeo.text) +
           (truncated
-            ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — demandez la suite ou une version plus courte.</em></p>'
+            ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — écrivez « continue » pour obtenir la suite, ou demandez une version plus courte.</em></p>'
             : "");
 
         // Demande de position émise par le gent : carte de consentement dans
@@ -506,7 +514,10 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
           t: nowTime(),
         }));
       })
-      .finally(() => setIsThinking(false));
+      .finally(() => {
+        setIsThinking(false);
+        setThinkingStatus(null);
+      });
   }, []);
 
   // Compose une demande à partir d'un formulaire jump puis l'envoie au gent.
@@ -826,6 +837,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         sendMessage,
         submitJumpForm,
         isThinking,
+        thinkingStatus,
         userPosition,
         geoStatus,
         requestGeolocation,

@@ -19,7 +19,7 @@ import { JUMP_FORM_PROMPT_INSTRUCTION, extractJumpFormSignal } from "@/lib/jumpF
 import { writePublishedGent, draftToEspace, patchPublishedGentName } from "@/lib/publishedGents";
 import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
-import { streamChatCompletion, CHAT_MAX_TOKENS } from "@/lib/streamChat";
+import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel } from "@/lib/streamChat";
 import {
   DRAFTS_STORAGE_KEY,
   freshDraftFromTemplate,
@@ -76,6 +76,7 @@ interface BuilderContextValue {
   /** Applique (ou ignore) un formulaire jump proposé par l'assistant. */
   applyJumpForm: (messageId: string, decision: "apply" | "dismiss") => void;
   isThinking: boolean;
+  thinkingStatus: string | null;
 }
 
 const BuilderContext = createContext<BuilderContextValue | null>(null);
@@ -145,6 +146,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [replyCursor, setReplyCursor] = useState(0);
   const [isThinking, setIsThinking] = useState(false);
+  const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
   const currentIdRef = useRef(currentId);
   currentIdRef.current = currentId;
   const draftsLoadedRef = useRef(false);
@@ -343,6 +345,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     });
 
     setIsThinking(true);
+    setThinkingStatus(defaultStatusLabel("preparing"));
 
     function updateLastMessage(updater: (m: ConversationMessage) => ConversationMessage) {
       setDrafts((p) => {
@@ -362,16 +365,19 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         // Les réponses du builder embarquent souvent un prompt système complet
         // + un bloc GENT_CONFIG : un plafond trop bas tronquait les propositions.
         max_tokens: CHAT_MAX_TOKENS.builder,
+        reasoning: { enabled: true },
         // Recherche web en tâche de fond : l'assistant s'en sert pour
         // découvrir des connecteurs candidats (datasets, MCP, API).
         webSearch: true,
       },
-      (fullSoFar) => {
+      (fullSoFar, reasoningSoFar) => {
         const displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
-        updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw) }));
-      }
+        updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw), reasoning: reasoningSoFar || undefined }));
+      },
+      undefined,
+      (status) => setThinkingStatus(status.label)
     )
-      .then(({ text: fullRaw, truncated }) => {
+      .then(({ text: fullRaw, truncated, reasoning }) => {
         const afterConfig = extractGentConfigSignal(fullRaw);
         const afterSuggestions = extractConnectorSuggestions(afterConfig.text);
         const afterConnector = extractConnectorSignal(afterSuggestions.text);
@@ -380,7 +386,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         const truncationNote = truncated
           ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — demandez « continue » ou reformulez plus court ; une proposition de configuration incomplète ne doit pas être appliquée.</em></p>'
           : "";
-        updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply) + truncationNote, questions }));
+        updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply) + truncationNote, questions, reasoning: reasoning || undefined }));
 
         // Configuration complète proposée : carte « Appliquer la configuration ».
         if (afterConfig.config) {
@@ -462,7 +468,10 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
           t: "à l'instant",
         }));
       })
-      .finally(() => setIsThinking(false));
+      .finally(() => {
+        setIsThinking(false);
+        setThinkingStatus(null);
+      });
   }, []);
 
   // Validation (ou refus) d'un connecteur préparé par l'assistant du builder.
@@ -657,6 +666,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         applyGentConfig,
         applyJumpForm,
         isThinking,
+        thinkingStatus,
       }}
     >
       {children}

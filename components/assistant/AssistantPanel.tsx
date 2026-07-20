@@ -13,6 +13,7 @@ import { setAssistWidthFromPointer } from "@/lib/assistResize";
 import { threadPreview, threadLastActivity } from "@/lib/conversationUtils";
 import { buildEspaceReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
+import { ThinkingIndicator } from "@/components/shared/ThinkingIndicator";
 import styles from "./AssistantPanel.module.css";
 
 const PROPOSAL_KIND_LABEL: Record<string, string> = {
@@ -55,6 +56,7 @@ export function AssistantPanel() {
     startNewConversation,
     switchConversation,
     isThinking,
+    thinkingStatus,
     geoStatus,
     confirmGeoRequest,
   } = useEspace();
@@ -76,7 +78,7 @@ export function AssistantPanel() {
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
-  }, [activeConversation.messages, cdView]);
+  }, [activeConversation.messages, cdView, isThinking, thinkingStatus]);
 
   useEffect(() => {
     setExpandedReasoning({});
@@ -244,9 +246,9 @@ export function AssistantPanel() {
   }
 
   function renderReasoning(m: ConversationMessage, i: number) {
-    if (!m.reasoning) return null;
     const live = isThinking && i === lastAgentIndex && !m.text;
     const open = isReasoningOpen(i);
+    if (!m.reasoning && !live) return null;
     return (
       <>
         <button
@@ -260,9 +262,13 @@ export function AssistantPanel() {
               <path d="M9 6l6 6-6 6" />
             </svg>
           </span>
-          {live ? "Réflexion en cours…" : "Raisonnement"}
+          {live ? thinkingStatus ?? "Réflexion en cours…" : "Raisonnement du modèle"}
         </button>
-        {open && <div className={styles.reasoningBox}>{m.reasoning}</div>}
+        {open && (
+          <div className={styles.reasoningBox}>
+            {m.reasoning || (live ? "Le modèle analyse votre demande…" : "")}
+          </div>
+        )}
       </>
     );
   }
@@ -695,6 +701,9 @@ export function AssistantPanel() {
                     inchangé.
                   </div>
                 )}
+            {isThinking && cdView === "chat" && (
+              <ThinkingIndicator label={thinkingStatus ?? "Réflexion en cours…"} />
+            )}
             {currentEspace.jumpForm && (activeConversation.messages.length === 0 || jumpFormOpen) && (
               <div className={styles.jumpFormWrap}>
                 <JumpFormCard

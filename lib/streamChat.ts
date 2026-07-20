@@ -12,11 +12,55 @@ export interface StreamChatResult {
   truncated: boolean;
 }
 
-/** Plafonds de tokens de sortie — le builder produit des réponses longues (prompt, connecteurs, bloc GENT_CONFIG). */
+/** Plafonds de tokens de sortie — analyses longues (tableaux, scoring, négociation…). */
 export const CHAT_MAX_TOKENS = {
-  espace: 4096,
+  espace: 12_288,
   builder: 8192,
 } as const;
+
+/** Phase affichée à l'utilisateur pendant le traitement d'une requête. */
+export type ThinkingPhase =
+  | "preparing"
+  | "connecting"
+  | "tool_running"
+  | "thinking"
+  | "writing";
+
+export interface StatusEvent {
+  phase: ThinkingPhase;
+  label: string;
+}
+
+/** Libellé par défaut selon la phase. */
+export function defaultStatusLabel(phase: ThinkingPhase, detail?: string): string {
+  switch (phase) {
+    case "preparing":
+      return "Préparation de la réponse…";
+    case "connecting":
+      return "Connexion aux outils…";
+    case "tool_running":
+      return detail ? `Consultation : ${detail}…` : "Consultation d'une source de données…";
+    case "thinking":
+      return "Réflexion en cours…";
+    case "writing":
+      return "Rédaction de la réponse…";
+  }
+}
+
+/** Formate un identifiant d'outil serveur en libellé lisible. */
+export function humanToolCallLabel(call: string): string {
+  if (call.startsWith("prim_stops_nearby")) return "transports à proximité (PRIM)";
+  if (call.startsWith("prim_next_departures")) return "horaires de passage (PRIM)";
+  if (call.startsWith("powens_accounts")) return "comptes bancaires (Powens)";
+  if (call.startsWith("powens_transactions")) return "transactions bancaires (Powens)";
+  if (call.startsWith("dataset_")) {
+    const action = call.includes("__query") ? "jeu de données (filtres)" : "jeu de données (proximité)";
+    return action;
+  }
+  if (call.startsWith("rest_")) return "API REST";
+  const [, tool] = call.split("__");
+  return tool?.replace(/_/g, " ") ?? call;
+}
 
 /** Événement émis par la route quand le gent utilise un outil MCP. */
 export interface ToolEvent {
@@ -52,7 +96,8 @@ export async function streamChatCompletion(
     webSearch?: boolean;
   },
   onToken: (fullTextSoFar: string, fullReasoningSoFar: string) => void,
-  onToolEvent?: (ev: ToolEvent) => void
+  onToolEvent?: (ev: ToolEvent) => void,
+  onStatus?: (ev: StatusEvent) => void
 ): Promise<StreamChatResult> {
   const res = await fetch("/api/chat", {
     method: "POST",
@@ -78,6 +123,7 @@ export async function streamChatCompletion(
   let full = "";
   let fullReasoning = "";
   let truncated = false;
+  onStatus?.({ phase: "preparing", label: defaultStatusLabel("preparing") });
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -97,6 +143,10 @@ export async function streamChatCompletion(
           onToolEvent(json.tool_event as ToolEvent);
           continue;
         }
+        if (json?.status_event && onStatus) {
+          onStatus(json.status_event as StatusEvent);
+          continue;
+        }
         if (json?.choices?.[0]?.finish_reason === "length") truncated = true;
         const delta = json?.choices?.[0]?.delta;
         const content: string | undefined = delta?.content;
@@ -107,17 +157,24 @@ export async function streamChatCompletion(
         if (content) {
           full += content;
           changed = true;
+          onStatus?.({ phase: "writing", label: defaultStatusLabel("writing") });
         }
         if (Array.isArray(reasoningDetails)) {
           for (const part of reasoningDetails) {
             if (typeof part?.text === "string") {
               fullReasoning += part.text;
               changed = true;
+              if (!content) {
+                onStatus?.({ phase: "thinking", label: defaultStatusLabel("thinking") });
+              }
             }
           }
         } else if (typeof legacyReasoning === "string" && legacyReasoning) {
           fullReasoning += legacyReasoning;
           changed = true;
+          if (!content) {
+            onStatus?.({ phase: "thinking", label: defaultStatusLabel("thinking") });
+          }
         }
 
         if (changed) onToken(full, fullReasoning);
