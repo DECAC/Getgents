@@ -57,7 +57,8 @@ export interface DashboardSpec {
 }
 
 export const DASHBOARD_PROMPT_INSTRUCTION =
-  "Pour une ANALYSE RICHE (rapport d'estimation, tableau de bord, synthèse chiffrée combinant plusieurs angles), privilégie l'artefact « dashboard » plutôt qu'un simple report markdown : il est rendu en plein espace avec de vrais graphiques et cartes. " +
+  "Pour une ANALYSE RICHE (rapport d'estimation, scoring, comparaison de marché, synthèse chiffrée combinant plusieurs angles), privilégie SYSTÉMATIQUEMENT l'artefact « dashboard » plutôt qu'un simple report markdown : il est rendu en plein espace avec de vrais graphiques et cartes, et met en avant les KPI en un coup d'œil au lieu de les noyer dans du texte. " +
+  "Dès que ta réponse contient un score global, une décomposition pondérée par catégories, une estimation de prix avec écart, ou plusieurs métriques comparables (ex. bien vs marché), traduis-les en blocs \"stats\" (les chiffres clés) et \"chart\" (la comparaison ou la décomposition) — n'écris jamais un score ou un écart de prix uniquement en prose quand un artefact est proposé : ce sont des candidats naturels pour un bloc chart (bar pour une comparaison, composed pour scoring par catégorie). Le texte narratif (contexte, arguments, tactiques) reste en blocs \"text\"/\"callout\"/\"kv\" à l'intérieur du même dashboard, pas dans un report séparé. " +
   "Émets le bloc : <!--ARTEFACT: {\"kind\":\"dashboard\",\"title\":\"Titre court\",\"dashboard\":{\"subtitle\":\"Sous-titre optionnel\",\"blocks\":[...]}}--> " +
   "où blocks est une liste ordonnée d'éléments, chacun avec un champ \"type\" et un champ optionnel \"width\" (\"full\" pleine largeur ou \"half\" demi-largeur pour juxtaposer deux graphiques) :\n" +
   '- {"type":"stats","items":[{"label":"Prix estimé","value":"685 000 €","delta":"-2,1 %","trend":"down","hint":"vs annonce"}]} — bandeau de 2 à 4 indicateurs clés ;\n' +
