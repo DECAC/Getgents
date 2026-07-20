@@ -1,4 +1,5 @@
 import type { GentDraft, GentDraftsMap } from "@/lib/types/builder";
+import type { Espace } from "@/lib/types";
 import { GENT_DRAFTS } from "@/lib/mock-data/builder";
 
 export const DRAFTS_STORAGE_KEY = "getgents:gent-drafts";
@@ -69,4 +70,67 @@ export function mergeStoredDrafts(prev: GentDraftsMap): GentDraftsMap {
   const merged = { ...prev, ...stored };
   merged[NOUVEAU_GENT_TEMPLATE_ID] = JSON.parse(JSON.stringify(GENT_DRAFTS[NOUVEAU_GENT_TEMPLATE_ID]));
   return merged;
+}
+
+/** Liste tous les brouillons visibles (mock + localStorage), hors gabarit. */
+export function listVisibleDrafts(): GentDraft[] {
+  const merged = mergeStoredDrafts(seedDrafts("_dashboard"));
+  return Object.values(merged)
+    .filter((d) => d.id !== NOUVEAU_GENT_TEMPLATE_ID)
+    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+}
+
+/** Recrée un brouillon builder minimal à partir d'un gent publié (récupération). */
+export function restoreDraftFromPublished(id: string, espace: Espace): GentDraft {
+  const base = freshDraftFromTemplate(id);
+  const connectors = connectorsFromPublishedEspace(espace);
+  return {
+    ...base,
+    id,
+    name: espace.name,
+    icon: espace.icon,
+    objective: espace.name,
+    systemPrompt: espace.systemPrompt ?? "",
+    status: "published",
+    webSearch: espace.webSearch,
+    jumpForm: espace.jumpForm,
+    connectors,
+    modelAssignments: base.modelAssignments.map((a) =>
+      a.capability === "chat" ? { ...a, modelId: espace.chatModelId ?? a.modelId } : a
+    ),
+    updatedAt: "restauré à l'instant",
+  };
+}
+
+function connectorsFromPublishedEspace(espace: Espace): GentDraft["connectors"] {
+  const connectors: GentDraft["connectors"] = [];
+  let n = 0;
+  for (const d of espace.datasets ?? []) {
+    connectors.push({ id: `restored-${n++}`, toolKind: "dataset", name: d.name, detail: d.url });
+  }
+  for (const m of espace.mcpServers ?? []) {
+    connectors.push({ id: `restored-${n++}`, toolKind: "mcp", name: m.name, detail: m.url });
+  }
+  if (espace.prim) {
+    connectors.push({ id: `restored-${n++}`, toolKind: "prim", name: "IDFM PRIM" });
+  }
+  if (espace.powens) {
+    connectors.push({ id: `restored-${n++}`, toolKind: "powens", name: "Powens (sandbox)" });
+  }
+  for (const r of espace.restApis ?? []) {
+    connectors.push({
+      id: `restored-${n++}`,
+      toolKind: "api-rest",
+      name: r.name,
+      restConfig: r.config,
+    });
+  }
+  return connectors;
+}
+
+/** Enregistre un brouillon restauré depuis un espace publié. */
+export function saveRestoredDraft(draft: GentDraft): void {
+  const stored = readStoredDrafts();
+  stored[draft.id] = draft;
+  writeStoredDrafts(stored);
 }

@@ -149,23 +149,24 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
   const currentIdRef = useRef(currentId);
   currentIdRef.current = currentId;
-  const draftsLoadedRef = useRef(false);
+  const [storageReady, setStorageReady] = useState(false);
 
-  // Recharge les brouillons persistés (localStorage) puis sauvegarde chaque
-  // changement — le premier rendu serveur n'y a pas accès, d'où le useEffect.
+  // Recharge les brouillons persistés (localStorage). On attend que cette
+  // fusion soit appliquée avant toute écriture — sinon le premier save
+  // écrase le localStorage avec les seuls mock data (perte des gents custom).
   useEffect(() => {
     setDrafts((prev) => mergeStoredDrafts(prev));
-    draftsLoadedRef.current = true;
+    setStorageReady(true);
   }, []);
 
   useEffect(() => {
-    if (!draftsLoadedRef.current || typeof window === "undefined") return;
+    if (!storageReady || typeof window === "undefined") return;
     try {
       window.localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(draftsForPersistence(drafts)));
     } catch {
       // quota dépassé / navigation privée : le studio reste utilisable en mémoire
     }
-  }, [drafts]);
+  }, [drafts, storageReady]);
 
   const currentDraft = drafts[currentId];
 
