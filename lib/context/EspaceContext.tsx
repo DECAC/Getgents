@@ -311,7 +311,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     const positionNote = position
       ? `\n\nPosition de l'utilisateur (partagée avec son consentement) : latitude ${position.lat}, longitude ${position.lon}.`
       : "";
-    const geolocNote = espace.datasets?.length || espace.prim ? `\n\n${GEOLOC_PROMPT_INSTRUCTION}` : "";
+    const geolocNote = espace.prim ? `\n\n${GEOLOC_PROMPT_INSTRUCTION}` : "";
     const systemPrompt =
       `${basePrompt}${timeNote}${honestyNote}${memoryNote}${positionNote}${geolocNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
       `\n\n${THEME_TAB_PROMPT_INSTRUCTION}\n\n${describeModulesForPrompt(espace)}`;

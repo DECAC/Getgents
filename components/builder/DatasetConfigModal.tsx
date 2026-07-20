@@ -97,7 +97,7 @@ export function DatasetConfigModal({ onClose, onSubmit }: Props) {
             />
             <span className={styles.hint}>
               {parsed
-                ? `Dataset détecté : ${parsed.datasetId} (portail ${parsed.domain}). Le gent pourra y chercher les lieux les plus proches d'une position.`
+                ? `Dataset détecté : ${parsed.datasetId} (portail ${parsed.domain}). Le gent pourra l'interroger : recherche par proximité GPS si le dataset est géolocalisé, ou par filtres (commune, type, surface…) pour les jeux tabulaires (ex. DVF).`
                 : url.trim()
                   ? "URL non reconnue — collez une page « explore/dataset » d'un portail open data (opendata.paris.fr, data.gouv.fr…)."
                   : "Collez l'adresse complète de la page du dataset pour continuer."}

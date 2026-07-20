@@ -108,11 +108,12 @@ export function draftToEspace(draft: GentDraft): Espace {
 
   if (datasets.length) {
     systemPrompt +=
-      `\n\nTu disposes d'outils de recherche géographique sur des données ouvertes : ${datasets.map((d) => d.name).join(", ")}. ` +
-      "Pour guider l'utilisateur vers le lieu le plus proche : demande-lui d'abord de partager sa position via le marqueur GEOLOC_REQUEST (voir instruction dédiée) — n'appelle jamais l'outil avec une position devinée. " +
-      "Une fois sa position connue (indiquée dans le contexte), appelle l'outil avec lat/lon, puis présente les résultats du plus proche au plus éloigné avec leur adresse et leurs caractéristiques utiles (horaires, accès PMR…). " +
-      "Rends chaque adresse cliquable en l'émettant sous la forme <a href=\"geo:LAT,LON\" data-address=\"ADRESSE COMPLÈTE\">ADRESSE</a>. " +
-      "Propose aussi un artefact carte des résultats quand il y en a plusieurs.";
+      `\n\nTu disposes d'outils sur des jeux de données ouvertes : ${datasets.map((d) => d.name).join(", ")}. ` +
+      "Deux modes selon le dataset : (1) géolocalisé — recherche par proximité GPS, demande la position via GEOLOC_REQUEST si besoin ; " +
+      "(2) tabulaire (ex. DVF transactions immobilières) — interroge par filtres (code INSEE commune, département, type de bien, surface, prix) sans demander la géolocalisation. " +
+      "Pour une commune, utilise le code INSEE à 5 chiffres (pas le code postal). " +
+      "Pour les datasets géolocalisés, rends chaque adresse cliquable : <a href=\"geo:LAT,LON\" data-address=\"ADRESSE\">ADRESSE</a>. " +
+      "Propose un artefact carte quand plusieurs lieux géolocalisés sont pertinents.";
   }
 
   // Connecteur IDFM PRIM : deux outils transit temps réel côté serveur.
