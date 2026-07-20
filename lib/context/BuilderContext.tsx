@@ -19,7 +19,7 @@ import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS } from "@/lib/streamChat";
 
-export type BuilderTab = "prompt" | "connectors" | "artefacts" | "audit";
+export type BuilderTab = "prompt" | "connectors" | "artefacts" | "diffusion" | "audit";
 
 interface BuilderContextValue {
   drafts: GentDraftsMap;

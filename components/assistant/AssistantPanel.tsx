@@ -47,6 +47,7 @@ export function AssistantPanel() {
     closeAssistant,
     switchTab,
     openArtefactModal,
+    viewArtefact,
     sendMessage,
     confirmArtefactProposal,
     confirmThemeProposal,
@@ -278,7 +279,7 @@ export function AssistantPanel() {
       const p = m.proposal;
       if (m.proposalStatus === "added") {
         return (
-          <button key={i} className={styles.artefPointer} onClick={() => openArtefactModal(m.ref ?? "")}>
+          <button key={i} className={styles.artefPointer} onClick={() => viewArtefact(m.id ?? "")}>
             <div className={[styles.pic, styles.picSent].join(" ")}>✓</div>
             <div className={styles.ptext}>
               <div className={styles.ptitle}>Ajouté à votre espace — {p.title}</div>
