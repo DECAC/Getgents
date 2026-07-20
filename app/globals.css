@@ -12,6 +12,11 @@ body {
   margin: 0;
   height: 100%;
   padding: 0;
+  /* L'app est un shell plein écran (builder/espace) avec ses propres zones de
+     scroll internes (colonnes, chat, contenu des tabs) — la fenêtre elle-même
+     ne doit jamais scroller, sinon un débordement d'un pixel quelque part fait
+     apparaître une barre de scroll globale inutile avec un grand vide en bas. */
+  overflow: hidden;
 }
 
 body {

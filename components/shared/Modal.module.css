@@ -10,6 +10,9 @@
   padding: 24px;
 }
 
+.modalWide {
+  max-width: 1040px;
+}
 .modal {
   background: var(--card);
   border-radius: 18px;

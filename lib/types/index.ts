@@ -129,12 +129,14 @@ export interface MapPoint {
 }
 
 export interface ArtefactProposal {
-  kind: "report" | "checklist" | "chart" | "visual" | "map";
+  kind: "report" | "checklist" | "chart" | "visual" | "map" | "dashboard";
   title: string;
   body?: string;
   items?: string[];
   chartData?: { label: string; value: number }[];
   mapPoints?: MapPoint[];
+  /** Schéma de tableau de bord (rendu Recharts + cartes en plein espace). */
+  dashboard?: import("@/lib/dashboardArtefact").DashboardSpec;
 }
 
 /**
@@ -232,6 +234,8 @@ export interface Artefact {
   checklistItems?: { label: string; checked: boolean }[];
   /** Points géolocalisés pour les artefacts carte (fond IGN cartes.gouv.fr). */
   mapPoints?: MapPoint[];
+  /** Schéma de tableau de bord (rendu Recharts + cartes en plein espace). */
+  dashboard?: import("@/lib/dashboardArtefact").DashboardSpec;
 }
 
 export interface EspaceMetric {

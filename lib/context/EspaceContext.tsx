@@ -32,6 +32,7 @@ const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
   chart: { type: "Graphique", icon: "📊" },
   visual: { type: "Aperçu visuel", icon: "🖼️" },
   map: { type: "Carte", icon: "🗺️" },
+  dashboard: { type: "Tableau de bord", icon: "📈" },
 };
 
 /** Applique une action de thème (create/rename/delete) — un module n'appartient qu'à un seul onglet thématique à la fois. */
@@ -126,6 +127,8 @@ interface EspaceContextValue {
   /** Réponse de l'utilisateur à une demande de position émise par le gent dans le fil. */
   confirmGeoRequest: (messageId: string, decision: "share" | "deny") => void;
   removeArtefact: (artefactId: string) => void;
+  /** Ouvre l'artefact pointé par un message ; s'il a été retiré de l'espace entre-temps, le recrée depuis la proposition d'origine (toujours conservée dans le message) avant de l'ouvrir. */
+  viewArtefact: (messageId: string) => void;
   confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss") => void;
   confirmThemeProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
   toggleChecklistItem: (artefactId: string, itemIndex: number) => void;
@@ -143,6 +146,7 @@ const EspaceContext = createContext<EspaceContextValue | null>(null);
 export function EspaceProvider({ children, initialId }: { children: ReactNode; initialId: string }) {
   const [espaces, setEspaces] = useState<EspacesMap>(() => seedEspaces(initialId));
   const [currentId, setCurrentId] = useState(initialId);
+  const [loadedFromStorage, setLoadedFromStorage] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>(0);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
@@ -197,6 +201,8 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
 
   // Persiste l'activité des gents publiés (conversations, artefacts…) dans
   // localStorage : c'est ce qui alimente l'onglet Audit côté builder.
+  // Important : seulement APRÈS avoir chargé les données depuis localStorage
+  // (sinon on écrase les gents tout juste publiés avec le FALLBACK_ESPACE).
   useEffect(() => {
     if (!storageReady) return;
     const espace = espaces[currentId];
@@ -598,6 +604,63 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     });
   }, []);
 
+  const viewArtefact = useCallback(
+    (messageId: string) => {
+      const id = currentIdRef.current;
+      const espace = espacesRef.current[id];
+      if (!espace) return;
+
+      let targetMsg: ConversationMessage | undefined;
+      let targetThreadId: string | undefined;
+      for (const t of espace.conversations) {
+        const found = t.messages.find((m) => m.id === messageId);
+        if (found) {
+          targetMsg = found;
+          targetThreadId = t.id;
+          break;
+        }
+      }
+      if (!targetMsg?.proposal) return;
+
+      const stillPresent = !!targetMsg.ref && espace.artefacts.some((a) => a.id === targetMsg!.ref);
+      if (stillPresent) {
+        openArtefactModal(targetMsg.ref!);
+        return;
+      }
+
+      // L'artefact a été retiré de l'espace entre-temps : la proposition
+      // d'origine reste dans le message, on la recrée à l'identique.
+      const sig = targetMsg.proposal;
+      const meta = ARTEFACT_KIND_META[sig.kind] ?? { type: "Artefact", icon: "📄" };
+      const newArtefactId = `artef-${Date.now()}`;
+      const newArtefact: Artefact = {
+        id: newArtefactId,
+        title: sig.title,
+        type: meta.type,
+        icon: meta.icon,
+        date: "à l'instant",
+        body: sig.body ? renderMarkdown(sig.body) : undefined,
+        chartData: sig.chartData,
+        checklistItems: sig.items?.map((label) => ({ label, checked: false })),
+        mapPoints: sig.mapPoints,
+        dashboard: sig.dashboard,
+      };
+
+      setEspaces((prev) => {
+        const cur = prev[id];
+        const artefacts = [newArtefact, ...cur.artefacts];
+        const conversations = cur.conversations.map((t) =>
+          t.id === targetThreadId
+            ? { ...t, messages: t.messages.map((m) => (m.id === messageId ? { ...m, ref: newArtefactId } : m)) }
+            : t
+        );
+        return { ...prev, [id]: { ...cur, artefacts, conversations } };
+      });
+      openArtefactModal(newArtefactId);
+    },
+    [openArtefactModal]
+  );
+
   const confirmArtefactProposal = useCallback((proposalId: string, decision: "add" | "dismiss") => {
     const id = currentIdRef.current;
     setEspaces((prev) => {
@@ -630,6 +693,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
           chartData: sig.chartData,
           checklistItems: sig.items?.map((label) => ({ label, checked: false })),
           mapPoints: sig.mapPoints,
+          dashboard: sig.dashboard,
         };
         artefacts = [newArtefact, ...espace.artefacts];
       }
@@ -848,6 +912,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         requestGeolocation,
         confirmGeoRequest,
         removeArtefact,
+        viewArtefact,
         confirmArtefactProposal,
         confirmThemeProposal,
         toggleChecklistItem,

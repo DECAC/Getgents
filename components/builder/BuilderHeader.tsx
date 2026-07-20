@@ -10,10 +10,10 @@ const STATUS_LABEL: Record<string, string> = {
   published: "Publié",
 };
 
-const STATUS_CLASS: Record<string, string> = {
-  draft: styles.statusDraft,
-  review: styles.statusReview,
-  published: styles.statusPublished,
+const STATUS_DOT_CLASS: Record<string, string> = {
+  draft: styles.dotDraft,
+  review: styles.dotReview,
+  published: styles.dotPublished,
 };
 
 const TABS: { id: BuilderTab; label: string; icon: JSX.Element }[] = [
@@ -42,6 +42,16 @@ const TABS: { id: BuilderTab; label: string; icon: JSX.Element }[] = [
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M14 3v5h5" />
         <path d="M19 8v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7z" />
+      </svg>
+    ),
+  },
+  {
+    id: "diffusion",
+    label: "Diffusion",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="2.5" />
+        <path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" />
       </svg>
     ),
   },
@@ -91,6 +101,10 @@ export function BuilderHeader() {
               aria-label="Nom du gent"
               spellCheck={false}
             />
+            <span className={styles.statusInline}>
+              <span className={[styles.statusDot, STATUS_DOT_CLASS[currentDraft.status]].join(" ")} />
+              {STATUS_LABEL[currentDraft.status]}
+            </span>
             <span className={styles.nameEditHint} aria-hidden="true">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
@@ -106,9 +120,6 @@ export function BuilderHeader() {
             aria-label="Objectif du gent"
           />
         </div>
-        <span className={[styles.statusPill, STATUS_CLASS[currentDraft.status]].join(" ")}>
-          {STATUS_LABEL[currentDraft.status]}
-        </span>
         <button
           className={styles.publishBtn}
           onClick={publishDraft}
@@ -124,7 +135,7 @@ export function BuilderHeader() {
             rel="noopener noreferrer"
             className={styles.viewLiveLink}
           >
-            Voir côté utilisateur
+            Preview
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
               <path d="M15 3h6v6M10 14 21 3" />

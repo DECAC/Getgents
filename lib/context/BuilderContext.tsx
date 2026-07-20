@@ -29,7 +29,7 @@ import {
   seedDrafts,
 } from "@/lib/builderDraftStorage";
 
-export type BuilderTab = "prompt" | "connectors" | "artefacts" | "audit";
+export type BuilderTab = "prompt" | "connectors" | "artefacts" | "diffusion" | "audit";
 
 interface BuilderContextValue {
   drafts: GentDraftsMap;
