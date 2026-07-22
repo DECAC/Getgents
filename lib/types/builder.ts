@@ -102,6 +102,8 @@ export interface GentDraft {
   jumpForm?: JumpForm;
   /** Routine planifiée (mission exécutée automatiquement côté serveur). */
   routine?: import("@/lib/types").Routine;
+  /** Canal de diffusion de la note produite par la routine (WhatsApp…). */
+  channel?: import("@/lib/types").NotificationChannel;
   /** Empreinte du contenu au moment de la dernière publication (voir builderSnapshot.ts). */
   publishedSnapshot?: string;
 }

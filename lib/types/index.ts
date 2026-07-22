@@ -342,6 +342,25 @@ export interface Espace {
   profile?: import("@/lib/profileSignal").UserProfile;
   /** Routine planifiée (veille en tâche de fond) — exécutée côté serveur. */
   routine?: Routine;
+  /** Canal de diffusion de la note produite par la routine (WhatsApp…). */
+  channel?: NotificationChannel;
+}
+
+/**
+ * Canal de diffusion externe : quand une routine produit une note, un résumé
+ * court est livré ici (en plus de l'artefact dans l'espace). L'envoi effectif
+ * se fait côté serveur avec des secrets d'environnement (jamais exposés au
+ * navigateur) — voir lib/server/whatsapp.ts.
+ */
+export interface NotificationChannel {
+  kind: "whatsapp";
+  enabled: boolean;
+  /** Destinataire : numéro E.164 (ex. +33612345678) pour WhatsApp. */
+  to: string;
+  /** Horodatage ISO du consentement du destinataire (opt-in requis). */
+  optInAt?: string;
+  /** Statut de la dernière livraison (posé par le runner). */
+  lastDeliveryNote?: string;
 }
 
 /**

@@ -9,6 +9,7 @@ import { extractArtefactSignal } from "@/lib/artefactSignal";
 import { ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
 import { profileContextNote } from "@/lib/profileSignal";
 import { renderMarkdown } from "@/lib/markdown";
+import { sendWhatsAppText } from "@/lib/server/whatsapp";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
@@ -25,6 +26,27 @@ function nowTimeParis(): string {
   return new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
 }
 
+/** Texte brut condensé d'une réponse markdown, pour un message de messagerie. */
+function plainExcerpt(markdown: string, max = 500): string {
+  const plain = markdown
+    .replace(/[#*_>`]/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+  return plain.length > max ? plain.slice(0, max).trimEnd() + "…" : plain;
+}
+
+/**
+ * Compose le message court livré sur le canal externe : titre, extrait de la
+ * note, et lien vers la note complète dans l'espace (si l'URL publique est
+ * configurée via NEXT_PUBLIC_APP_URL).
+ */
+function buildChannelSummary(gentId: string, title: string, noteText: string): string {
+  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  const link = base ? `\n\n👉 Note complète : ${base}/espace/${gentId}` : "";
+  return `📊 ${title}\n\n${plainExcerpt(noteText)}${link}`;
+}
+
 export interface RoutineRunResult {
   ok: boolean;
   note: string;
@@ -35,7 +57,7 @@ export interface RoutineRunResult {
  * Exécute la mission de la routine pour un gent et renvoie l'espace mis à
  * jour (artefact + messages + trace de run) — l'appelant persiste.
  */
-export async function runRoutine(espace: Espace, routine: Routine): Promise<RoutineRunResult> {
+export async function runRoutine(espace: Espace, routine: Routine, gentId = ""): Promise<RoutineRunResult> {
   const key = process.env.OPENROUTER_API_KEY;
   const stamp = new Date().toISOString();
   if (!key) {
@@ -137,14 +159,31 @@ export async function runRoutine(espace: Espace, routine: Routine): Promise<Rout
     c.id === threadId ? { ...c, messages: [...c.messages, ...newMessages] } : c
   );
 
+  // Diffusion externe (WhatsApp) : un résumé + lien est poussé au destinataire
+  // qui a donné son consentement. L'échec de livraison ne remet pas en cause
+  // le run (la note reste dans l'espace) — il est juste tracé.
+  let channel = espace.channel;
+  let deliveryNote = "";
+  if (channel?.enabled && channel.optInAt && channel.to.trim()) {
+    const summary = buildChannelSummary(gentId, sig ? sig.title : espace.name, text || "Note de veille du jour.");
+    const delivery = await sendWhatsAppText(channel.to, summary);
+    channel = { ...channel, lastDeliveryNote: `${nowTimeParis()} — ${delivery.note}` };
+    deliveryNote = delivery.ok ? " · WhatsApp livré" : ` · WhatsApp : ${delivery.note}`;
+  } else if (channel?.enabled && !channel.optInAt) {
+    channel = { ...channel, lastDeliveryNote: "non livré — consentement manquant" };
+    deliveryNote = " · WhatsApp non livré (opt-in manquant)";
+  }
+
+  const runNote = (sig ? `ok — ${sig.title}` : "ok — note texte") + deliveryNote;
   return {
     ok: true,
-    note: sig ? `ok — artefact « ${sig.title} »` : "ok — note texte (sans artefact)",
+    note: (sig ? `ok — artefact « ${sig.title} »` : "ok — note texte (sans artefact)") + deliveryNote,
     espace: {
       ...espace,
       artefacts,
       conversations,
-      routine: { ...routine, lastRunAt: stamp, lastRunNote: sig ? `ok — ${sig.title}` : "ok — note texte" },
+      channel,
+      routine: { ...routine, lastRunAt: stamp, lastRunNote: runNote },
     },
   };
 }

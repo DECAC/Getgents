@@ -260,6 +260,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     restApis: restApis.length ? restApis : undefined,
     jumpForm: draft.jumpForm,
     routine: draft.routine,
+    channel: draft.channel,
     webSearch: draft.webSearch || undefined,
   };
 }

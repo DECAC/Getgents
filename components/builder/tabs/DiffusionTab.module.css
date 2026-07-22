@@ -1,6 +1,9 @@
 .wrap {
   max-width: 760px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .card {
@@ -8,6 +11,13 @@
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 18px;
+}
+
+.headRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .title {
@@ -20,15 +30,122 @@
 .sub {
   font-size: 12px;
   color: var(--muted);
-  margin-bottom: 16px;
+  line-height: 1.5;
 }
 
-.channels {
+/* Interrupteur (même style que PromptTab) */
+.switch {
+  flex: none;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--line);
+  position: relative;
+  transition: background 0.15s;
+}
+.switchOn {
+  background: var(--sage);
+}
+.knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+.switchOn .knob {
+  transform: translateX(18px);
+}
+
+.config {
+  margin-top: 16px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.input {
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--plum);
+}
+
+.warn {
+  font-size: 11.5px;
+  color: var(--gold-700, #9a6a1e);
+}
+
+.optIn {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 4px 0;
+}
+.optIn input {
+  margin-top: 2px;
+  accent-color: var(--sage);
+}
+.optInDisabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.note {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  background: var(--bg);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+.note code {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 3px;
+}
+
+.status {
+  font-size: 12px;
+  color: var(--sage-700);
+  background: var(--sage-tint);
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+
+/* Autres canaux (placeholder) */
+.channels {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
 .channel {
   display: flex;
   align-items: center;
@@ -38,7 +155,6 @@
   border-radius: var(--r);
   background: var(--bg);
 }
-
 .channelIc {
   width: 34px;
   height: 34px;
@@ -50,19 +166,16 @@
   font-size: 16px;
   flex: none;
 }
-
 .channelTitle {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
-
 .channelDesc {
   font-size: 11.5px;
   color: var(--muted);
   margin-top: 2px;
 }
-
 .soon {
   margin-left: auto;
   flex: none;

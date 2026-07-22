@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
-import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine } from "@/lib/types";
+import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine, NotificationChannel } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 import {
@@ -67,6 +67,8 @@ interface BuilderContextValue {
   toggleWebSearch: () => void;
   /** Modifie la routine planifiée du brouillon (patch partiel). */
   updateRoutine: (patch: Partial<Routine>) => void;
+  /** Modifie le canal de diffusion du brouillon (patch partiel). */
+  updateChannel: (patch: Partial<NotificationChannel>) => void;
 
   sendBuilderMessage: (text: string) => void;
   applyBuilderSuggestion: (suggestion: string) => void;
@@ -232,6 +234,9 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
             routine: fresh.routine
               ? { ...fresh.routine, lastRunAt: existing.routine?.lastRunAt, lastRunNote: existing.routine?.lastRunNote }
               : undefined,
+            channel: fresh.channel
+              ? { ...fresh.channel, lastDeliveryNote: existing.channel?.lastDeliveryNote }
+              : undefined,
           }
         : fresh;
       writePublishedGent(currentId, espace);
@@ -332,6 +337,24 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       [currentId]: { ...prev[currentId], webSearch: !prev[currentId].webSearch, updatedAt: "à l'instant" },
     }));
   }, [currentId]);
+
+  // Canal de diffusion : patch partiel fusionné sur le canal du brouillon.
+  const updateChannel = useCallback(
+    (patch: Partial<NotificationChannel>) => {
+      setDrafts((prev) => {
+        const current = prev[currentId].channel ?? {
+          kind: "whatsapp" as const,
+          enabled: false,
+          to: "",
+        };
+        return {
+          ...prev,
+          [currentId]: { ...prev[currentId], channel: { ...current, ...patch }, updatedAt: "à l'instant" },
+        };
+      });
+    },
+    [currentId]
+  );
 
   // Routine planifiée : patch partiel fusionné sur la routine du brouillon
   // (valeurs par défaut posées à la première modification).
@@ -705,6 +728,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         removeToolInstance,
         toggleWebSearch,
         updateRoutine,
+        updateChannel,
         sendBuilderMessage,
         applyBuilderSuggestion,
         confirmConnectorProposal,

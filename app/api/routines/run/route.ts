@@ -30,7 +30,7 @@ async function runBatch(forced: string | null): Promise<{ ran: number; results: 
       continue;
     }
 
-    const run = await runRoutine(espace, routine);
+    const run = await runRoutine(espace, routine, row.id);
     const { error: upsertError } = await supabase.from("published_gents").upsert({ id: row.id, espace: run.espace });
     results.push({
       id: row.id,
