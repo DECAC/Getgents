@@ -82,7 +82,8 @@ export type ConversationRole =
   | "geo-request"
   | "connector-proposal"
   | "config-proposal"
-  | "jump-form-proposal";
+  | "jump-form-proposal"
+  | "profile-proposal";
 
 /**
  * « Formulaire jump » : un petit formulaire de champs affiché côté utilisateur
@@ -178,6 +179,9 @@ export interface ConversationMessage {
   proposalStatus?: "pending" | "added" | "dismissed";
   themeProposal?: ThemeTabProposalAction;
   themeProposalStatus?: "pending" | "applied" | "dismissed";
+  /** Profil utilisateur proposé par le gent (onboarding/CV), à valider. */
+  profileProposal?: import("@/lib/profileSignal").UserProfile;
+  profileProposalStatus?: "pending" | "applied" | "dismissed";
   /** Demande de partage de position émise par le gent, à valider par l'utilisateur. */
   geoRequestStatus?: "pending" | "granted" | "denied" | "error";
   /** Connecteur préparé par l'assistant du builder, à valider par le créateur. */
@@ -334,6 +338,8 @@ export interface Espace {
   jumpForm?: JumpForm;
   /** Recherche web activée pour ce gent (plugin web OpenRouter). */
   webSearch?: boolean;
+  /** Profil utilisateur validé (onboarding/CV) — réinjecté dans le prompt système. */
+  profile?: import("@/lib/profileSignal").UserProfile;
 }
 
 export type EspacesMap = Record<string, Espace>;

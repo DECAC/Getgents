@@ -21,6 +21,7 @@ import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggesti
 import { extractArtefactSignal, ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
 import { extractThemeTabSignal, describeModulesForPrompt, THEME_TAB_PROMPT_INSTRUCTION } from "@/lib/themeTabSignal";
 import { extractGeolocRequest, GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
+import { extractProfileSignal, profileContextNote, PROFILE_PROMPT_INSTRUCTION } from "@/lib/profileSignal";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
@@ -131,6 +132,8 @@ interface EspaceContextValue {
   viewArtefact: (messageId: string) => void;
   confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss") => void;
   confirmThemeProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
+  /** Valide ou ignore le profil utilisateur proposé par le gent. */
+  confirmProfileProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
   toggleChecklistItem: (artefactId: string, itemIndex: number) => void;
   startNewConversation: () => void;
   switchConversation: (id: string) => void;
@@ -340,9 +343,10 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       ? `\n\nPosition de l'utilisateur (partagée avec son consentement) : latitude ${position.lat}, longitude ${position.lon}.`
       : "";
     const geolocNote = espace.prim ? `\n\n${GEOLOC_PROMPT_INSTRUCTION}` : "";
+    const profileNote = espace.profile ? `\n\n${profileContextNote(espace.profile)}` : "";
     const systemPrompt =
-      `${basePrompt}${timeNote}${honestyNote}${memoryNote}${positionNote}${geolocNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
-      `\n\n${THEME_TAB_PROMPT_INSTRUCTION}\n\n${describeModulesForPrompt(espace)}`;
+      `${basePrompt}${timeNote}${honestyNote}${memoryNote}${positionNote}${geolocNote}${profileNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
+      `\n\n${THEME_TAB_PROMPT_INSTRUCTION}\n\n${describeModulesForPrompt(espace)}\n\n${PROFILE_PROMPT_INSTRUCTION}`;
     const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
 
     setEspaces((prev) => {
@@ -440,11 +444,40 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         const afterArtefact = extractArtefactSignal(afterQuestions.text);
         const afterTheme = extractThemeTabSignal(afterArtefact.text);
         const afterGeo = extractGeolocRequest(afterTheme.text);
+        const afterProfile = extractProfileSignal(afterGeo.text);
         const finalHtml =
-          renderMarkdown(afterGeo.text) +
+          renderMarkdown(afterProfile.text) +
           (truncated
             ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — écrivez « continue » pour obtenir la suite, ou demandez une version plus courte.</em></p>'
             : "");
+
+        // Profil proposé par le gent (onboarding, CV joint) : carte de
+        // validation dans le fil — jamais appliqué sans accord explicite.
+        function pushProfileProposalIfAny() {
+          if (!afterProfile.profile) return;
+          const profMsgId = `profile-${Date.now()}`;
+          setEspaces((p) => {
+            const e = p[id];
+            const convs = e.conversations.map((t) =>
+              t.id === threadId
+                ? {
+                    ...t,
+                    messages: [
+                      ...t.messages,
+                      {
+                        id: profMsgId,
+                        role: "profile-proposal" as const,
+                        profileProposal: afterProfile.profile!,
+                        profileProposalStatus: "pending" as const,
+                        t: nowTime(),
+                      },
+                    ],
+                  }
+                : t
+            );
+            return { ...p, [id]: { ...e, conversations: convs } };
+          });
+        }
 
         // Demande de position émise par le gent : carte de consentement dans
         // le fil (jamais de géolocalisation sans validation explicite).
@@ -531,6 +564,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
           }));
         }
         pushGeoRequestIfAny();
+        pushProfileProposalIfAny();
       })
       .catch((err: Error) => {
         updateLastMessage(() => ({
@@ -774,6 +808,47 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     });
   }, []);
 
+  // Valide ou ignore un profil proposé par le gent. Une fois appliqué, le
+  // profil vit sur l'espace : il est persisté avec lui (Supabase) et réinjecté
+  // dans le prompt système de chaque échange suivant.
+  const confirmProfileProposal = useCallback((proposalId: string, decision: "apply" | "dismiss") => {
+    const id = currentIdRef.current;
+    setEspaces((prev) => {
+      const espace = prev[id];
+      let targetMsg: ConversationMessage | undefined;
+      let targetThreadId: string | undefined;
+      for (const t of espace.conversations) {
+        const found = t.messages.find((m) => m.id === proposalId);
+        if (found) {
+          targetMsg = found;
+          targetThreadId = t.id;
+          break;
+        }
+      }
+      if (!targetMsg?.profileProposal) return prev;
+
+      const profile = decision === "apply" ? targetMsg.profileProposal : espace.profile;
+
+      const conversations = espace.conversations.map((t) =>
+        t.id === targetThreadId
+          ? {
+              ...t,
+              messages: t.messages.map((m) =>
+                m.id === proposalId
+                  ? {
+                      ...m,
+                      profileProposalStatus: decision === "apply" ? ("applied" as const) : ("dismissed" as const),
+                    }
+                  : m
+              ),
+            }
+          : t
+      );
+
+      return { ...prev, [id]: { ...espace, profile, conversations } };
+    });
+  }, []);
+
   const toggleChecklistItem = useCallback((artefactId: string, itemIndex: number) => {
     const id = currentIdRef.current;
     setEspaces((prev) => {
@@ -929,6 +1004,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         viewArtefact,
         confirmArtefactProposal,
         confirmThemeProposal,
+        confirmProfileProposal,
         toggleChecklistItem,
         startNewConversation,
         switchConversation,

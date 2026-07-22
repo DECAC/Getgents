@@ -55,6 +55,7 @@ export function AssistantPanel() {
     submitJumpForm,
     confirmArtefactProposal,
     confirmThemeProposal,
+    confirmProfileProposal,
     startNewConversation,
     switchConversation,
     isThinking,
@@ -488,6 +489,74 @@ export function AssistantPanel() {
               type="button"
               className={styles.proposalDismissBtn}
               onClick={() => confirmThemeProposal(m.id ?? "", "dismiss")}
+            >
+              Ignorer
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (m.role === "profile-proposal" && m.profileProposal) {
+      const prof = m.profileProposal;
+      if (m.profileProposalStatus === "applied") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            ✓ Profil enregistré — {prof.metier}
+            {prof.localisation ? ` · ${prof.localisation}` : ""}
+          </div>
+        );
+      }
+      if (m.profileProposalStatus === "dismissed") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            Profil ignoré — {prof.metier}
+          </div>
+        );
+      }
+      const rows: { label: string; value: string }[] = [
+        { label: "Métier", value: prof.metier },
+        ...(prof.seniorite ? [{ label: "Séniorité", value: prof.seniorite }] : []),
+        ...(prof.competences?.length ? [{ label: "Compétences", value: prof.competences.join(", ") }] : []),
+        ...(prof.localisation ? [{ label: "Localisation", value: prof.localisation }] : []),
+        ...(prof.mobilite ? [{ label: "Mobilité", value: prof.mobilite }] : []),
+        ...(prof.salaireCible ? [{ label: "Salaire cible", value: prof.salaireCible }] : []),
+        ...(prof.typesContrat?.length ? [{ label: "Contrats", value: prof.typesContrat.join(", ") }] : []),
+        ...(prof.secteurs?.length ? [{ label: "Secteurs", value: prof.secteurs.join(", ") }] : []),
+        ...(prof.exclusions?.length ? [{ label: "À exclure", value: prof.exclusions.join(", ") }] : []),
+      ];
+      return (
+        <div key={i} className={styles.proposalCard}>
+          <div className={styles.proposalHead}>
+            <span className={styles.proposalKind}>👤 Profil</span>
+            <span className={styles.proposalTitle}>
+              {currentEspace.profile ? "Mise à jour de votre profil" : "Votre profil, tel que compris"}
+            </span>
+          </div>
+          {prof.resume && <div className={styles.proposalBody}>{prof.resume}</div>}
+          <ul className={styles.proposalItems}>
+            {rows.map((r, ii) => (
+              <li key={ii}>
+                <strong>{r.label}</strong> : {r.value}
+              </li>
+            ))}
+          </ul>
+          <div className={styles.proposalBody}>
+            Ce profil personnalisera les réponses et la veille de ce gent. Corrigez-le simplement en
+            le disant dans la conversation.
+          </div>
+          <div className={styles.proposalActions}>
+            <button
+              type="button"
+              className={styles.proposalAddBtn}
+              onClick={() => confirmProfileProposal(m.id ?? "", "apply")}
+            >
+              Valider mon profil
+            </button>
+            <button
+              type="button"
+              className={styles.proposalDismissBtn}
+              onClick={() => confirmProfileProposal(m.id ?? "", "dismiss")}
             >
               Ignorer
             </button>
