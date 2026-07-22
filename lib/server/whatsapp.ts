@@ -47,3 +47,46 @@ export async function sendWhatsAppText(to: string, body: string): Promise<WhatsA
     return { ok: false, note: `échec réseau WhatsApp : ${(e as Error).message.slice(0, 160)}` };
   }
 }
+
+/**
+ * Envoie un message « template » pré-approuvé — seule voie autorisée par Meta
+ * hors de la fenêtre de service de 24 h (donc pour une note quotidienne non
+ * sollicitée). `bodyParams` remplit les variables {{1}}, {{2}}… du corps du
+ * template dans l'ordre.
+ */
+export async function sendWhatsAppTemplate(
+  to: string,
+  templateName: string,
+  languageCode = "en_US",
+  bodyParams: string[] = []
+): Promise<WhatsAppResult> {
+  if (!isWhatsAppConfigured()) return { ok: false, note: "WhatsApp non configuré (WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID)" };
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID!;
+  const token = process.env.WHATSAPP_TOKEN!;
+
+  const components = bodyParams.length
+    ? [{ type: "body", parameters: bodyParams.map((text) => ({ type: "text", text: text.slice(0, 1024) })) }]
+    : undefined;
+
+  try {
+    const res = await fetch(`${GRAPH_BASE}/${phoneId}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: to.replace(/[^\d+]/g, ""),
+        type: "template",
+        template: { name: templateName, language: { code: languageCode }, ...(components ? { components } : {}) },
+      }),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const detail = (await res.text()).slice(0, 300);
+      return { ok: false, note: `échec template ${res.status} : ${detail}` };
+    }
+    const data = (await res.json()) as { messages?: { id: string }[] };
+    return { ok: true, note: `template livré (id ${data.messages?.[0]?.id ?? "?"})` };
+  } catch (e) {
+    return { ok: false, note: `échec réseau WhatsApp : ${(e as Error).message.slice(0, 160)}` };
+  }
+}
