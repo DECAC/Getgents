@@ -359,6 +359,15 @@ export interface NotificationChannel {
   to: string;
   /** Horodatage ISO du consentement du destinataire (opt-in requis). */
   optInAt?: string;
+  /**
+   * WhatsApp uniquement : nom d'un template approuvé dans Meta, utilisé pour la
+   * note quotidienne (envoi non sollicité, hors fenêtre de 24 h). Le template
+   * doit avoir 2 variables de corps : {{1}} = titre, {{2}} = extrait. Sans
+   * template, l'envoi sortant retombe sur du texte libre (best effort).
+   */
+  templateName?: string;
+  /** Code langue du template (ex. « fr », « en_US »). Défaut : en_US. */
+  templateLang?: string;
   /** Statut de la dernière livraison (posé par le runner). */
   lastDeliveryNote?: string;
 }

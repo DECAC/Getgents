@@ -90,6 +90,45 @@ export function DiffusionTab() {
               </span>
             </label>
 
+            {!isEmail && (
+              <div className={styles.templateBlock}>
+                <div className={styles.templateRow}>
+                  <div className={styles.templateField}>
+                    <label className={styles.fieldLabel} htmlFor="wa-template">
+                      Template approuvé (note quotidienne)
+                    </label>
+                    <input
+                      id="wa-template"
+                      className={styles.input}
+                      placeholder="ex. veille_quotidienne"
+                      value={channel.templateName ?? ""}
+                      onChange={(e) => updateChannel({ templateName: e.target.value || undefined })}
+                      aria-label="Nom du template WhatsApp"
+                    />
+                  </div>
+                  <div className={styles.templateFieldSmall}>
+                    <label className={styles.fieldLabel} htmlFor="wa-lang">
+                      Langue
+                    </label>
+                    <input
+                      id="wa-lang"
+                      className={styles.input}
+                      placeholder="fr"
+                      value={channel.templateLang ?? ""}
+                      onChange={(e) => updateChannel({ templateLang: e.target.value || undefined })}
+                      aria-label="Code langue du template"
+                    />
+                  </div>
+                </div>
+                <div className={styles.templateHint}>
+                  Requis pour l&apos;envoi quotidien non sollicité. Créez dans Meta un template à 2
+                  variables de corps ({"{{1}}"} = titre, {"{{2}}"} = extrait). Sans template, la note
+                  ne part qu&apos;en texte libre (fenêtre de 24 h). La conversation entrante, elle,
+                  répond toujours en texte libre.
+                </div>
+              </div>
+            )}
+
             <div className={styles.note}>
               {isEmail ? (
                 <>
@@ -98,9 +137,8 @@ export function DiffusionTab() {
                 </>
               ) : (
                 <>
-                  Hors de la fenêtre de 24 h suivant un message du destinataire, Meta n&apos;autorise
-                  que des messages « template » pré-approuvés. Configurez <code> WHATSAPP_TOKEN </code>
-                  et <code> WHATSAPP_PHONE_NUMBER_ID </code> côté serveur.
+                  Configurez <code> WHATSAPP_TOKEN </code>, <code> WHATSAPP_PHONE_NUMBER_ID </code> et
+                  <code> WHATSAPP_VERIFY_TOKEN </code> (webhook entrant) côté serveur.
                 </>
               )}
             </div>

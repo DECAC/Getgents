@@ -9,7 +9,7 @@ import { extractArtefactSignal } from "@/lib/artefactSignal";
 import { ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
 import { profileContextNote } from "@/lib/profileSignal";
 import { renderMarkdown } from "@/lib/markdown";
-import { sendWhatsAppText } from "@/lib/server/whatsapp";
+import { sendWhatsAppText, sendWhatsAppTemplate } from "@/lib/server/whatsapp";
 import { sendBrevoEmail } from "@/lib/server/brevo";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
@@ -188,10 +188,21 @@ export async function runRoutine(espace: Espace, routine: Routine, gentId = ""):
   const noteText = text || "Note de veille du jour.";
   const label = channel?.kind === "email" ? "E-mail" : "WhatsApp";
   if (channel?.enabled && channel.optInAt && channel.to.trim()) {
-    const delivery =
-      channel.kind === "email"
-        ? await sendBrevoEmail(channel.to, title, buildEmailHtml(gentId, title, renderMarkdown(noteText)))
-        : await sendWhatsAppText(channel.to, buildWhatsAppSummary(gentId, title, noteText));
+    let delivery;
+    if (channel.kind === "email") {
+      delivery = await sendBrevoEmail(channel.to, title, buildEmailHtml(gentId, title, renderMarkdown(noteText)));
+    } else if (channel.templateName) {
+      // Note quotidienne non sollicitée : template approuvé (seule voie hors
+      // fenêtre de 24 h). {{1}} = titre, {{2}} = extrait court.
+      delivery = await sendWhatsAppTemplate(channel.to, channel.templateName, channel.templateLang ?? "en_US", [
+        title,
+        plainExcerpt(noteText, 240),
+      ]);
+    } else {
+      // Pas de template : texte libre (ne passe que si la fenêtre 24 h est
+      // ouverte — utile en test, à éviter pour un envoi planifié en prod).
+      delivery = await sendWhatsAppText(channel.to, buildWhatsAppSummary(gentId, title, noteText));
+    }
     channel = { ...channel, lastDeliveryNote: `${nowTimeParis()} — ${delivery.note}` };
     deliveryNote = delivery.ok ? ` · ${label} livré` : ` · ${label} : ${delivery.note}`;
   } else if (channel?.enabled && !channel.optInAt) {
