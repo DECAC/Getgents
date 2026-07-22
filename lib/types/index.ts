@@ -340,6 +340,27 @@ export interface Espace {
   webSearch?: boolean;
   /** Profil utilisateur validé (onboarding/CV) — réinjecté dans le prompt système. */
   profile?: import("@/lib/profileSignal").UserProfile;
+  /** Routine planifiée (veille en tâche de fond) — exécutée côté serveur. */
+  routine?: Routine;
+}
+
+/**
+ * Routine planifiée d'un gent : une mission exécutée automatiquement côté
+ * serveur (sans navigateur ouvert) qui produit une note dans l'espace.
+ * L'heure est en heure de Paris ; le déclenchement effectif dépend du cron
+ * qui appelle /api/routines/run (voir lib/server/routineRunner.ts).
+ */
+export interface Routine {
+  enabled: boolean;
+  frequency: "daily" | "weekly";
+  /** Heure locale Europe/Paris (0–23) à partir de laquelle le run est dû. */
+  hour: number;
+  /** Mission envoyée au gent à chaque exécution (le « prompt » de la routine). */
+  mission: string;
+  /** Horodatage ISO du dernier run réussi (posé par le runner). */
+  lastRunAt?: string;
+  /** Compte-rendu court du dernier run (ok ou message d'erreur). */
+  lastRunNote?: string;
 }
 
 export type EspacesMap = Record<string, Espace>;

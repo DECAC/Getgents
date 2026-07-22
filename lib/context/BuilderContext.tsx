@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
-import type { ConversationMessage, RestApiToolConfig, JumpForm } from "@/lib/types";
+import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 import {
@@ -16,7 +16,7 @@ import {
 } from "@/lib/connectorSignal";
 import { GENT_CONFIG_PROMPT_INSTRUCTION, extractGentConfigSignal, type GentConfigProposal } from "@/lib/gentConfigSignal";
 import { JUMP_FORM_PROMPT_INSTRUCTION, extractJumpFormSignal } from "@/lib/jumpFormSignal";
-import { writePublishedGent, draftToEspace, patchPublishedGentName } from "@/lib/publishedGents";
+import { writePublishedGent, draftToEspace, patchPublishedGentName, readPublishedGents } from "@/lib/publishedGents";
 import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel } from "@/lib/streamChat";
@@ -65,6 +65,8 @@ interface BuilderContextValue {
   removeToolInstance: (instanceId: string) => void;
 
   toggleWebSearch: () => void;
+  /** Modifie la routine planifiée du brouillon (patch partiel). */
+  updateRoutine: (patch: Partial<Routine>) => void;
 
   sendBuilderMessage: (text: string) => void;
   applyBuilderSuggestion: (suggestion: string) => void;
@@ -210,7 +212,29 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     setDrafts((prev) => {
       const draft = { ...prev[currentId], status: "published" as const, updatedAt: "à l'instant" };
       const published: GentDraft = { ...draft, publishedSnapshot: draftContentSnapshot(draft) };
-      writePublishedGent(currentId, draftToEspace(published));
+      const fresh = draftToEspace(published);
+      // Re-publication : la config (prompt, connecteurs, routine…) est
+      // remplacée, mais l'activité utilisateur déjà persistée (conversations,
+      // artefacts, profil, mémoire, historique de routine) est préservée.
+      const existing = readPublishedGents()[currentId];
+      const espace = existing
+        ? {
+            ...fresh,
+            version: (existing.version ?? 1) + 1,
+            conversations: existing.conversations?.length ? existing.conversations : fresh.conversations,
+            activeConversationId: existing.conversations?.length
+              ? existing.activeConversationId
+              : fresh.activeConversationId,
+            artefacts: existing.artefacts ?? fresh.artefacts,
+            themeTabs: existing.themeTabs,
+            memory: existing.memory || fresh.memory,
+            profile: existing.profile,
+            routine: fresh.routine
+              ? { ...fresh.routine, lastRunAt: existing.routine?.lastRunAt, lastRunNote: existing.routine?.lastRunNote }
+              : undefined,
+          }
+        : fresh;
+      writePublishedGent(currentId, espace);
       return { ...prev, [currentId]: published };
     });
   }, [currentId]);
@@ -308,6 +332,26 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       [currentId]: { ...prev[currentId], webSearch: !prev[currentId].webSearch, updatedAt: "à l'instant" },
     }));
   }, [currentId]);
+
+  // Routine planifiée : patch partiel fusionné sur la routine du brouillon
+  // (valeurs par défaut posées à la première modification).
+  const updateRoutine = useCallback(
+    (patch: Partial<Routine>) => {
+      setDrafts((prev) => {
+        const current = prev[currentId].routine ?? {
+          enabled: false,
+          frequency: "daily" as const,
+          hour: 8,
+          mission: "",
+        };
+        return {
+          ...prev,
+          [currentId]: { ...prev[currentId], routine: { ...current, ...patch }, updatedAt: "à l'instant" },
+        };
+      });
+    },
+    [currentId]
+  );
 
   const sendBuilderMessage = useCallback((text: string) => {
     const id = currentIdRef.current;
@@ -660,6 +704,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         updateToolInstance,
         removeToolInstance,
         toggleWebSearch,
+        updateRoutine,
         sendBuilderMessage,
         applyBuilderSuggestion,
         confirmConnectorProposal,

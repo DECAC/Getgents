@@ -259,6 +259,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     powens: powens || undefined,
     restApis: restApis.length ? restApis : undefined,
     jumpForm: draft.jumpForm,
+    routine: draft.routine,
     webSearch: draft.webSearch || undefined,
   };
 }

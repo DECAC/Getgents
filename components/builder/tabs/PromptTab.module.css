@@ -231,3 +231,95 @@
 .switchOn .knob {
   transform: translateX(18px);
 }
+
+/* ---------- Routine planifiée ---------- */
+.routineConfig {
+  margin-top: 14px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.routineRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.routineLabel {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.routineSelect {
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.routineMission {
+  width: 100%;
+  min-height: 90px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  resize: vertical;
+}
+.routineMission:focus {
+  outline: none;
+  border-color: var(--plum);
+}
+
+.routineFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.routineStatus {
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.routineRunBtn {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: var(--sage-tint);
+  color: var(--sage-700);
+  border: 1px solid rgba(122, 143, 122, 0.35);
+}
+.routineRunBtn:hover {
+  background: var(--sage);
+  color: #fff;
+}
+.routineRunBtn:disabled {
+  background: var(--line-soft);
+  color: var(--faint);
+  border-color: var(--line);
+  cursor: default;
+}
+
+.routineResult {
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 8px 11px;
+}

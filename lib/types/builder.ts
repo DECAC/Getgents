@@ -100,6 +100,8 @@ export interface GentDraft {
   webSearch?: boolean;
   /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
   jumpForm?: JumpForm;
+  /** Routine planifiée (mission exécutée automatiquement côté serveur). */
+  routine?: import("@/lib/types").Routine;
   /** Empreinte du contenu au moment de la dernière publication (voir builderSnapshot.ts). */
   publishedSnapshot?: string;
 }

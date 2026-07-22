@@ -39,10 +39,43 @@ function formatSize(bytes: number): string {
 }
 
 export function PromptTab() {
-  const { currentDraft, updateSystemPrompt, addKnowledgeSource, removeKnowledgeSource, toggleWebSearch } = useBuilder();
+  const { currentDraft, updateSystemPrompt, addKnowledgeSource, removeKnowledgeSource, toggleWebSearch, updateRoutine } =
+    useBuilder();
   const wordCount = currentDraft.systemPrompt.trim().split(/\s+/).filter(Boolean).length;
   const [urlValue, setUrlValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [routineRunning, setRoutineRunning] = useState(false);
+  const [routineRunResult, setRoutineRunResult] = useState<string | null>(null);
+
+  // Run forcé de la routine (test) : le serveur exécute la mission sur le gent
+  // PUBLIÉ (état en base) et écrit le résultat dans son espace.
+  async function handleRunRoutineNow() {
+    setRoutineRunning(true);
+    setRoutineRunResult(null);
+    try {
+      const res = await fetch("/api/routines/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gentId: currentDraft.id }),
+      });
+      const data = (await res.json()) as { results?: { status: string }[]; error?: string };
+      if (!res.ok) {
+        setRoutineRunResult(
+          data.error === "supabase_not_configured"
+            ? "Persistance serveur non configurée (variables Supabase absentes)."
+            : `Erreur : ${data.error ?? res.status}`
+        );
+      } else {
+        const status = data.results?.[0]?.status ?? "aucun gent trouvé en base (publiez d'abord)";
+        setRoutineRunResult(`Run terminé : ${status}. Ouvrez l'espace utilisateur pour voir la note.`);
+        if (status.startsWith("ok")) updateRoutine({ lastRunNote: status });
+      }
+    } catch (e) {
+      setRoutineRunResult(`Erreur réseau : ${(e as Error).message}`);
+    } finally {
+      setRoutineRunning(false);
+    }
+  }
 
   // Valeur locale découplée des re-rendus du contexte (ex. streaming de
   // l'assistant du builder) : sans ça, chaque frappe pouvait interrompre une
@@ -187,6 +220,89 @@ export function PromptTab() {
             <span className={styles.knob} />
           </button>
         </div>
+      </div>
+
+      <div className={styles.card}>
+        <div className={styles.webSearchRow}>
+          <div>
+            <h4 className={styles.title}>Routine planifiée</h4>
+            <div className={styles.sub}>
+              Le gent exécute une mission automatiquement (veille, note quotidienne…), même sans
+              personne en ligne — le résultat arrive dans l&apos;espace utilisateur. Actif après
+              publication.
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!!currentDraft.routine?.enabled}
+            className={[styles.switch, currentDraft.routine?.enabled ? styles.switchOn : ""].filter(Boolean).join(" ")}
+            onClick={() => updateRoutine({ enabled: !currentDraft.routine?.enabled })}
+            aria-label="Activer la routine planifiée"
+          >
+            <span className={styles.knob} />
+          </button>
+        </div>
+        {currentDraft.routine?.enabled && (
+          <div className={styles.routineConfig}>
+            <div className={styles.routineRow}>
+              <label className={styles.routineLabel} htmlFor="routine-freq">
+                Fréquence
+              </label>
+              <select
+                id="routine-freq"
+                className={styles.routineSelect}
+                value={currentDraft.routine.frequency}
+                onChange={(e) => updateRoutine({ frequency: e.target.value as "daily" | "weekly" })}
+              >
+                <option value="daily">Tous les jours</option>
+                <option value="weekly">Toutes les semaines</option>
+              </select>
+              <label className={styles.routineLabel} htmlFor="routine-hour">
+                à partir de
+              </label>
+              <select
+                id="routine-hour"
+                className={styles.routineSelect}
+                value={currentDraft.routine.hour}
+                onChange={(e) => updateRoutine({ hour: parseInt(e.target.value, 10) })}
+              >
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={h}>
+                    {String(h).padStart(2, "0")} h
+                  </option>
+                ))}
+              </select>
+            </div>
+            <textarea
+              className={styles.routineMission}
+              value={currentDraft.routine.mission}
+              onChange={(e) => updateRoutine({ mission: e.target.value })}
+              placeholder={
+                "Mission exécutée à chaque déclenchement. Ex. : Scanne les offres d'emploi et l'actualité du marché correspondant au profil de l'utilisateur, et produis une note du jour (dashboard : offres pertinentes, signaux marché, conseils)."
+              }
+              aria-label="Mission de la routine"
+            />
+            <div className={styles.routineFoot}>
+              <span className={styles.routineStatus}>
+                {currentDraft.routine.lastRunNote
+                  ? `Dernier run : ${currentDraft.routine.lastRunNote}`
+                  : "Jamais exécutée"}
+              </span>
+              {currentDraft.status === "published" && (
+                <button
+                  type="button"
+                  className={styles.routineRunBtn}
+                  disabled={routineRunning || !currentDraft.routine.mission.trim()}
+                  onClick={handleRunRoutineNow}
+                >
+                  {routineRunning ? "Exécution…" : "▶ Exécuter maintenant"}
+                </button>
+              )}
+            </div>
+            {routineRunResult && <div className={styles.routineResult}>{routineRunResult}</div>}
+          </div>
+        )}
       </div>
 
       <div className={styles.card}>
