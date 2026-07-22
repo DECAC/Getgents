@@ -4,9 +4,11 @@ import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { formatConversationStartedAt, newConversationId } from "@/lib/conversationUtils";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
 
-// Pont client-only entre le Builder et le côté utilisateur : il n'y a pas de
-// backend dans cette maquette, donc un gent publié n'est visible que dans le
-// navigateur qui l'a publié (localStorage), pas partagé entre appareils.
+// Persistance des gents publiés : la source de vérité est Supabase (via les
+// routes /api/gents), le localStorage n'est plus qu'un cache local pour un
+// affichage instantané et un mode dégradé. Si Supabase n'est pas configuré
+// (variables d'env absentes → l'API répond 503), on retombe silencieusement
+// sur le comportement maquette d'origine : localStorage seul.
 const STORAGE_KEY = "getgents:published-gents";
 
 export function readPublishedGents(): EspacesMap {
@@ -19,16 +21,91 @@ export function readPublishedGents(): EspacesMap {
   }
 }
 
+function writeLocalCache(gents: EspacesMap): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(gents));
+  } catch {
+    // localStorage indisponible (navigation privée, quota dépassé…).
+  }
+}
+
+// --- Synchronisation distante -------------------------------------------
+
+// null = pas encore sondé ; false = API absente/non configurée (on arrête
+// d'essayer pour la session) ; true = distant opérationnel.
+let remoteAvailable: boolean | null = null;
+const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const PUSH_DEBOUNCE_MS = 1500;
+
+/** Récupère les gents publiés depuis le serveur — null si indisponible. */
+export async function fetchRemoteGents(): Promise<EspacesMap | null> {
+  if (remoteAvailable === false) return null;
+  try {
+    const res = await fetch("/api/gents", { cache: "no-store" });
+    if (res.status === 503) {
+      remoteAvailable = false;
+      return null;
+    }
+    if (!res.ok) return null;
+    remoteAvailable = true;
+    const data = (await res.json()) as { gents?: EspacesMap };
+    return data.gents ?? {};
+  } catch {
+    return null;
+  }
+}
+
+function pushRemoteGent(id: string, espace: Espace): void {
+  if (remoteAvailable === false) return;
+  // Débounce par gent : l'état de l'espace change à chaque frappe/message,
+  // on n'envoie au serveur que la version stabilisée.
+  const pending = pushTimers.get(id);
+  if (pending) clearTimeout(pending);
+  pushTimers.set(
+    id,
+    setTimeout(() => {
+      pushTimers.delete(id);
+      fetch(`/api/gents/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ espace }),
+      })
+        .then((res) => {
+          if (res.status === 503) remoteAvailable = false;
+          else if (res.ok) remoteAvailable = true;
+        })
+        .catch(() => {
+          // Réseau indisponible : le cache localStorage garde la donnée, le
+          // prochain writePublishedGent retentera.
+        });
+    }, PUSH_DEBOUNCE_MS)
+  );
+}
+
 export function writePublishedGent(id: string, espace: Espace): void {
   if (typeof window === "undefined") return;
-  try {
-    const current = readPublishedGents();
-    current[id] = espace;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
-  } catch {
-    // localStorage indisponible (navigation privée, quota dépassé…) : la
-    // publication reste visible dans le builder mais pas côté utilisateur.
+  const current = readPublishedGents();
+  current[id] = espace;
+  writeLocalCache(current);
+  pushRemoteGent(id, espace);
+}
+
+/**
+ * Hydratation au chargement : fusionne le distant (source de vérité) par-dessus
+ * le cache local, met le cache à jour, et renvoie la map fusionnée — ou null si
+ * le distant est indisponible (le cache local reste alors la seule source).
+ */
+export async function syncPublishedGentsFromRemote(): Promise<EspacesMap | null> {
+  const remote = await fetchRemoteGents();
+  if (remote === null) return null;
+  const merged = { ...readPublishedGents(), ...remote };
+  writeLocalCache(merged);
+  // Réconciliation : les gents présents uniquement en local (publiés hors
+  // ligne ou avant la config Supabase) remontent vers le serveur.
+  for (const [id, espace] of Object.entries(merged)) {
+    if (!(id in remote)) pushRemoteGent(id, espace);
   }
+  return merged;
 }
 
 /** Met à jour le nom affiché côté utilisateur sans effacer conversations ni artefacts. */

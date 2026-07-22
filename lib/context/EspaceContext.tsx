@@ -21,7 +21,7 @@ import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggesti
 import { extractArtefactSignal, ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
 import { extractThemeTabSignal, describeModulesForPrompt, THEME_TAB_PROMPT_INSTRUCTION } from "@/lib/themeTabSignal";
 import { extractGeolocRequest, GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
-import { readPublishedGents, writePublishedGent } from "@/lib/publishedGents";
+import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 import { buildJumpFormPrompt } from "@/lib/jumpFormSignal";
@@ -187,16 +187,30 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     );
   }, []);
 
-  // Recharge les gents publiés depuis ce navigateur (localStorage) — n'existe
-  // pas encore côté serveur/premier rendu, d'où le placeholder FALLBACK_ESPACE.
-  // On retarde la persistance tant que cette fusion n'est pas faite, sinon on
-  // écrase un gent publié par le placeholder vide au premier rendu.
+  // Recharge les gents publiés : d'abord le cache localStorage (instantané,
+  // évite le placeholder FALLBACK_ESPACE le temps du réseau), puis Supabase
+  // (source de vérité) qui écrase le cache si disponible. On retarde la
+  // persistance tant que cette hydratation n'est pas faite, sinon on écrase
+  // un gent publié par le placeholder vide au premier rendu.
   useEffect(() => {
     const published = readPublishedGents();
     if (Object.keys(published).length) {
       setEspaces((prev) => ({ ...prev, ...published }));
     }
-    setStorageReady(true);
+    let cancelled = false;
+    syncPublishedGentsFromRemote()
+      .then((merged) => {
+        if (cancelled) return;
+        if (merged && Object.keys(merged).length) {
+          setEspaces((prev) => ({ ...prev, ...merged }));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setStorageReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Persiste l'activité des gents publiés (conversations, artefacts…) dans
