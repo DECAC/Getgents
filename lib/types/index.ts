@@ -353,9 +353,9 @@ export interface Espace {
  * navigateur) — voir lib/server/whatsapp.ts.
  */
 export interface NotificationChannel {
-  kind: "whatsapp";
+  kind: "whatsapp" | "email";
   enabled: boolean;
-  /** Destinataire : numéro E.164 (ex. +33612345678) pour WhatsApp. */
+  /** Destinataire : numéro E.164 (WhatsApp) ou adresse e-mail (email). */
   to: string;
   /** Horodatage ISO du consentement du destinataire (opt-in requis). */
   optInAt?: string;

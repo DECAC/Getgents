@@ -10,6 +10,7 @@ import { ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
 import { profileContextNote } from "@/lib/profileSignal";
 import { renderMarkdown } from "@/lib/markdown";
 import { sendWhatsAppText } from "@/lib/server/whatsapp";
+import { sendBrevoEmail } from "@/lib/server/brevo";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
@@ -41,10 +42,29 @@ function plainExcerpt(markdown: string, max = 500): string {
  * note, et lien vers la note complète dans l'espace (si l'URL publique est
  * configurée via NEXT_PUBLIC_APP_URL).
  */
-function buildChannelSummary(gentId: string, title: string, noteText: string): string {
+function spaceUrl(gentId: string): string | null {
   const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-  const link = base ? `\n\n👉 Note complète : ${base}/espace/${gentId}` : "";
+  return base ? `${base}/espace/${gentId}` : null;
+}
+
+/** Message court pour WhatsApp : titre, extrait texte brut, lien. */
+function buildWhatsAppSummary(gentId: string, title: string, noteText: string): string {
+  const url = spaceUrl(gentId);
+  const link = url ? `\n\n👉 Note complète : ${url}` : "";
   return `📊 ${title}\n\n${plainExcerpt(noteText)}${link}`;
+}
+
+/** Corps HTML pour l'e-mail : la note complète rendue + lien vers l'espace. */
+function buildEmailHtml(gentId: string, title: string, noteHtml: string): string {
+  const url = spaceUrl(gentId);
+  const link = url
+    ? `<p style="margin-top:24px"><a href="${url}" style="background:#4f46e5;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">Ouvrir la note complète</a></p>`
+    : "";
+  return (
+    `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:640px;margin:0 auto;color:#1a1a2e;line-height:1.6">` +
+    `<h2 style="letter-spacing:-0.02em">${title}</h2>${noteHtml}${link}` +
+    `<p style="margin-top:28px;font-size:12px;color:#8888a0">Note générée automatiquement par votre gent Getgents.</p></div>`
+  );
 }
 
 export interface RoutineRunResult {
@@ -164,14 +184,19 @@ export async function runRoutine(espace: Espace, routine: Routine, gentId = ""):
   // le run (la note reste dans l'espace) — il est juste tracé.
   let channel = espace.channel;
   let deliveryNote = "";
+  const title = sig ? sig.title : espace.name;
+  const noteText = text || "Note de veille du jour.";
+  const label = channel?.kind === "email" ? "E-mail" : "WhatsApp";
   if (channel?.enabled && channel.optInAt && channel.to.trim()) {
-    const summary = buildChannelSummary(gentId, sig ? sig.title : espace.name, text || "Note de veille du jour.");
-    const delivery = await sendWhatsAppText(channel.to, summary);
+    const delivery =
+      channel.kind === "email"
+        ? await sendBrevoEmail(channel.to, title, buildEmailHtml(gentId, title, renderMarkdown(noteText)))
+        : await sendWhatsAppText(channel.to, buildWhatsAppSummary(gentId, title, noteText));
     channel = { ...channel, lastDeliveryNote: `${nowTimeParis()} — ${delivery.note}` };
-    deliveryNote = delivery.ok ? " · WhatsApp livré" : ` · WhatsApp : ${delivery.note}`;
+    deliveryNote = delivery.ok ? ` · ${label} livré` : ` · ${label} : ${delivery.note}`;
   } else if (channel?.enabled && !channel.optInAt) {
     channel = { ...channel, lastDeliveryNote: "non livré — consentement manquant" };
-    deliveryNote = " · WhatsApp non livré (opt-in manquant)";
+    deliveryNote = ` · ${label} non livré (opt-in manquant)`;
   }
 
   const runNote = (sig ? `ok — ${sig.title}` : "ok — note texte") + deliveryNote;

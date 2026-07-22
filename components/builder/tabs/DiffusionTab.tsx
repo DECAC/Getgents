@@ -3,24 +3,26 @@
 import { useBuilder } from "@/lib/context/BuilderContext";
 import styles from "./DiffusionTab.module.css";
 
-// Format E.164 permissif (ex. +33612345678) — validation d'affichage, la
-// vérification réelle est faite par Meta à l'envoi.
 const E164 = /^\+[1-9]\d{6,14}$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function DiffusionTab() {
   const { currentDraft, updateChannel } = useBuilder();
   const channel = currentDraft.channel;
-  const numberOk = !!channel?.to && E164.test(channel.to.trim());
+  const isEmail = channel?.kind === "email";
+  const to = channel?.to?.trim() ?? "";
+  const toOk = isEmail ? EMAIL.test(to) : E164.test(to);
 
   return (
     <div className={styles.wrap}>
       <div className={styles.card}>
         <div className={styles.headRow}>
           <div>
-            <h4 className={styles.title}>Diffusion WhatsApp</h4>
+            <h4 className={styles.title}>Diffusion de la note</h4>
             <div className={styles.sub}>
-              Quand la routine produit une note, un résumé + lien est envoyé sur WhatsApp au
-              destinataire. L&apos;envoi utilise l&apos;API WhatsApp Business (secrets côté serveur).
+              Quand la routine produit une note, elle est envoyée au destinataire sur le canal
+              choisi (en plus de l&apos;artefact dans l&apos;espace). L&apos;envoi se fait côté
+              serveur.
             </div>
           </div>
           <button
@@ -29,7 +31,7 @@ export function DiffusionTab() {
             aria-checked={!!channel?.enabled}
             className={[styles.switch, channel?.enabled ? styles.switchOn : ""].filter(Boolean).join(" ")}
             onClick={() => updateChannel({ enabled: !channel?.enabled })}
-            aria-label="Activer la diffusion WhatsApp"
+            aria-label="Activer la diffusion"
           >
             <span className={styles.knob} />
           </button>
@@ -37,41 +39,70 @@ export function DiffusionTab() {
 
         {channel?.enabled && (
           <div className={styles.config}>
-            <label className={styles.fieldLabel} htmlFor="wa-number">
-              Numéro du destinataire (format international)
+            <div className={styles.segRow} role="tablist" aria-label="Canal de diffusion">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isEmail}
+                className={[styles.seg, isEmail ? styles.segOn : ""].filter(Boolean).join(" ")}
+                onClick={() => updateChannel({ kind: "email", to: "", optInAt: undefined })}
+              >
+                ✉️ E-mail
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!isEmail}
+                className={[styles.seg, !isEmail ? styles.segOn : ""].filter(Boolean).join(" ")}
+                onClick={() => updateChannel({ kind: "whatsapp", to: "", optInAt: undefined })}
+              >
+                💬 WhatsApp
+              </button>
+            </div>
+
+            <label className={styles.fieldLabel} htmlFor="chan-to">
+              {isEmail ? "Adresse e-mail du destinataire" : "Numéro WhatsApp (format international)"}
             </label>
             <input
-              id="wa-number"
+              id="chan-to"
               className={styles.input}
-              type="tel"
-              placeholder="+33612345678"
+              type={isEmail ? "email" : "tel"}
+              placeholder={isEmail ? "prenom@exemple.fr" : "+33612345678"}
               value={channel.to}
               onChange={(e) => updateChannel({ to: e.target.value, optInAt: undefined })}
-              aria-label="Numéro WhatsApp du destinataire"
+              aria-label={isEmail ? "Adresse e-mail du destinataire" : "Numéro WhatsApp du destinataire"}
             />
-            {channel.to.trim() && !numberOk && (
-              <div className={styles.warn}>Format attendu : indicatif pays + numéro, ex. +33612345678</div>
+            {to && !toOk && (
+              <div className={styles.warn}>
+                {isEmail ? "Adresse e-mail invalide." : "Format attendu : indicatif + numéro, ex. +33612345678"}
+              </div>
             )}
 
-            <label
-              className={[styles.optIn, !numberOk ? styles.optInDisabled : ""].filter(Boolean).join(" ")}
-            >
+            <label className={[styles.optIn, !toOk ? styles.optInDisabled : ""].filter(Boolean).join(" ")}>
               <input
                 type="checkbox"
                 checked={!!channel.optInAt}
-                disabled={!numberOk}
+                disabled={!toOk}
                 onChange={(e) => updateChannel({ optInAt: e.target.checked ? new Date().toISOString() : undefined })}
               />
               <span>
-                Le destinataire a donné son <strong>consentement</strong> pour recevoir ces messages
-                sur WhatsApp (opt-in requis par Meta).
+                Le destinataire a donné son <strong>consentement</strong> pour recevoir ces messages.
               </span>
             </label>
 
             <div className={styles.note}>
-              Hors de la fenêtre de 24 h suivant un message du destinataire, Meta n&apos;autorise que
-              des messages « template » pré-approuvés — un simple texte peut être refusé. Configurez
-              <code> WHATSAPP_TOKEN </code> et <code> WHATSAPP_PHONE_NUMBER_ID </code> côté serveur.
+              {isEmail ? (
+                <>
+                  Envoi via Brevo — configurez <code> BREVO_API_KEY </code> et
+                  <code> BREVO_SENDER_EMAIL </code> côté serveur (expéditeur vérifié dans Brevo).
+                </>
+              ) : (
+                <>
+                  Hors de la fenêtre de 24 h suivant un message du destinataire, Meta n&apos;autorise
+                  que des messages « template » pré-approuvés. Configurez <code> WHATSAPP_TOKEN </code>
+                  et <code> WHATSAPP_PHONE_NUMBER_ID </code> côté serveur.
+                </>
+              )}
             </div>
 
             {channel.lastDeliveryNote && (
@@ -85,7 +116,6 @@ export function DiffusionTab() {
         <h4 className={styles.title}>Autres canaux</h4>
         <div className={styles.channels}>
           {[
-            { icon: "✉️", title: "E-mail", desc: "Recevoir la note par e-mail." },
             { icon: "🔗", title: "Lien direct", desc: "Partager un lien vers l'espace." },
             { icon: "🌐", title: "Intégration web", desc: "Widget/iframe sur votre site." },
           ].map((c) => (
