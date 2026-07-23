@@ -14,6 +14,10 @@ const INPUT_KINDS: { kind: PinnedArtefactInput["kind"]; label: string }[] = [
  * Config « artefact figé » côté builder : le créateur transforme le gent en
  * mini-application — un tableau de bord permanent dont l'utilisateur rafraîchit
  * les données d'un bouton, à partir d'entrées limitées (LinkedIn, CV…).
+ *
+ * L'activation et le « prompt figé » (mission) vivent désormais dans l'onglet
+ * Prompt, en tête du prompt système, pour ne pas les confondre. Cet onglet ne
+ * gère que la STRUCTURE de l'artefact : titre et entrées demandées.
  */
 export function PinnedArtefactConfig() {
   const { currentDraft, updatePinnedArtefact } = useBuilder();
@@ -45,19 +49,15 @@ export function PinnedArtefactConfig() {
             d&apos;un bouton <b>Update</b>. Idéal pour un usage « app », pas « chat ».
           </div>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={!!pinned?.enabled}
-          className={[styles.switch, pinned?.enabled ? styles.switchOn : ""].filter(Boolean).join(" ")}
-          onClick={() => updatePinnedArtefact({ enabled: !pinned?.enabled })}
-          aria-label="Activer le mode artefact figé"
-        >
-          <span className={styles.knob} />
-        </button>
       </div>
 
-      {pinned?.enabled && (
+      {!pinned?.enabled ? (
+        <div className={styles.disabledHint}>
+          Activez le <b>« prompt figé »</b> dans l&apos;onglet <b>Prompt</b> (en tête du prompt
+          système) pour définir la mission de génération, puis revenez ici configurer le titre, les
+          entrées et prévisualiser l&apos;artefact.
+        </div>
+      ) : (
         <div className={styles.config}>
           <label className={styles.fieldLabel} htmlFor="pin-title">
             Titre de l&apos;artefact
@@ -69,20 +69,6 @@ export function PinnedArtefactConfig() {
             value={pinned.title}
             onChange={(e) => updatePinnedArtefact({ title: e.target.value })}
             aria-label="Titre de l'artefact figé"
-          />
-
-          <label className={styles.fieldLabel} htmlFor="pin-mission">
-            Mission de génération (le « prompt figé »)
-          </label>
-          <textarea
-            id="pin-mission"
-            className={styles.mission}
-            placeholder={
-              "Décris le tableau de bord à produire à chaque génération : sections, indicateurs clés, tableaux… Ex. : Analyse le profil et produis un tableau de bord carrière — diagnostic de positionnement, opportunités classées par fit, réseau, actions prioritaires."
-            }
-            value={pinned.mission}
-            onChange={(e) => updatePinnedArtefact({ mission: e.target.value })}
-            aria-label="Mission de l'artefact figé"
           />
 
           <div className={styles.inputsHead}>
@@ -131,8 +117,8 @@ export function PinnedArtefactConfig() {
 
           <div className={styles.hint}>
             Activez la recherche web (onglet Prompt) pour que les données soient réelles et
-            vérifiées. La première ouverture côté utilisateur génère l&apos;artefact ; le bouton
-            <b> Update </b> le rafraîchit ensuite sans reformulation.
+            vérifiées. Prévisualisez le rendu ci-dessous avant de publier ; côté utilisateur, le
+            bouton <b>Update</b> le rafraîchit sans reformulation.
           </div>
         </div>
       )}

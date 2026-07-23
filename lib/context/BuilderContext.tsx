@@ -665,6 +665,10 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
           });
           next.connectors = connectors;
         }
+        if (cfg.pinnedArtefact) {
+          const base = next.pinnedArtefact ?? { enabled: false, title: "", mission: "", inputs: [] };
+          next.pinnedArtefact = { ...base, ...cfg.pinnedArtefact };
+        }
         if (cfg.name && draft.status === "published") {
           patchPublishedGentName(currentId, cfg.name);
         }
