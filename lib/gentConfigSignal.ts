@@ -4,7 +4,7 @@
 // explicite du créateur (carte « Appliquer la configuration »).
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { parseDatasetUrl, DVF_CANONICAL_DATASET_URL, datasetRefToDetail } from "@/lib/opendatasoft";
-import type { RestApiToolConfig, RestApiAuth } from "@/lib/types";
+import type { RestApiToolConfig, RestApiAuth, PinnedArtefactInput } from "@/lib/types";
 
 const GENT_CONFIG_RE = /<!--GENT_CONFIG:\s*(\{[\s\S]*?\})\s*-->/;
 
@@ -27,6 +27,16 @@ export interface GentConfigProposal {
   chatModelId?: string;
   reasoningModelId?: string;
   connectors?: GentConfigConnector[];
+  /**
+   * Artefact figé « mini-app » : le champ `mission` est le « prompt figé »
+   * (l'instruction de génération du tableau de bord), distinct du systemPrompt.
+   */
+  pinnedArtefact?: {
+    enabled?: boolean;
+    title?: string;
+    mission?: string;
+    inputs?: PinnedArtefactInput[];
+  };
 }
 
 export const GENT_CONFIG_PROMPT_INSTRUCTION =
@@ -40,6 +50,9 @@ export const GENT_CONFIG_PROMPT_INSTRUCTION =
   "Une carte « Appliquer la configuration » s'affiche alors : le créateur valide en un clic et tout est appliqué au gent (nom, prompt, modèles, connecteurs…). " +
   "Règles impératives : n'annonce JAMAIS que tu configures ou vas configurer quelque chose sans émettre ce bloc dans le MÊME message ; si le créateur accepte verbalement une proposition faite plus tôt, ré-émets immédiatement le bloc GENT_CONFIG complet correspondant ; ne renvoie jamais le créateur vers une configuration manuelle (onglets, listes déroulantes) pour ce que ce bloc sait faire. " +
   "Économie de longueur : ne recopie PAS l'intégralité du prompt système dans le texte visible — résume tes choix en quelques puces courtes, le contenu complet vit uniquement dans le bloc GENT_CONFIG (le créateur le verra dans la carte de validation et l'onglet Prompt). Tout connecteur que tu annonces DOIT figurer dans le champ connectors de ce même bloc. " +
+  "Tu peux aussi transformer le gent en ARTEFACT FIGÉ « mini-application » : au lieu de converser, il produit un tableau de bord permanent que l'utilisateur rafraîchit d'un bouton, à partir d'entrées limitées (lien, CV…). Pour le proposer ou le modifier, ajoute au bloc GENT_CONFIG un objet pinnedArtefact, ainsi : " +
+  '"pinnedArtefact":{"enabled":true,"title":"Titre lisible","mission":"Décris précisément le tableau de bord à produire à chaque génération : sections, indicateurs clés, tableaux","inputs":[{"id":"cv","label":"CV du candidat","kind":"file"}]}. ' +
+  "Le champ mission EST le « prompt figé » (l'instruction de génération de l'artefact) ; kind vaut url, file ou text. Ne confonds pas mission (ce que l'artefact figé génère) et systemPrompt (le comportement général du gent) — ce sont deux prompts distincts. " +
   "Pour un dataset DVF (transactions immobilières France), URL obligatoire : " +
   DVF_CANONICAL_DATASET_URL +
   " (pas data.opendatasoft.com, pas de suffixe @public).";
@@ -128,6 +141,34 @@ function validateConnector(c: unknown): GentConfigConnector | null {
   return { kind: p.kind as GentConfigConnector["kind"], name: p.name, url: p.url };
 }
 
+/** Valide/normalise une proposition d'artefact figé « mini-app » (partielle). */
+function validatePinnedArtefact(v: unknown): GentConfigProposal["pinnedArtefact"] | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const o = v as Record<string, unknown>;
+  const out: NonNullable<GentConfigProposal["pinnedArtefact"]> = {};
+  if (typeof o.enabled === "boolean") out.enabled = o.enabled;
+  const title = str(o.title, 120);
+  if (title) out.title = title;
+  const mission = str(o.mission, 4000);
+  if (mission) out.mission = mission;
+  if (Array.isArray(o.inputs)) {
+    out.inputs = o.inputs
+      .filter((i) => i && typeof (i as { label?: unknown }).label === "string")
+      .map((i, idx) => {
+        const r = i as Record<string, unknown>;
+        const kind = r.kind === "file" || r.kind === "text" ? r.kind : "url";
+        return {
+          id: typeof r.id === "string" && r.id.trim() ? r.id : `in-${idx}`,
+          label: asStr(r.label).slice(0, 80),
+          kind,
+        } as PinnedArtefactInput;
+      })
+      .filter((i) => i.label.trim() !== "")
+      .slice(0, 8);
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 export function extractGentConfigSignal(raw: string): { text: string; config: GentConfigProposal | null } {
   const match = raw.match(GENT_CONFIG_RE);
   if (!match) return { text: raw, config: null };
@@ -149,6 +190,7 @@ export function extractGentConfigSignal(raw: string): { text: string; config: Ge
       chatModelId,
       reasoningModelId,
       connectors: connectors?.length ? connectors : undefined,
+      pinnedArtefact: validatePinnedArtefact(p.pinnedArtefact),
     };
     if (Object.values(candidate).some((v) => v !== undefined)) config = candidate;
   } catch {
