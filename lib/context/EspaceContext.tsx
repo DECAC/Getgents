@@ -739,10 +739,24 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     setPinnedError(null);
     try {
       const inputs = Object.fromEntries(espace.pinnedArtefact.inputs.map((i) => [i.id, i.value ?? ""]));
+      // On envoie le contexte du gent (pas seulement l'id) : la génération ne
+      // dépend alors que d'OpenRouter, pas de Supabase — la mini-app marche même
+      // sans persistance serveur (le client garde le résultat en localStorage).
       const res = await fetch("/api/artefact/refresh", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gentId: id, inputs }),
+        body: JSON.stringify({
+          gentId: id,
+          inputs,
+          espace: {
+            name: espace.name,
+            systemPrompt: espace.systemPrompt,
+            profile: espace.profile,
+            webSearch: espace.webSearch,
+            chatModelId: espace.chatModelId,
+            pinnedArtefact: espace.pinnedArtefact,
+          },
+        }),
       });
       const data = (await res.json()) as { ok?: boolean; note?: string; pinnedArtefact?: Espace["pinnedArtefact"]; error?: string };
       if (!res.ok || data.error) {
