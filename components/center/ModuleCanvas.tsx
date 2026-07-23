@@ -12,6 +12,7 @@ import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { ChecklistView } from "@/components/shared/ChecklistView";
 import { MapArtefact } from "@/components/shared/MapArtefact";
 import { DashboardArtefact } from "@/components/shared/dashboard/DashboardArtefact";
+import { PinnedArtefactPanel } from "./PinnedArtefactPanel";
 import styles from "./ModuleCanvas.module.css";
 
 interface ModuleLayout {
@@ -293,14 +294,21 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     setSavedConf(null);
   }
 
+  const pinned = espace.pinnedArtefact?.enabled ? espace.pinnedArtefact : null;
+
   if (!modules.length) {
     return (
-      <div className={styles.empty}>
-        <div className={styles.emptyIcon}>{espace.icon}</div>
-        <p className={styles.emptyText}>
-          Cet espace ne contient pas encore de module. Ouvrez la conversation — les artefacts
-          générés par votre assistant apparaîtront ici, librement organisables.
-        </p>
+      <div className={styles.wrap}>
+        {pinned && <PinnedArtefactPanel pinned={pinned} />}
+        {!pinned && (
+          <div className={styles.empty}>
+            <div className={styles.emptyIcon}>{espace.icon}</div>
+            <p className={styles.emptyText}>
+              Cet espace ne contient pas encore de module. Ouvrez la conversation — les artefacts
+              générés par votre assistant apparaîtront ici, librement organisables.
+            </p>
+          </div>
+        )}
       </div>
     );
   }
@@ -451,6 +459,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
 
   return (
     <div className={styles.wrap}>
+      {pinned && <PinnedArtefactPanel pinned={pinned} />}
       <div className={styles.toolbar}>
         <div className={styles.viewSwitch} role="tablist" aria-label="Style d'affichage">
           <button

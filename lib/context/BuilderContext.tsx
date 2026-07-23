@@ -69,6 +69,8 @@ interface BuilderContextValue {
   updateRoutine: (patch: Partial<Routine>) => void;
   /** Modifie le canal de diffusion du brouillon (patch partiel). */
   updateChannel: (patch: Partial<NotificationChannel>) => void;
+  /** Modifie l'artefact figé « mini-app » du brouillon (patch partiel). */
+  updatePinnedArtefact: (patch: Partial<import("@/lib/types").PinnedArtefact>) => void;
 
   sendBuilderMessage: (text: string) => void;
   applyBuilderSuggestion: (suggestion: string) => void;
@@ -237,6 +239,19 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
             channel: fresh.channel
               ? { ...fresh.channel, lastDeliveryNote: existing.channel?.lastDeliveryNote }
               : undefined,
+            // Config re-publiée mais données déjà générées (dashboard, entrées
+            // renseignées par l'utilisateur) préservées.
+            pinnedArtefact: fresh.pinnedArtefact
+              ? {
+                  ...fresh.pinnedArtefact,
+                  dashboard: existing.pinnedArtefact?.dashboard,
+                  generatedAt: existing.pinnedArtefact?.generatedAt,
+                  inputs: fresh.pinnedArtefact.inputs.map((i) => ({
+                    ...i,
+                    value: existing.pinnedArtefact?.inputs.find((e) => e.id === i.id)?.value ?? i.value,
+                  })),
+                }
+              : undefined,
           }
         : fresh;
       writePublishedGent(currentId, espace);
@@ -337,6 +352,25 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       [currentId]: { ...prev[currentId], webSearch: !prev[currentId].webSearch, updatedAt: "à l'instant" },
     }));
   }, [currentId]);
+
+  // Artefact figé « mini-app » : patch partiel fusionné sur la config du brouillon.
+  const updatePinnedArtefact = useCallback(
+    (patch: Partial<import("@/lib/types").PinnedArtefact>) => {
+      setDrafts((prev) => {
+        const current = prev[currentId].pinnedArtefact ?? {
+          enabled: false,
+          title: "",
+          mission: "",
+          inputs: [],
+        };
+        return {
+          ...prev,
+          [currentId]: { ...prev[currentId], pinnedArtefact: { ...current, ...patch }, updatedAt: "à l'instant" },
+        };
+      });
+    },
+    [currentId]
+  );
 
   // Canal de diffusion : patch partiel fusionné sur le canal du brouillon.
   const updateChannel = useCallback(
@@ -729,6 +763,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         toggleWebSearch,
         updateRoutine,
         updateChannel,
+        updatePinnedArtefact,
         sendBuilderMessage,
         applyBuilderSuggestion,
         confirmConnectorProposal,
