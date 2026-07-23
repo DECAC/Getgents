@@ -104,6 +104,8 @@ export interface GentDraft {
   routine?: import("@/lib/types").Routine;
   /** Canal de diffusion de la note produite par la routine (WhatsApp…). */
   channel?: import("@/lib/types").NotificationChannel;
+  /** Artefact figé « mini-app » défini par le créateur. */
+  pinnedArtefact?: import("@/lib/types").PinnedArtefact;
   /** Empreinte du contenu au moment de la dernière publication (voir builderSnapshot.ts). */
   publishedSnapshot?: string;
 }

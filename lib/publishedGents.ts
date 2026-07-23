@@ -261,6 +261,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     jumpForm: draft.jumpForm,
     routine: draft.routine,
     channel: draft.channel,
+    pinnedArtefact: draft.pinnedArtefact,
     webSearch: draft.webSearch || undefined,
   };
 }

@@ -342,8 +342,42 @@ export interface Espace {
   profile?: import("@/lib/profileSignal").UserProfile;
   /** Routine planifiée (veille en tâche de fond) — exécutée côté serveur. */
   routine?: Routine;
+  /** Artefact figé « mini-app » : un tableau de bord permanent que l'utilisateur rafraîchit d'un bouton. */
+  pinnedArtefact?: PinnedArtefact;
   /** Canal de diffusion de la note produite par la routine (WhatsApp…). */
   channel?: NotificationChannel;
+}
+
+/**
+ * Entrée attendue de l'utilisateur pour alimenter un artefact figé (ex. un lien
+ * LinkedIn, un CV). Le créateur les déclare ; l'utilisateur les renseigne, et
+ * elles nourrissent chaque génération/rafraîchissement de l'artefact.
+ */
+export interface PinnedArtefactInput {
+  id: string;
+  label: string;
+  kind: "url" | "file" | "text";
+  /** Valeur renseignée par l'utilisateur (URL, nom de fichier, texte court). */
+  value?: string;
+}
+
+/**
+ * Artefact figé « mini-app » : le créateur définit un tableau de bord permanent
+ * dont seules les DONNÉES se rafraîchissent à la demande (bouton Update), sans
+ * que l'utilisateur ait à reformuler quoi que ce soit. La mission décrit ce que
+ * le gent doit produire ; le rendu reste un DashboardSpec, régénéré côté serveur.
+ */
+export interface PinnedArtefact {
+  enabled: boolean;
+  title: string;
+  /** Instruction de génération du tableau de bord (le « prompt figé »). */
+  mission: string;
+  /** Entrées requises de l'utilisateur (LinkedIn, CV…). */
+  inputs: PinnedArtefactInput[];
+  /** Dernier rendu produit (null tant que non généré). */
+  dashboard?: import("@/lib/dashboardArtefact").DashboardSpec;
+  /** Horodatage ISO de la dernière génération. */
+  generatedAt?: string;
 }
 
 /**

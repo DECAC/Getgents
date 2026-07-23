@@ -1,0 +1,195 @@
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  margin-bottom: 18px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+/* Bandeau d'accent en tête, comme les cartes d'artefact */
+.panel::before {
+  content: "";
+  display: block;
+  height: 4px;
+  background: linear-gradient(90deg, var(--plum), var(--sage), var(--gold));
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line-soft);
+  flex-wrap: wrap;
+}
+.titleWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--plum);
+  background: var(--plum-tint);
+  padding: 3px 8px;
+  border-radius: 6px;
+  flex: none;
+}
+.title {
+  font-family: "Inter", sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+.when {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.inputsBtn {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 6px 11px;
+}
+.inputsBtn:hover {
+  color: var(--ink);
+  border-color: var(--plum);
+}
+.updateBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--plum);
+  border-radius: 8px;
+  padding: 7px 14px;
+}
+.updateBtn:hover {
+  background: #5a3049;
+}
+.updateBtn:disabled {
+  background: var(--line);
+  color: var(--faint);
+  cursor: default;
+}
+.spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line-soft);
+}
+.inputRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 220px;
+}
+.inputLabel {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.input {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--plum);
+}
+
+.error {
+  margin: 12px 18px 0;
+  font-size: 12.5px;
+  color: #b4462f;
+  background: #fdf1ee;
+  border: 1px solid #f3d3ca;
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+
+.body {
+  padding: 18px;
+}
+.empty {
+  padding: 40px 18px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .error {
+    background: #3a201a;
+    border-color: #5c2f24;
+    color: #f3b1a2;
+  }
+}
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fileBtn {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--plum);
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 8px;
+  padding: 8px 12px;
+  flex: none;
+}
+.fileBtn:hover { border-color: var(--plum); }
+.fileState {
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hiddenFile { display: none; }
