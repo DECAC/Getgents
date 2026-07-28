@@ -9,7 +9,20 @@ import type {
 // Catalogue de modèles accessible via une seule clé API OpenRouter.
 // Le builder choisit un modèle par capacité — un seul est obligatoire (chat),
 // les autres (image, voix) sont optionnels et activés selon les besoins du gent.
+
+/** Modèle OpenRouter utilisé par l'assistant du builder (panneau de droite). */
+export const BUILDER_ASSISTANT_MODEL_ID = "moonshotai/kimi-k3";
+
 export const MODEL_CATALOG: OpenRouterModel[] = [
+  {
+    id: "moonshotai/kimi-k3",
+    label: "Kimi K3",
+    provider: "Moonshot AI",
+    capability: "chat",
+    contextWindow: 1_048_576,
+    pricing: { input: 3, output: 15 },
+    tagline: "Modèle prioritaire pour l'assistant builder — code, outils, long contexte.",
+  },
   {
     id: "openai/gpt-4.1",
     label: "GPT-4.1",

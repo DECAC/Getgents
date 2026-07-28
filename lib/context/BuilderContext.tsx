@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
 import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine, NotificationChannel } from "@/lib/types";
-import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG } from "@/lib/mock-data/builder";
+import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG, BUILDER_ASSISTANT_MODEL_ID } from "@/lib/mock-data/builder";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 import {
   CONNECTOR_PROMPT_INSTRUCTION,
@@ -137,6 +137,7 @@ const MODEL_CATALOG_SUMMARY = MODEL_CATALOG.map(
 
 const MODEL_RECOMMENDATION_INSTRUCTION =
   `Voici le catalogue des modèles disponibles pour ce gent (une seule clé API OpenRouter donne accès à tous) :\n${MODEL_CATALOG_SUMMARY}\n\n` +
+  "L'assistant du builder utilise toujours Kimi K3 (Moonshot AI) pour vous guider — le modèle « chat » ci-dessous concerne le gent une fois publié. " +
   "Dès que l'objectif ou les instructions données par le créateur laissent deviner un besoin particulier (raisonnement complexe, génération d'image, restitution vocale, budget serré, gros volume de texte...), recommande explicitement, capacité par capacité, le ou les modèles les plus adaptés parmi cette liste, en une phrase de justification, et propose leur assignation via le bloc GENT_CONFIG (voir instruction dédiée).";
 
 const BUILDER_ASSISTANT_REPLIES = [
@@ -420,7 +421,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     // pour l'appel API dans ces variables, le streaming se fait après, en dehors.
     let history: { role: string; content: string }[] = [];
     let systemPrompt = "";
-    let chatModelId = "anthropic/claude-sonnet-5";
+    let chatModelId = BUILDER_ASSISTANT_MODEL_ID;
     let existingConnectorUrls: string[] = [];
 
     setDrafts((prev) => {
@@ -440,7 +441,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
           role: m.role === "agent" ? "assistant" : "user",
           content: (m.text ?? "").replace(/<[^>]+>/g, ""),
         }));
-      chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? chatModelId;
+      chatModelId = BUILDER_ASSISTANT_MODEL_ID;
 
       const builderConversation = [...draft.builderConversation, userMsg, agentPlaceholder];
       return { ...prev, [id]: { ...draft, builderConversation } };
