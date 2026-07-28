@@ -130,6 +130,12 @@ interface EspaceContextValue {
   removeArtefact: (artefactId: string) => void;
   /** Ouvre l'artefact pointé par un message ; s'il a été retiré de l'espace entre-temps, le recrée depuis la proposition d'origine (toujours conservée dans le message) avant de l'ouvrir. */
   viewArtefact: (messageId: string) => void;
+  /** Artefact figé « mini-app » : rafraîchit ses données côté serveur. */
+  refreshPinnedArtefact: () => Promise<void>;
+  /** Met à jour une entrée de l'artefact figé (LinkedIn, CV…). */
+  updatePinnedInput: (inputId: string, value: string) => void;
+  pinnedRefreshing: boolean;
+  pinnedError: string | null;
   confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss") => void;
   confirmThemeProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
   /** Valide ou ignore le profil utilisateur proposé par le gent. */
@@ -162,6 +168,8 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   const [storageReady, setStorageReady] = useState(false);
   const [userPosition, setUserPosition] = useState<{ lat: number; lon: number } | null>(null);
   const [geoStatus, setGeoStatus] = useState<GeoStatus>("idle");
+  const [pinnedRefreshing, setPinnedRefreshing] = useState(false);
+  const [pinnedError, setPinnedError] = useState<string | null>(null);
   const currentIdRef = useRef(currentId);
   currentIdRef.current = currentId;
   const userPositionRef = useRef(userPosition);
@@ -709,6 +717,53 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     [openArtefactModal]
   );
 
+  // Met à jour une entrée de l'artefact figé (LinkedIn, CV…) localement.
+  const updatePinnedInput = useCallback((inputId: string, value: string) => {
+    const id = currentIdRef.current;
+    setEspaces((prev) => {
+      const espace = prev[id];
+      if (!espace?.pinnedArtefact) return prev;
+      const inputs = espace.pinnedArtefact.inputs.map((i) => (i.id === inputId ? { ...i, value } : i));
+      return { ...prev, [id]: { ...espace, pinnedArtefact: { ...espace.pinnedArtefact, inputs } } };
+    });
+  }, []);
+
+  // Rafraîchit l'artefact figé côté serveur (régénère le tableau de bord à
+  // partir de la mission + des entrées). Le résultat remplace le dashboard en
+  // place, sans que l'utilisateur ait à reformuler quoi que ce soit.
+  const refreshPinnedArtefact = useCallback(async () => {
+    const id = currentIdRef.current;
+    const espace = espacesRef.current[id];
+    if (!espace?.pinnedArtefact?.enabled) return;
+    setPinnedRefreshing(true);
+    setPinnedError(null);
+    try {
+      const inputs = Object.fromEntries(espace.pinnedArtefact.inputs.map((i) => [i.id, i.value ?? ""]));
+      const res = await fetch("/api/artefact/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gentId: id, inputs }),
+      });
+      const data = (await res.json()) as { ok?: boolean; note?: string; pinnedArtefact?: Espace["pinnedArtefact"]; error?: string };
+      if (!res.ok || data.error) {
+        setPinnedError(
+          data.error === "supabase_not_configured"
+            ? "Persistance serveur non configurée."
+            : `Échec : ${data.error ?? data.note ?? res.status}`
+        );
+        return;
+      }
+      if (!data.ok) setPinnedError(data.note ?? "La génération n'a pas abouti.");
+      if (data.pinnedArtefact) {
+        setEspaces((prev) => ({ ...prev, [id]: { ...prev[id], pinnedArtefact: data.pinnedArtefact } }));
+      }
+    } catch (e) {
+      setPinnedError(`Erreur réseau : ${(e as Error).message}`);
+    } finally {
+      setPinnedRefreshing(false);
+    }
+  }, []);
+
   const confirmArtefactProposal = useCallback((proposalId: string, decision: "add" | "dismiss") => {
     const id = currentIdRef.current;
     setEspaces((prev) => {
@@ -1002,6 +1057,10 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         confirmGeoRequest,
         removeArtefact,
         viewArtefact,
+        refreshPinnedArtefact,
+        updatePinnedInput,
+        pinnedRefreshing,
+        pinnedError,
         confirmArtefactProposal,
         confirmThemeProposal,
         confirmProfileProposal,

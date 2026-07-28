@@ -39,8 +39,15 @@ function formatSize(bytes: number): string {
 }
 
 export function PromptTab() {
-  const { currentDraft, updateSystemPrompt, addKnowledgeSource, removeKnowledgeSource, toggleWebSearch, updateRoutine } =
-    useBuilder();
+  const {
+    currentDraft,
+    updateSystemPrompt,
+    addKnowledgeSource,
+    removeKnowledgeSource,
+    toggleWebSearch,
+    updateRoutine,
+    updatePinnedArtefact,
+  } = useBuilder();
   const wordCount = currentDraft.systemPrompt.trim().split(/\s+/).filter(Boolean).length;
   const [urlValue, setUrlValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -97,6 +104,27 @@ export function PromptTab() {
     updateSystemPrompt(text);
   }
 
+  // « Prompt figé » de l'artefact « mini-app » : édité ici (onglet Prompt), plus
+  // dans l'onglet Artefacts, pour ne pas le confondre avec le prompt système.
+  // Même découplage local que le prompt système (accents pendant le streaming).
+  const pinnedEnabled = !!currentDraft.pinnedArtefact?.enabled;
+  const pinnedMission = currentDraft.pinnedArtefact?.mission ?? "";
+  const [missionValue, setMissionValue] = useState(pinnedMission);
+  const missionPushedRef = useRef(pinnedMission);
+
+  useEffect(() => {
+    if (pinnedMission !== missionPushedRef.current) {
+      setMissionValue(pinnedMission);
+      missionPushedRef.current = pinnedMission;
+    }
+  }, [pinnedMission]);
+
+  function handleMissionChange(text: string) {
+    setMissionValue(text);
+    missionPushedRef.current = text;
+    updatePinnedArtefact({ mission: text });
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) addKnowledgeSource("file", file.name, `${formatSize(file.size)} · ajouté à l'instant`);
@@ -112,6 +140,44 @@ export function PromptTab() {
 
   return (
     <div className={styles.wrap}>
+      <div className={styles.card}>
+        <div className={styles.webSearchRow}>
+          <div>
+            <h4 className={styles.title}>Prompt figé — artefact « mini-app »</h4>
+            <div className={styles.sub}>
+              Transforme le gent en mini-application : au lieu de converser, il produit un tableau de
+              bord permanent que l&apos;utilisateur rafraîchit d&apos;un bouton. Le « prompt figé »
+              ci-dessous décrit ce que le gent génère à chaque mise à jour — distinct du prompt
+              système. La structure (titre, entrées) et l&apos;aperçu se règlent dans l&apos;onglet
+              Artefacts.
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={pinnedEnabled}
+            className={[styles.switch, pinnedEnabled ? styles.switchOn : ""].filter(Boolean).join(" ")}
+            onClick={() => updatePinnedArtefact({ enabled: !pinnedEnabled })}
+            aria-label="Activer le prompt figé (artefact mini-app)"
+          >
+            <span className={styles.knob} />
+          </button>
+        </div>
+        {pinnedEnabled && (
+          <div className={styles.routineConfig}>
+            <textarea
+              className={styles.routineMission}
+              value={missionValue}
+              onChange={(e) => handleMissionChange(e.target.value)}
+              placeholder={
+                "Décris le tableau de bord à produire à chaque génération : sections, indicateurs clés, tableaux… Ex. : Analyse le profil et produis un tableau de bord carrière — diagnostic de positionnement, opportunités classées par fit, réseau, actions prioritaires."
+              }
+              aria-label="Prompt figé — mission de l'artefact"
+            />
+          </div>
+        )}
+      </div>
+
       <div className={styles.card}>
         <h4 className={styles.title}>Instructions système (prompt)</h4>
         <div className={styles.sub}>

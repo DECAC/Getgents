@@ -4,7 +4,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
-import { MODEL_CATALOG } from "@/lib/mock-data/builder";
+import { MODEL_CATALOG, BUILDER_ASSISTANT_MODEL_ID } from "@/lib/mock-data/builder";
 import type { ConversationMessage } from "@/lib/types";
 import { setBuilderAssistWidthFromPointer, canResizeAssist } from "@/lib/assistResize";
 import { buildBuilderReport } from "@/lib/testReport";
@@ -79,10 +79,12 @@ export function BuilderAssistantPanel() {
     };
   }, []);
 
-  const chatModelId =
+  const gentChatModelId =
     currentDraft.modelAssignments.find((a) => a.capability === "chat")?.modelId ??
     CHAT_MODELS[0]?.id ??
     "";
+  const assistantModelLabel =
+    MODEL_CATALOG.find((m) => m.id === BUILDER_ASSISTANT_MODEL_ID)?.label ?? "Kimi K3";
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
@@ -434,11 +436,19 @@ export function BuilderAssistantPanel() {
         </button>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderBottom: "1px solid var(--line)" }}>
-        <label htmlFor="builder-chat-model" style={{ flex: 1, fontSize: 12, color: "var(--muted)" }}>Modèle conversationnel</label>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px 16px", borderBottom: "1px solid var(--line)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--muted)" }}>
+          <span style={{ flex: 1 }}>Modèle de l&apos;assistant builder</span>
+          <strong style={{ color: "var(--ink)", fontWeight: 600 }}>{assistantModelLabel}</strong>
+          <span style={{ fontSize: 10, color: "var(--sage-700)", background: "var(--sage-tint)", padding: "2px 6px", borderRadius: 4 }}>
+            prioritaire
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <label htmlFor="builder-chat-model" style={{ flex: 1, fontSize: 12, color: "var(--muted)" }}>Modèle conversationnel du gent (publié)</label>
         <select
           id="builder-chat-model"
-          value={chatModelId}
+          value={gentChatModelId}
           onChange={(e) => assignModel("chat", e.target.value)}
           style={{
             background: "var(--bg)",
@@ -453,6 +463,7 @@ export function BuilderAssistantPanel() {
             <option key={m.id} value={m.id}>{m.label}</option>
           ))}
         </select>
+        </div>
       </div>
 
       <div className={styles.scope}>

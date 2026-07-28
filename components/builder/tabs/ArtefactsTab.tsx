@@ -2,6 +2,8 @@
 
 import { ARTEFACT_EXAMPLES } from "@/lib/mock-data/builder";
 import type { ArtefactKind } from "@/lib/types/builder";
+import { PinnedArtefactConfig } from "./PinnedArtefactConfig";
+import { PinnedArtefactPreview } from "./PinnedArtefactPreview";
 import styles from "./ArtefactsTab.module.css";
 
 // Petites illustrations donnant un exemple visuel de chaque type d'artefact,
@@ -79,6 +81,8 @@ const ARTEFACT_ILLUSTRATION: Record<ArtefactKind, JSX.Element> = {
 export function ArtefactsTab() {
   return (
     <div className={styles.wrap}>
+      <PinnedArtefactConfig />
+      <PinnedArtefactPreview />
       <p className={styles.intro}>
         Ces artefacts sont générés <b>automatiquement</b> par le gent, au moment le plus pertinent
         de la conversation — aucune activation à faire ici : tous les types sont éligibles pour
