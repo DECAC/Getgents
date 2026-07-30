@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
+import { draftToEspace, readPublishedGents, writePublishedGent } from "@/lib/publishedGents";
 import { ModelsTab } from "./ModelsTab";
 import type { KnowledgeSourceKind } from "@/lib/types/builder";
 import styles from "./PromptTab.module.css";
@@ -60,21 +61,29 @@ export function PromptTab() {
     setRoutineRunning(true);
     setRoutineRunResult(null);
     try {
+      const espace = readPublishedGents()[currentDraft.id] ?? draftToEspace(currentDraft);
       const res = await fetch("/api/routines/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gentId: currentDraft.id }),
+        body: JSON.stringify({ gentId: currentDraft.id, espace }),
       });
-      const data = (await res.json()) as { results?: { status: string }[]; error?: string };
+      const data = (await res.json()) as {
+        results?: { status: string; espace?: ReturnType<typeof draftToEspace> }[];
+        error?: string;
+        persisted?: boolean;
+      };
       if (!res.ok) {
         setRoutineRunResult(
           data.error === "supabase_not_configured"
-            ? "Persistance serveur non configurée (variables Supabase absentes)."
+            ? "Impossible d'exécuter : publiez d'abord le gent, puis réessayez."
             : `Erreur : ${data.error ?? res.status}`
         );
       } else {
-        const status = data.results?.[0]?.status ?? "aucun gent trouvé en base (publiez d'abord)";
-        setRoutineRunResult(`Run terminé : ${status}. Ouvrez l'espace utilisateur pour voir la note.`);
+        const result = data.results?.[0];
+        const status = result?.status ?? "aucun gent trouvé (publiez d'abord)";
+        if (result?.espace) writePublishedGent(currentDraft.id, result.espace);
+        const localNote = data.persisted === false ? " (enregistré localement)" : "";
+        setRoutineRunResult(`Run terminé : ${status}${localNote}. Ouvrez l'espace utilisateur pour voir la note.`);
         if (status.startsWith("ok")) updateRoutine({ lastRunNote: status });
       }
     } catch (e) {

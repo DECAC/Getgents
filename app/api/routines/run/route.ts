@@ -7,17 +7,33 @@ export const dynamic = "force-dynamic";
 // Un run de veille (recherche web + synthèse) peut être long.
 export const maxDuration = 300;
 
+type RunResult = { id: string; status: string; espace?: Espace };
+
 /** Exécute les routines dues de tous les gents (ou d'un seul si forced). */
-async function runBatch(forced: string | null): Promise<{ ran: number; results: { id: string; status: string }[] }> {
+async function runBatch(
+  forced: string | null,
+  fallbackEspace: Espace | null = null
+): Promise<{ ran: number; results: RunResult[]; persisted: boolean }> {
   const supabase = getSupabaseAdmin();
-  if (!supabase) throw new Error("supabase_not_configured");
 
-  const query = supabase.from("published_gents").select("id, espace");
-  const { data, error } = forced ? await query.eq("id", forced) : await query;
-  if (error) throw new Error(error.message);
+  type Row = { id: string; espace: Espace };
+  let rows: Row[] = [];
 
-  const results: { id: string; status: string }[] = [];
-  for (const row of data ?? []) {
+  if (supabase) {
+    const query = supabase.from("published_gents").select("id, espace");
+    const { data, error } = forced ? await query.eq("id", forced) : await query;
+    if (error) throw new Error(error.message);
+    rows = (data ?? []) as Row[];
+  } else if (forced && fallbackEspace) {
+    rows = [{ id: forced, espace: fallbackEspace }];
+  } else if (forced) {
+    throw new Error("supabase_not_configured");
+  } else {
+    throw new Error("supabase_not_configured");
+  }
+
+  const results: RunResult[] = [];
+  for (const row of rows) {
     const espace = row.espace as Espace;
     const routine = espace.routine;
     if (!routine) {
@@ -31,13 +47,17 @@ async function runBatch(forced: string | null): Promise<{ ran: number; results: 
     }
 
     const run = await runRoutine(espace, routine, row.id);
-    const { error: upsertError } = await supabase.from("published_gents").upsert({ id: row.id, espace: run.espace });
-    results.push({
-      id: row.id,
-      status: upsertError ? `run ${run.ok ? "ok" : "ko"} mais écriture échouée : ${upsertError.message}` : run.note,
-    });
+    if (supabase) {
+      const { error: upsertError } = await supabase.from("published_gents").upsert({ id: row.id, espace: run.espace });
+      results.push({
+        id: row.id,
+        status: upsertError ? `run ${run.ok ? "ok" : "ko"} mais écriture échouée : ${upsertError.message}` : run.note,
+      });
+    } else {
+      results.push({ id: row.id, status: run.note, espace: run.espace });
+    }
   }
-  return { ran: results.length, results };
+  return { ran: results.length, results, persisted: !!supabase };
 }
 
 function checkCronSecret(req: Request): boolean {
@@ -67,20 +87,30 @@ export async function GET(req: Request) {
  * le secret si configuré).
  */
 export async function POST(req: Request) {
-  let body: { gentId?: string } = {};
+  let body: { gentId?: string; espace?: Espace } = {};
   try {
     body = await req.json();
   } catch {
     // corps vide accepté
   }
   const forced = typeof body.gentId === "string" ? body.gentId : null;
+  const fallbackEspace = body.espace && typeof body.espace === "object" ? body.espace : null;
   if (!forced && !checkCronSecret(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   try {
-    return NextResponse.json(await runBatch(forced));
+    return NextResponse.json(await runBatch(forced, fallbackEspace));
   } catch (e) {
     const msg = (e as Error).message;
-    return NextResponse.json({ error: msg }, { status: msg === "supabase_not_configured" ? 503 : 500 });
+    return NextResponse.json(
+      {
+        error: msg,
+        hint:
+          msg === "supabase_not_configured"
+            ? "Sans Supabase, publiez le gent puis renvoyez son espace courant dans le corps de la requête."
+            : undefined,
+      },
+      { status: msg === "supabase_not_configured" ? 503 : 500 }
+    );
   }
 }
