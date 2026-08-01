@@ -742,13 +742,19 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
       const res = await fetch("/api/artefact/refresh", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gentId: id, inputs }),
+        body: JSON.stringify({ gentId: id, inputs, espace }),
       });
-      const data = (await res.json()) as { ok?: boolean; note?: string; pinnedArtefact?: Espace["pinnedArtefact"]; error?: string };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        note?: string;
+        pinnedArtefact?: Espace["pinnedArtefact"];
+        error?: string;
+        persisted?: boolean;
+      };
       if (!res.ok || data.error) {
         setPinnedError(
           data.error === "supabase_not_configured"
-            ? "Persistance serveur non configurée."
+            ? "Impossible de rafraîchir : espace introuvable. Rechargez la page ou republiez le gent."
             : `Échec : ${data.error ?? data.note ?? res.status}`
         );
         return;

@@ -15,9 +15,8 @@ const ID_RE = /^[a-z0-9][a-z0-9_-]{0,80}$/i;
  */
 export async function POST(req: Request) {
   const supabase = getSupabaseAdmin();
-  if (!supabase) return NextResponse.json({ error: "supabase_not_configured" }, { status: 503 });
 
-  let body: { gentId?: string; inputs?: Record<string, string> };
+  let body: { gentId?: string; inputs?: Record<string, string>; espace?: Espace };
   try {
     body = await req.json();
   } catch {
@@ -26,11 +25,26 @@ export async function POST(req: Request) {
   const gentId = body.gentId;
   if (!gentId || !ID_RE.test(gentId)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
 
-  const { data, error } = await supabase.from("published_gents").select("espace").eq("id", gentId).maybeSingle();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  let espace: Espace | null = null;
+  if (supabase) {
+    const { data, error } = await supabase.from("published_gents").select("espace").eq("id", gentId).maybeSingle();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!data) espace = body.espace ?? null;
+    else espace = data.espace as Espace;
+  } else {
+    espace = body.espace ?? null;
+  }
 
-  let espace = data.espace as Espace;
+  if (!espace) {
+    return NextResponse.json(
+      {
+        error: supabase ? "not_found" : "supabase_not_configured",
+        hint: "Sans Supabase, envoyez l'espace courant dans le corps de la requête.",
+      },
+      { status: supabase ? 404 : 503 }
+    );
+  }
+
   // Mise à jour éventuelle des entrées avant génération.
   if (body.inputs && espace.pinnedArtefact) {
     const inputs = espace.pinnedArtefact.inputs.map((i) =>
@@ -41,8 +55,16 @@ export async function POST(req: Request) {
 
   const result = await refreshPinnedArtefact(espace);
   const updated: Espace = { ...espace, pinnedArtefact: result.pinned };
-  const { error: upErr } = await supabase.from("published_gents").upsert({ id: gentId, espace: updated });
-  if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
 
-  return NextResponse.json({ ok: result.ok, note: result.note, pinnedArtefact: result.pinned });
+  if (supabase) {
+    const { error: upErr } = await supabase.from("published_gents").upsert({ id: gentId, espace: updated });
+    if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    ok: result.ok,
+    note: result.note,
+    pinnedArtefact: result.pinned,
+    persisted: !!supabase,
+  });
 }
