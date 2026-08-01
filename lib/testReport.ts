@@ -5,6 +5,7 @@ import type { Espace, ConversationMessage } from "@/lib/types";
 import type { GentDraft } from "@/lib/types/builder";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
+import { describeShareLink, type ShareLink, type ShareLinkStats } from "@/lib/shareLink";
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, "").replace(/\s+\n/g, "\n").trim();
@@ -97,7 +98,78 @@ export function buildBuilderReport(draft: GentDraft): string {
   return lines.join("\n");
 }
 
-export function buildEspaceReport(espace: Espace): string {
+function fmtWhen(iso?: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("fr-FR");
+}
+
+/**
+ * Section « Artefact figé » du rapport : configuration + historique des
+ * générations (échecs compris, avec leur diagnostic).
+ */
+function pinnedArtefactSection(espace: Espace): string[] {
+  const pinned = espace.pinnedArtefact;
+  if (!pinned?.enabled) return [];
+
+  const lines: string[] = ["## Artefact figé (mini-app)"];
+  lines.push(`- **Titre** : ${pinned.title || "—"}`);
+  lines.push(`- **Entrées demandées** : ${pinned.inputs.map((i) => `${i.label} (${i.kind})`).join(", ") || "aucune"}`);
+  lines.push(`- **Dernière génération** : ${fmtWhen(pinned.generatedAt)}`);
+  lines.push(`- **Blocs du rendu courant** : ${pinned.dashboard?.blocks.length ?? 0}`);
+  lines.push("");
+  lines.push("### Prompt figé (mission)");
+  lines.push("```");
+  lines.push(pinned.mission || "—");
+  lines.push("```");
+  lines.push("");
+
+  const runs = pinned.runs ?? [];
+  lines.push("### Historique des générations");
+  if (runs.length === 0) {
+    lines.push("Aucune génération enregistrée.");
+  } else {
+    lines.push("| Date | Résultat | Modèle | Durée | Tentatives | Blocs | Tokens | Origine |");
+    lines.push("| --- | --- | --- | --- | --- | --- | --- | --- |");
+    for (const r of runs) {
+      const duration = r.durationMs != null ? `${(r.durationMs / 1000).toFixed(1)} s` : "—";
+      lines.push(
+        `| ${fmtWhen(r.at)} | ${r.ok ? "✓" : "✕"} ${r.note} | ${modelLabel(r.model)} | ${duration} | ` +
+          `${r.attempts ?? "—"} | ${r.blocks ?? "—"} | ${r.totalTokens ?? "—"} | ${r.source ?? "—"} |`
+      );
+    }
+  }
+  lines.push("");
+  return lines;
+}
+
+/**
+ * Section « Diffusion par lien ». Les liens ne vivent pas dans l'espace (tables
+ * dédiées côté serveur) : l'appelant les fournit s'il en dispose — l'onglet
+ * Audit, par exemple. Sinon la section est omise.
+ */
+function shareLinksSection(links?: ShareLinkReportEntry[]): string[] {
+  if (!links || links.length === 0) return [];
+  const lines: string[] = ["## Diffusion par lien"];
+  lines.push("| Cible | Statut | Créé le | Expiration | Ouvertures | Échanges | Mises à jour |");
+  lines.push("| --- | --- | --- | --- | --- | --- | --- |");
+  for (const { link, stats } of links) {
+    lines.push(
+      `| ${link.targetLabel} | ${describeShareLink(link, stats)} | ${fmtWhen(link.createdAt)} | ` +
+        `${link.expiresAt ? fmtWhen(link.expiresAt) : "sans expiration"} | ${stats?.openCount ?? 0} | ` +
+        `${stats?.chatCount ?? 0} | ${link.refreshCount}/${link.maxRefresh} |`
+    );
+  }
+  lines.push("");
+  return lines;
+}
+
+export interface ShareLinkReportEntry {
+  link: ShareLink;
+  stats?: ShareLinkStats;
+}
+
+export function buildEspaceReport(espace: Espace, links?: ShareLinkReportEntry[]): string {
   const lines: string[] = [];
   lines.push(`# Rapport de test — Espace « ${espace.name} »`);
   lines.push(`Généré le ${new Date().toLocaleString("fr-FR")} · gent : ${espace.gent} · statut : ${espace.statusLabel}`);
@@ -131,6 +203,8 @@ export function buildEspaceReport(espace: Espace): string {
     lines.push("```");
     lines.push("");
   }
+  lines.push(...pinnedArtefactSection(espace));
+  lines.push(...shareLinksSection(links));
   espace.conversations.forEach((thread, idx) => {
     if (!thread.messages.length) return;
     lines.push(`## Conversation ${espace.conversations.length - idx} (${thread.startedAt})`);

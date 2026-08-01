@@ -119,3 +119,10 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* Export du rapport d'audit (artefact figé + liens de partage inclus). */
+.reportRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}

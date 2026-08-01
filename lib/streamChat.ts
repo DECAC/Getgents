@@ -97,9 +97,13 @@ export async function streamChatCompletion(
   },
   onToken: (fullTextSoFar: string, fullReasoningSoFar: string) => void,
   onToolEvent?: (ev: ToolEvent) => void,
-  onStatus?: (ev: StatusEvent) => void
+  onStatus?: (ev: StatusEvent) => void,
+  // Mode lien de partage : la requête part vers /api/links/<token>/chat, qui
+  // reconstruit le prompt système et les connecteurs côté serveur (le
+  // destinataire ne les reçoit jamais). Le flux SSE est identique.
+  endpoint = "/api/chat"
 ): Promise<StreamChatResult> {
-  const res = await fetch("/api/chat", {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...payload, stream: true }),

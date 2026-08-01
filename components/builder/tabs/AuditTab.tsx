@@ -4,9 +4,20 @@ import { useEffect, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { readPublishedGents } from "@/lib/publishedGents";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
-import { describeMessage } from "@/lib/testReport";
+import { describeMessage, buildEspaceReport } from "@/lib/testReport";
+import { ReportMenu } from "@/components/shared/ReportMenu";
+import { appAccessHeaders } from "@/lib/appAccess";
+import { describeShareLink, type ShareLink, type ShareLinkStats } from "@/lib/shareLink";
 import type { Espace, ConversationThread } from "@/lib/types";
 import styles from "./AuditTab.module.css";
+
+function formatWhen(iso?: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
 
 function modelLabel(id?: string): string {
   if (!id) return "Modèle par défaut";
@@ -40,6 +51,8 @@ function reasoningKind(thread: ConversationThread): string {
 export function AuditTab() {
   const { currentDraft } = useBuilder();
   const [espace, setEspace] = useState<Espace | null>(null);
+  const [links, setLinks] = useState<ShareLink[]>([]);
+  const [linkStats, setLinkStats] = useState<Record<string, ShareLinkStats>>({});
 
   // Les runs côté user sont persistés dans localStorage à chaque échange
   // (voir EspaceContext) : on relit à l'affichage de l'onglet.
@@ -47,7 +60,29 @@ export function AuditTab() {
     setEspace(readPublishedGents()[currentDraft.id] ?? null);
   }, [currentDraft.id, currentDraft.updatedAt]);
 
+  // Les liens de partage vivent en base (pas dans l'espace) : requête dédiée.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/links?gentId=${encodeURIComponent(currentDraft.id)}`, {
+      cache: "no-store",
+      headers: appAccessHeaders(),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { links?: ShareLink[]; stats?: Record<string, ShareLinkStats> } | null) => {
+        if (cancelled || !data) return;
+        setLinks(data.links ?? []);
+        setLinkStats(data.stats ?? {});
+      })
+      .catch(() => {
+        // Partage non configuré : la section reste simplement vide.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentDraft.id]);
+
   const runs = (espace?.conversations ?? []).filter((t) => t.messages.length > 0);
+  const pinnedRuns = espace?.pinnedArtefact?.runs ?? [];
 
   if (!espace) {
     return (
@@ -116,6 +151,95 @@ export function AuditTab() {
             </details>
           );
         })
+      )}
+
+      <h4 className={styles.sectionTitle}>Artefact figé</h4>
+      <p className={styles.sectionSub}>
+        Chaque génération du tableau de bord, succès comme échec, avec le modèle réellement utilisé
+        et le diagnostic renvoyé par le fournisseur.
+      </p>
+      {!espace.pinnedArtefact?.enabled ? (
+        <div className={styles.empty}>
+          L&apos;artefact figé n&apos;est pas activé pour ce gent (onglet Prompt).
+        </div>
+      ) : pinnedRuns.length === 0 ? (
+        <div className={styles.empty}>
+          Aucune génération enregistrée. Ouvrez l&apos;espace utilisateur et lancez une mise à jour
+          de l&apos;artefact.
+        </div>
+      ) : (
+        pinnedRuns.map((run, idx) => (
+          <details className={styles.run} key={`${run.at}-${idx}`}>
+            <summary className={styles.runHead}>
+              <span className={styles.runTitle}>
+                {run.ok ? "✓" : "✕"} Génération <span className={styles.runDate}>· {formatWhen(run.at)}</span>
+              </span>
+              <span className={styles.runMeta}>
+                {run.source === "lien" ? "via lien de partage" : "depuis l'espace"}
+                {!run.ok && <span className={styles.runFail}> · échec</span>}
+              </span>
+            </summary>
+            <dl className={styles.factList}>
+              <div><dt>Résultat</dt><dd>{run.note}</dd></div>
+              <div><dt>Modèle utilisé</dt><dd>{modelLabel(run.model)}</dd></div>
+              <div>
+                <dt>Durée</dt>
+                <dd>{run.durationMs != null ? `${(run.durationMs / 1000).toFixed(1)} s` : "—"}</dd>
+              </div>
+              <div>
+                <dt>Tentatives</dt>
+                <dd>{run.attempts ?? "—"}{run.attempts && run.attempts > 1 ? " (repli déclenché)" : ""}</dd>
+              </div>
+              <div><dt>Blocs produits</dt><dd>{run.blocks ?? "—"}</dd></div>
+              <div><dt>Tokens</dt><dd>{run.totalTokens ?? "—"}</dd></div>
+              {run.httpStatus != null && run.httpStatus >= 400 && (
+                <div><dt>Statut HTTP</dt><dd>{run.httpStatus}</dd></div>
+              )}
+            </dl>
+          </details>
+        ))
+      )}
+
+      <div className={styles.reportRow}>
+        <ReportMenu
+          getMarkdown={() =>
+            buildEspaceReport(
+              espace,
+              links.map((link) => ({ link, stats: linkStats[link.token] }))
+            )
+          }
+          baseName={espace.name}
+        />
+      </div>
+
+      <h4 className={styles.sectionTitle}>Diffusion par lien</h4>
+      <p className={styles.sectionSub}>
+        Les liens personnalisés émis pour ce gent et ce que chaque cible en a fait.
+      </p>
+      {links.length === 0 ? (
+        <div className={styles.empty}>
+          Aucun lien émis (onglet Diffusion). Le partage exige la persistance serveur.
+        </div>
+      ) : (
+        links.map((link) => (
+          <details className={styles.run} key={link.token}>
+            <summary className={styles.runHead}>
+              <span className={styles.runTitle}>{link.targetLabel}</span>
+              <span className={styles.runMeta}>{describeShareLink(link, linkStats[link.token])}</span>
+            </summary>
+            <dl className={styles.factList}>
+              <div><dt>Créé le</dt><dd>{formatWhen(link.createdAt)}</dd></div>
+              <div><dt>Expiration</dt><dd>{link.expiresAt ? formatWhen(link.expiresAt) : "sans expiration"}</dd></div>
+              <div><dt>Ouvertures</dt><dd>{linkStats[link.token]?.openCount ?? 0}</dd></div>
+              <div><dt>Échanges</dt><dd>{linkStats[link.token]?.chatCount ?? 0}</dd></div>
+              <div>
+                <dt>Mises à jour</dt>
+                <dd>{link.refreshCount} / {link.maxRefresh}</dd>
+              </div>
+              <div><dt>Dernière activité</dt><dd>{formatWhen(linkStats[link.token]?.lastEventAt)}</dd></div>
+            </dl>
+          </details>
+        ))
       )}
     </div>
   );

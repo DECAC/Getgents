@@ -2,7 +2,7 @@
 // le gent produit un tableau de bord (DashboardSpec) à partir d'une mission
 // fixe et des entrées de l'utilisateur (LinkedIn, CV…). Seules les données
 // changent d'une génération à l'autre ; la nature du rendu reste un dashboard.
-import type { Espace, PinnedArtefact } from "@/lib/types";
+import type { Espace, PinnedArtefact, PinnedRun } from "@/lib/types";
 import { parseDashboard, DASHBOARD_BLOCKS_SCHEMA, type DashboardSpec } from "@/lib/dashboardArtefact";
 import { profileContextNote } from "@/lib/profileSignal";
 import { extractLlmMessageText } from "@/lib/server/llmMessageText";
@@ -16,21 +16,57 @@ export interface PinnedRefreshResult {
   ok: boolean;
   note: string;
   pinned: PinnedArtefact;
+  /** Métriques de la génération, également archivées dans pinned.runs. */
+  run?: PinnedRun;
+}
+
+/** Nombre de générations conservées dans l'historique de l'artefact. */
+const MAX_RUNS = 20;
+
+/** Résultat d'un appel au modèle, diagnostics compris. */
+interface PinnedCall {
+  text: string;
+  httpStatus?: number;
+  totalTokens?: number;
+  errorNote?: string;
+}
+
+/** Ajoute la trace en tête d'historique et borne la liste. */
+function withRun(pinned: PinnedArtefact, run: PinnedRun): PinnedArtefact {
+  return { ...pinned, runs: [run, ...(pinned.runs ?? [])].slice(0, MAX_RUNS) };
 }
 
 /**
  * (Ré)génère le dashboard de l'artefact figé. Renvoie le pinnedArtefact mis à
  * jour (dashboard + generatedAt) — l'appelant persiste l'espace.
  */
-export async function refreshPinnedArtefact(espace: Espace): Promise<PinnedRefreshResult> {
+export async function refreshPinnedArtefact(
+  espace: Espace,
+  source: PinnedRun["source"] = "espace"
+): Promise<PinnedRefreshResult> {
   const pinned = espace.pinnedArtefact;
   const stamp = new Date().toISOString();
+  const startedAt = Date.now();
   if (!pinned?.enabled || !pinned.mission.trim()) {
     return { ok: false, note: "artefact figé non configuré", pinned: pinned ?? { enabled: false, title: "", mission: "", inputs: [] } };
   }
 
+  // Toute sortie passe par ici : un échec laisse désormais la même trace
+  // exploitable qu'un succès (c'était le principal angle mort de l'audit).
+  const finish = (ok: boolean, note: string, extra: Partial<PinnedRun>, next?: PinnedArtefact): PinnedRefreshResult => {
+    const run: PinnedRun = {
+      at: stamp,
+      ok,
+      note,
+      durationMs: Date.now() - startedAt,
+      source,
+      ...extra,
+    };
+    return { ok, note, pinned: withRun(next ?? pinned, run), run };
+  };
+
   const key = process.env.OPENROUTER_API_KEY;
-  if (!key) return { ok: false, note: "clé API absente", pinned: { ...pinned, generatedAt: stamp } };
+  if (!key) return finish(false, "clé API absente", { attempts: 0 }, { ...pinned, generatedAt: stamp });
 
   const inputsBlock = pinned.inputs.length
     ? "\n\nENTRÉES FOURNIES PAR L'UTILISATEUR :\n" +
@@ -53,14 +89,18 @@ export async function refreshPinnedArtefact(espace: Espace): Promise<PinnedRefre
   const userContent = `${pinned.mission}${inputsBlock}`;
   const model = espace.chatModelId ?? PINNED_MODEL_FALLBACK;
 
-  let raw = await callPinnedModel(key, model, systemPrompt, userContent, espace.webSearch);
+  let attempts = 1;
+  let usedModel = model;
+  let call = await callPinnedModel(key, model, systemPrompt, userContent, espace.webSearch);
+  let raw = call.text;
   let dashboard = raw ? extractPinnedDashboard(raw) : null;
 
   // 2e tentative : modèle de repli + consigne plus stricte (structure JSON souvent
   // ratée par les modèles reasoning ou avec recherche web).
   if (!dashboard) {
     const retryModel = model === PINNED_MODEL_FALLBACK ? model : PINNED_MODEL_FALLBACK;
-    const retryRaw = await callPinnedModel(
+    attempts = 2;
+    const retry = await callPinnedModel(
       key,
       retryModel,
       systemPrompt +
@@ -68,32 +108,36 @@ export async function refreshPinnedArtefact(espace: Espace): Promise<PinnedRefre
       `${userContent}\n\n(Réponds uniquement par le bloc <!--PINNED: …--> avec un dashboard complet.)`,
       false
     );
-    if (retryRaw) {
-      raw = retryRaw;
-      dashboard = extractPinnedDashboard(retryRaw);
+    call = retry;
+    if (retry.text) {
+      raw = retry.text;
+      usedModel = retryModel;
+      dashboard = extractPinnedDashboard(retry.text);
     }
   }
 
+  const metrics = { attempts, model: usedModel, httpStatus: call.httpStatus, totalTokens: call.totalTokens };
+
   if (!raw?.trim()) {
-    return {
-      ok: false,
-      note: "réponse vide du modèle — essayez sans recherche web ou changez le modèle chat",
-      pinned,
-    };
+    // On remonte la cause réelle (401, 429, timeout…) au lieu du générique
+    // « réponse vide » : c'est ce qui rend l'échec diagnosticable.
+    const cause = call.errorNote ? ` — ${call.errorNote}` : " — essayez sans recherche web ou changez le modèle chat";
+    return finish(false, `réponse vide du modèle${cause}`, metrics);
   }
 
   if (!dashboard) {
     const hint = raw.includes("<!--PINNED") || raw.includes("<!--ARTEFACT")
       ? "bloc détecté mais JSON ou blocs invalides"
       : "aucun bloc PINNED/ARTEFACT détecté";
-    return {
-      ok: false,
-      note: `réponse illisible (dashboard non produit) — ${hint}`,
-      pinned,
-    };
+    return finish(false, `réponse illisible (dashboard non produit) — ${hint}`, metrics);
   }
 
-  return { ok: true, note: `ok — ${dashboard.blocks.length} blocs`, pinned: { ...pinned, dashboard, generatedAt: stamp } };
+  return finish(
+    true,
+    `ok — ${dashboard.blocks.length} blocs`,
+    { ...metrics, blocks: dashboard.blocks.length },
+    { ...pinned, dashboard, generatedAt: stamp }
+  );
 }
 
 async function callPinnedModel(
@@ -102,7 +146,7 @@ async function callPinnedModel(
   systemPrompt: string,
   userContent: string,
   webSearch?: boolean
-): Promise<string> {
+): Promise<PinnedCall> {
   try {
     const res = await fetch(OPENROUTER_API, {
       method: "POST",
@@ -118,11 +162,23 @@ async function callPinnedModel(
       }),
       cache: "no-store",
     });
-    if (!res.ok) return "";
-    const data = (await res.json()) as { choices?: { message?: Record<string, unknown> }[] };
-    return extractLlmMessageText(data);
-  } catch {
-    return "";
+    if (!res.ok) {
+      // Le corps porte la vraie cause (quota, clé invalide, modèle inconnu) :
+      // sans lui, tous les échecs se ressemblaient.
+      const body = await res.text().catch(() => "");
+      return {
+        text: "",
+        httpStatus: res.status,
+        errorNote: `échec LLM ${res.status}${body ? ` : ${body.slice(0, 160)}` : ""}`,
+      };
+    }
+    const data = (await res.json()) as {
+      choices?: { message?: Record<string, unknown> }[];
+      usage?: { total_tokens?: number };
+    };
+    return { text: extractLlmMessageText(data), httpStatus: res.status, totalTokens: data.usage?.total_tokens };
+  } catch (e) {
+    return { text: "", errorNote: `échec réseau : ${(e as Error).message.slice(0, 140)}` };
   }
 }
 

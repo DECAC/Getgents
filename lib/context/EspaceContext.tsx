@@ -10,6 +10,7 @@ import type {
   Artefact,
   ThemeTab,
   ThemeTabProposalAction,
+  PinnedRun,
 } from "@/lib/types";
 import { ESPACES as INITIAL_ESPACES } from "@/lib/mock-data/espaces";
 import {
@@ -152,12 +153,30 @@ interface EspaceContextValue {
   connectTool: (toolName: string) => void;
   addSpend: (categoryLabel: string, amount: number) => void;
   getResvItem: (id: string) => ReservationItem | undefined;
+  /** Vrai quand l'espace est consulté via un lien de partage (destinataire externe). */
+  shareMode: boolean;
 }
 
 const EspaceContext = createContext<EspaceContextValue | null>(null);
 
-export function EspaceProvider({ children, initialId }: { children: ReactNode; initialId: string }) {
-  const [espaces, setEspaces] = useState<EspacesMap>(() => seedEspaces(initialId));
+export function EspaceProvider({
+  children,
+  initialId,
+  shareToken,
+  initialEspaces,
+}: {
+  children: ReactNode;
+  initialId: string;
+  /**
+   * Mode « lien de partage » : l'espace est fourni par le serveur (projection
+   * publique), le localStorage et la synchro Supabase sont désactivés, et les
+   * appels chat/refresh passent par les routes tokenisées.
+   */
+  shareToken?: string;
+  initialEspaces?: EspacesMap;
+}) {
+  const shareMode = !!shareToken;
+  const [espaces, setEspaces] = useState<EspacesMap>(() => initialEspaces ?? seedEspaces(initialId));
   const [currentId, setCurrentId] = useState(initialId);
   const [loadedFromStorage, setLoadedFromStorage] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>(0);
@@ -208,6 +227,12 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
   // persistance tant que cette hydratation n'est pas faite, sinon on écrase
   // un gent publié par le placeholder vide au premier rendu.
   useEffect(() => {
+    // Lien de partage : le destinataire n'a ni cache local ni accès aux routes
+    // /api/gents — l'espace reçu du serveur est la seule source.
+    if (shareMode) {
+      setStorageReady(true);
+      return;
+    }
     const published = readPublishedGents();
     if (Object.keys(published).length) {
       setEspaces((prev) => ({ ...prev, ...published }));
@@ -226,20 +251,20 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [shareMode]);
 
   // Persiste l'activité des gents publiés (conversations, artefacts…) dans
   // localStorage : c'est ce qui alimente l'onglet Audit côté builder.
   // Important : seulement APRÈS avoir chargé les données depuis localStorage
   // (sinon on écrase les gents tout juste publiés avec le FALLBACK_ESPACE).
   useEffect(() => {
-    if (!storageReady) return;
+    if (!storageReady || shareMode) return;
     const espace = espaces[currentId];
     if (!espace) return;
     if (readPublishedGents()[currentId]) {
       writePublishedGent(currentId, espace);
     }
-  }, [espaces, currentId, storageReady]);
+  }, [espaces, currentId, storageReady, shareMode]);
 
   const currentEspace = espaces[currentId];
   const activeConversation = getActiveConversation(
@@ -449,7 +474,8 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
           pushToolMessage("MCP", `Connexion impossible à ${ev.server} — ${ev.message ?? "erreur"}`, false);
         }
       },
-      (status) => setThinkingStatus(status.label)
+      (status) => setThinkingStatus(status.label),
+      shareToken ? `/api/links/${encodeURIComponent(shareToken)}/chat` : undefined
     )
       .then(({ text: fullRaw, reasoning, truncated }) => {
         const afterQuestions = extractQuestions(fullRaw);
@@ -589,7 +615,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         setIsThinking(false);
         setThinkingStatus(null);
       });
-  }, []);
+  }, [shareToken]);
 
   // Compose une demande à partir d'un formulaire jump puis l'envoie au gent.
   const submitJumpForm = useCallback(
@@ -744,37 +770,59 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     try {
       const inputs = Object.fromEntries(espace.pinnedArtefact.inputs.map((i) => [i.id, i.value ?? ""]));
       const slim = espaceForPinnedRefresh(espace, inputs);
-      const res = await fetch("/api/artefact/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ espace: slim }),
-      });
+      // Lien de partage : le destinataire n'a ni la mission ni le prompt
+      // système — le serveur les relit en base à partir du token, et n'accepte
+      // que les valeurs d'entrées.
+      const res = shareToken
+        ? await fetch(`/api/links/${encodeURIComponent(shareToken)}/refresh`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ inputs }),
+          })
+        : await fetch("/api/artefact/preview", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ espace: slim }),
+          });
       const data = (await res.json()) as {
         ok?: boolean;
         note?: string;
         dashboard?: NonNullable<Espace["pinnedArtefact"]>["dashboard"];
+        run?: PinnedRun | null;
         error?: string;
       };
+
+      // L'historique enregistre aussi les échecs : c'est ce qui rend l'onglet
+      // Audit utile quand une génération ne passe pas.
+      const archive = (base: NonNullable<Espace["pinnedArtefact"]>, patch: Partial<NonNullable<Espace["pinnedArtefact"]>>) => {
+        const runs = data.run ? [data.run, ...(base.runs ?? [])].slice(0, 20) : base.runs;
+        setEspaces((prev) => ({ ...prev, [id]: { ...prev[id], pinnedArtefact: { ...base, ...patch, runs } } }));
+      };
+
       if (!res.ok || data.error) {
         setPinnedError(`Échec : ${data.error ?? data.note ?? res.status}`);
+        if (espace.pinnedArtefact) archive(espace.pinnedArtefact, {});
         return;
       }
       if (!data.ok) setPinnedError(data.note ?? "La génération n'a pas abouti.");
-      if (data.dashboard && espace.pinnedArtefact) {
-        const pinnedArtefact = {
-          ...espace.pinnedArtefact,
-          inputs: slim.pinnedArtefact!.inputs,
-          dashboard: data.dashboard,
-          generatedAt: new Date().toISOString(),
-        };
-        setEspaces((prev) => ({ ...prev, [id]: { ...prev[id], pinnedArtefact } }));
+      if (espace.pinnedArtefact) {
+        archive(
+          espace.pinnedArtefact,
+          data.dashboard
+            ? {
+                inputs: slim.pinnedArtefact!.inputs,
+                dashboard: data.dashboard,
+                generatedAt: new Date().toISOString(),
+              }
+            : { inputs: slim.pinnedArtefact!.inputs }
+        );
       }
     } catch (e) {
       setPinnedError(formatApiNetworkError(e));
     } finally {
       setPinnedRefreshing(false);
     }
-  }, []);
+  }, [shareToken]);
 
   const confirmArtefactProposal = useCallback((proposalId: string, decision: "add" | "dismiss") => {
     const id = currentIdRef.current;
@@ -1073,6 +1121,7 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
         updatePinnedInput,
         pinnedRefreshing,
         pinnedError,
+        shareMode,
         confirmArtefactProposal,
         confirmThemeProposal,
         confirmProfileProposal,

@@ -3,6 +3,7 @@ import type { GentDraft } from "@/lib/types/builder";
 import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { formatConversationStartedAt, newConversationId } from "@/lib/conversationUtils";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
+import { appAccessHeaders } from "@/lib/appAccess";
 
 // Persistance des gents publiés : la source de vérité est Supabase (via les
 // routes /api/gents), le localStorage n'est plus qu'un cache local pour un
@@ -41,8 +42,11 @@ const PUSH_DEBOUNCE_MS = 1500;
 export async function fetchRemoteGents(): Promise<EspacesMap | null> {
   if (remoteAvailable === false) return null;
   try {
-    const res = await fetch("/api/gents", { cache: "no-store" });
-    if (res.status === 503) {
+    const res = await fetch("/api/gents", { cache: "no-store", headers: appAccessHeaders() });
+    if (res.status === 503 || res.status === 401) {
+      // 503 : Supabase non configuré. 401 : secret d'accès absent ou invalide
+      // (ouvrir l'app une fois avec ?key=… pour l'enregistrer). Dans les deux
+      // cas on cesse d'interroger le serveur et le cache local prend le relais.
       remoteAvailable = false;
       return null;
     }
@@ -67,11 +71,11 @@ function pushRemoteGent(id: string, espace: Espace): void {
       pushTimers.delete(id);
       fetch(`/api/gents/${encodeURIComponent(id)}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...appAccessHeaders() },
         body: JSON.stringify({ espace }),
       })
         .then((res) => {
-          if (res.status === 503) remoteAvailable = false;
+          if (res.status === 503 || res.status === 401) remoteAvailable = false;
           else if (res.ok) remoteAvailable = true;
         })
         .catch(() => {

@@ -29,5 +29,8 @@ export async function POST(req: Request) {
     ok: result.ok,
     note: result.note,
     dashboard: result.pinned.dashboard ?? null,
+    // Métriques de la génération : le client les archive dans l'historique
+    // local de l'artefact (rien n'est persisté côté serveur par cette route).
+    run: result.run ?? null,
   });
 }

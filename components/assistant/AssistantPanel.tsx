@@ -62,6 +62,7 @@ export function AssistantPanel() {
     thinkingStatus,
     geoStatus,
     confirmGeoRequest,
+    shareMode,
   } = useEspace();
 
   const [cdView, setCdView] = useState<"chat" | "hist">("chat");
@@ -709,7 +710,10 @@ export function AssistantPanel() {
           <h3 className={styles.headTitle}>{currentEspace.gent}</h3>
           <div className={styles.headSub}>{currentEspace.name}</div>
         </div>
-        <ReportMenu getMarkdown={() => buildEspaceReport(currentEspace)} baseName={currentEspace.name} />
+        {/* Le rapport est un outil du créateur : jamais proposé au destinataire d'un lien de partage. */}
+        {!shareMode && (
+          <ReportMenu getMarkdown={() => buildEspaceReport(currentEspace)} baseName={currentEspace.name} />
+        )}
         <button
           type="button"
           className={styles.reportBtn}

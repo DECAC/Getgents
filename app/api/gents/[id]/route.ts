@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
+import { checkAppAccess } from "@/lib/server/appAccess";
 
 export const dynamic = "force-dynamic";
+
+// Une Response ne peut être consommée qu'une fois : on en construit une neuve
+// à chaque refus plutôt que de partager une instance de module.
+const unauthorized = () => NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
 // Un id de gent est un slug court généré par l'app (ex. "sanisettes-paris",
 // "gent-1721...") — on borne pour écarter les payloads exotiques.
@@ -11,7 +16,8 @@ interface Params {
   params: { id: string };
 }
 
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(req: Request, { params }: Params) {
+  if (!checkAppAccess(req)) return unauthorized();
   const supabase = getSupabaseAdmin();
   if (!supabase) return NextResponse.json({ error: "supabase_not_configured" }, { status: 503 });
   if (!ID_RE.test(params.id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
@@ -27,6 +33,7 @@ export async function GET(_req: Request, { params }: Params) {
 }
 
 export async function PUT(req: Request, { params }: Params) {
+  if (!checkAppAccess(req)) return unauthorized();
   const supabase = getSupabaseAdmin();
   if (!supabase) return NextResponse.json({ error: "supabase_not_configured" }, { status: 503 });
   if (!ID_RE.test(params.id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
@@ -48,7 +55,8 @@ export async function PUT(req: Request, { params }: Params) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
+  if (!checkAppAccess(req)) return unauthorized();
   const supabase = getSupabaseAdmin();
   if (!supabase) return NextResponse.json({ error: "supabase_not_configured" }, { status: 503 });
   if (!ID_RE.test(params.id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });

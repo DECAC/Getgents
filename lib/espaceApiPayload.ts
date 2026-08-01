@@ -7,11 +7,13 @@ import type { Espace } from "@/lib/types";
  */
 export function espaceForPinnedRefresh(espace: Espace, inputs?: Record<string, string>): Espace {
   let pinned = espace.pinnedArtefact;
-  if (pinned && inputs) {
-    pinned = {
-      ...pinned,
-      inputs: pinned.inputs.map((i) => (i.id in inputs ? { ...i, value: inputs[i.id] } : i)),
-    };
+  if (pinned) {
+    // L'historique des générations n'a aucune utilité pour produire le
+    // dashboard : on l'exclut du payload (il est archivé côté client).
+    const { runs: _runs, ...rest } = pinned;
+    pinned = inputs
+      ? { ...rest, inputs: rest.inputs.map((i) => (i.id in inputs ? { ...i, value: inputs[i.id] } : i)) }
+      : rest;
   }
   return {
     icon: espace.icon,
@@ -36,6 +38,60 @@ export function espaceForPinnedRefresh(espace: Espace, inputs?: Record<string, s
     webSearch: espace.webSearch,
     profile: espace.profile,
     pinnedArtefact: pinned,
+  };
+}
+
+/**
+ * Projection envoyée au navigateur d'un DESTINATAIRE de lien de partage.
+ *
+ * Liste blanche stricte : tout ce qui n'est pas nommé ici ne quitte pas le
+ * serveur. `espaceForPinnedRefresh` ne convient pas — elle conserve
+ * `systemPrompt` et `profile`.
+ *
+ * Sont notamment retirés :
+ * - `systemPrompt` : c'est le travail du créateur, jamais exposé au visiteur
+ *   (le chat passe par /api/links/[token]/chat, qui l'injecte côté serveur) ;
+ * - `profile`, `memory`, `conversations`, `files`, `artefacts` : historique et
+ *   données personnelles du créateur ;
+ * - `restApis`, `mcpServers`, `datasets` : URL internes et surtout secrets
+ *   d'authentification des connecteurs ;
+ * - `routine`, `channel` : configuration de diffusion (dont le numéro/e-mail).
+ *
+ * Les VALEURS des entrées de l'artefact figé sont vidées : elles contiennent le
+ * texte des documents fournis par le créateur (un CV, par exemple). Seuls les
+ * libellés sont transmis, pour que le destinataire sache quoi renseigner.
+ */
+export function espaceForPublicLink(espace: Espace): Espace {
+  const pinned = espace.pinnedArtefact;
+  return {
+    icon: espace.icon,
+    name: espace.name,
+    gent: espace.gent,
+    version: espace.version,
+    status: espace.status,
+    statusLabel: espace.statusLabel,
+    sensitive: espace.sensitive,
+    metrics: [],
+    integrations: [],
+    tools: [],
+    tabs: [],
+    map: null,
+    memory: "",
+    conversations: [],
+    activeConversationId: "shared",
+    files: [],
+    artefacts: [],
+    jumpForm: espace.jumpForm,
+    pinnedArtefact: pinned
+      ? {
+          enabled: pinned.enabled,
+          title: pinned.title,
+          mission: "", // le « prompt figé » reste côté serveur
+          inputs: pinned.inputs.map((i) => ({ id: i.id, label: i.label, kind: i.kind })),
+          dashboard: pinned.dashboard,
+          generatedAt: pinned.generatedAt,
+        }
+      : undefined,
   };
 }
 

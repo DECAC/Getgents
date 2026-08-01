@@ -1,6 +1,7 @@
 "use client";
 
 import { useBuilder } from "@/lib/context/BuilderContext";
+import { ShareLinksSection } from "./ShareLinksSection";
 import styles from "./DiffusionTab.module.css";
 
 const E164 = /^\+[1-9]\d{6,14}$/;
@@ -150,13 +151,12 @@ export function DiffusionTab() {
         )}
       </div>
 
+      <ShareLinksSection />
+
       <div className={styles.card}>
         <h4 className={styles.title}>Autres canaux</h4>
         <div className={styles.channels}>
-          {[
-            { icon: "🔗", title: "Lien direct", desc: "Partager un lien vers l'espace." },
-            { icon: "🌐", title: "Intégration web", desc: "Widget/iframe sur votre site." },
-          ].map((c) => (
+          {[{ icon: "🌐", title: "Intégration web", desc: "Widget/iframe sur votre site." }].map((c) => (
             <div className={styles.channel} key={c.title}>
               <div className={styles.channelIc}>{c.icon}</div>
               <div>

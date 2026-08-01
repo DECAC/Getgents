@@ -241,12 +241,14 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
               ? { ...fresh.channel, lastDeliveryNote: existing.channel?.lastDeliveryNote }
               : undefined,
             // Config re-publiée mais données déjà générées (dashboard, entrées
-            // renseignées par l'utilisateur) préservées.
+            // renseignées par l'utilisateur) préservées — ainsi que
+            // l'historique des générations, qui alimente l'audit.
             pinnedArtefact: fresh.pinnedArtefact
               ? {
                   ...fresh.pinnedArtefact,
                   dashboard: existing.pinnedArtefact?.dashboard,
                   generatedAt: existing.pinnedArtefact?.generatedAt,
+                  runs: existing.pinnedArtefact?.runs,
                   inputs: fresh.pinnedArtefact.inputs.map((i) => ({
                     ...i,
                     value: existing.pinnedArtefact?.inputs.find((e) => e.id === i.id)?.value ?? i.value,

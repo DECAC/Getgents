@@ -378,6 +378,34 @@ export interface PinnedArtefact {
   dashboard?: import("@/lib/dashboardArtefact").DashboardSpec;
   /** Horodatage ISO de la dernière génération. */
   generatedAt?: string;
+  /**
+   * Historique borné des générations (plus récente en tête) — alimente
+   * l'onglet Audit et les rapports. Les ÉCHECS y figurent aussi : sans cela
+   * une génération ratée ne laissait aucune trace exploitable.
+   */
+  runs?: PinnedRun[];
+}
+
+/** Trace d'une génération d'artefact figé, succès ou échec. */
+export interface PinnedRun {
+  at: string;
+  ok: boolean;
+  /** Diagnostic lisible (« ok — 6 blocs », « échec LLM 429 : … »). */
+  note: string;
+  /** Modèle réellement utilisé (peut différer du modèle chat après repli). */
+  model?: string;
+  /** Durée totale de la génération, tentatives comprises. */
+  durationMs?: number;
+  /** Nombre d'appels au modèle (2 en cas de repli). */
+  attempts?: number;
+  /** Statut HTTP du dernier appel en échec — distingue 401, 429, 500… */
+  httpStatus?: number;
+  /** Nombre de blocs du dashboard produit. */
+  blocks?: number;
+  /** Consommation de tokens rapportée par le fournisseur. */
+  totalTokens?: number;
+  /** Origine du déclenchement : espace du créateur, ou lien de partage. */
+  source?: "espace" | "lien";
 }
 
 /**
