@@ -5,6 +5,7 @@ import { useBuilder } from "@/lib/context/BuilderContext";
 import { draftToEspace } from "@/lib/publishedGents";
 import { DashboardArtefact } from "@/components/shared/dashboard/DashboardArtefact";
 import { extractDocumentText } from "@/lib/extractDocumentText";
+import { espaceForPinnedRefresh, formatApiNetworkError } from "@/lib/espaceApiPayload";
 import type { DashboardSpec } from "@/lib/dashboardArtefact";
 import styles from "./PinnedArtefactPreview.module.css";
 
@@ -44,9 +45,7 @@ export function PinnedArtefactPreview() {
     setLoading(true);
     setError(null);
     try {
-      // Espace dérivé du brouillon courant, avec les valeurs d'entrées d'exemple
-      // injectées — c'est cet objet que le serveur régénère (parité totale).
-      const espace = draftToEspace(currentDraft);
+      const espace = espaceForPinnedRefresh(draftToEspace(currentDraft));
       if (espace.pinnedArtefact) {
         espace.pinnedArtefact = {
           ...espace.pinnedArtefact,
@@ -73,7 +72,7 @@ export function PinnedArtefactPreview() {
         setError(data.note ? `Aperçu impossible : ${data.note}` : "Aucun tableau de bord produit.");
       }
     } catch (e) {
-      setError(`Erreur réseau : ${(e as Error).message}`);
+      setError(formatApiNetworkError(e));
     } finally {
       setLoading(false);
     }

@@ -23,6 +23,10 @@ import { extractThemeTabSignal, describeModulesForPrompt, THEME_TAB_PROMPT_INSTR
 import { extractGeolocRequest, GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
 import { extractProfileSignal, profileContextNote, PROFILE_PROMPT_INSTRUCTION } from "@/lib/profileSignal";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
+import {
+  espaceForPinnedRefresh,
+  formatApiNetworkError,
+} from "@/lib/espaceApiPayload";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 import { buildJumpFormPrompt } from "@/lib/jumpFormSignal";
@@ -739,32 +743,34 @@ export function EspaceProvider({ children, initialId }: { children: ReactNode; i
     setPinnedError(null);
     try {
       const inputs = Object.fromEntries(espace.pinnedArtefact.inputs.map((i) => [i.id, i.value ?? ""]));
-      const res = await fetch("/api/artefact/refresh", {
+      const slim = espaceForPinnedRefresh(espace, inputs);
+      const res = await fetch("/api/artefact/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gentId: id, inputs, espace }),
+        body: JSON.stringify({ espace: slim }),
       });
       const data = (await res.json()) as {
         ok?: boolean;
         note?: string;
-        pinnedArtefact?: Espace["pinnedArtefact"];
+        dashboard?: NonNullable<Espace["pinnedArtefact"]>["dashboard"];
         error?: string;
-        persisted?: boolean;
       };
       if (!res.ok || data.error) {
-        setPinnedError(
-          data.error === "supabase_not_configured"
-            ? "Impossible de rafraîchir : espace introuvable. Rechargez la page ou republiez le gent."
-            : `Échec : ${data.error ?? data.note ?? res.status}`
-        );
+        setPinnedError(`Échec : ${data.error ?? data.note ?? res.status}`);
         return;
       }
       if (!data.ok) setPinnedError(data.note ?? "La génération n'a pas abouti.");
-      if (data.pinnedArtefact) {
-        setEspaces((prev) => ({ ...prev, [id]: { ...prev[id], pinnedArtefact: data.pinnedArtefact } }));
+      if (data.dashboard && espace.pinnedArtefact) {
+        const pinnedArtefact = {
+          ...espace.pinnedArtefact,
+          inputs: slim.pinnedArtefact!.inputs,
+          dashboard: data.dashboard,
+          generatedAt: new Date().toISOString(),
+        };
+        setEspaces((prev) => ({ ...prev, [id]: { ...prev[id], pinnedArtefact } }));
       }
     } catch (e) {
-      setPinnedError(`Erreur réseau : ${(e as Error).message}`);
+      setPinnedError(formatApiNetworkError(e));
     } finally {
       setPinnedRefreshing(false);
     }
