@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { draftToEspace, readPublishedGents, writePublishedGent } from "@/lib/publishedGents";
+import { espaceForRoutineRun, formatApiNetworkError, mergeRoutineRunResult } from "@/lib/espaceApiPayload";
 import { ModelsTab } from "./ModelsTab";
 import type { KnowledgeSourceKind } from "@/lib/types/builder";
 import styles from "./PromptTab.module.css";
@@ -61,11 +62,11 @@ export function PromptTab() {
     setRoutineRunning(true);
     setRoutineRunResult(null);
     try {
-      const espace = readPublishedGents()[currentDraft.id] ?? draftToEspace(currentDraft);
+      const full = readPublishedGents()[currentDraft.id] ?? draftToEspace(currentDraft);
       const res = await fetch("/api/routines/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gentId: currentDraft.id, espace }),
+        body: JSON.stringify({ gentId: currentDraft.id, espace: espaceForRoutineRun(full) }),
       });
       const data = (await res.json()) as {
         results?: { status: string; espace?: ReturnType<typeof draftToEspace> }[];
@@ -81,13 +82,13 @@ export function PromptTab() {
       } else {
         const result = data.results?.[0];
         const status = result?.status ?? "aucun gent trouvé (publiez d'abord)";
-        if (result?.espace) writePublishedGent(currentDraft.id, result.espace);
+        if (result?.espace) writePublishedGent(currentDraft.id, mergeRoutineRunResult(full, result.espace));
         const localNote = data.persisted === false ? " (enregistré localement)" : "";
         setRoutineRunResult(`Run terminé : ${status}${localNote}. Ouvrez l'espace utilisateur pour voir la note.`);
         if (status.startsWith("ok")) updateRoutine({ lastRunNote: status });
       }
     } catch (e) {
-      setRoutineRunResult(`Erreur réseau : ${(e as Error).message}`);
+      setRoutineRunResult(formatApiNetworkError(e));
     } finally {
       setRoutineRunning(false);
     }
