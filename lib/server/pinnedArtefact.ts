@@ -3,11 +3,14 @@
 // fixe et des entrées de l'utilisateur (LinkedIn, CV…). Seules les données
 // changent d'une génération à l'autre ; la nature du rendu reste un dashboard.
 import type { Espace, PinnedArtefact } from "@/lib/types";
-import { parseDashboard, DASHBOARD_PROMPT_INSTRUCTION, type DashboardSpec } from "@/lib/dashboardArtefact";
+import { parseDashboard, DASHBOARD_BLOCKS_SCHEMA, type DashboardSpec } from "@/lib/dashboardArtefact";
 import { profileContextNote } from "@/lib/profileSignal";
+import { extractLlmMessageText } from "@/lib/server/llmMessageText";
+import { extractJsonFromHtmlMarker } from "@/lib/server/markerJson";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
-const PINNED_RE = /<!--PINNED:\s*(\{[\s\S]*?\})\s*-->/;
+/** Modèle fiable pour la structure JSON du dashboard (indépendamment du modèle chat du gent). */
+const PINNED_MODEL_FALLBACK = "anthropic/claude-sonnet-5";
 
 export interface PinnedRefreshResult {
   ok: boolean;
@@ -38,56 +41,96 @@ export async function refreshPinnedArtefact(espace: Espace): Promise<PinnedRefre
 
   const systemPrompt =
     `${espace.systemPrompt?.trim() || `Tu es le gent « ${espace.name} ».`}\n\n${dateNote}${profileNote}` +
-    "\n\nCONTEXTE : tu produis un ARTEFACT FIGÉ — un tableau de bord dense, lu comme une mini-application, sans conversation. " +
-    "Fais ressortir les informations clés au premier plan (indicateurs, comparaisons, tableaux), du plus important au moins important. " +
+    "\n\nCONTEXTE : tu produis un ARTEFACT FIGÉ — un tableau de bord dense, sans conversation. " +
+    "Fais ressortir les informations clés (indicateurs, comparaisons, tableaux). " +
     (espace.webSearch ? "Appuie-toi sur la recherche web et n'invente aucune donnée non vérifiée. " : "") +
-    "Tu DOIS répondre en émettant UNIQUEMENT le bloc suivant (aucun autre texte) : " +
-    '<!--PINNED: {"dashboard":{"subtitle":"...","blocks":[...]}}--> ' +
-    "où le dashboard suit ce schéma :\n" +
-    DASHBOARD_PROMPT_INSTRUCTION;
+    "\n\nFORMAT DE RÉPONSE OBLIGATOIRE : ta réponse ENTIÈRE doit être UNIQUEMENT ce bloc HTML, sans texte avant ni après :\n" +
+    '<!--PINNED: {"dashboard":{"subtitle":"…","blocks":[…]}}-->\n' +
+    "Exemple minimal valide :\n" +
+    '<!--PINNED: {"dashboard":{"blocks":[{"type":"stats","items":[{"label":"Indicateur","value":"42"}]},{"type":"text","body":"Synthèse."}]}}-->\n\n' +
+    DASHBOARD_BLOCKS_SCHEMA;
 
-  let raw: string;
+  const userContent = `${pinned.mission}${inputsBlock}`;
+  const model = espace.chatModelId ?? PINNED_MODEL_FALLBACK;
+
+  let raw = await callPinnedModel(key, model, systemPrompt, userContent, espace.webSearch);
+  let dashboard = raw ? extractPinnedDashboard(raw) : null;
+
+  // 2e tentative : modèle de repli + consigne plus stricte (structure JSON souvent
+  // ratée par les modèles reasoning ou avec recherche web).
+  if (!dashboard) {
+    const retryModel = model === PINNED_MODEL_FALLBACK ? model : PINNED_MODEL_FALLBACK;
+    const retryRaw = await callPinnedModel(
+      key,
+      retryModel,
+      systemPrompt +
+        "\n\nRAPPEL CRITIQUE : n'écris AUCUN texte libre. Émets UNIQUEMENT <!--PINNED: {\"dashboard\":{\"blocks\":[…]}}--> avec au moins 3 blocs valides.",
+      `${userContent}\n\n(Réponds uniquement par le bloc <!--PINNED: …--> avec un dashboard complet.)`,
+      false
+    );
+    if (retryRaw) {
+      raw = retryRaw;
+      dashboard = extractPinnedDashboard(retryRaw);
+    }
+  }
+
+  if (!raw?.trim()) {
+    return {
+      ok: false,
+      note: "réponse vide du modèle — essayez sans recherche web ou changez le modèle chat",
+      pinned,
+    };
+  }
+
+  if (!dashboard) {
+    const hint = raw.includes("<!--PINNED") || raw.includes("<!--ARTEFACT")
+      ? "bloc détecté mais JSON ou blocs invalides"
+      : "aucun bloc PINNED/ARTEFACT détecté";
+    return {
+      ok: false,
+      note: `réponse illisible (dashboard non produit) — ${hint}`,
+      pinned,
+    };
+  }
+
+  return { ok: true, note: `ok — ${dashboard.blocks.length} blocs`, pinned: { ...pinned, dashboard, generatedAt: stamp } };
+}
+
+async function callPinnedModel(
+  key: string,
+  model: string,
+  systemPrompt: string,
+  userContent: string,
+  webSearch?: boolean
+): Promise<string> {
   try {
     const res = await fetch(OPENROUTER_API, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: espace.chatModelId ?? "anthropic/claude-sonnet-5",
+        model,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `${pinned.mission}${inputsBlock}` },
+          { role: "user", content: userContent },
         ],
-        // Budget large + raisonnement bridé : sinon la recherche web + le
-        // raisonnement épuisent le budget et `content` revient vide.
         max_tokens: 9000,
-        reasoning: { effort: "low" },
-        ...(espace.webSearch ? { plugins: [{ id: "web" }] } : {}),
+        ...(webSearch ? { plugins: [{ id: "web" }] } : {}),
       }),
       cache: "no-store",
     });
-    if (!res.ok) {
-      const detail = (await res.text()).slice(0, 160);
-      return { ok: false, note: `échec LLM ${res.status} : ${detail}`, pinned: { ...pinned, generatedAt: stamp } };
-    }
-    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    raw = data.choices?.[0]?.message?.content ?? "";
-  } catch (e) {
-    return { ok: false, note: `échec réseau : ${(e as Error).message.slice(0, 140)}`, pinned: { ...pinned, generatedAt: stamp } };
+    if (!res.ok) return "";
+    const data = (await res.json()) as { choices?: { message?: Record<string, unknown> }[] };
+    return extractLlmMessageText(data);
+  } catch {
+    return "";
   }
-
-  const dashboard = extractPinnedDashboard(raw);
-  if (!dashboard) {
-    // Échec de parsing : on conserve l'ancien rendu ET l'ancien horodatage
-    // (« données à jour » reste honnête).
-    return { ok: false, note: "réponse illisible (dashboard non produit)", pinned };
-  }
-  return { ok: true, note: `ok — ${dashboard.blocks.length} blocs`, pinned: { ...pinned, dashboard, generatedAt: stamp } };
 }
 
 /** Un objet candidat est un dashboard s'il porte des blocks, éventuellement sous une clé `dashboard`. */
 function coerceDashboard(parsed: unknown): DashboardSpec | null {
   if (!parsed || typeof parsed !== "object") return null;
   const o = parsed as Record<string, unknown>;
+  if (o.kind === "dashboard" && o.dashboard) return parseDashboard(o.dashboard);
   return parseDashboard(o.dashboard ?? o);
 }
 
@@ -105,26 +148,20 @@ export function extractPinnedDashboard(raw: string): DashboardSpec | null {
     }
   };
 
-  const pinned = raw.match(PINNED_RE);
-  if (pinned) {
-    const spec = tryParse(pinned[1]);
-    if (spec) return spec;
+  for (const marker of ["PINNED", "ARTEFACT"] as const) {
+    const json = extractJsonFromHtmlMarker(raw, marker);
+    if (json) {
+      const spec = tryParse(json);
+      if (spec) return spec;
+    }
   }
 
-  const artefact = raw.match(/<!--ARTEFACT:\s*(\{[\s\S]*?\})\s*-->/);
-  if (artefact) {
-    const spec = tryParse(artefact[1]);
-    if (spec) return spec;
-  }
-
-  // Bloc de code ```json … ``` ou ``` … ```
   const fence = raw.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
   if (fence) {
     const spec = tryParse(fence[1]);
     if (spec) return spec;
   }
 
-  // Dernier recours : balayer chaque objet JSON équilibré qui mentionne « blocks ».
   for (const candidate of balancedJsonObjects(raw)) {
     if (!candidate.includes('"blocks"')) continue;
     const spec = tryParse(candidate);

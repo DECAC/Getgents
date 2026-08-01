@@ -72,6 +72,18 @@ export const DASHBOARD_PROMPT_INSTRUCTION =
   "Dans un graphe (y compris composé), n'associe QUE des séries d'échelle comparable : deux mesures d'ordres de grandeur très différents (ex. un nombre de ventes ~10 et un prix ~380 000) doivent aller dans DEUX graphiques séparés, jamais sur le même axe. " +
   "N'invente jamais de chiffres : n'utilise que les données de la conversation. Un seul artefact par réponse.";
 
+/** Schéma des blocs dashboard sans la ligne d'émission ARTEFACT (artefact figé / PINNED). */
+export const DASHBOARD_BLOCKS_SCHEMA =
+  "Construis un tableau de bord dense avec des blocs JSON, chacun avec \"type\" et optionnellement \"width\" (\"full\" ou \"half\") :\n" +
+  '- {"type":"stats","items":[{"label":"Prix estimé","value":"685 000 €","delta":"-2,1 %","trend":"down","hint":"vs annonce"}]} — 2 à 4 indicateurs ;\n' +
+  '- {"type":"heading","text":"Titre de section"} ;\n' +
+  '- {"type":"kv","title":"Critères","items":[{"label":"Surface","value":"153 m²"}]} ;\n' +
+  '- {"type":"callout","tone":"warning","title":"Point d\'attention","body":"Texte"} — tone: info|success|warning|critical|neutral ;\n' +
+  '- {"type":"chart","variant":"bar","title":"...","xKey":"label","series":[{"key":"prix","label":"Prix au m²"}],"data":[{"label":"Bien","prix":4575},{"label":"Marché","prix":3800}]} ;\n' +
+  '- {"type":"table","columns":["Poste","Valeur"],"rows":[["...","..."]]} ;\n' +
+  '- {"type":"text","body":"Paragraphe en markdown"}.\n' +
+  "Combine au minimum 3 blocs (stats ou heading + text ou kv + chart ou callout). Chaque bloc stats doit avoir label ET value sur chaque item.";
+
 const TONES: CalloutTone[] = ["info", "success", "warning", "critical", "neutral"];
 const VARIANTS: ChartVariant[] = ["bar", "line", "area", "pie", "donut", "radial", "composed"];
 
