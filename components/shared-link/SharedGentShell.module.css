@@ -1,5 +1,11 @@
 .page {
-  min-height: 100vh;
+  /* `html, body` sont en `overflow: hidden` (app.globals.css) : le shell
+     builder/espace gère son propre scroll interne, mais cette page publique
+     n'en avait aucun — un tableau de bord dense (plusieurs sections, tuile
+     rémunération pleine largeur…) dépassait la hauteur d'écran sans qu'on
+     puisse jamais atteindre le bas. `.page` est donc ici la zone de scroll. */
+  height: 100vh;
+  overflow-y: auto;
   background: var(--bg);
   color: var(--ink);
   display: flex;

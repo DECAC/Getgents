@@ -63,6 +63,12 @@ export function espaceForPinnedRefresh(espace: Espace, inputs?: Record<string, s
  * Les VALEURS des entrées de l'artefact figé sont vidées : elles contiennent le
  * texte des documents fournis par le créateur (un CV, par exemple). Seuls les
  * libellés sont transmis, pour que le destinataire sache quoi renseigner.
+ *
+ * Le DASHBOARD DÉJÀ GÉNÉRÉ n'est jamais transmis non plus : c'est le résultat
+ * personnel du créateur (produit à partir de son propre CV/sa propre
+ * situation lors de ses tests), pas un aperçu neutre du gent. Le visiteur doit
+ * démarrer d'un artefact vierge et générer SA propre version à partir de SES
+ * propres entrées.
  */
 export function espaceForPublicLink(espace: Espace): Espace {
   const pinned = espace.pinnedArtefact;
@@ -91,8 +97,7 @@ export function espaceForPublicLink(espace: Espace): Espace {
           title: pinned.title,
           mission: "", // le « prompt figé » reste côté serveur
           inputs: pinned.inputs.map((i) => ({ id: i.id, label: i.label, kind: i.kind })),
-          dashboard: pinned.dashboard,
-          generatedAt: pinned.generatedAt,
+          // dashboard / generatedAt volontairement absents : voir ci-dessus.
         }
       : undefined,
   };

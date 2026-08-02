@@ -161,10 +161,15 @@ describe("projection publique d'un espace", () => {
     expect(pub.pinnedArtefact?.inputs).toEqual([{ id: "cv", label: "Votre CV", kind: "file" }]);
   });
 
+  it("n'expose jamais le dashboard déjà généré par le créateur — le visiteur doit repartir vierge", () => {
+    expect(pub.pinnedArtefact?.dashboard).toBeUndefined();
+    expect(pub.pinnedArtefact?.generatedAt).toBeUndefined();
+    expect(serialized).not.toContain("Rendu public");
+  });
+
   it("conserve ce qui est nécessaire à l'affichage", () => {
     expect(pub.name).toBe("Radar Emploi");
     expect(pub.icon).toBe("🧭");
     expect(pub.pinnedArtefact?.title).toBe("Tableau de bord carrière");
-    expect(pub.pinnedArtefact?.dashboard?.blocks).toHaveLength(1);
   });
 });
