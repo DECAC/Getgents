@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { checkAppAccess } from "@/lib/server/appAccess";
+import { checkAppAccess, APP_ACCESS_HINT } from "@/lib/server/appAccess";
 import { createShareLink, listShareLinks, statsForTokens } from "@/lib/server/shareLinks";
 
 export const dynamic = "force-dynamic";
 
 const ID_RE = /^[a-z0-9][a-z0-9_-]{0,80}$/i;
-const unauthorized = () => NextResponse.json({ error: "unauthorized" }, { status: 401 });
+const unauthorized = () =>
+  NextResponse.json({ error: "unauthorized", hint: APP_ACCESS_HINT }, { status: 401 });
 
 function fail(e: unknown) {
   const msg = (e as Error).message;

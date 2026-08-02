@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
-import { checkAppAccess } from "@/lib/server/appAccess";
+import { checkAppAccess, APP_ACCESS_HINT } from "@/lib/server/appAccess";
 
 export const dynamic = "force-dynamic";
 
 // Une Response ne peut être consommée qu'une fois : on en construit une neuve
 // à chaque refus plutôt que de partager une instance de module.
-const unauthorized = () => NextResponse.json({ error: "unauthorized" }, { status: 401 });
+const unauthorized = () => NextResponse.json({ error: "unauthorized", hint: APP_ACCESS_HINT }, { status: 401 });
 
 // Un id de gent est un slug court généré par l'app (ex. "sanisettes-paris",
 // "gent-1721...") — on borne pour écarter les payloads exotiques.

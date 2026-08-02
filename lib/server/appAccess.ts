@@ -28,3 +28,14 @@ export function checkAppAccess(req: Request): boolean {
   if (header && header === secret) return true;
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
+
+/**
+ * Explication actionnable jointe aux refus 401 : « unauthorized » seul ne dit
+ * pas au créateur quoi faire, alors que la cause est presque toujours la même —
+ * APP_ACCESS_SECRET est configuré côté serveur mais le navigateur ne l'a jamais
+ * reçu (voir lib/appAccess.ts : capture unique via ?key=…).
+ */
+export const APP_ACCESS_HINT =
+  "Accès protégé par APP_ACCESS_SECRET : ce navigateur n'a pas encore la clé. " +
+  "Rouvrez l'application une fois avec ?key=VOTRE_SECRET dans l'URL (elle est mémorisée puis retirée de la barre d'adresse).";
+
