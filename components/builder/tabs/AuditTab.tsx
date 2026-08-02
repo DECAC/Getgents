@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { readPublishedGents } from "@/lib/publishedGents";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { describeMessage, buildEspaceReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
 import { appAccessHeaders } from "@/lib/appAccess";
+import { AppAccessPrompt } from "@/components/shared/AppAccessPrompt";
 import { describeShareLink, type ShareLink, type ShareLinkStats } from "@/lib/shareLink";
 import type { Espace, ConversationThread } from "@/lib/types";
 import styles from "./AuditTab.module.css";
@@ -53,6 +54,7 @@ export function AuditTab() {
   const [espace, setEspace] = useState<Espace | null>(null);
   const [links, setLinks] = useState<ShareLink[]>([]);
   const [linkStats, setLinkStats] = useState<Record<string, ShareLinkStats>>({});
+  const [linksNeedAccessKey, setLinksNeedAccessKey] = useState(false);
 
   // Les runs côté user sont persistés dans localStorage à chaque échange
   // (voir EspaceContext) : on relit à l'affichage de l'onglet.
@@ -61,25 +63,32 @@ export function AuditTab() {
   }, [currentDraft.id, currentDraft.updatedAt]);
 
   // Les liens de partage vivent en base (pas dans l'espace) : requête dédiée.
-  useEffect(() => {
-    let cancelled = false;
+  const loadLinks = useCallback(() => {
+    setLinksNeedAccessKey(false);
     fetch(`/api/links?gentId=${encodeURIComponent(currentDraft.id)}`, {
       cache: "no-store",
       headers: appAccessHeaders(),
     })
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (res.status === 401) {
+          setLinksNeedAccessKey(true);
+          return null;
+        }
+        return res.ok ? res.json() : null;
+      })
       .then((data: { links?: ShareLink[]; stats?: Record<string, ShareLinkStats> } | null) => {
-        if (cancelled || !data) return;
+        if (!data) return;
         setLinks(data.links ?? []);
         setLinkStats(data.stats ?? {});
       })
       .catch(() => {
         // Partage non configuré : la section reste simplement vide.
       });
-    return () => {
-      cancelled = true;
-    };
   }, [currentDraft.id]);
+
+  useEffect(() => {
+    loadLinks();
+  }, [loadLinks]);
 
   const runs = (espace?.conversations ?? []).filter((t) => t.messages.length > 0);
   const pinnedRuns = espace?.pinnedArtefact?.runs ?? [];
@@ -216,7 +225,9 @@ export function AuditTab() {
       <p className={styles.sectionSub}>
         Les liens personnalisés émis pour ce gent et ce que chaque cible en a fait.
       </p>
-      {links.length === 0 ? (
+      {linksNeedAccessKey ? (
+        <AppAccessPrompt onSaved={loadLinks} />
+      ) : links.length === 0 ? (
         <div className={styles.empty}>
           Aucun lien émis (onglet Diffusion). Le partage exige la persistance serveur.
         </div>

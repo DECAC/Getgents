@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { appAccessHeaders } from "@/lib/appAccess";
+import { AppAccessPrompt } from "@/components/shared/AppAccessPrompt";
 import { describeShareLink, shareLinkState, shareLinkUrl, type ShareLink, type ShareLinkStats } from "@/lib/shareLink";
 import styles from "./ShareLinksSection.module.css";
 
@@ -25,6 +26,7 @@ export function ShareLinksSection() {
   const [stats, setStats] = useState<Record<string, ShareLinkStats>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [needsAccessKey, setNeedsAccessKey] = useState(false);
   const [target, setTarget] = useState("");
   const [expiryDays, setExpiryDays] = useState(30);
   const [creating, setCreating] = useState(false);
@@ -33,6 +35,7 @@ export function ShareLinksSection() {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setNeedsAccessKey(false);
     try {
       const res = await fetch(`/api/links?gentId=${encodeURIComponent(gentId)}`, {
         cache: "no-store",
@@ -45,7 +48,8 @@ export function ShareLinksSection() {
         hint?: string;
       };
       if (!res.ok) {
-        setError(data.hint ?? `Erreur : ${data.error ?? res.status}`);
+        if (res.status === 401) setNeedsAccessKey(true);
+        else setError(data.hint ?? `Erreur : ${data.error ?? res.status}`);
         setLinks([]);
         return;
       }
@@ -77,7 +81,8 @@ export function ShareLinksSection() {
       });
       const data = (await res.json()) as { link?: ShareLink; error?: string; hint?: string };
       if (!res.ok) {
-        setError(data.hint ?? `Erreur : ${data.error ?? res.status}`);
+        if (res.status === 401) setNeedsAccessKey(true);
+        else setError(data.hint ?? `Erreur : ${data.error ?? res.status}`);
         return;
       }
       setTarget("");
@@ -97,6 +102,10 @@ export function ShareLinksSection() {
         headers: appAccessHeaders(),
       });
       if (!res.ok) {
+        if (res.status === 401) {
+          setNeedsAccessKey(true);
+          return;
+        }
         const data = (await res.json()) as { error?: string };
         setError(`Erreur : ${data.error ?? res.status}`);
         return;
@@ -170,9 +179,10 @@ export function ShareLinksSection() {
         </button>
       </div>
 
+      {needsAccessKey && <AppAccessPrompt onSaved={() => void load()} />}
       {error && <div className={styles.error}>{error}</div>}
 
-      {loading ? (
+      {needsAccessKey ? null : loading ? (
         <div className={styles.muted}>Chargement des liens…</div>
       ) : links.length === 0 ? (
         <div className={styles.muted}>Aucun lien pour ce gent.</div>

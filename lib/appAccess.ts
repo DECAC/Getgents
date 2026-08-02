@@ -29,6 +29,22 @@ export function readAppSecret(): string | null {
   }
 }
 
+/**
+ * Enregistre la clé directement, sans passer par l'URL — utilisé par
+ * `AppAccessPrompt`, affiché là où un 401 « unauthorized » survient (ex. la
+ * section Lien de Diffusion), pour ne pas exiger de revenir à la racine de
+ * l'app avec `?key=…` à chaque fois qu'un nouvel onglet ou une preview le
+ * demande.
+ */
+export function writeAppSecret(secret: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(KEY, secret.trim());
+  } catch {
+    // localStorage indisponible — sans remède ici.
+  }
+}
+
 let captured = false;
 
 /**
