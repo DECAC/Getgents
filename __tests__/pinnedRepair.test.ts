@@ -67,3 +67,27 @@ describe("diagnostic d'échec", () => {
     expect(extractJsonFromHtmlMarker('<!--PINNED: {"dashboard":{"blocks":[{"type":"text","body":"a"}', "PINNED")).not.toBeNull();
   });
 });
+
+describe("conflit entre la règle anti-HTML du gent et l'enveloppe PINNED", () => {
+  const prose = "Voici votre tableau de bord :\n\n## Top 5 des postes\n1. Directeur Produit — 42 %";
+
+  it("nomme le conflit quand le prompt du gent interdit les balises HTML", () => {
+    const promptDuGent =
+      "7. FORMAT STRICT : n'insère JAMAIS de balises HTML ni de balises de citation (<cite index=\"...\">) dans tes réponses.";
+    const note = diagnosePinnedFailure(prose, promptDuGent);
+    expect(note).toContain("interdit");
+    expect(note).toContain("<!--PINNED-->");
+    expect(note).toContain("Reformulez");
+  });
+
+  it("reste générique quand le prompt ne contient pas cette règle", () => {
+    const note = diagnosePinnedFailure(prose, "Tu es un assistant carrière. Sois concis.");
+    expect(note).toContain("texte libre");
+    expect(note).not.toContain("Reformulez");
+  });
+
+  it("détecte aussi les formulations voisines", () => {
+    expect(diagnosePinnedFailure(prose, "N'utilise aucune balise HTML.")).toContain("Reformulez");
+    expect(diagnosePinnedFailure(prose, "Pas de balises HTML dans le rendu.")).toContain("Reformulez");
+  });
+});

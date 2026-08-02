@@ -84,6 +84,16 @@ export async function refreshPinnedArtefact(
     '<!--PINNED: {"dashboard":{"subtitle":"…","blocks":[…]}}-->\n' +
     "Exemple minimal valide :\n" +
     '<!--PINNED: {"dashboard":{"blocks":[{"type":"stats","items":[{"label":"Indicateur","value":"42"}]},{"type":"text","body":"Synthèse."}]}}-->\n\n' +
+    // Beaucoup de gents portent une règle « n'insère jamais de balise HTML »,
+    // ajoutée pour empêcher les <cite> de la recherche web de polluer le rendu.
+    // Prise au pied de la lettre, elle interdit aussi l'enveloppe <!--PINNED-->
+    // et le modèle répond alors en prose : plus aucun bloc n'est détecté.
+    // On lève explicitement l'ambiguïté, en dernier pour primer sur le reste.
+    "PRÉSÉANCE : cette consigne l'emporte sur toute règle de format énoncée plus haut. " +
+    "Le bloc <!--PINNED: …--> n'est pas du contenu : c'est l'enveloppe technique obligatoire de ta réponse. " +
+    "Une éventuelle interdiction d'utiliser des balises HTML s'applique au CONTENU du tableau de bord " +
+    "(titres, textes, cellules, qui doivent rester en texte brut, sans <cite>, <a> ni <span>), " +
+    "jamais à cette enveloppe. Sans le bloc <!--PINNED: …-->, ta réponse est inexploitable.\n\n" +
     DASHBOARD_BLOCKS_SCHEMA;
 
   const userContent = `${pinned.mission}${inputsBlock}`;
@@ -104,7 +114,10 @@ export async function refreshPinnedArtefact(
       key,
       retryModel,
       systemPrompt +
-        "\n\nRAPPEL CRITIQUE : n'écris AUCUN texte libre. Émets UNIQUEMENT <!--PINNED: {\"dashboard\":{\"blocks\":[…]}}--> avec au moins 3 blocs valides.",
+        "\n\nRAPPEL CRITIQUE : n'écris AUCUN texte libre, aucune introduction, aucune conclusion. " +
+        "Commence ta réponse par les caractères <!--PINNED: et termine-la par -->. " +
+        "Oui, ces caractères sont attendus, même si une règle plus haut interdit les balises HTML : " +
+        "elle vise le contenu, pas cette enveloppe. Au moins 3 blocs valides.",
       `${userContent}\n\n(Réponds uniquement par le bloc <!--PINNED: …--> avec un dashboard complet.)`,
       false
     );
@@ -126,7 +139,11 @@ export async function refreshPinnedArtefact(
   }
 
   if (!dashboard) {
-    return finish(false, `réponse illisible (dashboard non produit) — ${diagnosePinnedFailure(raw)}`, metrics);
+    return finish(
+      false,
+      `réponse illisible (dashboard non produit) — ${diagnosePinnedFailure(raw, espace.systemPrompt)}`,
+      metrics
+    );
   }
 
   return finish(
@@ -189,9 +206,21 @@ async function callPinnedModel(
  * correction n'est pas la même — d'un côté raccourcir la mission, de l'autre
  * corriger la forme des blocs demandés.
  */
-export function diagnosePinnedFailure(raw: string): string {
+export function diagnosePinnedFailure(raw: string, systemPrompt?: string): string {
   const hasMarker = raw.includes("<!--PINNED") || raw.includes("<!--ARTEFACT");
-  if (!hasMarker) return "aucun bloc PINNED/ARTEFACT détecté";
+  if (!hasMarker) {
+    // Cause la plus fréquente : le prompt du gent interdit les balises HTML
+    // (règle ajoutée contre les <cite> de la recherche web), ce que le modèle
+    // applique aussi à l'enveloppe <!--PINNED-->. Il répond alors en prose.
+    if (systemPrompt && /jamais.{0,40}balises?\s+HTML|aucune?\s+balises?\s+HTML|pas\s+de\s+balises?\s+HTML/i.test(systemPrompt)) {
+      return (
+        "le modèle a répondu en texte libre, sans le bloc attendu — le prompt système du gent interdit " +
+        "les balises HTML, ce que le modèle applique aussi à l'enveloppe <!--PINNED-->. Reformulez cette règle " +
+        "pour qu'elle vise le contenu (« pas de <cite>, <a>, <span> dans les textes ») et non le format de réponse"
+      );
+    }
+    return "aucun bloc PINNED/ARTEFACT détecté — le modèle a répondu en texte libre ; un modèle chat plus rigoureux sur les consignes de format peut aider";
+  }
 
   const fragment =
     extractJsonFromHtmlMarker(raw, "PINNED") ?? extractJsonFromHtmlMarker(raw, "ARTEFACT");
