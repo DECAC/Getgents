@@ -179,6 +179,22 @@ export async function incrementRefreshCount(token: string): Promise<number | nul
   return typeof data === "number" ? data : null;
 }
 
+/**
+ * Le gent existe-t-il réellement dans `published_gents` ? Un lien peut être
+ * parfaitement valide (créé, non expiré) alors que le gent qu'il pointe n'a
+ * jamais atteint le serveur — cas vécu : tant que Supabase n'était pas
+ * configuré, chaque publication n'écrivait que le localStorage du créateur.
+ * Un visiteur ouvrant le lien voit alors « Contenu indisponible » sans que le
+ * créateur, lui, s'en aperçoive (son propre navigateur a toujours le cache
+ * local). Exposer ce fait côté créateur évite cette confusion.
+ */
+export async function gentPublishedInDb(gentId: string): Promise<boolean> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return false;
+  const { data } = await supabase.from("published_gents").select("id").eq("id", gentId).maybeSingle();
+  return !!data;
+}
+
 /** Agrégats de tracking pour un lot de liens (une seule requête). */
 export async function statsForTokens(tokens: string[]): Promise<Record<string, ShareLinkStats>> {
   const out: Record<string, ShareLinkStats> = {};

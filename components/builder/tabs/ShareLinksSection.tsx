@@ -27,6 +27,7 @@ export function ShareLinksSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsAccessKey, setNeedsAccessKey] = useState(false);
+  const [gentPublished, setGentPublished] = useState(true);
   const [target, setTarget] = useState("");
   const [expiryDays, setExpiryDays] = useState(30);
   const [creating, setCreating] = useState(false);
@@ -44,6 +45,7 @@ export function ShareLinksSection() {
       const data = (await res.json()) as {
         links?: ShareLink[];
         stats?: Record<string, ShareLinkStats>;
+        gentPublished?: boolean;
         error?: string;
         hint?: string;
       };
@@ -55,6 +57,7 @@ export function ShareLinksSection() {
       }
       setLinks(data.links ?? []);
       setStats(data.stats ?? {});
+      setGentPublished(data.gentPublished ?? true);
     } catch (e) {
       setError(`Erreur réseau : ${(e as Error).message}`);
     } finally {
@@ -145,6 +148,15 @@ export function ShareLinksSection() {
       {!published && (
         <div className={styles.warn}>
           Publiez d&apos;abord le gent : un lien pointe vers sa version publiée.
+        </div>
+      )}
+
+      {published && !loading && !needsAccessKey && !gentPublished && (
+        <div className={styles.warn}>
+          ⚠ Ce gent est marqué publié ici, mais <b>absent de la base serveur</b> — les liens
+          pointeront vers du vide (« Contenu indisponible » côté visiteur). Cause fréquente :
+          Supabase n&apos;était pas configuré au moment de la dernière publication. Cliquez à
+          nouveau sur <b>Publier</b> (onglet Prompt) pour le pousser vers le serveur.
         </div>
       )}
 

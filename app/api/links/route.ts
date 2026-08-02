@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { checkAppAccess, APP_ACCESS_HINT } from "@/lib/server/appAccess";
-import { createShareLink, describeShareLinksFailure, listShareLinks, statsForTokens } from "@/lib/server/shareLinks";
+import {
+  createShareLink,
+  describeShareLinksFailure,
+  gentPublishedInDb,
+  listShareLinks,
+  statsForTokens,
+} from "@/lib/server/shareLinks";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +28,8 @@ export async function GET(req: Request) {
   try {
     const links = await listShareLinks(gentId);
     const stats = await statsForTokens(links.map((l) => l.token));
-    return NextResponse.json({ links, stats });
+    const gentPublished = await gentPublishedInDb(gentId);
+    return NextResponse.json({ links, stats, gentPublished });
   } catch (e) {
     return fail(e);
   }
