@@ -131,14 +131,14 @@ export function PinnedArtefactPreview() {
                     Choisir un fichier
                   </button>
                   <span className={styles.fileStateLabel}>
-                    {fileState[inp.id] ?? (values[inp.id] ? "✓ document chargé" : "PDF, Word ou texte")}
+                    {fileState[inp.id] ?? (values[inp.id] ? "✓ document chargé" : "PDF, Word, texte ou CSV")}
                   </span>
                   <input
                     ref={(el) => {
                       fileRefs.current[inp.id] = el;
                     }}
                     type="file"
-                    accept=".pdf,.docx,.txt,.md"
+                    accept=".pdf,.docx,.txt,.md,.csv,.tsv"
                     className={styles.hiddenFile}
                     onChange={(e) => handleFile(inp.id, e.target.files?.[0])}
                   />

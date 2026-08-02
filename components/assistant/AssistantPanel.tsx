@@ -842,7 +842,7 @@ export function AssistantPanel() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+            accept=".pdf,.docx,.txt,.md,.csv,.tsv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv"
             style={{ display: "none" }}
             onChange={(e) => handleFilePick(e.target.files?.[0])}
           />
