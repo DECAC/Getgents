@@ -27,6 +27,8 @@ import {
   draftsForPersistence,
   mergeStoredDrafts,
   seedDrafts,
+  syncDraftsFromRemote,
+  pushRemoteDraft,
 } from "@/lib/builderDraftStorage";
 
 export type BuilderTab = "prompt" | "connectors" | "artefacts" | "diffusion" | "audit";
@@ -158,20 +160,44 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   currentIdRef.current = currentId;
   const [storageReady, setStorageReady] = useState(false);
 
-  // Recharge les brouillons persistés (localStorage). On attend que cette
-  // fusion soit appliquée avant toute écriture — sinon le premier save
-  // écrase le localStorage avec les seuls mock data (perte des gents custom).
+  // Recharge les brouillons : d'abord le cache localStorage (instantané), puis
+  // le serveur (source de vérité) qui l'écrase s'il est disponible. On attend
+  // que cette fusion soit appliquée avant toute écriture — sinon le premier
+  // save écrase le stockage avec les seuls mock data (perte des gents custom).
   useEffect(() => {
     setDrafts((prev) => mergeStoredDrafts(prev));
-    setStorageReady(true);
+    let cancelled = false;
+    syncDraftsFromRemote()
+      .then((merged) => {
+        if (cancelled || !merged || !Object.keys(merged).length) return;
+        setDrafts((prev) => ({ ...prev, ...merged }));
+      })
+      .finally(() => {
+        if (!cancelled) setStorageReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  // Persistance : cache local immédiat + écriture serveur débouncée, pour que
+  // tout gent créé ou édité survive au navigateur et à la machine.
+  const lastPersistedRef = useRef<Record<string, string>>({});
   useEffect(() => {
     if (!storageReady || typeof window === "undefined") return;
+    const persistable = draftsForPersistence(drafts);
     try {
-      window.localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(draftsForPersistence(drafts)));
+      window.localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(persistable));
     } catch {
       // quota dépassé / navigation privée : le studio reste utilisable en mémoire
+    }
+    // N'envoie au serveur que les brouillons réellement modifiés (l'effet se
+    // déclenche à chaque frappe, mais un seul brouillon change à la fois).
+    for (const [id, draft] of Object.entries(persistable)) {
+      const serialized = JSON.stringify(draft);
+      if (lastPersistedRef.current[id] === serialized) continue;
+      lastPersistedRef.current[id] = serialized;
+      pushRemoteDraft(id, draft);
     }
   }, [drafts, storageReady]);
 

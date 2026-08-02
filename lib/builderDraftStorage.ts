@@ -1,6 +1,7 @@
 import type { GentDraft, GentDraftsMap } from "@/lib/types/builder";
 import type { Espace } from "@/lib/types";
 import { GENT_DRAFTS } from "@/lib/mock-data/builder";
+import { appAccessHeaders } from "@/lib/appAccess";
 
 export const DRAFTS_STORAGE_KEY = "getgents:gent-drafts";
 export const NOUVEAU_GENT_TEMPLATE_ID = "nouveau-gent";
@@ -46,12 +47,91 @@ export function writeStoredDrafts(drafts: GentDraftsMap): void {
   }
 }
 
-/** Crée un brouillon vierge, l'enregistre et renvoie son identifiant. */
+// --- Persistance serveur -------------------------------------------------
+// Même modèle que lib/publishedGents.ts : le localStorage devient un cache
+// d'affichage immédiat, la base est la source de vérité. Un brouillon créé sur
+// une machine se retrouve donc sur les autres, et survit au vidage du cache.
+
+// null = pas encore sondé ; false = API absente/non autorisée (on cesse
+// d'essayer pour la session) ; true = distant opérationnel.
+let remoteAvailable: boolean | null = null;
+const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const PUSH_DEBOUNCE_MS = 1500;
+
+/** Récupère les brouillons depuis le serveur — null si indisponible. */
+export async function fetchRemoteDrafts(): Promise<GentDraftsMap | null> {
+  if (remoteAvailable === false) return null;
+  try {
+    const res = await fetch("/api/drafts", { cache: "no-store", headers: appAccessHeaders() });
+    if (res.status === 503 || res.status === 401) {
+      remoteAvailable = false;
+      return null;
+    }
+    if (!res.ok) return null;
+    remoteAvailable = true;
+    const data = (await res.json()) as { drafts?: GentDraftsMap };
+    const drafts = data.drafts ?? {};
+    delete drafts[NOUVEAU_GENT_TEMPLATE_ID];
+    return drafts;
+  } catch {
+    return null;
+  }
+}
+
+/** Pousse un brouillon vers le serveur, débouncé par id (l'édition est frappe à frappe). */
+export function pushRemoteDraft(id: string, draft: GentDraft): void {
+  if (remoteAvailable === false || id === NOUVEAU_GENT_TEMPLATE_ID) return;
+  const pending = pushTimers.get(id);
+  if (pending) clearTimeout(pending);
+  pushTimers.set(
+    id,
+    setTimeout(() => {
+      pushTimers.delete(id);
+      fetch(`/api/drafts/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...appAccessHeaders() },
+        body: JSON.stringify({ draft }),
+      })
+        .then((res) => {
+          if (res.status === 503 || res.status === 401) remoteAvailable = false;
+          else if (res.ok) remoteAvailable = true;
+        })
+        .catch(() => {
+          // Réseau indisponible : le cache local garde le brouillon, la
+          // prochaine édition retentera.
+        });
+    }, PUSH_DEBOUNCE_MS)
+  );
+}
+
+/**
+ * Hydratation au chargement : fusionne le distant (source de vérité) par-dessus
+ * le cache local, met le cache à jour, et renvoie la map fusionnée — ou null si
+ * le distant est indisponible (le cache local reste alors la seule source).
+ * Les brouillons présents seulement en local (créés hors ligne ou avant la
+ * configuration de Supabase) remontent vers le serveur.
+ */
+export async function syncDraftsFromRemote(): Promise<GentDraftsMap | null> {
+  const remote = await fetchRemoteDrafts();
+  if (remote === null) return null;
+  const merged = { ...readStoredDrafts(), ...remote };
+  writeStoredDrafts(merged);
+  for (const [id, draft] of Object.entries(merged)) {
+    if (!(id in remote)) pushRemoteDraft(id, draft);
+  }
+  return merged;
+}
+
+/** Crée un brouillon vierge, l'enregistre (local + serveur) et renvoie son identifiant. */
 export function allocateNewDraft(): string {
   const id = createDraftId();
   const stored = readStoredDrafts();
-  stored[id] = freshDraftFromTemplate(id);
+  const draft = freshDraftFromTemplate(id);
+  stored[id] = draft;
   writeStoredDrafts(stored);
+  // Persistance immédiate : un gent tout juste créé ne doit pas dépendre d'une
+  // édition ultérieure pour exister côté serveur.
+  pushRemoteDraft(id, draft);
   return id;
 }
 
