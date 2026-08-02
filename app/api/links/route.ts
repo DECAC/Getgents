@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkAppAccess, APP_ACCESS_HINT } from "@/lib/server/appAccess";
-import { createShareLink, listShareLinks, statsForTokens } from "@/lib/server/shareLinks";
+import { createShareLink, describeShareLinksFailure, listShareLinks, statsForTokens } from "@/lib/server/shareLinks";
 
 export const dynamic = "force-dynamic";
 
@@ -9,17 +9,8 @@ const unauthorized = () =>
   NextResponse.json({ error: "unauthorized", hint: APP_ACCESS_HINT }, { status: 401 });
 
 function fail(e: unknown) {
-  const msg = (e as Error).message;
-  return NextResponse.json(
-    {
-      error: msg,
-      hint:
-        msg === "supabase_not_configured"
-          ? "Les liens de partage exigent Supabase : le destinataire n'a pas le cache local du créateur. Configurez NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY, puis exécutez supabase/migrations/002_share_links.sql."
-          : undefined,
-    },
-    { status: msg === "supabase_not_configured" ? 503 : 500 }
-  );
+  const { error, hint, status } = describeShareLinksFailure(e);
+  return NextResponse.json({ error, hint }, { status });
 }
 
 /** Liste les liens d'un gent, avec leurs agrégats de tracking. */

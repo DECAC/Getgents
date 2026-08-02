@@ -1,0 +1,65 @@
+import { ShareLinksError, describeShareLinksFailure } from "@/lib/server/shareLinks";
+import { withoutSessionContext } from "@/lib/espaceApiPayload";
+import type { Espace, UserFile } from "@/lib/types";
+
+describe("diagnostic des échecs de liens de partage", () => {
+  it("nomme Supabase non configuré", () => {
+    const r = describeShareLinksFailure(new Error("supabase_not_configured"));
+    expect(r.status).toBe(503);
+    expect(r.hint).toContain("NEXT_PUBLIC_SUPABASE_URL");
+  });
+
+  it("détecte une table absente via le code Postgres 42P01", () => {
+    const r = describeShareLinksFailure(new ShareLinksError('relation "public.share_links" does not exist', "42P01"));
+    expect(r.status).toBe(503);
+    expect(r.hint).toContain("002_share_links.sql");
+  });
+
+  it("détecte une table absente via le code PostgREST PGRST205", () => {
+    const r = describeShareLinksFailure(
+      new ShareLinksError("Could not find the table 'public.share_links' in the schema cache", "PGRST205")
+    );
+    expect(r.hint).toContain("002_share_links.sql");
+  });
+
+  it("détecte une fonction RPC absente (PGRST202)", () => {
+    const r = describeShareLinksFailure(new ShareLinksError("Could not find the function", "PGRST202"));
+    expect(r.hint).toContain("002_share_links.sql");
+  });
+
+  it("détecte le message même sans code, par correspondance de texte", () => {
+    const r = describeShareLinksFailure(new Error('relation "public.share_links" does not exist'));
+    expect(r.hint).toContain("002_share_links.sql");
+  });
+
+  it("reste générique pour une erreur sans rapport", () => {
+    const r = describeShareLinksFailure(new Error("connection timeout"));
+    expect(r.status).toBe(500);
+    expect(r.hint).toBeUndefined();
+    expect(r.error).toBe("connection timeout");
+  });
+});
+
+describe("neutralisation du contexte de session pour un visiteur externe", () => {
+  const espace = {
+    memory: "Résumé de l'utilisation par Charles",
+    files: [{ id: "f1", name: "cv.pdf", size: "1 Ko", date: "hier", text: "Contenu du CV" } as UserFile],
+    name: "Next Move",
+  } as unknown as Espace;
+
+  it("vide la mémoire et les fichiers", () => {
+    const out = withoutSessionContext(espace);
+    expect(out.memory).toBe("");
+    expect(out.files).toEqual([]);
+  });
+
+  it("ne modifie pas l'espace d'origine (persistance intacte)", () => {
+    withoutSessionContext(espace);
+    expect(espace.memory).toBe("Résumé de l'utilisation par Charles");
+    expect(espace.files).toHaveLength(1);
+  });
+
+  it("conserve le reste de l'espace", () => {
+    expect(withoutSessionContext(espace).name).toBe("Next Move");
+  });
+});

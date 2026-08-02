@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
-import { getShareLink, recordShareEvent, TOKEN_RE } from "@/lib/server/shareLinks";
+import { describeShareLinksFailure, getShareLink, recordShareEvent, TOKEN_RE } from "@/lib/server/shareLinks";
 import { canChat } from "@/lib/shareLink";
 import { profileContextNote } from "@/lib/profileSignal";
 import type { Espace } from "@/lib/types";
@@ -39,7 +39,8 @@ export async function POST(req: Request, { params }: Params) {
   try {
     link = await getShareLink(token);
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    const { error, hint, status } = describeShareLinksFailure(e);
+    return NextResponse.json({ error, hint }, { status });
   }
   if (!link) return NextResponse.json({ error: "link_not_found" }, { status: 404 });
   if (!canChat(link)) return NextResponse.json({ error: "link_unavailable" }, { status: 403 });

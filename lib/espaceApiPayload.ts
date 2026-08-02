@@ -98,6 +98,22 @@ export function espaceForPublicLink(espace: Espace): Espace {
   };
 }
 
+/**
+ * Neutralise la mémoire et les documents avant une génération déclenchée par
+ * quelqu'un d'autre que l'utilisateur auquel ils appartiennent.
+ *
+ * Rappel de sémantique : la mémoire est un résumé de l'usage du gent PAR SON
+ * UTILISATEUR ; les fichiers sont ceux que CET UTILISATEUR a fournis. Ni l'un
+ * ni l'autre n'appartiennent jamais au créateur (builder). Pour le visiteur
+ * d'un lien de partage — qui n'a ni session ni fichiers propres au sens du
+ * gent — la mémoire et les fichiers persistés sur l'espace sont ceux de
+ * quelqu'un d'autre : ils ne doivent jamais nourrir sa génération. Seules les
+ * valeurs qu'il renseigne lui-même (pinnedArtefact.inputs) le doivent.
+ */
+export function withoutSessionContext(espace: Espace): Espace {
+  return { ...espace, memory: "", files: [] };
+}
+
 /** Coquille légère pour exécuter une routine : le fil actif est vide, le serveur n'y ajoute que les nouveaux messages. */
 export function espaceForRoutineRun(espace: Espace): Espace {
   return {

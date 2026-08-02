@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
-import { getShareLink, incrementRefreshCount, recordShareEvent, TOKEN_RE } from "@/lib/server/shareLinks";
+import {
+  describeShareLinksFailure,
+  getShareLink,
+  incrementRefreshCount,
+  recordShareEvent,
+  TOKEN_RE,
+} from "@/lib/server/shareLinks";
 import { canRefresh, shareLinkState } from "@/lib/shareLink";
 import { refreshPinnedArtefact } from "@/lib/server/pinnedArtefact";
+import { withoutSessionContext } from "@/lib/espaceApiPayload";
 import type { Espace } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +38,8 @@ export async function POST(req: Request, { params }: Params) {
   try {
     link = await getShareLink(token);
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    const { error, hint, status } = describeShareLinksFailure(e);
+    return NextResponse.json({ error, hint }, { status });
   }
   if (!link) return NextResponse.json({ error: "link_not_found" }, { status: 404 });
 
@@ -76,10 +84,18 @@ export async function POST(req: Request, { params }: Params) {
     espace = { ...espace, pinnedArtefact: { ...espace.pinnedArtefact, inputs } };
   }
 
+  // Le visiteur externe n'a ni mémoire ni fichiers au sens du gent (aucune
+  // session préalable) : seules ses valeurs d'entrées, déjà appliquées
+  // ci-dessus, doivent nourrir sa génération — jamais la mémoire ou les
+  // documents persistés sur l'espace, qui appartiennent au créateur ou à
+  // d'autres utilisateurs. Neutralisé pour ce seul appel ; `espace` (utilisé
+  // plus bas pour la persistance) reste intact.
+  const forGeneration = withoutSessionContext(espace);
+
   // Le crédit est consommé avant la génération : un échec LLM ne doit pas
   // offrir de tentatives illimitées.
   await incrementRefreshCount(token);
-  const result = await refreshPinnedArtefact(espace, "lien");
+  const result = await refreshPinnedArtefact(forGeneration, "lien");
 
   const updated: Espace = { ...espace, pinnedArtefact: result.pinned };
   await supabase.from("published_gents").upsert({ id: link.gentId, espace: updated });

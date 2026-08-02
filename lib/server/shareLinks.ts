@@ -10,6 +10,58 @@ import type { ShareEventKind, ShareLink, ShareLinkStats } from "@/lib/shareLink"
 /** Format du token : 32 caractères base64url — non devinable, sûr en URL. */
 export const TOKEN_RE = /^[A-Za-z0-9_-]{32,64}$/;
 
+/** Erreur Supabase enrichie du code Postgres/PostgREST d'origine. */
+export class ShareLinksError extends Error {
+  code?: string;
+  constructor(message: string, code?: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
+function raise(error: { message: string; code?: string }): never {
+  throw new ShareLinksError(error.message, error.code);
+}
+
+/**
+ * Message actionnable pour un échec touchant les liens de partage. La cause la
+ * plus fréquente en pratique : la migration 002_share_links.sql n'a jamais été
+ * exécutée dans le projet Supabase (les tables n'existent pas). Sans ce
+ * diagnostic, l'appelant ne voit qu'un message Postgres brut — souvent en
+ * anglais, jamais actionnable — et ne peut pas deviner quoi faire.
+ */
+export function describeShareLinksFailure(e: unknown): { error: string; hint?: string; status: number } {
+  if (e instanceof Error && e.message === "supabase_not_configured") {
+    return {
+      error: e.message,
+      status: 503,
+      hint:
+        "Les liens de partage exigent Supabase : configurez NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY, " +
+        "puis exécutez supabase/migrations/001_published_gents.sql et 002_share_links.sql dans le SQL Editor.",
+    };
+  }
+  const code = e instanceof ShareLinksError ? e.code : undefined;
+  const message = e instanceof Error ? e.message : "erreur inconnue";
+  // 42P01 (Postgres) / PGRST205 (PostgREST) : relation absente. PGRST202 : la
+  // fonction increment_share_refresh n'existe pas (même migration manquante).
+  const missingSchema =
+    code === "42P01" ||
+    code === "PGRST202" ||
+    code === "PGRST205" ||
+    /relation .* does not exist|could not find the (table|function)/i.test(message);
+  if (missingSchema) {
+    return {
+      error: message,
+      status: 503,
+      hint:
+        "La table des liens de partage n'existe pas encore dans ce projet Supabase : ouvrez le SQL Editor du projet " +
+        "(celui dont l'URL est dans NEXT_PUBLIC_SUPABASE_URL) et exécutez le contenu de supabase/migrations/002_share_links.sql, " +
+        "puis réessayez.",
+    };
+  }
+  return { error: message, status: 500 };
+}
+
 export function generateToken(): string {
   return randomBytes(24).toString("base64url");
 }
@@ -65,7 +117,7 @@ export async function createShareLink(input: CreateShareLinkInput): Promise<Shar
     max_refresh: input.maxRefresh ?? 20,
   };
   const { data, error } = await supabase.from("share_links").insert(row).select().single();
-  if (error) throw new Error(error.message);
+  if (error) raise(error);
   return toShareLink(data as ShareLinkRow);
 }
 
@@ -73,7 +125,7 @@ export async function getShareLink(token: string): Promise<ShareLink | null> {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error("supabase_not_configured");
   const { data, error } = await supabase.from("share_links").select("*").eq("token", token).maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) raise(error);
   return data ? toShareLink(data as ShareLinkRow) : null;
 }
 
@@ -85,7 +137,7 @@ export async function listShareLinks(gentId: string): Promise<ShareLink[]> {
     .select("*")
     .eq("gent_id", gentId)
     .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
+  if (error) raise(error);
   return ((data ?? []) as ShareLinkRow[]).map(toShareLink);
 }
 
@@ -96,7 +148,7 @@ export async function revokeShareLink(token: string): Promise<void> {
     .from("share_links")
     .update({ revoked_at: new Date().toISOString() })
     .eq("token", token);
-  if (error) throw new Error(error.message);
+  if (error) raise(error);
 }
 
 /**
