@@ -126,10 +126,7 @@ export async function refreshPinnedArtefact(
   }
 
   if (!dashboard) {
-    const hint = raw.includes("<!--PINNED") || raw.includes("<!--ARTEFACT")
-      ? "bloc détecté mais JSON ou blocs invalides"
-      : "aucun bloc PINNED/ARTEFACT détecté";
-    return finish(false, `réponse illisible (dashboard non produit) — ${hint}`, metrics);
+    return finish(false, `réponse illisible (dashboard non produit) — ${diagnosePinnedFailure(raw)}`, metrics);
   }
 
   return finish(
@@ -157,7 +154,10 @@ async function callPinnedModel(
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
         ],
-        max_tokens: 9000,
+        // Un tableau de bord dense (plusieurs onglets, tableaux, graphiques)
+        // dépassait 9 000 tokens et revenait coupé en plein JSON. Le plafond
+        // n'est pas facturé, seuls les tokens réellement produits le sont.
+        max_tokens: 16_000,
         ...(webSearch ? { plugins: [{ id: "web" }] } : {}),
       }),
       cache: "no-store",
@@ -180,6 +180,42 @@ async function callPinnedModel(
   } catch (e) {
     return { text: "", errorNote: `échec réseau : ${(e as Error).message.slice(0, 140)}` };
   }
+}
+
+/**
+ * Explique POURQUOI aucun dashboard n'a pu être produit. Le message précédent
+ * (« bloc détecté mais JSON ou blocs invalides ») confondait deux causes très
+ * différentes : une réponse coupée, et des blocs refusés par le schéma. La
+ * correction n'est pas la même — d'un côté raccourcir la mission, de l'autre
+ * corriger la forme des blocs demandés.
+ */
+export function diagnosePinnedFailure(raw: string): string {
+  const hasMarker = raw.includes("<!--PINNED") || raw.includes("<!--ARTEFACT");
+  if (!hasMarker) return "aucun bloc PINNED/ARTEFACT détecté";
+
+  const fragment =
+    extractJsonFromHtmlMarker(raw, "PINNED") ?? extractJsonFromHtmlMarker(raw, "ARTEFACT");
+  if (!fragment) {
+    return "réponse coupée avant la fin du JSON — mission trop longue pour le budget de réponse, raccourcissez-la ou réduisez le nombre de sections";
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(fragment);
+  } catch {
+    return "JSON malformé dans le bloc émis";
+  }
+
+  const o = (parsed ?? {}) as Record<string, unknown>;
+  const inner = (o.dashboard ?? o) as Record<string, unknown>;
+  const blocks = Array.isArray(inner.blocks) ? inner.blocks : null;
+  if (!blocks) return "le bloc émis ne contient pas de tableau « blocks »";
+  if (blocks.length === 0) return "tableau « blocks » vide";
+
+  const types = blocks
+    .map((b) => (b && typeof b === "object" ? String((b as Record<string, unknown>).type ?? "?") : "?"))
+    .slice(0, 8);
+  return `${blocks.length} bloc(s) reçu(s), tous refusés par le schéma (types : ${types.join(", ")}) — vérifiez les champs obligatoires (stats/items, table/columns+rows, chart/series+data)`;
 }
 
 /** Un objet candidat est un dashboard s'il porte des blocks, éventuellement sous une clé `dashboard`. */
