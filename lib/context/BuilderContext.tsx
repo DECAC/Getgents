@@ -124,6 +124,24 @@ function mergeRestConfigSecrets(next: RestApiToolConfig, prev?: RestApiToolConfi
   return merged;
 }
 
+/**
+ * La configuration de l'artefact figé a-t-elle changé d'une publication à
+ * l'autre ? On compare la mission (« prompt figé ») et la structure des entrées
+ * (identifiants, libellés, types) — pas leurs valeurs, qui appartiennent à
+ * l'utilisateur.
+ */
+function pinnedConfigChanged(
+  fresh: NonNullable<import("@/lib/types").PinnedArtefact>,
+  existing?: import("@/lib/types").PinnedArtefact
+): boolean {
+  if (!existing) return true;
+  if (fresh.mission.trim() !== existing.mission.trim()) return true;
+  if (fresh.title.trim() !== existing.title.trim()) return true;
+  const shape = (p: import("@/lib/types").PinnedArtefact) =>
+    p.inputs.map((i) => `${i.id}|${i.kind}|${i.label}`).join("~");
+  return shape(fresh) !== shape(existing);
+}
+
 const MODEL_CAPABILITY_LABEL: Record<string, string> = {
   chat: "Conversation",
   reasoning: "Raisonnement approfondi",
@@ -266,24 +284,31 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
             channel: fresh.channel
               ? { ...fresh.channel, lastDeliveryNote: existing.channel?.lastDeliveryNote }
               : undefined,
-            // Config re-publiée mais données déjà générées (dashboard, entrées
-            // renseignées par l'utilisateur) préservées — ainsi que
-            // l'historique des générations, qui alimente l'audit.
+            // Artefact figé : quand la mission ou les entrées ont changé, le
+            // rendu précédent a été produit par une configuration obsolète —
+            // on repart d'une ardoise vierge pour que la nouvelle version soit
+            // réellement testable. Sinon (republication sans changement, ex.
+            // renommage) on conserve les données déjà générées.
             pinnedArtefact: fresh.pinnedArtefact
-              ? {
-                  ...fresh.pinnedArtefact,
-                  dashboard: existing.pinnedArtefact?.dashboard,
-                  generatedAt: existing.pinnedArtefact?.generatedAt,
-                  runs: existing.pinnedArtefact?.runs,
-                  inputs: fresh.pinnedArtefact.inputs.map((i) => ({
-                    ...i,
-                    value: existing.pinnedArtefact?.inputs.find((e) => e.id === i.id)?.value ?? i.value,
-                  })),
-                }
+              ? pinnedConfigChanged(fresh.pinnedArtefact, existing.pinnedArtefact)
+                ? { ...fresh.pinnedArtefact, runs: existing.pinnedArtefact?.runs }
+                : {
+                    ...fresh.pinnedArtefact,
+                    dashboard: existing.pinnedArtefact?.dashboard,
+                    generatedAt: existing.pinnedArtefact?.generatedAt,
+                    runs: existing.pinnedArtefact?.runs,
+                    inputs: fresh.pinnedArtefact.inputs.map((i) => ({
+                      ...i,
+                      value: existing.pinnedArtefact?.inputs.find((e) => e.id === i.id)?.value ?? i.value,
+                    })),
+                  }
               : undefined,
           }
         : fresh;
-      writePublishedGent(currentId, espace);
+      // Envoi immédiat (pas de débounce) : « Preview » est une navigation
+      // pleine page qui annulerait un push différé, et l'espace rechargerait
+      // alors la version précédente depuis le serveur.
+      writePublishedGent(currentId, espace, true);
       return { ...prev, [currentId]: published };
     });
   }, [currentId]);

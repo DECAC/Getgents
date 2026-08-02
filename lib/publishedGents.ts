@@ -59,39 +59,57 @@ export async function fetchRemoteGents(): Promise<EspacesMap | null> {
   }
 }
 
-function pushRemoteGent(id: string, espace: Espace): void {
+function sendRemoteGent(id: string, espace: Espace): Promise<void> {
+  return fetch(`/api/gents/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...appAccessHeaders() },
+    body: JSON.stringify({ espace }),
+    // Survit à une navigation immédiate (clic sur « Preview » juste après la
+    // publication) : sans ça la requête est annulée par le déchargement.
+    keepalive: true,
+  })
+    .then((res) => {
+      if (res.status === 503 || res.status === 401) remoteAvailable = false;
+      else if (res.ok) remoteAvailable = true;
+    })
+    .catch(() => {
+      // Réseau indisponible : le cache localStorage garde la donnée, le
+      // prochain writePublishedGent retentera.
+    });
+}
+
+function pushRemoteGent(id: string, espace: Espace, immediate = false): void {
   if (remoteAvailable === false) return;
-  // Débounce par gent : l'état de l'espace change à chaque frappe/message,
-  // on n'envoie au serveur que la version stabilisée.
   const pending = pushTimers.get(id);
   if (pending) clearTimeout(pending);
+
+  // Publication : on envoie tout de suite. Le débounce était ici une cause de
+  // perte de données — le lien « Preview » est une navigation pleine page, qui
+  // détruisait le timer avant son déclenchement ; l'espace rechargeait alors la
+  // version précédente depuis le serveur et écrasait la nouvelle.
+  if (immediate) {
+    pushTimers.delete(id);
+    void sendRemoteGent(id, espace);
+    return;
+  }
+
+  // Débounce par gent : l'état de l'espace change à chaque frappe/message,
+  // on n'envoie au serveur que la version stabilisée.
   pushTimers.set(
     id,
     setTimeout(() => {
       pushTimers.delete(id);
-      fetch(`/api/gents/${encodeURIComponent(id)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...appAccessHeaders() },
-        body: JSON.stringify({ espace }),
-      })
-        .then((res) => {
-          if (res.status === 503 || res.status === 401) remoteAvailable = false;
-          else if (res.ok) remoteAvailable = true;
-        })
-        .catch(() => {
-          // Réseau indisponible : le cache localStorage garde la donnée, le
-          // prochain writePublishedGent retentera.
-        });
+      void sendRemoteGent(id, espace);
     }, PUSH_DEBOUNCE_MS)
   );
 }
 
-export function writePublishedGent(id: string, espace: Espace): void {
+export function writePublishedGent(id: string, espace: Espace, immediate = false): void {
   if (typeof window === "undefined") return;
   const current = readPublishedGents();
   current[id] = espace;
   writeLocalCache(current);
-  pushRemoteGent(id, espace);
+  pushRemoteGent(id, espace, immediate);
 }
 
 /**
@@ -102,12 +120,30 @@ export function writePublishedGent(id: string, espace: Espace): void {
 export async function syncPublishedGentsFromRemote(): Promise<EspacesMap | null> {
   const remote = await fetchRemoteGents();
   if (remote === null) return null;
-  const merged = { ...readPublishedGents(), ...remote };
+
+  const local = readPublishedGents();
+  const merged: EspacesMap = { ...local };
+  const stale: string[] = [];
+
+  for (const [id, remoteEspace] of Object.entries(remote)) {
+    const localEspace = local[id];
+    // Le distant fait autorité, SAUF s'il est en retard d'une publication : une
+    // version locale plus récente signifie que le push n'a pas encore abouti.
+    // Sans ce garde-fou, republier puis ouvrir l'espace aussitôt ramenait la
+    // configuration précédente (nouveaux champs d'entrée invisibles).
+    if (localEspace && (localEspace.version ?? 1) > (remoteEspace.version ?? 1)) {
+      stale.push(id);
+      continue;
+    }
+    merged[id] = remoteEspace;
+  }
+
   writeLocalCache(merged);
-  // Réconciliation : les gents présents uniquement en local (publiés hors
-  // ligne ou avant la config Supabase) remontent vers le serveur.
+
+  // Réconciliation : gents absents du serveur (publiés hors ligne ou avant la
+  // config Supabase) et versions locales en avance remontent vers le serveur.
   for (const [id, espace] of Object.entries(merged)) {
-    if (!(id in remote)) pushRemoteGent(id, espace);
+    if (!(id in remote) || stale.includes(id)) pushRemoteGent(id, espace, true);
   }
   return merged;
 }
