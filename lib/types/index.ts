@@ -224,6 +224,14 @@ export interface UserFile {
   name: string;
   size: string;
   date: string;
+  /**
+   * Texte extrait du document côté navigateur (PDF, Word, texte, CSV). C'est
+   * lui qui nourrit le contexte de la session — conversation comme artefact
+   * figé. Absent pour les fichiers de démonstration, purement décoratifs.
+   */
+  text?: string;
+  /** Vrai si l'extraction a dépassé la limite de caractères. */
+  truncated?: boolean;
 }
 
 export interface Artefact {

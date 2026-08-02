@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
+import { extractDocumentText } from "@/lib/extractDocumentText";
 import { ToolsTab } from "@/components/center/tabs/ToolsTab";
 import styles from "./Aside.module.css";
 
@@ -12,11 +13,43 @@ const FILE_ICON = (
   </svg>
 );
 
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
 export function Aside() {
-  const { currentEspace, asideCollapsed, toggleAsideCollapsed, updateMemory } = useEspace();
+  const { currentEspace, asideCollapsed, toggleAsideCollapsed, updateMemory, addFile, removeFile } = useEspace();
   const memRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileBusy, setFileBusy] = useState<string | null>(null);
   const files = currentEspace.files;
   const tools = currentEspace.tools;
+
+  // Le texte est extrait ici, côté navigateur, puis conservé avec le fichier :
+  // c'est lui qui alimente le contexte de la session (conversation ET artefact
+  // figé). Auparavant cette liste n'était qu'un affichage sans effet.
+  async function handleFilePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setFileBusy(`Lecture de ${file.name}…`);
+    try {
+      const doc = await extractDocumentText(file);
+      addFile({
+        id: `file-${Date.now()}`,
+        name: doc.name,
+        size: formatSize(file.size),
+        date: "ajouté à l'instant",
+        text: doc.text,
+        truncated: doc.truncated,
+      });
+      setFileBusy(null);
+    } catch (err) {
+      setFileBusy(`⚠ ${(err as Error).message}`);
+    }
+  }
 
   // Auto-size textarea when espace changes
   useEffect(() => {
@@ -151,7 +184,8 @@ export function Aside() {
               )}
             </div>
             <p className={styles.shelp}>
-              Ce que vous avez téléversé pour cette conversation — billets, documents, photos.
+              Documents joints à cette session. Leur contenu est transmis au gent — en conversation
+              comme dans le tableau de bord. PDF, Word, texte ou CSV.
             </p>
 
             <div className={styles.artlist}>
@@ -169,17 +203,32 @@ export function Aside() {
                       <span className={styles.artTitle}>{f.name}</span>
                       <span className={styles.artMeta}>
                         {f.size} · {f.date}
+                        {f.text ? (f.truncated ? " · dans le contexte (tronqué)" : " · dans le contexte") : ""}
                       </span>
                     </span>
+                    <button
+                      className={styles.fileRemove}
+                      onClick={() => removeFile(f.id)}
+                      aria-label={`Retirer ${f.name}`}
+                      title="Retirer du contexte"
+                    >
+                      ✕
+                    </button>
                   </div>
                 ))
               )}
             </div>
 
-            <button
-              className={styles.uploadBtn}
-              onClick={() => alert("Maquette : ouvrirait un sélecteur de fichier.")}
-            >
+            {fileBusy && <div className={styles.fileBusy}>{fileBusy}</div>}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.docx,.txt,.md,.csv,.tsv"
+              className={styles.hiddenFileInput}
+              onChange={handleFilePick}
+            />
+            <button className={styles.uploadBtn} onClick={() => fileInputRef.current?.click()}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 3v12M7 8l5-5 5 5" />
                 <path d="M5 21h14" />

@@ -249,3 +249,30 @@
     transform: translateX(0);
   }
 }
+
+/* Documents de la session : retrait, état de lecture, input masqué. */
+.fileRemove {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--faint);
+  font-size: 11px;
+}
+.fileRemove:hover {
+  background: var(--plum-tint);
+  color: #b4462f;
+}
+.fileBusy {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.hiddenFileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}

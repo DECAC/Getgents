@@ -5,6 +5,7 @@
 import type { Espace, PinnedArtefact, PinnedRun } from "@/lib/types";
 import { parseDashboard, DASHBOARD_BLOCKS_SCHEMA, type DashboardSpec } from "@/lib/dashboardArtefact";
 import { profileContextNote } from "@/lib/profileSignal";
+import { sessionContextNote } from "@/lib/sessionContext";
 import { extractLlmMessageText } from "@/lib/server/llmMessageText";
 import { extractJsonFromHtmlMarker } from "@/lib/server/markerJson";
 
@@ -73,10 +74,13 @@ export async function refreshPinnedArtefact(
       pinned.inputs.map((i) => `- ${i.label} : ${i.value?.trim() || "(non renseigné)"}`).join("\n")
     : "";
   const profileNote = espace.profile ? `\n\n${profileContextNote(espace.profile)}` : "";
+  // Mémoire de l'espace et documents téléversés : jusqu'ici réservés à la
+  // conversation, alors que la mini-app doit travailler sur le même contexte.
+  const contextNote = sessionContextNote(espace);
   const dateNote = `Date : ${new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "full", timeStyle: "short" })} (Paris).`;
 
   const systemPrompt =
-    `${espace.systemPrompt?.trim() || `Tu es le gent « ${espace.name} ».`}\n\n${dateNote}${profileNote}` +
+    `${espace.systemPrompt?.trim() || `Tu es le gent « ${espace.name} ».`}\n\n${dateNote}${profileNote}${contextNote}` +
     "\n\nCONTEXTE : tu produis un ARTEFACT FIGÉ — un tableau de bord dense, sans conversation. " +
     "Fais ressortir les informations clés (indicateurs, comparaisons, tableaux). " +
     (espace.webSearch ? "Appuie-toi sur la recherche web et n'invente aucune donnée non vérifiée. " : "") +

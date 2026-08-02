@@ -28,10 +28,13 @@ export function espaceForPinnedRefresh(espace: Espace, inputs?: Record<string, s
     tools: [],
     tabs: [],
     map: null,
-    memory: "",
+    // Mémoire et documents font partie du contexte de session : l'artefact figé
+    // doit voir exactement ce que voit la conversation. Seules les métadonnées
+    // d'affichage sont écartées des fichiers, pas leur contenu.
+    memory: espace.memory,
     conversations: [],
     activeConversationId: espace.activeConversationId || "local",
-    files: [],
+    files: (espace.files ?? []).filter((f) => (f.text ?? "").trim() !== ""),
     artefacts: [],
     systemPrompt: espace.systemPrompt,
     chatModelId: espace.chatModelId,

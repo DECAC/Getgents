@@ -11,7 +11,10 @@ import { ResvModal } from "@/components/shared/ResvModal";
 import styles from "./EspaceShell.module.css";
 
 function ShellInner() {
-  const { railCollapsed, assistantOpen, asideCollapsed, closeModal, closeAssistant } = useEspace();
+  const { railCollapsed, assistantOpen, asideCollapsed, closeModal, closeAssistant, miniAppMode } = useEspace();
+  // Mode mini-application : le gent s'utilise par son tableau de bord ; le
+  // panneau conversationnel n'est ni rendu ni atteignable.
+  const chatOpen = assistantOpen && !miniAppMode;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -31,9 +34,9 @@ function ShellInner() {
   const shellClass = [
     styles.shell,
     railCollapsed ? styles.collapsed : "",
-    assistantOpen ? styles.assistOpen : "",
-    assistantOpen && !asideCollapsed ? styles.asideExpanded : "",
-    !assistantOpen && asideCollapsed ? styles.asideCollapsedOnly : "",
+    chatOpen ? styles.assistOpen : "",
+    chatOpen && !asideCollapsed ? styles.asideExpanded : "",
+    !chatOpen && asideCollapsed ? styles.asideCollapsedOnly : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -45,7 +48,7 @@ function ShellInner() {
       </a>
       <div className={shellClass} id="shell">
         <Rail />
-        {assistantOpen && <AssistantPanel />}
+        {chatOpen && <AssistantPanel />}
         <Center />
         <Aside />
       </div>

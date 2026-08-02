@@ -11,7 +11,9 @@ import type {
   ThemeTab,
   ThemeTabProposalAction,
   PinnedRun,
+  UserFile,
 } from "@/lib/types";
+import { sessionContextNote } from "@/lib/sessionContext";
 import { ESPACES as INITIAL_ESPACES } from "@/lib/mock-data/espaces";
 import {
   formatConversationStartedAt,
@@ -155,6 +157,14 @@ interface EspaceContextValue {
   getResvItem: (id: string) => ReservationItem | undefined;
   /** Vrai quand l'espace est consulté via un lien de partage (destinataire externe). */
   shareMode: boolean;
+  /**
+   * Mode « mini-application » : l'artefact figé est actif, le gent s'utilise
+   * alors par son tableau de bord et non par la conversation.
+   */
+  miniAppMode: boolean;
+  /** Ajoute un document à la session (texte déjà extrait côté navigateur). */
+  addFile: (file: UserFile) => void;
+  removeFile: (fileId: string) => void;
 }
 
 const EspaceContext = createContext<EspaceContextValue | null>(null);
@@ -291,6 +301,10 @@ export function EspaceProvider({
   const toggleRail = useCallback(() => setRailCollapsed((v) => !v), []);
 
   const openAssistant = useCallback(() => {
+    // Mode mini-application : le gent s'utilise par son tableau de bord, la
+    // conversation n'est pas proposée. Garde défensive, en plus du masquage
+    // des déclencheurs, pour qu'aucun chemin résiduel ne l'ouvre.
+    if (espacesRef.current[currentIdRef.current]?.pinnedArtefact?.enabled) return;
     setAssistantOpen(true);
     // Libère de la place : rail et aside se réduisent ; l'utilisateur peut les rouvrir.
     setRailCollapsed(true);
@@ -329,6 +343,22 @@ export function EspaceProvider({
     });
   }, [currentId]);
 
+  // Documents de la session : le texte est extrait côté navigateur avant
+  // l'appel, et alimente ensuite les deux modes (conversation et artefact figé).
+  const addFile = useCallback((file: UserFile) => {
+    setEspaces((prev) => {
+      const e = prev[currentId];
+      return { ...prev, [currentId]: { ...e, files: [file, ...e.files.filter((f) => f.id !== file.id)] } };
+    });
+  }, [currentId]);
+
+  const removeFile = useCallback((fileId: string) => {
+    setEspaces((prev) => {
+      const e = prev[currentId];
+      return { ...prev, [currentId]: { ...e, files: e.files.filter((f) => f.id !== fileId) } };
+    });
+  }, [currentId]);
+
   const sendMessage = useCallback((text: string) => {
     const id = currentIdRef.current;
     const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: nowTime() };
@@ -356,7 +386,9 @@ export function EspaceProvider({
 
     const basePrompt =
       espace.systemPrompt?.trim() || `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`;
-    const memoryNote = espace.memory ? `\n\nMémoire de l'espace : ${espace.memory}` : "";
+    // Mémoire + documents téléversés : même contexte que celui fourni à
+    // l'artefact figé, pour que les deux modes voient la même chose.
+    const memoryNote = sessionContextNote(espace);
     // Le modèle n'a pas d'horloge : sans cette note, il invente l'heure
     // courante (ex. « dans 2 min (14:35) » alors qu'il est 11h01).
     const timeNote = `\n\nDate et heure actuelles : ${new Date().toLocaleString("fr-FR", {
@@ -1122,6 +1154,9 @@ export function EspaceProvider({
         pinnedRefreshing,
         pinnedError,
         shareMode,
+        miniAppMode: !!currentEspace.pinnedArtefact?.enabled,
+        addFile,
+        removeFile,
         confirmArtefactProposal,
         confirmThemeProposal,
         confirmProfileProposal,

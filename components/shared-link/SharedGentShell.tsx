@@ -13,8 +13,11 @@ import styles from "./SharedGentShell.module.css";
  * module conversationnel — rien d'autre.
  */
 function SharedGentBody() {
-  const { currentEspace, assistantOpen, openAssistant } = useEspace();
+  const { currentEspace, assistantOpen, openAssistant, miniAppMode } = useEspace();
   const pinned = currentEspace.pinnedArtefact;
+  // Un gent en mode mini-application s'utilise par son tableau de bord : le
+  // destinataire n'a pas non plus accès à la conversation.
+  const chatAvailable = !miniAppMode;
 
   return (
     <div className={styles.page}>
@@ -24,7 +27,7 @@ function SharedGentBody() {
           <h1 className={styles.title}>{currentEspace.gent}</h1>
           <div className={styles.sub}>{currentEspace.name}</div>
         </div>
-        {!assistantOpen && (
+        {chatAvailable && !assistantOpen && (
           <button type="button" className={styles.chatBtn} onClick={openAssistant}>
             💬 Discuter
           </button>
@@ -44,7 +47,7 @@ function SharedGentBody() {
         )}
       </main>
 
-      {assistantOpen && <AssistantPanel />}
+      {chatAvailable && assistantOpen && <AssistantPanel />}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { ModuleCanvas } from "./ModuleCanvas";
 import styles from "./Center.module.css";
 
 export function Center() {
-  const { currentEspace, currentId, openAssistant, closeAssistant, assistantOpen } = useEspace();
+  const { currentEspace, currentId, openAssistant, closeAssistant, assistantOpen, miniAppMode } = useEspace();
   const pullTabRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef({ active: false, moved: false, startX: 0 });
   const suppressClickRef = useRef(false);
@@ -83,6 +83,8 @@ export function Center() {
         <ModuleCanvas key={currentId} espace={currentEspace} />
       </div>
 
+      {/* Mode mini-application : pas de conversation, donc pas d'onglet d'appel. */}
+      {!miniAppMode && (
       <button
         ref={pullTabRef}
         type="button"
@@ -116,6 +118,7 @@ export function Center() {
           </span>
         </span>
       </button>
+      )}
     </main>
   );
 }
