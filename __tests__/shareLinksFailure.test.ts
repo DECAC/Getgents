@@ -63,3 +63,27 @@ describe("neutralisation du contexte de session pour un visiteur externe", () =>
     expect(withoutSessionContext(espace).name).toBe("Next Move");
   });
 });
+
+describe("nomme précisément la ou les variables Supabase manquantes", () => {
+  const ORIGINAL = { ...process.env };
+  afterEach(() => {
+    process.env = { ...ORIGINAL };
+  });
+
+  it("cite les deux variables si aucune n'est définie", () => {
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const r = describeShareLinksFailure(new Error("supabase_not_configured"));
+    expect(r.hint).toContain("NEXT_PUBLIC_SUPABASE_URL");
+    expect(r.hint).toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(r.hint).toContain("REDÉPLOYEZ");
+  });
+
+  it("ne cite que la variable réellement absente", () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://exemple.supabase.co";
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const r = describeShareLinksFailure(new Error("supabase_not_configured"));
+    expect(r.hint).toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(r.hint).not.toContain("NEXT_PUBLIC_SUPABASE_URL manquante");
+  });
+});

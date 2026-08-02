@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { getSupabaseAdmin } from "@/lib/server/supabase";
+import { getSupabaseAdmin, missingSupabaseEnvVars } from "@/lib/server/supabase";
 import type { ShareEventKind, ShareLink, ShareLinkStats } from "@/lib/shareLink";
 
 // Accès Supabase aux liens de partage et à leur journal d'événements.
@@ -32,12 +32,17 @@ function raise(error: { message: string; code?: string }): never {
  */
 export function describeShareLinksFailure(e: unknown): { error: string; hint?: string; status: number } {
   if (e instanceof Error && e.message === "supabase_not_configured") {
+    const missing = missingSupabaseEnvVars();
     return {
       error: e.message,
       status: 503,
       hint:
-        "Les liens de partage exigent Supabase : configurez NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY, " +
-        "puis exécutez supabase/migrations/001_published_gents.sql et 002_share_links.sql dans le SQL Editor.",
+        (missing.length
+          ? `Variable(s) manquante(s) sur le serveur : ${missing.join(", ")}. `
+          : "Les liens de partage exigent Supabase. ") +
+        "Configurez-la(les) dans Vercel → Settings → Environment Variables pour l'environnement Production, " +
+        "REDÉPLOYEZ (une variable ajoutée ne s'applique pas au déploiement déjà en ligne), puis exécutez " +
+        "supabase/migrations/001_published_gents.sql et 002_share_links.sql dans le SQL Editor si ce n'est pas déjà fait.",
     };
   }
   const code = e instanceof ShareLinksError ? e.code : undefined;
