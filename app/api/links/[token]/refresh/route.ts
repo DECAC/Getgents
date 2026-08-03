@@ -88,8 +88,7 @@ export async function POST(req: Request, { params }: Params) {
   // session préalable) : seules ses valeurs d'entrées, déjà appliquées
   // ci-dessus, doivent nourrir sa génération — jamais la mémoire ou les
   // documents persistés sur l'espace, qui appartiennent au créateur ou à
-  // d'autres utilisateurs. Neutralisé pour ce seul appel ; `espace` (utilisé
-  // plus bas pour la persistance) reste intact.
+  // d'autres utilisateurs.
   const forGeneration = withoutSessionContext(espace);
 
   // Le crédit est consommé avant la génération : un échec LLM ne doit pas
@@ -97,13 +96,18 @@ export async function POST(req: Request, { params }: Params) {
   await incrementRefreshCount(token);
   const result = await refreshPinnedArtefact(forGeneration, "lien");
 
-  const updated: Espace = { ...espace, pinnedArtefact: result.pinned };
-  await supabase.from("published_gents").upsert({ id: link.gentId, espace: updated });
+  // Ne JAMAIS réécrire published_gents avec le résultat du visiteur :
+  // - ses entrées (CV, LinkedIn…) et son dashboard sont personnels ;
+  // - l'upsert gonflait la ligne serveur et allongeait la requête jusqu'à
+  //   faire tomber la connexion (« Failed to fetch ») après 1–2 min de LLM.
+  // Le dashboard est renvoyé au navigateur du destinataire uniquement
+  // (comme /api/artefact/preview côté builder).
   await recordShareEvent(token, "refresh", result.ok ? "ok" : result.note);
 
   return NextResponse.json({
     ok: result.ok,
     note: result.note,
     dashboard: result.pinned.dashboard ?? null,
+    run: result.run ?? null,
   });
 }

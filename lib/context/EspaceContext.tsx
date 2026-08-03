@@ -816,13 +816,27 @@ export function EspaceProvider({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ espace: slim }),
           });
-      const data = (await res.json()) as {
+      // Vercel peut renvoyer une page HTML (504) au lieu de JSON quand la
+      // fonction est tuée : on lit d'abord le texte pour un message clair.
+      const rawBody = await res.text();
+      let data: {
         ok?: boolean;
         note?: string;
         dashboard?: NonNullable<Espace["pinnedArtefact"]>["dashboard"];
         run?: PinnedRun | null;
         error?: string;
-      };
+        hint?: string;
+      } = {};
+      try {
+        data = rawBody ? (JSON.parse(rawBody) as typeof data) : {};
+      } catch {
+        setPinnedError(
+          res.status >= 500
+            ? `Le serveur a interrompu la génération (HTTP ${res.status}). Réessayez ; avec la recherche web, comptez 1 à 2 minutes.`
+            : `Réponse serveur illisible (HTTP ${res.status}).`
+        );
+        return;
+      }
 
       // L'historique enregistre aussi les échecs : c'est ce qui rend l'onglet
       // Audit utile quand une génération ne passe pas.
@@ -832,7 +846,7 @@ export function EspaceProvider({
       };
 
       if (!res.ok || data.error) {
-        setPinnedError(`Échec : ${data.error ?? data.note ?? res.status}`);
+        setPinnedError(`Échec : ${data.error ?? data.note ?? res.status}${data.hint ? ` — ${data.hint}` : ""}`);
         if (espace.pinnedArtefact) archive(espace.pinnedArtefact, {});
         return;
       }

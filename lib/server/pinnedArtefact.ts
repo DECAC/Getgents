@@ -12,6 +12,14 @@ import { extractJsonFromHtmlMarker } from "@/lib/server/markerJson";
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 /** Modèle fiable pour la structure JSON du dashboard (indépendamment du modèle chat du gent). */
 const PINNED_MODEL_FALLBACK = "anthropic/claude-sonnet-5";
+/**
+ * Plafond par appel OpenRouter. Sans signal, un LLM bloqué laisse Vercel tuer
+ * la fonction → le navigateur voit « Failed to fetch » (connexion coupée)
+ * plutôt qu'une erreur JSON exploitable. On laisse une marge sous maxDuration=300.
+ */
+const PINNED_CALL_TIMEOUT_MS = 150_000;
+/** Au-delà, on saute la 2ᵉ tentative pour renvoyer une réponse avant le kill Vercel. */
+const PINNED_RETRY_BUDGET_MS = 120_000;
 
 export interface PinnedRefreshResult {
   ok: boolean;
@@ -111,7 +119,9 @@ export async function refreshPinnedArtefact(
 
   // 2e tentative : modèle de repli + consigne plus stricte (structure JSON souvent
   // ratée par les modèles reasoning ou avec recherche web).
-  if (!dashboard) {
+  // Sautée si le 1er appel a déjà mangé le budget : deux appels × recherche web
+  // dépassent souvent la limite Vercel et provoquent « Connexion interrompue ».
+  if (!dashboard && Date.now() - startedAt < PINNED_RETRY_BUDGET_MS) {
     const retryModel = model === PINNED_MODEL_FALLBACK ? model : PINNED_MODEL_FALLBACK;
     attempts = 2;
     const retry = await callPinnedModel(
@@ -130,6 +140,11 @@ export async function refreshPinnedArtefact(
       raw = retry.text;
       usedModel = retryModel;
       dashboard = extractPinnedDashboard(retry.text);
+    }
+  } else if (!dashboard) {
+    // On conserve le diagnostic du 1er appel ; on signale juste qu'on n'a pas retenté.
+    if (call.errorNote) {
+      call = { ...call, errorNote: `${call.errorNote} (2ᵉ tentative sautée : délai déjà écoulé)` };
     }
   }
 
@@ -182,6 +197,8 @@ async function callPinnedModel(
         ...(webSearch ? { plugins: [{ id: "web" }] } : {}),
       }),
       cache: "no-store",
+      // Évite que Vercel coupe la connexion sans réponse JSON (« Failed to fetch »).
+      signal: AbortSignal.timeout(PINNED_CALL_TIMEOUT_MS),
     });
     if (!res.ok) {
       // Le corps porte la vraie cause (quota, clé invalide, modèle inconnu) :
@@ -199,7 +216,14 @@ async function callPinnedModel(
     };
     return { text: extractLlmMessageText(data), httpStatus: res.status, totalTokens: data.usage?.total_tokens };
   } catch (e) {
-    return { text: "", errorNote: `échec réseau : ${(e as Error).message.slice(0, 140)}` };
+    const msg = (e as Error).message ?? "erreur inconnue";
+    const timedOut = (e as Error).name === "TimeoutError" || /aborted|timeout/i.test(msg);
+    return {
+      text: "",
+      errorNote: timedOut
+        ? `délai dépassé (${Math.round(PINNED_CALL_TIMEOUT_MS / 1000)}s) — recherche web ou modèle trop lent`
+        : `échec réseau : ${msg.slice(0, 140)}`,
+    };
   }
 }
 

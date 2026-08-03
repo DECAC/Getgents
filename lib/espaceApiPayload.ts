@@ -161,9 +161,10 @@ export function formatApiNetworkError(err: unknown): string {
   const msg = (err as Error).message ?? "erreur inconnue";
   if (msg === "Failed to fetch") {
     return (
-      "Connexion interrompue. L'opération peut prendre 1 à 2 minutes (recherche web + génération). " +
-      "Si l'erreur persiste : vérifiez que l'app tourne (npm run dev ou déploiement Vercel à jour), " +
-      "puis réessayez."
+      "Connexion interrompue pendant la génération (souvent un délai serveur trop court avec " +
+      "recherche web). Réessayez une fois ; si ça revient, désactivez temporairement la recherche " +
+      "web sur le gent ou vérifiez que le déploiement Vercel est à jour (plan Pro recommandé pour " +
+      "les opérations longues)."
     );
   }
   return `Erreur réseau : ${msg}`;
