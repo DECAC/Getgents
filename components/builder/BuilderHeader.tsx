@@ -82,6 +82,7 @@ export function BuilderHeader() {
   let publishHint: string | undefined;
   if (!nameOk) publishHint = "Donnez un nom au gent avant de publier";
   else if (!currentDraft.systemPrompt.trim()) publishHint = "Rédigez un prompt système avant de publier";
+  else if (dirty) publishHint = "Des modifications n'ont pas encore été publiées — cliquez pour mettre à jour l'espace";
 
   return (
     <header className={styles.head}>

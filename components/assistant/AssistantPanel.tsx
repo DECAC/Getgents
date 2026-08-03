@@ -60,6 +60,7 @@ export function AssistantPanel() {
     switchConversation,
     isThinking,
     thinkingStatus,
+    stopGeneration,
     geoStatus,
     confirmGeoRequest,
     shareMode,
@@ -132,6 +133,7 @@ export function AssistantPanel() {
   }, []);
 
   const handleSend = useCallback(() => {
+    if (isThinking) return;
     const txt = composerText.trim();
     if (!txt && !attachment) return;
     const parts: string[] = [];
@@ -147,7 +149,7 @@ export function AssistantPanel() {
     setAttachment(null);
     setAttachError(null);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
-  }, [composerText, attachment, sendMessage]);
+  }, [composerText, attachment, sendMessage, isThinking]);
 
   const handleFilePick = useCallback(async (file: File | undefined) => {
     if (!file) return;
@@ -168,7 +170,7 @@ export function AssistantPanel() {
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      if (!isThinking) handleSend();
     }
   }
 
@@ -869,16 +871,31 @@ export function AssistantPanel() {
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
             />
-            <button
-              className={styles.sendBtn}
-              aria-label="Envoyer"
-              disabled={!composerText.trim() && !attachment}
-              onClick={handleSend}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </button>
+            {isThinking ? (
+              <button
+                type="button"
+                className={styles.stopBtn}
+                aria-label="Arrêter la génération"
+                title="Arrêter"
+                onClick={stopGeneration}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <rect x="6" y="6" width="12" height="12" rx="1.5" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={styles.sendBtn}
+                aria-label="Envoyer"
+                disabled={!composerText.trim() && !attachment}
+                onClick={handleSend}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </button>
+            )}
           </div>
           <div className={styles.aiDisclosure}>
             Vous interagissez avec une IA. Vérifiez les informations importantes.

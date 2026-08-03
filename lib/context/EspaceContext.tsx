@@ -128,6 +128,8 @@ interface EspaceContextValue {
   isThinking: boolean;
   /** Libellé de la phase en cours (réflexion, outil, rédaction…). */
   thinkingStatus: string | null;
+  /** Interrompt la génération en cours (bouton Stop du composer). */
+  stopGeneration: () => void;
   /** Position partagée par l'utilisateur (consentement explicite) — null sinon. */
   userPosition: { lat: number; lon: number } | null;
   geoStatus: GeoStatus;
@@ -212,6 +214,11 @@ export function EspaceProvider({
   // updaters setEspaces ne sont pas garantis d'être exécutés immédiatement.
   const espacesRef = useRef(espaces);
   espacesRef.current = espaces;
+  const streamAbortRef = useRef<AbortController | null>(null);
+
+  const stopGeneration = useCallback(() => {
+    streamAbortRef.current?.abort();
+  }, []);
 
   // Géolocalisation à consentement explicite : déclenchée uniquement par un
   // clic utilisateur, puis validée une seconde fois par la permission navigateur.
@@ -360,6 +367,7 @@ export function EspaceProvider({
   }, [currentId]);
 
   const sendMessage = useCallback((text: string) => {
+    if (streamAbortRef.current) return; // une génération est déjà en cours
     const id = currentIdRef.current;
     const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: nowTime() };
     const agentPlaceholder = { role: "agent" as const, text: "", t: nowTime() };
@@ -428,6 +436,9 @@ export function EspaceProvider({
 
     setIsThinking(true);
     setThinkingStatus(defaultStatusLabel("preparing"));
+
+    const controller = new AbortController();
+    streamAbortRef.current = controller;
 
     function updateLastMessage(updater: (m: ConversationMessage) => ConversationMessage) {
       setEspaces((p) => {
@@ -507,7 +518,8 @@ export function EspaceProvider({
         }
       },
       (status) => setThinkingStatus(status.label),
-      shareToken ? `/api/links/${encodeURIComponent(shareToken)}/chat` : undefined
+      shareToken ? `/api/links/${encodeURIComponent(shareToken)}/chat` : undefined,
+      controller.signal
     )
       .then(({ text: fullRaw, reasoning, truncated }) => {
         const afterQuestions = extractQuestions(fullRaw);
@@ -637,6 +649,15 @@ export function EspaceProvider({
         pushProfileProposalIfAny();
       })
       .catch((err: Error) => {
+        if (err?.name === "AbortError") {
+          updateLastMessage((m) => ({
+            ...m,
+            text: (m.text?.trim()
+              ? m.text
+              : "") + '<p><em>Génération interrompue.</em></p>',
+          }));
+          return;
+        }
         updateLastMessage(() => ({
           role: "agent" as const,
           text: `<p>Erreur de connexion au service IA${err?.message ? ` : ${err.message}` : ""}.</p>`,
@@ -644,6 +665,7 @@ export function EspaceProvider({
         }));
       })
       .finally(() => {
+        if (streamAbortRef.current === controller) streamAbortRef.current = null;
         setIsThinking(false);
         setThinkingStatus(null);
       });
@@ -1157,6 +1179,7 @@ export function EspaceProvider({
         submitJumpForm,
         isThinking,
         thinkingStatus,
+        stopGeneration,
         userPosition,
         geoStatus,
         requestGeolocation,

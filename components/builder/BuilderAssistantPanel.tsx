@@ -31,6 +31,7 @@ export function BuilderAssistantPanel() {
     switchTab,
     isThinking,
     thinkingStatus,
+    stopGeneration,
   } = useBuilder();
   const [composerText, setComposerText] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
@@ -100,17 +101,18 @@ export function BuilderAssistantPanel() {
   }
 
   const handleSend = useCallback(() => {
+    if (isThinking) return;
     const txt = composerText.trim();
     if (!txt) return;
     sendBuilderMessage(txt);
     setComposerText("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
-  }, [composerText, sendBuilderMessage]);
+  }, [composerText, sendBuilderMessage, isThinking]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      if (!isThinking) handleSend();
     }
   }
 
@@ -494,16 +496,31 @@ export function BuilderAssistantPanel() {
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
           />
-          <button
-            className={styles.sendBtn}
-            aria-label="Envoyer"
-            disabled={!composerText.trim()}
-            onClick={handleSend}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14M13 6l6 6-6 6" />
-            </svg>
-          </button>
+          {isThinking ? (
+            <button
+              type="button"
+              className={styles.stopBtn}
+              aria-label="Arrêter la génération"
+              title="Arrêter"
+              onClick={stopGeneration}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <rect x="6" y="6" width="12" height="12" rx="1.5" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.sendBtn}
+              aria-label="Envoyer"
+              disabled={!composerText.trim()}
+              onClick={handleSend}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </button>
+          )}
         </div>
         <div className={styles.aiDisclosure}>
           Vous interagissez avec une IA. Vérifiez les suggestions avant publication.

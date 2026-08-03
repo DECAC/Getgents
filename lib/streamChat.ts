@@ -87,6 +87,7 @@ export interface ToolEvent {
 // notifié via onToken en second argument — vide si le modèle n'en fournit pas.
 // Si mcpServers est fourni, la route exécute une boucle d'outils MCP et
 // signale chaque appel via onToolEvent.
+// `signal` permet d'interrompre la génération (bouton Stop) : AbortError.
 export async function streamChatCompletion(
   payload: {
     model: string;
@@ -106,12 +107,14 @@ export async function streamChatCompletion(
   // Mode lien de partage : la requête part vers /api/links/<token>/chat, qui
   // reconstruit le prompt système et les connecteurs côté serveur (le
   // destinataire ne les reçoit jamais). Le flux SSE est identique.
-  endpoint = "/api/chat"
+  endpoint = "/api/chat",
+  signal?: AbortSignal
 ): Promise<StreamChatResult> {
   const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...payload, stream: true }),
+    signal,
   });
 
   if (!res.ok || !res.body) {
@@ -134,63 +137,71 @@ export async function streamChatCompletion(
   let truncated = false;
   onStatus?.({ phase: "preparing", label: defaultStatusLabel("preparing") });
 
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith("data:")) continue;
-      const dataStr = trimmed.slice(5).trim();
-      if (dataStr === "[DONE]") continue;
-      try {
-        const json = JSON.parse(dataStr);
-        if (json?.tool_event && onToolEvent) {
-          onToolEvent(json.tool_event as ToolEvent);
-          continue;
-        }
-        if (json?.status_event && onStatus) {
-          onStatus(json.status_event as StatusEvent);
-          continue;
-        }
-        if (json?.choices?.[0]?.finish_reason === "length") truncated = true;
-        const delta = json?.choices?.[0]?.delta;
-        const content: string | undefined = delta?.content;
-        const reasoningDetails: { type?: string; text?: string }[] | undefined = delta?.reasoning_details;
-        const legacyReasoning: string | undefined = delta?.reasoning;
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+        const dataStr = trimmed.slice(5).trim();
+        if (dataStr === "[DONE]") continue;
+        try {
+          const json = JSON.parse(dataStr);
+          if (json?.tool_event && onToolEvent) {
+            onToolEvent(json.tool_event as ToolEvent);
+            continue;
+          }
+          if (json?.status_event && onStatus) {
+            onStatus(json.status_event as StatusEvent);
+            continue;
+          }
+          if (json?.choices?.[0]?.finish_reason === "length") truncated = true;
+          const delta = json?.choices?.[0]?.delta;
+          const content: string | undefined = delta?.content;
+          const reasoningDetails: { type?: string; text?: string }[] | undefined = delta?.reasoning_details;
+          const legacyReasoning: string | undefined = delta?.reasoning;
 
-        let changed = false;
-        if (content) {
-          full += content;
-          changed = true;
-          onStatus?.({ phase: "writing", label: defaultStatusLabel("writing") });
-        }
-        if (Array.isArray(reasoningDetails)) {
-          for (const part of reasoningDetails) {
-            if (typeof part?.text === "string") {
-              fullReasoning += part.text;
-              changed = true;
-              if (!content) {
-                onStatus?.({ phase: "thinking", label: defaultStatusLabel("thinking") });
+          let changed = false;
+          if (content) {
+            full += content;
+            changed = true;
+            onStatus?.({ phase: "writing", label: defaultStatusLabel("writing") });
+          }
+          if (Array.isArray(reasoningDetails)) {
+            for (const part of reasoningDetails) {
+              if (typeof part?.text === "string") {
+                fullReasoning += part.text;
+                changed = true;
+                if (!content) {
+                  onStatus?.({ phase: "thinking", label: defaultStatusLabel("thinking") });
+                }
               }
             }
+          } else if (typeof legacyReasoning === "string" && legacyReasoning) {
+            fullReasoning += legacyReasoning;
+            changed = true;
+            if (!content) {
+              onStatus?.({ phase: "thinking", label: defaultStatusLabel("thinking") });
+            }
           }
-        } else if (typeof legacyReasoning === "string" && legacyReasoning) {
-          fullReasoning += legacyReasoning;
-          changed = true;
-          if (!content) {
-            onStatus?.({ phase: "thinking", label: defaultStatusLabel("thinking") });
-          }
-        }
 
-        if (changed) onToken(full, fullReasoning);
-      } catch {
-        // ligne SSE incomplète/malformée — ignorée, le buffer la recomplètera
+          if (changed) onToken(full, fullReasoning);
+        } catch {
+          // ligne SSE incomplète/malformée — ignorée, le buffer la recomplètera
+        }
       }
     }
+  } catch (e) {
+    if (signal?.aborted || (e as Error).name === "AbortError") {
+      await reader.cancel().catch(() => undefined);
+      throw new DOMException("Aborted", "AbortError");
+    }
+    throw e;
   }
 
   return { text: full, reasoning: fullReasoning, truncated };
