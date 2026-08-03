@@ -12,10 +12,15 @@ export interface StreamChatResult {
   truncated: boolean;
 }
 
-/** Plafonds de tokens de sortie — analyses longues (tableaux, scoring, négociation…). */
+/**
+ * Plafonds de tokens de sortie.
+ * Le builder doit pouvoir émettre un prompt système complet + un bloc
+ * GENT_CONFIG dans le même message : 8192 coupait trop souvent les
+ * propositions (« Réponse tronquée »). Aligné sur le plafond artefact figé.
+ */
 export const CHAT_MAX_TOKENS = {
   espace: 12_288,
-  builder: 8192,
+  builder: 16_000,
 } as const;
 
 /** Phase affichée à l'utilisateur pendant le traitement d'une requête. */
