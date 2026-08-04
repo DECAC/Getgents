@@ -15,17 +15,20 @@ function formatWhen(iso?: string): string {
 }
 
 /**
- * Artefact figé « mini-app » : rendu proéminent en tête d'espace. L'utilisateur
+ * Mini-app (artefact figé) : rendu proéminent en tête d'espace. L'utilisateur
  * renseigne des entrées limitées (LinkedIn, CV…) puis génère / rafraîchit les
  * données d'un bouton — sans jamais reformuler une instruction.
  */
 export function PinnedArtefactPanel({ pinned }: { pinned: PinnedArtefact }) {
-  const { refreshPinnedArtefact, updatePinnedInput, pinnedRefreshing, pinnedError } = useEspace();
+  const { refreshPinnedArtefact, resetPinnedArtefact, updatePinnedInput, pinnedRefreshing, pinnedError } =
+    useEspace();
   const [inputsOpen, setInputsOpen] = useState(!pinned.dashboard);
   const [fileState, setFileState] = useState<Record<string, string>>({});
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const hasData = !!pinned.dashboard;
+  const hasSession =
+    hasData || pinned.inputs.some((i) => !!(i.value && i.value.trim())) || Object.keys(fileState).length > 0;
   const missingInputs = pinned.inputs.some((i) => !i.value?.trim());
 
   // Entrée « fichier » : on extrait le TEXTE côté navigateur (CV PDF/Word) et on
@@ -43,6 +46,15 @@ export function PinnedArtefactPanel({ pinned }: { pinned: PinnedArtefact }) {
     }
   }
 
+  function handleNew() {
+    resetPinnedArtefact();
+    setFileState({});
+    setInputsOpen(true);
+    for (const el of Object.values(fileRefs.current)) {
+      if (el) el.value = "";
+    }
+  }
+
   return (
     <section className={styles.panel}>
       <header className={styles.head}>
@@ -55,6 +67,17 @@ export function PinnedArtefactPanel({ pinned }: { pinned: PinnedArtefact }) {
           {pinned.inputs.length > 0 && (
             <button type="button" className={styles.inputsBtn} onClick={() => setInputsOpen((v) => !v)}>
               {inputsOpen ? "Masquer les entrées" : "Entrées"}
+            </button>
+          )}
+          {hasSession && (
+            <button
+              type="button"
+              className={styles.newBtn}
+              onClick={handleNew}
+              disabled={pinnedRefreshing}
+              title="Effacer le résultat et les entrées pour recommencer"
+            >
+              New
             </button>
           )}
           <button

@@ -141,6 +141,11 @@ interface EspaceContextValue {
   viewArtefact: (messageId: string) => void;
   /** Artefact figé « mini-app » : rafraîchit ses données côté serveur. */
   refreshPinnedArtefact: () => Promise<void>;
+  /**
+   * Remet la mini-app à zéro : efface le tableau de bord et les valeurs des
+   * entrées pour repartir d'un chargement neuf (bouton « New »).
+   */
+  resetPinnedArtefact: () => void;
   /** Met à jour une entrée de l'artefact figé (LinkedIn, CV…). */
   updatePinnedInput: (inputId: string, value: string) => void;
   pinnedRefreshing: boolean;
@@ -812,6 +817,27 @@ export function EspaceProvider({
     });
   }, []);
 
+  const resetPinnedArtefact = useCallback(() => {
+    const id = currentIdRef.current;
+    setPinnedError(null);
+    setEspaces((prev) => {
+      const espace = prev[id];
+      const pinned = espace?.pinnedArtefact;
+      if (!pinned?.enabled) return prev;
+      const { dashboard: _d, generatedAt: _g, ...rest } = pinned;
+      return {
+        ...prev,
+        [id]: {
+          ...espace,
+          pinnedArtefact: {
+            ...rest,
+            inputs: pinned.inputs.map(({ value: _v, ...input }) => input),
+          },
+        },
+      };
+    });
+  }, []);
+
   // Rafraîchit l'artefact figé côté serveur (régénère le tableau de bord à
   // partir de la mission + des entrées). Le résultat remplace le dashboard en
   // place, sans que l'utilisateur ait à reformuler quoi que ce soit.
@@ -1187,6 +1213,7 @@ export function EspaceProvider({
         removeArtefact,
         viewArtefact,
         refreshPinnedArtefact,
+        resetPinnedArtefact,
         updatePinnedInput,
         pinnedRefreshing,
         pinnedError,

@@ -22,6 +22,7 @@ export function BuilderAssistantPanel() {
   const {
     currentDraft,
     sendBuilderMessage,
+    startNewBuilderConversation,
     applyBuilderSuggestion,
     assignModel,
     confirmConnectorProposal,
@@ -426,6 +427,22 @@ export function BuilderAssistantPanel() {
           <h3 className={styles.headTitle}>Assistant du builder</h3>
           <div className={styles.headSub}>Vous aide à concevoir {currentDraft.name || "ce gent"}</div>
         </div>
+        <button
+          type="button"
+          className={styles.newConvBtn}
+          onClick={() => {
+            startNewBuilderConversation();
+            setComposerText("");
+            setExpandedReasoning({});
+          }}
+          title="Démarrer une nouvelle discussion avec l'assistant"
+          disabled={!currentDraft.builderConversation.length && !isThinking}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Nouvelle discussion
+        </button>
         <ReportMenu getMarkdown={() => buildBuilderReport(currentDraft)} baseName={currentDraft.name} />
         <button
           type="button"

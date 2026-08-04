@@ -114,9 +114,8 @@ export function PromptTab() {
     updateSystemPrompt(text);
   }
 
-  // « Prompt figé » de l'artefact « mini-app » : édité ici (onglet Prompt), plus
-  // dans l'onglet Artefacts, pour ne pas le confondre avec le prompt système.
-  // Même découplage local que le prompt système (accents pendant le streaming).
+  // Mission de la mini-app : éditée ici (onglet Prompt), distincte du prompt
+  // système. Même découplage local (accents pendant le streaming).
   const pinnedEnabled = !!currentDraft.pinnedArtefact?.enabled;
   const pinnedMission = currentDraft.pinnedArtefact?.mission ?? "";
   const [missionValue, setMissionValue] = useState(pinnedMission);
@@ -153,13 +152,12 @@ export function PromptTab() {
       <div className={styles.card}>
         <div className={styles.webSearchRow}>
           <div>
-            <h4 className={styles.title}>Prompt figé — artefact « mini-app »</h4>
+            <h4 className={styles.title}>Mini-application</h4>
             <div className={styles.sub}>
-              Transforme le gent en mini-application : au lieu de converser, il produit un tableau de
-              bord permanent que l&apos;utilisateur rafraîchit d&apos;un bouton. Le « prompt figé »
-              ci-dessous décrit ce que le gent génère à chaque mise à jour — distinct du prompt
-              système. La structure (titre, entrées) et l&apos;aperçu se règlent dans l&apos;onglet
-              Artefacts.
+              Transforme le gent en mini-app : au lieu de converser, l&apos;utilisateur fournit des
+              entrées puis génère un tableau de bord. Le texte ci-dessous décrit ce que la mini-app
+              produit à chaque génération — distinct du prompt système. Titre, entrées et aperçu se
+              règlent dans l&apos;onglet Artefacts.
             </div>
           </div>
           <button
@@ -168,7 +166,7 @@ export function PromptTab() {
             aria-checked={pinnedEnabled}
             className={[styles.switch, pinnedEnabled ? styles.switchOn : ""].filter(Boolean).join(" ")}
             onClick={() => updatePinnedArtefact({ enabled: !pinnedEnabled })}
-            aria-label="Activer le prompt figé (artefact mini-app)"
+            aria-label="Activer la mini-application"
           >
             <span className={styles.knob} />
           </button>
@@ -182,7 +180,7 @@ export function PromptTab() {
               placeholder={
                 "Décris le tableau de bord à produire à chaque génération : sections, indicateurs clés, tableaux… Ex. : Analyse le profil et produis un tableau de bord carrière — diagnostic de positionnement, opportunités classées par fit, réseau, actions prioritaires."
               }
-              aria-label="Prompt figé — mission de l'artefact"
+              aria-label="Instruction de génération de la mini-app"
             />
           </div>
         )}

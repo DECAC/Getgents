@@ -75,6 +75,8 @@ interface BuilderContextValue {
   updatePinnedArtefact: (patch: Partial<import("@/lib/types").PinnedArtefact>) => void;
 
   sendBuilderMessage: (text: string) => void;
+  /** Vide le fil courant pour démarrer un nouvel échange avec l'assistant. */
+  startNewBuilderConversation: () => void;
   applyBuilderSuggestion: (suggestion: string) => void;
   confirmConnectorProposal: (messageId: string, decision: "add" | "dismiss") => void;
   /** Applique (ou ignore) une configuration complète proposée par l'assistant. */
@@ -651,6 +653,21 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       });
   }, []);
 
+  const startNewBuilderConversation = useCallback(() => {
+    streamAbortRef.current?.abort();
+    const id = currentIdRef.current;
+    setDrafts((prev) => {
+      const draft = prev[id];
+      if (!draft.builderConversation.length) return prev;
+      return {
+        ...prev,
+        [id]: { ...draft, builderConversation: [], updatedAt: "à l'instant" },
+      };
+    });
+    setIsThinking(false);
+    setThinkingStatus(null);
+  }, []);
+
   // Validation (ou refus) d'un connecteur préparé par l'assistant du builder.
   const confirmConnectorProposal = useCallback((messageId: string, decision: "add" | "dismiss") => {
     setDrafts((prev) => {
@@ -859,6 +876,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         updateChannel,
         updatePinnedArtefact,
         sendBuilderMessage,
+        startNewBuilderConversation,
         applyBuilderSuggestion,
         confirmConnectorProposal,
         confirmConnectorSuggestions,

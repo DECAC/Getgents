@@ -118,7 +118,7 @@ function pinnedArtefactSection(espace: Espace): string[] {
   lines.push(`- **Dernière génération** : ${fmtWhen(pinned.generatedAt)}`);
   lines.push(`- **Blocs du rendu courant** : ${pinned.dashboard?.blocks.length ?? 0}`);
   lines.push("");
-  lines.push("### Prompt figé (mission)");
+  lines.push("### Instruction de génération (mini-app)");
   lines.push("```");
   lines.push(pinned.mission || "—");
   lines.push("```");
