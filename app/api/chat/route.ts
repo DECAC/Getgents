@@ -14,6 +14,13 @@ import type { RestApiConnector } from "@/lib/types";
 import type { StatusEvent, ThinkingPhase } from "@/lib/streamChat";
 import { defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 
+// Un tour de conversation avec recherche web, boucle d'outils ou un prompt
+// système volumineux (base de connaissance) peut dépasser la limite par
+// défaut de la plateforme — c'était la seule route appelant le LLM sans cette
+// déclaration, contrairement à /api/artefact/* et /api/links/*/*, d'où des
+// « Failed to fetch » en cours de streaming sur les échanges les plus longs.
+export const maxDuration = 300;
+
 // Surchargeable en test/dev pour pointer vers un mock local.
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 const MAX_TOOL_ROUNDS = 6;
