@@ -58,6 +58,11 @@ let remoteAvailable: boolean | null = null;
 const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const PUSH_DEBOUNCE_MS = 1500;
 
+/** À appeler quand la clé APP_ACCESS_SECRET est (re)saisie — relance les syncs. */
+export function resetDraftsRemoteAvailability(): void {
+  remoteAvailable = null;
+}
+
 /** Récupère les brouillons depuis le serveur — null si indisponible. */
 export async function fetchRemoteDrafts(): Promise<GentDraftsMap | null> {
   if (remoteAvailable === false) return null;
@@ -160,21 +165,53 @@ export function listVisibleDrafts(): GentDraft[] {
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 }
 
-/** Recrée un brouillon builder minimal à partir d'un gent publié (récupération). */
+/** Recrée un brouillon builder à partir d'un gent publié (récupération). */
 export function restoreDraftFromPublished(id: string, espace: Espace): GentDraft {
   const base = freshDraftFromTemplate(id);
   const connectors = connectorsFromPublishedEspace(espace);
+  // Artefact figé : on reprend la config (mission, entrées) sans le rendu
+  // personnel ni l'historique de runs — le créateur régénère au besoin.
+  const pinned = espace.pinnedArtefact
+    ? {
+        enabled: espace.pinnedArtefact.enabled,
+        title: espace.pinnedArtefact.title,
+        mission: espace.pinnedArtefact.mission,
+        inputs: espace.pinnedArtefact.inputs.map((i) => ({
+          id: i.id,
+          label: i.label,
+          kind: i.kind,
+        })),
+      }
+    : undefined;
   return {
     ...base,
     id,
-    name: espace.name,
+    name: espace.gent || espace.name,
     icon: espace.icon,
-    objective: espace.name,
+    objective: espace.name !== (espace.gent || espace.name) ? espace.name : espace.gent || espace.name,
     systemPrompt: espace.systemPrompt ?? "",
     status: "published",
     webSearch: espace.webSearch,
     jumpForm: espace.jumpForm,
     connectors,
+    pinnedArtefact: pinned,
+    routine: espace.routine
+      ? {
+          enabled: espace.routine.enabled,
+          frequency: espace.routine.frequency,
+          hour: espace.routine.hour,
+          mission: espace.routine.mission,
+        }
+      : undefined,
+    channel: espace.channel
+      ? {
+          kind: espace.channel.kind,
+          enabled: espace.channel.enabled,
+          to: espace.channel.to,
+          templateName: espace.channel.templateName,
+          templateLang: espace.channel.templateLang,
+        }
+      : undefined,
     modelAssignments: base.modelAssignments.map((a) =>
       a.capability === "chat" ? { ...a, modelId: espace.chatModelId ?? a.modelId } : a
     ),

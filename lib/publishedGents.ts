@@ -38,6 +38,11 @@ let remoteAvailable: boolean | null = null;
 const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const PUSH_DEBOUNCE_MS = 1500;
 
+/** À appeler quand la clé APP_ACCESS_SECRET est (re)saisie — relance les syncs. */
+export function resetPublishedRemoteAvailability(): void {
+  remoteAvailable = null;
+}
+
 /** Récupère les gents publiés depuis le serveur — null si indisponible. */
 export async function fetchRemoteGents(): Promise<EspacesMap | null> {
   if (remoteAvailable === false) return null;

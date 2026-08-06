@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   allocateNewDraft,
   listVisibleDrafts,
   restoreDraftFromPublished,
   saveRestoredDraft,
+  syncDraftsFromRemote,
 } from "@/lib/builderDraftStorage";
-import { readPublishedGents } from "@/lib/publishedGents";
+import { readPublishedGents, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
+import { readAppSecret } from "@/lib/appAccess";
+import { AppAccessPrompt } from "@/components/shared/AppAccessPrompt";
+import type { GentDraft } from "@/lib/types/builder";
 import type { Espace } from "@/lib/types";
 import styles from "./BuilderDashboard.module.css";
 
@@ -24,22 +28,58 @@ const STATUS_CLASS: Record<string, string> = {
   published: styles.statusPublished,
 };
 
+function computeOrphans(visible: GentDraft[]): { id: string; espace: Espace }[] {
+  const draftIds = new Set(visible.map((d) => d.id));
+  const published = readPublishedGents();
+  return Object.entries(published)
+    .filter(([id]) => !draftIds.has(id))
+    .map(([id, espace]) => ({ id, espace }));
+}
+
 export function BuilderDashboard() {
   const router = useRouter();
   const [drafts, setDrafts] = useState(() => listVisibleDrafts());
   const [orphanedPublished, setOrphanedPublished] = useState<{ id: string; espace: Espace }[]>([]);
+  const [syncing, setSyncing] = useState(true);
+  const [needsAccessKey, setNeedsAccessKey] = useState(false);
 
-  useEffect(() => {
+  const refreshLists = useCallback(() => {
     const visible = listVisibleDrafts();
     setDrafts(visible);
-    const draftIds = new Set(visible.map((d) => d.id));
-    const published = readPublishedGents();
-    setOrphanedPublished(
-      Object.entries(published)
-        .filter(([id]) => !draftIds.has(id))
-        .map(([id, espace]) => ({ id, espace }))
-    );
+    setOrphanedPublished(computeOrphans(visible));
   }, []);
+
+  const hydrateFromRemote = useCallback(async () => {
+    setSyncing(true);
+    setNeedsAccessKey(false);
+    try {
+      // Sans clé, les routes /api/drafts et /api/gents répondent 401 : on
+      // propose tout de suite la saisie plutôt que d'afficher seulement les démos.
+      if (!readAppSecret()) {
+        setNeedsAccessKey(true);
+      }
+      const [remoteDrafts, remotePublished] = await Promise.all([
+        syncDraftsFromRemote(),
+        syncPublishedGentsFromRemote(),
+      ]);
+      // Si aucune sync n'a abouti alors qu'une clé est (censée être) présente,
+      // elle est peut‑être invalide — on réaffiche le champ.
+      if (remoteDrafts === null && remotePublished === null && readAppSecret()) {
+        setNeedsAccessKey(true);
+      }
+      if (remoteDrafts !== null || remotePublished !== null) {
+        setNeedsAccessKey(false);
+      }
+      refreshLists();
+    } finally {
+      setSyncing(false);
+    }
+  }, [refreshLists]);
+
+  useEffect(() => {
+    refreshLists();
+    void hydrateFromRemote();
+  }, [refreshLists, hydrateFromRemote]);
 
   function handleCreate() {
     const id = allocateNewDraft();
@@ -68,10 +108,25 @@ export function BuilderDashboard() {
           </a>
         </div>
 
+        {needsAccessKey && (
+          <div className={styles.recoveryBanner}>
+            <strong>Accès serveur requis</strong> — sans la clé, seuls les gents de démo locaux
+            s&apos;affichent. Collez APP_ACCESS_SECRET pour retrouver vos gents (ex. Next Move) depuis
+            le serveur.
+            <div style={{ marginTop: 10 }}>
+              <AppAccessPrompt onSaved={() => void hydrateFromRemote()} />
+            </div>
+          </div>
+        )}
+
+        {syncing && !needsAccessKey && (
+          <div className={styles.recoveryBanner}>Synchronisation de vos gents…</div>
+        )}
+
         {orphanedPublished.length > 0 && (
           <div className={styles.recoveryBanner}>
             <strong>Gents publiés retrouvés</strong> — le brouillon builder a pu disparaître après une mise à
-            jour, mais l&apos;espace publié est toujours dans votre navigateur. Vous pouvez le rouvrir ou
+            jour, mais l&apos;espace publié est toujours disponible. Vous pouvez le rouvrir ou
             restaurer le brouillon.
           </div>
         )}
@@ -98,12 +153,13 @@ export function BuilderDashboard() {
               <div className={styles.cardTop}>
                 <div className={styles.ic}>{espace.icon}</div>
                 <div>
-                  <div className={styles.name}>{espace.name}</div>
+                  <div className={styles.name}>{espace.gent || espace.name}</div>
                   <span className={[styles.statusBadge, styles.statusPublished].join(" ")}>Publié (espace seul)</span>
                 </div>
               </div>
               <p className={styles.objective}>
-                Brouillon builder absent — l&apos;espace utilisateur est conservé dans ce navigateur.
+                Brouillon builder absent — l&apos;espace utilisateur est conservé. Restaurez-le pour
+                continuer à l&apos;éditer (prompt, mini-app, connecteurs…).
               </p>
               <div className={styles.recoveryActions}>
                 <a href={`/espace/${id}`} className={styles.recoveryLink}>

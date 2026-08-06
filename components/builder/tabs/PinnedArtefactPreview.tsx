@@ -64,7 +64,11 @@ export function PinnedArtefactPreview() {
         error?: string;
       };
       if (!res.ok) {
-        setError(data.error === "invalid_espace" ? "Configurez le prompt figé (onglet Prompt)." : `Erreur : ${data.error ?? res.status}`);
+        setError(
+          data.error === "invalid_espace"
+            ? "Configurez la mini-app (onglet Prompt)."
+            : `Erreur : ${data.error ?? res.status}`
+        );
       } else if (data.dashboard) {
         setDashboard(data.dashboard);
         if (!data.ok && data.note) setError(`Aperçu partiel : ${data.note}`);
@@ -95,7 +99,11 @@ export function PinnedArtefactPreview() {
           className={styles.genBtn}
           onClick={generate}
           disabled={loading || missionMissing}
-          title={missionMissing ? "Renseignez d'abord le prompt figé (onglet Prompt)" : "Générer l'aperçu"}
+          title={
+            missionMissing
+              ? "Renseignez d'abord l'instruction de génération (onglet Prompt)"
+              : "Générer l'aperçu"
+          }
         >
           {loading ? (
             <>
@@ -111,8 +119,8 @@ export function PinnedArtefactPreview() {
 
       {missionMissing && (
         <div className={styles.warn}>
-          Le « prompt figé » est vide : renseignez la mission dans l&apos;onglet <b>Prompt</b> pour
-          pouvoir générer un aperçu.
+          L&apos;instruction de génération est vide : renseignez-la dans l&apos;onglet <b>Prompt</b>{" "}
+          (section Mini-application) pour pouvoir générer un aperçu.
         </div>
       )}
 

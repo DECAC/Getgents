@@ -15,7 +15,7 @@ const INPUT_KINDS: { kind: PinnedArtefactInput["kind"]; label: string }[] = [
  * mini-application — un tableau de bord permanent dont l'utilisateur rafraîchit
  * les données d'un bouton, à partir d'entrées limitées (LinkedIn, CV…).
  *
- * L'activation et le « prompt figé » (mission) vivent désormais dans l'onglet
+ * L'activation et la mission de génération vivent désormais dans l'onglet
  * Prompt, en tête du prompt système, pour ne pas les confondre. Cet onglet ne
  * gère que la STRUCTURE de l'artefact : titre et entrées demandées.
  */
@@ -53,9 +53,9 @@ export function PinnedArtefactConfig() {
 
       {!pinned?.enabled ? (
         <div className={styles.disabledHint}>
-          Activez le <b>« prompt figé »</b> dans l&apos;onglet <b>Prompt</b> (en tête du prompt
-          système) pour définir la mission de génération, puis revenez ici configurer le titre, les
-          entrées et prévisualiser l&apos;artefact.
+          Activez la <b>mini-application</b> dans l&apos;onglet <b>Prompt</b> pour définir
+          l&apos;instruction de génération, puis revenez ici configurer le titre, les entrées et
+          prévisualiser l&apos;artefact.
         </div>
       ) : (
         <div className={styles.config}>

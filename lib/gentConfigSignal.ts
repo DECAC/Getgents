@@ -57,7 +57,27 @@ export const GENT_CONFIG_PROMPT_INSTRUCTION =
   DVF_CANONICAL_DATASET_URL +
   " (pas data.opendatasoft.com, pas de suffixe @public).";
 
-const VALID_MODEL_IDS = new Set(MODEL_CATALOG.map((m) => m.id));
+/**
+ * Résout un id de modèle pour une capacité donnée.
+ * Accepte l'id OpenRouter exact, ou le libellé catalogue (ex. « Mistral Large »),
+ * afin que les recommandations appliquées mettent bien à jour les filtres Prompt.
+ */
+export function resolveModelIdForCapability(
+  raw: unknown,
+  capability: "chat" | "reasoning" | "image" | "tts" | "stt"
+): string | undefined {
+  if (typeof raw !== "string" || !raw.trim()) return undefined;
+  const value = raw.trim();
+  const byId = MODEL_CATALOG.find((m) => m.id === value && m.capability === capability);
+  if (byId) return byId.id;
+  const lower = value.toLowerCase();
+  const byLabel = MODEL_CATALOG.find(
+    (m) => m.capability === capability && m.label.toLowerCase() === lower
+  );
+  if (byLabel) return byLabel.id;
+  // Id connu mais mauvaise capacité (ex. DeepSeek R1 collé dans chatModelId) : ignoré.
+  return undefined;
+}
 
 function str(v: unknown, max: number): string | undefined {
   return typeof v === "string" && v.trim() ? v.slice(0, max) : undefined;
@@ -176,9 +196,8 @@ export function extractGentConfigSignal(raw: string): { text: string; config: Ge
   let config: GentConfigProposal | null = null;
   try {
     const p = JSON.parse(match[1]) as Record<string, unknown>;
-    const chatModelId = typeof p.chatModelId === "string" && VALID_MODEL_IDS.has(p.chatModelId) ? p.chatModelId : undefined;
-    const reasoningModelId =
-      typeof p.reasoningModelId === "string" && VALID_MODEL_IDS.has(p.reasoningModelId) ? p.reasoningModelId : undefined;
+    const chatModelId = resolveModelIdForCapability(p.chatModelId, "chat");
+    const reasoningModelId = resolveModelIdForCapability(p.reasoningModelId, "reasoning");
     const connectors = Array.isArray(p.connectors)
       ? p.connectors.map(validateConnector).filter((c): c is GentConfigConnector => c !== null).slice(0, 6)
       : undefined;

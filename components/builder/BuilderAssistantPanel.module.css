@@ -61,6 +61,30 @@
   gap: 11px;
   flex: none;
 }
+.newConvBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  border-radius: 7px;
+  flex: none;
+  white-space: nowrap;
+}
+.newConvBtn:hover:not(:disabled) {
+  color: var(--plum);
+  background: var(--plum-tint);
+}
+.newConvBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.newConvBtn svg {
+  flex: none;
+  opacity: 0.75;
+}
 .headIc {
   width: 34px;
   height: 34px;
@@ -363,6 +387,20 @@
   background: var(--line);
   color: var(--faint);
   cursor: default;
+}
+
+.stopBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.stopBtn:hover {
+  opacity: 0.88;
 }
 
 .aiDisclosure {

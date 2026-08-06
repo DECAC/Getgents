@@ -778,6 +778,21 @@
   cursor: default;
 }
 
+.stopBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.stopBtn:hover {
+  background: #1a1a1a;
+  opacity: 0.9;
+}
+
 .aiDisclosure {
   font-size: 10px;
   color: var(--faint);

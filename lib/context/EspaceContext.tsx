@@ -128,6 +128,8 @@ interface EspaceContextValue {
   isThinking: boolean;
   /** Libellé de la phase en cours (réflexion, outil, rédaction…). */
   thinkingStatus: string | null;
+  /** Interrompt la génération en cours (bouton Stop du composer). */
+  stopGeneration: () => void;
   /** Position partagée par l'utilisateur (consentement explicite) — null sinon. */
   userPosition: { lat: number; lon: number } | null;
   geoStatus: GeoStatus;
@@ -139,6 +141,11 @@ interface EspaceContextValue {
   viewArtefact: (messageId: string) => void;
   /** Artefact figé « mini-app » : rafraîchit ses données côté serveur. */
   refreshPinnedArtefact: () => Promise<void>;
+  /**
+   * Remet la mini-app à zéro : efface le tableau de bord et les valeurs des
+   * entrées pour repartir d'un chargement neuf (bouton « New »).
+   */
+  resetPinnedArtefact: () => void;
   /** Met à jour une entrée de l'artefact figé (LinkedIn, CV…). */
   updatePinnedInput: (inputId: string, value: string) => void;
   pinnedRefreshing: boolean;
@@ -212,6 +219,11 @@ export function EspaceProvider({
   // updaters setEspaces ne sont pas garantis d'être exécutés immédiatement.
   const espacesRef = useRef(espaces);
   espacesRef.current = espaces;
+  const streamAbortRef = useRef<AbortController | null>(null);
+
+  const stopGeneration = useCallback(() => {
+    streamAbortRef.current?.abort();
+  }, []);
 
   // Géolocalisation à consentement explicite : déclenchée uniquement par un
   // clic utilisateur, puis validée une seconde fois par la permission navigateur.
@@ -360,6 +372,7 @@ export function EspaceProvider({
   }, [currentId]);
 
   const sendMessage = useCallback((text: string) => {
+    if (streamAbortRef.current) return; // une génération est déjà en cours
     const id = currentIdRef.current;
     const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: nowTime() };
     const agentPlaceholder = { role: "agent" as const, text: "", t: nowTime() };
@@ -428,6 +441,9 @@ export function EspaceProvider({
 
     setIsThinking(true);
     setThinkingStatus(defaultStatusLabel("preparing"));
+
+    const controller = new AbortController();
+    streamAbortRef.current = controller;
 
     function updateLastMessage(updater: (m: ConversationMessage) => ConversationMessage) {
       setEspaces((p) => {
@@ -507,7 +523,8 @@ export function EspaceProvider({
         }
       },
       (status) => setThinkingStatus(status.label),
-      shareToken ? `/api/links/${encodeURIComponent(shareToken)}/chat` : undefined
+      shareToken ? `/api/links/${encodeURIComponent(shareToken)}/chat` : undefined,
+      controller.signal
     )
       .then(({ text: fullRaw, reasoning, truncated }) => {
         const afterQuestions = extractQuestions(fullRaw);
@@ -637,6 +654,15 @@ export function EspaceProvider({
         pushProfileProposalIfAny();
       })
       .catch((err: Error) => {
+        if (err?.name === "AbortError") {
+          updateLastMessage((m) => ({
+            ...m,
+            text: (m.text?.trim()
+              ? m.text
+              : "") + '<p><em>Génération interrompue.</em></p>',
+          }));
+          return;
+        }
         updateLastMessage(() => ({
           role: "agent" as const,
           text: `<p>Erreur de connexion au service IA${err?.message ? ` : ${err.message}` : ""}.</p>`,
@@ -644,6 +670,7 @@ export function EspaceProvider({
         }));
       })
       .finally(() => {
+        if (streamAbortRef.current === controller) streamAbortRef.current = null;
         setIsThinking(false);
         setThinkingStatus(null);
       });
@@ -790,6 +817,27 @@ export function EspaceProvider({
     });
   }, []);
 
+  const resetPinnedArtefact = useCallback(() => {
+    const id = currentIdRef.current;
+    setPinnedError(null);
+    setEspaces((prev) => {
+      const espace = prev[id];
+      const pinned = espace?.pinnedArtefact;
+      if (!pinned?.enabled) return prev;
+      const { dashboard: _d, generatedAt: _g, ...rest } = pinned;
+      return {
+        ...prev,
+        [id]: {
+          ...espace,
+          pinnedArtefact: {
+            ...rest,
+            inputs: pinned.inputs.map(({ value: _v, ...input }) => input),
+          },
+        },
+      };
+    });
+  }, []);
+
   // Rafraîchit l'artefact figé côté serveur (régénère le tableau de bord à
   // partir de la mission + des entrées). Le résultat remplace le dashboard en
   // place, sans que l'utilisateur ait à reformuler quoi que ce soit.
@@ -816,13 +864,27 @@ export function EspaceProvider({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ espace: slim }),
           });
-      const data = (await res.json()) as {
+      // Vercel peut renvoyer une page HTML (504) au lieu de JSON quand la
+      // fonction est tuée : on lit d'abord le texte pour un message clair.
+      const rawBody = await res.text();
+      let data: {
         ok?: boolean;
         note?: string;
         dashboard?: NonNullable<Espace["pinnedArtefact"]>["dashboard"];
         run?: PinnedRun | null;
         error?: string;
-      };
+        hint?: string;
+      } = {};
+      try {
+        data = rawBody ? (JSON.parse(rawBody) as typeof data) : {};
+      } catch {
+        setPinnedError(
+          res.status >= 500
+            ? `Le serveur a interrompu la génération (HTTP ${res.status}). Réessayez ; avec la recherche web, comptez 1 à 2 minutes.`
+            : `Réponse serveur illisible (HTTP ${res.status}).`
+        );
+        return;
+      }
 
       // L'historique enregistre aussi les échecs : c'est ce qui rend l'onglet
       // Audit utile quand une génération ne passe pas.
@@ -832,7 +894,7 @@ export function EspaceProvider({
       };
 
       if (!res.ok || data.error) {
-        setPinnedError(`Échec : ${data.error ?? data.note ?? res.status}`);
+        setPinnedError(`Échec : ${data.error ?? data.note ?? res.status}${data.hint ? ` — ${data.hint}` : ""}`);
         if (espace.pinnedArtefact) archive(espace.pinnedArtefact, {});
         return;
       }
@@ -1143,6 +1205,7 @@ export function EspaceProvider({
         submitJumpForm,
         isThinking,
         thinkingStatus,
+        stopGeneration,
         userPosition,
         geoStatus,
         requestGeolocation,
@@ -1150,6 +1213,7 @@ export function EspaceProvider({
         removeArtefact,
         viewArtefact,
         refreshPinnedArtefact,
+        resetPinnedArtefact,
         updatePinnedInput,
         pinnedRefreshing,
         pinnedError,

@@ -12,7 +12,7 @@ export function captureAppSecretFromUrl(): void {
     const url = new URL(window.location.href);
     const key = url.searchParams.get("key");
     if (!key) return;
-    window.localStorage.setItem(KEY, key);
+    writeAppSecret(key);
     url.searchParams.delete("key");
     window.history.replaceState({}, "", url.toString());
   } catch {
@@ -43,6 +43,10 @@ export function writeAppSecret(secret: string): void {
   } catch {
     // localStorage indisponible — sans remède ici.
   }
+  // Import dynamique pour éviter une dépendance circulaire au chargement :
+  // sans ça, un 401 préalable laissait remoteAvailable=false pour toute la session.
+  void import("@/lib/builderDraftStorage").then((m) => m.resetDraftsRemoteAvailability());
+  void import("@/lib/publishedGents").then((m) => m.resetPublishedRemoteAvailability());
 }
 
 let captured = false;

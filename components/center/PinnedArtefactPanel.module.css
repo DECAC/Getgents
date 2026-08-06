@@ -74,6 +74,24 @@
   color: var(--ink);
   border-color: var(--plum);
 }
+.newBtn {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 6px 11px;
+}
+.newBtn:hover:not(:disabled) {
+  color: var(--plum);
+  border-color: var(--plum);
+  background: var(--plum-tint);
+}
+.newBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 .updateBtn {
   display: inline-flex;
   align-items: center;

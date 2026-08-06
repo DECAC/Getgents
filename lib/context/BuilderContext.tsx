@@ -75,6 +75,8 @@ interface BuilderContextValue {
   updatePinnedArtefact: (patch: Partial<import("@/lib/types").PinnedArtefact>) => void;
 
   sendBuilderMessage: (text: string) => void;
+  /** Vide le fil courant pour démarrer un nouvel échange avec l'assistant. */
+  startNewBuilderConversation: () => void;
   applyBuilderSuggestion: (suggestion: string) => void;
   confirmConnectorProposal: (messageId: string, decision: "add" | "dismiss") => void;
   /** Applique (ou ignore) une configuration complète proposée par l'assistant. */
@@ -85,6 +87,8 @@ interface BuilderContextValue {
   applyJumpForm: (messageId: string, decision: "apply" | "dismiss") => void;
   isThinking: boolean;
   thinkingStatus: string | null;
+  /** Interrompt la génération en cours (bouton Stop du composer). */
+  stopGeneration: () => void;
 }
 
 const BuilderContext = createContext<BuilderContextValue | null>(null);
@@ -152,13 +156,13 @@ const MODEL_CAPABILITY_LABEL: Record<string, string> = {
 
 const MODEL_CATALOG_SUMMARY = MODEL_CATALOG.map(
   (m) =>
-    `- [${MODEL_CAPABILITY_LABEL[m.capability] ?? m.capability}] ${m.label} (${m.provider}) — ${m.tagline} (env. $${m.pricing.input}/$${m.pricing.output} par 1M tokens en entrée/sortie)`
+    `- id="${m.id}" [${MODEL_CAPABILITY_LABEL[m.capability] ?? m.capability}] ${m.label} (${m.provider}) — ${m.tagline} (env. $${m.pricing.input}/$${m.pricing.output} par 1M tokens en entrée/sortie)`
 ).join("\n");
 
 const MODEL_RECOMMENDATION_INSTRUCTION =
   `Voici le catalogue des modèles disponibles pour ce gent (une seule clé API OpenRouter donne accès à tous) :\n${MODEL_CATALOG_SUMMARY}\n\n` +
   "L'assistant du builder utilise toujours Kimi K3 (Moonshot AI) pour vous guider — le modèle « chat » ci-dessous concerne le gent une fois publié. " +
-  "Dès que l'objectif ou les instructions données par le créateur laissent deviner un besoin particulier (raisonnement complexe, génération d'image, restitution vocale, budget serré, gros volume de texte...), recommande explicitement, capacité par capacité, le ou les modèles les plus adaptés parmi cette liste, en une phrase de justification, et propose leur assignation via le bloc GENT_CONFIG (voir instruction dédiée).";
+  "Dès que l'objectif ou les instructions données par le créateur laissent deviner un besoin particulier (raisonnement complexe, génération d'image, restitution vocale, budget serré, gros volume de texte...), recommande explicitement, capacité par capacité, le ou les modèles les plus adaptés parmi cette liste, en une phrase de justification, et propose leur assignation via le bloc GENT_CONFIG en recopiant EXACTEMENT les id=\"…\" du catalogue (ex. chatModelId=\"anthropic/claude-sonnet-5\", reasoningModelId=\"deepseek/deepseek-r1\") — jamais le seul libellé.";
 
 const BUILDER_ASSISTANT_REPLIES = [
   "Bien noté. J'ai reformulé ce point dans un langage plus directif pour le modèle — regardez le prompt mis à jour.",
@@ -177,6 +181,11 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   const currentIdRef = useRef(currentId);
   currentIdRef.current = currentId;
   const [storageReady, setStorageReady] = useState(false);
+  const streamAbortRef = useRef<AbortController | null>(null);
+
+  const stopGeneration = useCallback(() => {
+    streamAbortRef.current?.abort();
+  }, []);
 
   // Recharge les brouillons : d'abord le cache localStorage (instantané), puis
   // le serveur (source de vérité) qui l'écrase s'il est disponible. On attend
@@ -465,6 +474,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
   );
 
   const sendBuilderMessage = useCallback((text: string) => {
+    if (streamAbortRef.current) return; // une génération est déjà en cours
     const id = currentIdRef.current;
     const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" };
     const agentPlaceholder = { role: "agent" as const, text: "", t: "à l'instant" };
@@ -503,6 +513,9 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     setIsThinking(true);
     setThinkingStatus(defaultStatusLabel("preparing"));
 
+    const controller = new AbortController();
+    streamAbortRef.current = controller;
+
     function updateLastMessage(updater: (m: ConversationMessage) => ConversationMessage) {
       setDrafts((p) => {
         const d = p[id];
@@ -531,7 +544,9 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw), reasoning: reasoningSoFar || undefined }));
       },
       undefined,
-      (status) => setThinkingStatus(status.label)
+      (status) => setThinkingStatus(status.label),
+      "/api/chat",
+      controller.signal
     )
       .then(({ text: fullRaw, truncated, reasoning }) => {
         const afterConfig = extractGentConfigSignal(fullRaw);
@@ -618,6 +633,13 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         }
       })
       .catch((err: Error) => {
+        if (err?.name === "AbortError") {
+          updateLastMessage((m) => ({
+            ...m,
+            text: (m.text?.trim() ? m.text : "") + "<p><em>Génération interrompue.</em></p>",
+          }));
+          return;
+        }
         updateLastMessage(() => ({
           role: "agent" as const,
           text: `<p>Erreur de connexion au service IA${err?.message ? ` : ${err.message}` : ""}.</p>`,
@@ -625,9 +647,25 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         }));
       })
       .finally(() => {
+        if (streamAbortRef.current === controller) streamAbortRef.current = null;
         setIsThinking(false);
         setThinkingStatus(null);
       });
+  }, []);
+
+  const startNewBuilderConversation = useCallback(() => {
+    streamAbortRef.current?.abort();
+    const id = currentIdRef.current;
+    setDrafts((prev) => {
+      const draft = prev[id];
+      if (!draft.builderConversation.length) return prev;
+      return {
+        ...prev,
+        [id]: { ...draft, builderConversation: [], updatedAt: "à l'instant" },
+      };
+    });
+    setIsThinking(false);
+    setThinkingStatus(null);
   }, []);
 
   // Validation (ou refus) d'un connecteur préparé par l'assistant du builder.
@@ -674,11 +712,26 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         if (cfg.systemPrompt) next.systemPrompt = cfg.systemPrompt;
         if (cfg.webSearch !== undefined) next.webSearch = cfg.webSearch;
         if (cfg.chatModelId || cfg.reasoningModelId) {
-          next.modelAssignments = next.modelAssignments.map((a) => {
-            if (a.capability === "chat" && cfg.chatModelId) return { ...a, modelId: cfg.chatModelId };
-            if (a.capability === "reasoning" && cfg.reasoningModelId) return { ...a, modelId: cfg.reasoningModelId };
-            return a;
-          });
+          // Upsert par capacité : un .map seul n'ajoutait rien si la ligne
+          // manquait, et un id mal classé (reasoning dans chat) restait invisible
+          // dans les filtres Conversation du configurateur Prompt.
+          const upsert = (
+            list: typeof next.modelAssignments,
+            capability: "chat" | "reasoning",
+            modelId: string
+          ) => {
+            let found = false;
+            const mapped = list.map((a) => {
+              if (a.capability !== capability) return a;
+              found = true;
+              return { ...a, modelId };
+            });
+            return found ? mapped : [...mapped, { capability, modelId }];
+          };
+          let assignments = next.modelAssignments;
+          if (cfg.chatModelId) assignments = upsert(assignments, "chat", cfg.chatModelId);
+          if (cfg.reasoningModelId) assignments = upsert(assignments, "reasoning", cfg.reasoningModelId);
+          next.modelAssignments = assignments;
         }
         if (cfg.connectors?.length) {
           // Met à jour un connecteur existant (même URL) au lieu de l'ignorer :
@@ -823,6 +876,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         updateChannel,
         updatePinnedArtefact,
         sendBuilderMessage,
+        startNewBuilderConversation,
         applyBuilderSuggestion,
         confirmConnectorProposal,
         confirmConnectorSuggestions,
@@ -830,6 +884,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         applyJumpForm,
         isThinking,
         thinkingStatus,
+        stopGeneration,
       }}
     >
       {children}
