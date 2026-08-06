@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { checkAppAccess, APP_ACCESS_HINT } from "@/lib/server/appAccess";
+import { deleteShareLinksForGent } from "@/lib/server/shareLinks";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,12 @@ export async function DELETE(req: Request, { params }: Params) {
   const supabase = getSupabaseAdmin();
   if (!supabase) return NextResponse.json({ error: "supabase_not_configured" }, { status: 503 });
   if (!ID_RE.test(params.id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
+
+  // Nettoie les liens de partage AVANT de supprimer le gent : sinon, en cas
+  // d'échec du nettoyage, on se retrouverait avec des liens orphelins
+  // pointant vers un gent déjà supprimé, sans plus aucun moyen de les
+  // retrouver depuis l'app (ils ne sont listés que par gentId).
+  await deleteShareLinksForGent(params.id);
 
   const { error } = await supabase.from("published_gents").delete().eq("id", params.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

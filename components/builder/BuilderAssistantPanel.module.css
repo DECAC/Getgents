@@ -106,10 +106,21 @@
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.01em;
+  /* .headMeta a bien flex:1 + min-width:0, mais sans ceci le texte impose sa
+     propre largeur de contenu au lieu d'être tronqué — c'est ce qui élargit
+     visiblement le header dès que le bouton « Nouvelle discussion » se
+     partage la place disponible (même pattern déjà correct côté espace,
+     voir components/assistant/AssistantPanel.module.css). */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .headSub {
   font-size: 11px;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .reportBtn {

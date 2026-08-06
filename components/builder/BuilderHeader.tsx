@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useBuilder, type BuilderTab } from "@/lib/context/BuilderContext";
 import { hasCustomName, isDirtySincePublish } from "@/lib/builderSnapshot";
+import { deleteGentEverywhere } from "@/lib/deleteGent";
 import styles from "./BuilderHeader.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -69,6 +72,29 @@ const TABS: { id: BuilderTab; label: string; icon: JSX.Element }[] = [
 
 export function BuilderHeader() {
   const { currentDraft, activeTab, switchTab, updateName, updateObjective, publishDraft } = useBuilder();
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function handleDelete() {
+    const name = currentDraft.name || "ce gent";
+    if (
+      !window.confirm(
+        `Supprimer définitivement « ${name} » ? Cette action est irréversible : le brouillon, le gent publié et ses liens de partage seront effacés.`
+      )
+    ) {
+      return;
+    }
+    setDeleteError(null);
+    setDeleting(true);
+    const result = await deleteGentEverywhere(currentDraft.id);
+    if (!result.ok) {
+      setDeleteError(`Suppression incomplète : ${result.error ?? "erreur inconnue"}`);
+      setDeleting(false);
+      return;
+    }
+    router.push("/builder");
+  }
 
   const nameOk = hasCustomName(currentDraft);
   const dirty = isDirtySincePublish(currentDraft);
@@ -143,7 +169,18 @@ export function BuilderHeader() {
             </svg>
           </a>
         )}
+        <button
+          type="button"
+          className={styles.deleteBtn}
+          onClick={handleDelete}
+          disabled={deleting}
+          title="Supprimer ce gent (brouillon, publication et liens de partage)"
+        >
+          {deleting ? "Suppression…" : "Supprimer"}
+        </button>
       </div>
+
+      {deleteError && <div className={styles.deleteError}>{deleteError}</div>}
 
       <div className={styles.threadbar} role="tablist">
         {TABS.map((tab) => (

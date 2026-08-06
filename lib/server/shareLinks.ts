@@ -195,6 +195,26 @@ export async function gentPublishedInDb(gentId: string): Promise<boolean> {
   return !!data;
 }
 
+/**
+ * Supprime tous les liens de partage d'un gent (et leurs événements, via le
+ * `on delete cascade` de share_events → share_links). Aucune contrainte FK ne
+ * relie `share_links` à `published_gents` (tables indépendantes) : sans cet
+ * appel explicite à la suppression d'un gent, ses liens resteraient orphelins
+ * — toujours ouverts, pointant vers un gent qui n'existe plus.
+ *
+ * Volontairement silencieux en cas d'échec : la suppression du gent lui-même
+ * ne doit pas échouer pour un problème sur ce nettoyage secondaire.
+ */
+export async function deleteShareLinksForGent(gentId: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return;
+  try {
+    await supabase.from("share_links").delete().eq("gent_id", gentId);
+  } catch {
+    // best-effort
+  }
+}
+
 /** Agrégats de tracking pour un lot de liens (une seule requête). */
 export async function statsForTokens(tokens: string[]): Promise<Record<string, ShareLinkStats>> {
   const out: Record<string, ShareLinkStats> = {};

@@ -11,6 +11,7 @@ import {
 } from "@/lib/builderDraftStorage";
 import { readPublishedGents, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import { readAppSecret } from "@/lib/appAccess";
+import { deleteGentEverywhere } from "@/lib/deleteGent";
 import { AppAccessPrompt } from "@/components/shared/AppAccessPrompt";
 import type { GentDraft } from "@/lib/types/builder";
 import type { Espace } from "@/lib/types";
@@ -42,6 +43,8 @@ export function BuilderDashboard() {
   const [orphanedPublished, setOrphanedPublished] = useState<{ id: string; espace: Espace }[]>([]);
   const [syncing, setSyncing] = useState(true);
   const [needsAccessKey, setNeedsAccessKey] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const refreshLists = useCallback(() => {
     const visible = listVisibleDrafts();
@@ -94,6 +97,23 @@ export function BuilderDashboard() {
     router.push(`/builder/${id}`);
   }
 
+  async function handleDelete(id: string, name: string) {
+    if (!window.confirm(`Supprimer définitivement « ${name} » ? Cette action est irréversible : le brouillon, le gent publié et ses liens de partage seront effacés.`)) {
+      return;
+    }
+    setDeleteError(null);
+    setDeletingId(id);
+    try {
+      const result = await deleteGentEverywhere(id);
+      if (!result.ok) {
+        setDeleteError(`Suppression incomplète pour « ${name} » : ${result.error ?? "erreur inconnue"}`);
+      }
+      refreshLists();
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.wrap}>
@@ -131,21 +151,35 @@ export function BuilderDashboard() {
           </div>
         )}
 
+        {deleteError && <div className={styles.deleteError}>{deleteError}</div>}
+
         <div className={styles.grid}>
           {drafts.map((d) => (
-            <a key={d.id} href={`/builder/${d.id}`} className={styles.card}>
-              <div className={styles.cardTop}>
-                <div className={styles.ic}>{d.icon}</div>
-                <div>
-                  <div className={styles.name}>{d.name}</div>
-                  <span className={[styles.statusBadge, STATUS_CLASS[d.status]].join(" ")}>
-                    {STATUS_LABEL[d.status]}
-                  </span>
+            <div key={d.id} className={styles.card}>
+              <a href={`/builder/${d.id}`} className={styles.cardLink}>
+                <div className={styles.cardTop}>
+                  <div className={styles.ic}>{d.icon}</div>
+                  <div>
+                    <div className={styles.name}>{d.name}</div>
+                    <span className={[styles.statusBadge, STATUS_CLASS[d.status]].join(" ")}>
+                      {STATUS_LABEL[d.status]}
+                    </span>
+                  </div>
                 </div>
+                <p className={styles.objective}>{d.objective || "Aucun objectif défini pour l'instant."}</p>
+                <div className={styles.meta}>Mis à jour {d.updatedAt}</div>
+              </a>
+              <div className={styles.cardActions}>
+                <button
+                  type="button"
+                  className={styles.deleteBtn}
+                  onClick={() => handleDelete(d.id, d.name || "ce gent")}
+                  disabled={deletingId === d.id}
+                >
+                  {deletingId === d.id ? "Suppression…" : "Supprimer"}
+                </button>
               </div>
-              <p className={styles.objective}>{d.objective || "Aucun objectif défini pour l'instant."}</p>
-              <div className={styles.meta}>Mis à jour {d.updatedAt}</div>
-            </a>
+            </div>
           ))}
 
           {orphanedPublished.map(({ id, espace }) => (
@@ -167,6 +201,14 @@ export function BuilderDashboard() {
                 </a>
                 <button type="button" className={styles.recoveryBtn} onClick={() => handleRestore(id, espace)}>
                   Restaurer dans le builder
+                </button>
+                <button
+                  type="button"
+                  className={styles.deleteBtn}
+                  onClick={() => handleDelete(id, espace.gent || espace.name)}
+                  disabled={deletingId === id}
+                >
+                  {deletingId === id ? "Suppression…" : "Supprimer"}
                 </button>
               </div>
             </div>

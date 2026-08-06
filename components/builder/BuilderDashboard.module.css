@@ -63,13 +63,54 @@
   border-radius: 16px;
   padding: 18px;
   text-align: left;
-  display: block;
-  text-decoration: none;
-  color: inherit;
 }
 .card:hover {
   border-color: var(--plum);
   box-shadow: 0 4px 14px rgba(21, 33, 43, 0.06);
+}
+
+/* Le lien couvre le corps de la carte (ouvre le gent) ; le bouton Supprimer
+   vit en dehors, dans .cardActions, pour ne jamais déclencher la navigation. */
+.cardLink {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.cardActions {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.deleteBtn {
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.deleteBtn:hover:not(:disabled) {
+  border-color: #e3b5aa;
+  color: #b4462f;
+  background: #fbeeea;
+}
+.deleteBtn:disabled {
+  color: var(--faint);
+  cursor: default;
+}
+
+.deleteError {
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fbeeea;
+  border: 1px solid #e3b5aa;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #b4462f;
 }
 
 .cardTop {

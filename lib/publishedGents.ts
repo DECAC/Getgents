@@ -153,6 +153,46 @@ export async function syncPublishedGentsFromRemote(): Promise<EspacesMap | null>
   return merged;
 }
 
+/**
+ * Supprime un gent publié : cache local retiré immédiatement, puis suppression
+ * serveur (qui nettoie aussi ses liens de partage — voir DELETE /api/gents/[id]).
+ * Contrairement aux écritures, c'est une action explicite de l'utilisateur :
+ * on attend la réponse pour pouvoir signaler un échec, plutôt que de supposer
+ * que ça a marché.
+ */
+export async function deletePublishedGent(id: string): Promise<{ ok: boolean; error?: string }> {
+  if (typeof window === "undefined") return { ok: false, error: "unavailable" };
+
+  const pending = pushTimers.get(id);
+  if (pending) {
+    clearTimeout(pending);
+    pushTimers.delete(id);
+  }
+  const current = readPublishedGents();
+  delete current[id];
+  writeLocalCache(current);
+
+  if (remoteAvailable === false) return { ok: true };
+  try {
+    const res = await fetch(`/api/gents/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: appAccessHeaders(),
+    });
+    if (res.status === 503 || res.status === 401) {
+      remoteAvailable = false;
+      return { ok: true };
+    }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}) as { error?: string });
+      return { ok: false, error: data.error ?? String(res.status) };
+    }
+    remoteAvailable = true;
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
 /** Met à jour le nom affiché côté utilisateur sans effacer conversations ni artefacts. */
 export function patchPublishedGentName(id: string, name: string): void {
   if (typeof window === "undefined") return;

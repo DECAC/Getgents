@@ -127,6 +127,44 @@ export async function syncDraftsFromRemote(): Promise<GentDraftsMap | null> {
   return merged;
 }
 
+/**
+ * Supprime un brouillon : cache local retiré immédiatement, puis suppression
+ * serveur. Action explicite de l'utilisateur — on attend la réponse pour
+ * pouvoir signaler un échec, contrairement aux écritures fire-and-forget.
+ */
+export async function deleteRemoteDraft(id: string): Promise<{ ok: boolean; error?: string }> {
+  if (typeof window === "undefined") return { ok: false, error: "unavailable" };
+
+  const pending = pushTimers.get(id);
+  if (pending) {
+    clearTimeout(pending);
+    pushTimers.delete(id);
+  }
+  const stored = readStoredDrafts();
+  delete stored[id];
+  writeStoredDrafts(stored);
+
+  if (remoteAvailable === false) return { ok: true };
+  try {
+    const res = await fetch(`/api/drafts/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: appAccessHeaders(),
+    });
+    if (res.status === 503 || res.status === 401) {
+      remoteAvailable = false;
+      return { ok: true };
+    }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}) as { error?: string });
+      return { ok: false, error: data.error ?? String(res.status) };
+    }
+    remoteAvailable = true;
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
 /** Crée un brouillon vierge, l'enregistre (local + serveur) et renvoie son identifiant. */
 export function allocateNewDraft(): string {
   const id = createDraftId();
