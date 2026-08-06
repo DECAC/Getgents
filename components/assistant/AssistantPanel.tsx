@@ -642,6 +642,16 @@ export function AssistantPanel() {
           {isAgent && renderReasoning(m, i)}
           <div className={styles.bubble}>
             <SafeHTML html={m.text ?? ""} />
+            {m.imageStatus === "pending" && (
+              <div className={styles.proposalBody}>🎨 Génération de l'image…</div>
+            )}
+            {m.imageUrl && (
+              <img
+                src={m.imageUrl}
+                alt="Image générée"
+                style={{ maxWidth: "100%", borderRadius: 12, marginTop: 8, display: "block" }}
+              />
+            )}
             <div className={styles.t}>{m.t}</div>
           </div>
           {isAgent && isLastMessage && !!m.questions?.length && (

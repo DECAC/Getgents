@@ -4,6 +4,7 @@ import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { formatConversationStartedAt, newConversationId } from "@/lib/conversationUtils";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
 import { appAccessHeaders } from "@/lib/appAccess";
+import { IMAGE_PROMPT_INSTRUCTION } from "@/lib/imageSignal";
 
 // Persistance des gents publiés : la source de vérité est Supabase (via les
 // routes /api/gents), le localStorage n'est plus qu'un cache local pour un
@@ -297,6 +298,10 @@ export function draftToEspace(draft: GentDraft): Espace {
 
   const threadId = newConversationId();
   const chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? undefined;
+  const imageModelId = draft.modelAssignments.find((a) => a.capability === "image")?.modelId ?? undefined;
+  if (imageModelId) {
+    systemPrompt += `\n\n${IMAGE_PROMPT_INSTRUCTION}`;
+  }
 
   // Les connecteurs MCP dont le détail est une URL deviennent de vrais
   // serveurs d'outils côté chat (transport Streamable HTTP, ex. datagouv).
@@ -391,6 +396,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     artefacts: [],
     systemPrompt,
     chatModelId,
+    imageModelId,
     mcpServers: mcpServers.length ? mcpServers : undefined,
     datasets: datasets.length ? datasets : undefined,
     prim: prim || undefined,

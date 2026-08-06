@@ -175,6 +175,9 @@ export interface ConversationMessage {
   title?: string;
   link?: string;
   questions?: { q: string; options: string[]; multi?: boolean }[];
+  /** Image générée par le modèle image assigné au gent (data URL base64). */
+  imageUrl?: string;
+  imageStatus?: "pending" | "done" | "error";
   proposal?: ArtefactProposal;
   proposalStatus?: "pending" | "added" | "dismissed";
   themeProposal?: ThemeTabProposalAction;
@@ -332,6 +335,8 @@ export interface Espace {
   themeTabs?: ThemeTab[];
   systemPrompt?: string;
   chatModelId?: string;
+  /** Modèle de génération d'image assigné (capability "image"), ex. google/nanobanana. */
+  imageModelId?: string;
   /** Serveurs MCP (transport Streamable HTTP) configurés dans le builder. */
   mcpServers?: { name: string; url: string }[];
   /** Datasets open data (portails Opendatasoft) interrogeables par proximité. */

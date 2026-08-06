@@ -25,6 +25,7 @@ import { extractArtefactSignal, ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefa
 import { extractThemeTabSignal, describeModulesForPrompt, THEME_TAB_PROMPT_INSTRUCTION } from "@/lib/themeTabSignal";
 import { extractGeolocRequest, GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
 import { extractProfileSignal, profileContextNote, PROFILE_PROMPT_INSTRUCTION } from "@/lib/profileSignal";
+import { extractImageSignal } from "@/lib/imageSignal";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import {
   espaceForPinnedRefresh,
@@ -532,8 +533,9 @@ export function EspaceProvider({
         const afterTheme = extractThemeTabSignal(afterArtefact.text);
         const afterGeo = extractGeolocRequest(afterTheme.text);
         const afterProfile = extractProfileSignal(afterGeo.text);
+        const afterImage = extractImageSignal(afterProfile.text);
         const finalHtml =
-          renderMarkdown(afterProfile.text) +
+          renderMarkdown(afterImage.text) +
           (truncated
             ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — écrivez « continue » pour obtenir la suite, ou demandez une version plus courte.</em></p>'
             : "");
@@ -652,6 +654,38 @@ export function EspaceProvider({
         }
         pushGeoRequestIfAny();
         pushProfileProposalIfAny();
+
+        // Image demandée par le gent : générée côté serveur via le modèle
+        // image assigné, distinct du modèle conversationnel (voir /api/image).
+        if (afterImage.image && espace.imageModelId) {
+          const prompt = afterImage.image.prompt;
+          const modelId = espace.imageModelId;
+          updateLastMessage((m) => ({ ...m, imageStatus: "pending" as const }));
+          fetch("/api/image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt, modelId }),
+          })
+            .then((r) => r.json())
+            .then((data: { imageUrl?: string; error?: string }) => {
+              if (data.imageUrl) {
+                updateLastMessage((m) => ({ ...m, imageUrl: data.imageUrl, imageStatus: "done" as const }));
+              } else {
+                updateLastMessage((m) => ({
+                  ...m,
+                  text: (m.text ?? "") + `<p>⚠️ <em>Génération d'image impossible${data.error ? ` : ${data.error}` : ""}.</em></p>`,
+                  imageStatus: "error" as const,
+                }));
+              }
+            })
+            .catch((err: Error) => {
+              updateLastMessage((m) => ({
+                ...m,
+                text: (m.text ?? "") + `<p>⚠️ <em>Génération d'image impossible : ${err.message}.</em></p>`,
+                imageStatus: "error" as const,
+              }));
+            });
+        }
       })
       .catch((err: Error) => {
         if (err?.name === "AbortError") {
