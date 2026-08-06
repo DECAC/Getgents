@@ -65,6 +65,14 @@ export interface KnowledgeSource {
   kind: KnowledgeSourceKind;
   label: string;
   meta: string;
+  /**
+   * Texte extrait du document côté navigateur (kind "file"). Sans lui, le
+   * gent ne connaît que le NOM du fichier — il ne peut ni le lire ni y
+   * répondre, seulement en extrapoler le sujet depuis son titre.
+   */
+  text?: string;
+  /** Vrai si l'extraction a dépassé la limite de caractères. */
+  truncated?: boolean;
 }
 
 export type ArtefactKind = "report" | "checklist" | "visual" | "timeline" | "budget" | "map";

@@ -1,5 +1,5 @@
 import type { Espace, EspacesMap, Tool, UserFile, RestApiConnector } from "@/lib/types";
-import type { GentDraft } from "@/lib/types/builder";
+import type { GentDraft, KnowledgeSource } from "@/lib/types/builder";
 import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { formatConversationStartedAt, newConversationId } from "@/lib/conversationUtils";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
@@ -156,6 +156,63 @@ export function patchPublishedGentName(id: string, name: string): void {
   writePublishedGent(id, { ...existing, name, gent: name });
 }
 
+/**
+ * Total de caractères de base de connaissance injectés dans le prompt système.
+ * Chaque document est déjà borné par `extractDocumentText` (15 000 caractères
+ * pour un PDF/Word, 60 000 pour un CSV), mais plusieurs documents combinés
+ * pourraient alourdir excessivement un prompt figé pour toujours.
+ */
+const KNOWLEDGE_BASE_BUDGET = 45_000;
+
+/**
+ * Injecte le CONTENU des sources de connaissance déclarées par le créateur,
+ * pas seulement leur nom. Baké dans le systemPrompt à la publication — c'est
+ * là que vivent déjà tous les autres réglages figés du créateur (connecteurs,
+ * recherche web…) ; Espace.files reste réservé aux documents de l'utilisateur
+ * final, jamais à la base de connaissance du créateur.
+ *
+ * Repli en référence seule (nom listé, contenu absent) pour les sources sans
+ * texte extrait : liens (kind "url", jamais récupérés côté serveur), fichiers
+ * dont l'extraction a échoué, ou budget total dépassé.
+ */
+function knowledgeBaseBlock(sources: KnowledgeSource[]): string {
+  if (!sources.length) return "";
+
+  const withText = sources.filter((s) => (s.text ?? "").trim() !== "");
+  const refsOnly = sources.filter((s) => !(s.text ?? "").trim());
+
+  const parts: string[] = [];
+  const omitted: string[] = [];
+  let used = 0;
+  for (const s of withText) {
+    const body = s.text!.trim();
+    if (used + body.length > KNOWLEDGE_BASE_BUDGET) {
+      omitted.push(s.label);
+      continue;
+    }
+    used += body.length;
+    parts.push(`--- ${s.label}${s.truncated ? " (extrait tronqué)" : ""} ---\n${body}`);
+  }
+
+  let block = "";
+  if (parts.length) {
+    block +=
+      "\n\nBASE DE CONNAISSANCE DÉCLARÉE PAR LE CRÉATEUR — contenu intégral ci-dessous, à utiliser comme " +
+      `source primaire de tes réponses :\n${parts.join("\n\n")}`;
+  }
+
+  const refLabels = [
+    ...refsOnly.map((s) => `${s.kind} : ${s.label}`),
+    ...omitted.map((l) => `file : ${l} (non inclus faute de place)`),
+  ];
+  if (refLabels.length) {
+    block += `\n\nAutres références déclarées (nom seulement, contenu non accessible) :\n${refLabels
+      .map((r) => `- ${r}`)
+      .join("\n")}`;
+  }
+  return block;
+}
+
 export function draftToEspace(draft: GentDraft): Espace {
   // Le modèle d'outils du builder (8 types génériques configurables : MCP,
   // API REST, connecteur personnalisé…) ne porte plus de catégorie
@@ -183,11 +240,7 @@ export function draftToEspace(draft: GentDraft): Espace {
   }));
 
   let systemPrompt = draft.systemPrompt.trim();
-
-  if (draft.knowledgeSources.length) {
-    const refs = draft.knowledgeSources.map((s) => `- ${s.kind} : ${s.label}`).join("\n");
-    systemPrompt += `\n\nBase de connaissance déclarée par le créateur (références seulement — leur contenu n'est pas analysé automatiquement dans cette maquette) :\n${refs}`;
-  }
+  systemPrompt += knowledgeBaseBlock(draft.knowledgeSources);
 
   // Tous les artefacts (rapport, checklist, graphique, aperçu visuel, carte) sont éligibles
   // pour tous les gents — pas de configuration côté créateur. Le modèle décide seul, au fil de

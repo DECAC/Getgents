@@ -323,3 +323,10 @@
   border-radius: 8px;
   padding: 8px 11px;
 }
+
+/* État de lecture/erreur pendant l'extraction d'un document de connaissance. */
+.knowBusy {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}

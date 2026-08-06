@@ -5,6 +5,7 @@ import { useBuilder } from "@/lib/context/BuilderContext";
 import { draftToEspace, readPublishedGents, writePublishedGent } from "@/lib/publishedGents";
 import { espaceForRoutineRun, formatApiNetworkError, mergeRoutineRunResult } from "@/lib/espaceApiPayload";
 import { ModelsTab } from "./ModelsTab";
+import { extractDocumentText } from "@/lib/extractDocumentText";
 import type { KnowledgeSourceKind } from "@/lib/types/builder";
 import styles from "./PromptTab.module.css";
 
@@ -52,6 +53,7 @@ export function PromptTab() {
   } = useBuilder();
   const wordCount = currentDraft.systemPrompt.trim().split(/\s+/).filter(Boolean).length;
   const [urlValue, setUrlValue] = useState("");
+  const [fileBusy, setFileBusy] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [routineRunning, setRoutineRunning] = useState(false);
   const [routineRunResult, setRoutineRunResult] = useState<string | null>(null);
@@ -135,10 +137,31 @@ export function PromptTab() {
     updatePinnedArtefact({ mission: text });
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  // Le texte est extrait ici, côté navigateur, et attaché à la source : sans
+  // lui le gent ne connaît que le NOM du fichier (c'était le comportement
+  // d'origine — une simple référence listée dans le prompt, jamais lue).
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) addKnowledgeSource("file", file.name, `${formatSize(file.size)} · ajouté à l'instant`);
     e.target.value = "";
+    if (!file) return;
+    setFileBusy(`Lecture de ${file.name}…`);
+    try {
+      const doc = await extractDocumentText(file);
+      addKnowledgeSource(
+        "file",
+        file.name,
+        `${formatSize(file.size)} · ajouté à l'instant${doc.truncated ? " · tronqué" : ""}`,
+        doc.text,
+        doc.truncated
+      );
+      setFileBusy(null);
+    } catch (err) {
+      // Extraction impossible (format non pris en charge, PDF scanné…) : la
+      // source est quand même déclarée, en repli sur le nom seul, pour ne pas
+      // perdre la déclaration du créateur — mais le gent n'en verra que le nom.
+      addKnowledgeSource("file", file.name, `${formatSize(file.size)} · contenu non lu`);
+      setFileBusy(`⚠ ${(err as Error).message}`);
+    }
   }
 
   function handleAddUrl() {
@@ -226,6 +249,12 @@ export function PromptTab() {
                   <div className={styles.knowLabel}>{source.label}</div>
                   <div className={styles.knowMeta}>
                     {KNOWLEDGE_LABEL[source.kind]} · {source.meta}
+                    {source.kind === "file" && (
+                      <>
+                        {" · "}
+                        {source.text ? "contenu lu par le gent" : "nom seul (contenu non accessible au gent)"}
+                      </>
+                    )}
                   </div>
                 </div>
                 <button
@@ -242,6 +271,8 @@ export function PromptTab() {
           </div>
         )}
 
+        {fileBusy && <div className={styles.knowBusy}>{fileBusy}</div>}
+
         <div className={styles.knowAddRow}>
           <button type="button" className={styles.knowAddBtn} onClick={() => fileInputRef.current?.click()}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -250,7 +281,13 @@ export function PromptTab() {
             </svg>
             Ajouter un fichier
           </button>
-          <input ref={fileInputRef} type="file" onChange={handleFileChange} className={styles.hiddenFileInput} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.txt,.md,.csv,.tsv"
+            onChange={handleFileChange}
+            className={styles.hiddenFileInput}
+          />
 
           <input
             className={styles.urlInput}

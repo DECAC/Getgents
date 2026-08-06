@@ -52,7 +52,7 @@ interface BuilderContextValue {
 
   assignModel: (capability: ModelCapability, modelId: string | null) => void;
 
-  addKnowledgeSource: (kind: KnowledgeSourceKind, label: string, meta: string) => void;
+  addKnowledgeSource: (kind: KnowledgeSourceKind, label: string, meta: string, text?: string, truncated?: boolean) => void;
   removeKnowledgeSource: (sourceId: string) => void;
 
   addToolInstance: (
@@ -323,10 +323,10 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     });
   }, [currentId]);
 
-  const addKnowledgeSource = useCallback((kind: KnowledgeSourceKind, label: string, meta: string) => {
+  const addKnowledgeSource = useCallback((kind: KnowledgeSourceKind, label: string, meta: string, text?: string, truncated?: boolean) => {
     setDrafts((prev) => {
       const draft = prev[currentId];
-      const source = { id: `know-${Date.now()}`, kind, label, meta };
+      const source = { id: `know-${Date.now()}`, kind, label, meta, text, truncated };
       return {
         ...prev,
         [currentId]: { ...draft, knowledgeSources: [...draft.knowledgeSources, source], updatedAt: "à l'instant" },
