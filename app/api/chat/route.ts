@@ -472,6 +472,15 @@ function toolLoopResponse(
 
         // 2. Boucle d'appels : le modèle décide quand utiliser les outils.
         // Au dernier tour, les outils sont retirés pour forcer une réponse.
+        //
+        // Chaque tour est lui-même streamé (SSE OpenRouter) : sans ça, un tour
+        // qui n'appelle finalement aucun outil (cas fréquent — le modèle
+        // répond directement) faisait attendre l'utilisateur devant
+        // « Réflexion en cours » pendant TOUTE la génération, avant qu'un
+        // simple découpage en morceaux de 60 caractères ne mime un streaming
+        // déjà terminé. Ici le contenu et le raisonnement partent au fil de
+        // l'eau ; seuls les tool_calls (nécessairement structurés) sont
+        // accumulés jusqu'à la fin du tour avant d'être exécutés.
         for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
           const withTools = registry.size > 0 && round < MAX_TOOL_ROUNDS - 1;
           sendStatus("thinking");
@@ -482,13 +491,15 @@ function toolLoopResponse(
               model: body.model,
               messages,
               max_tokens: body.max_tokens ?? 12_288,
+              stream: true,
               ...(withTools ? { tools: openaiTools } : {}),
               ...(body.webSearch ? { plugins: [{ id: "web" }] } : {}),
               ...(body.reasoning ? { reasoning: body.reasoning } : {}),
             }),
           });
-          const data = await res.json();
-          if (!res.ok) {
+
+          if (!res.ok || !res.body) {
+            const data = await res.json().catch(() => ({}));
             const err = data?.error;
             const errText =
               typeof err === "string" ? err : typeof err?.message === "string" ? err.message : JSON.stringify(data);
@@ -497,27 +508,81 @@ function toolLoopResponse(
             break;
           }
 
-          const msg = data?.choices?.[0]?.message as Record<string, unknown> | undefined;
-          const finishReason = data?.choices?.[0]?.finish_reason as string | undefined;
-          const toolCalls: { id: string; function: { name: string; arguments: string } }[] =
-            (msg?.tool_calls as typeof toolCalls) ?? [];
+          let content = "";
+          let reasoningStarted = false;
+          let finishReason: string | undefined;
+          const toolCallsAcc: { id?: string; function: { name?: string; arguments: string } }[] = [];
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = "";
+          streamLoop: while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            let nl: number;
+            while ((nl = buf.indexOf("\n\n")) !== -1) {
+              const chunk = buf.slice(0, nl);
+              buf = buf.slice(nl + 2);
+              const line = chunk.split("\n").find((l) => l.startsWith("data: "));
+              if (!line) continue;
+              const payload = line.slice(6).trim();
+              if (payload === "[DONE]") break streamLoop;
+              let evt: Record<string, unknown>;
+              try {
+                evt = JSON.parse(payload);
+              } catch {
+                continue;
+              }
+              const choice = (evt?.choices as Record<string, unknown>[] | undefined)?.[0];
+              const delta = choice?.delta as Record<string, unknown> | undefined;
+              const fr = choice?.finish_reason as string | undefined;
+              if (fr) finishReason = fr;
+              if (!delta) continue;
+
+              const reasoningPiece = extractReasoningText(delta);
+              if (reasoningPiece) {
+                if (!reasoningStarted) {
+                  sendStatus("thinking");
+                  reasoningStarted = true;
+                }
+                sendReasoningChunks(send, reasoningPiece);
+              }
+
+              const deltaContent = delta.content;
+              if (typeof deltaContent === "string" && deltaContent) {
+                if (!content) sendStatus("writing");
+                content += deltaContent;
+                sentContent = true;
+                sendContent(deltaContent);
+              }
+
+              const deltaToolCalls = delta.tool_calls as
+                | { index: number; id?: string; function?: { name?: string; arguments?: string } }[]
+                | undefined;
+              if (Array.isArray(deltaToolCalls)) {
+                for (const tc of deltaToolCalls) {
+                  const slot = (toolCallsAcc[tc.index] ??= { function: { arguments: "" } });
+                  if (tc.id) slot.id = tc.id;
+                  if (tc.function?.name) slot.function.name = (slot.function.name ?? "") + tc.function.name;
+                  if (tc.function?.arguments) slot.function.arguments += tc.function.arguments;
+                }
+              }
+            }
+          }
+
+          const toolCalls = toolCallsAcc.filter(
+            (tc): tc is { id: string; function: { name: string; arguments: string } } => !!tc.id && !!tc.function.name
+          );
 
           if (!toolCalls.length) {
-            const reasoning = extractReasoningText(msg);
-            sendReasoningChunks(send, reasoning);
-            const content: string = (msg?.content as string) ?? "";
-            sendStatus("writing");
-            for (let i = 0; i < content.length; i += 60) {
-              sendContent(content.slice(i, i + 60));
-            }
             if (finishReason === "length") {
               send({ choices: [{ finish_reason: "length" }] });
             }
-            if (content) sentContent = true;
             break;
           }
 
-          messages.push({ role: "assistant", content: msg?.content ?? null, tool_calls: toolCalls });
+          messages.push({ role: "assistant", content: content || null, tool_calls: toolCalls });
 
           for (const tc of toolCalls) {
             const entry = registry.get(tc.function.name);
