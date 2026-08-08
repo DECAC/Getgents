@@ -65,11 +65,11 @@ export async function fetchRemoteGents(): Promise<EspacesMap | null> {
   }
 }
 
-function sendRemoteGent(id: string, espace: Espace): Promise<void> {
+function sendRemoteGent(id: string, espace: Espace, diffuse = false): Promise<void> {
   return fetch(`/api/gents/${encodeURIComponent(id)}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...appAccessHeaders() },
-    body: JSON.stringify({ espace }),
+    body: JSON.stringify({ espace, ...(diffuse ? { diffuse: true } : {}) }),
     // Survit à une navigation immédiate (clic sur « Preview » juste après la
     // publication) : sans ça la requête est annulée par le déchargement.
     keepalive: true,
@@ -84,7 +84,7 @@ function sendRemoteGent(id: string, espace: Espace): Promise<void> {
     });
 }
 
-function pushRemoteGent(id: string, espace: Espace, immediate = false): void {
+function pushRemoteGent(id: string, espace: Espace, immediate = false, diffuse = false): void {
   if (remoteAvailable === false) return;
   const pending = pushTimers.get(id);
   if (pending) clearTimeout(pending);
@@ -95,7 +95,7 @@ function pushRemoteGent(id: string, espace: Espace, immediate = false): void {
   // version précédente depuis le serveur et écrasait la nouvelle.
   if (immediate) {
     pushTimers.delete(id);
-    void sendRemoteGent(id, espace);
+    void sendRemoteGent(id, espace, diffuse);
     return;
   }
 
@@ -105,17 +105,23 @@ function pushRemoteGent(id: string, espace: Espace, immediate = false): void {
     id,
     setTimeout(() => {
       pushTimers.delete(id);
-      void sendRemoteGent(id, espace);
+      void sendRemoteGent(id, espace, diffuse);
     }, PUSH_DEBOUNCE_MS)
   );
 }
 
-export function writePublishedGent(id: string, espace: Espace, immediate = false): void {
+/**
+ * `diffuse` fige en plus la version servie aux destinataires (liens de
+ * partage, iframe, WhatsApp, routines). Sans lui, on n'écrit que la version
+ * de travail : le créateur peut donc tester en Preview sans rien changer
+ * pour les utilisateurs déjà en place.
+ */
+export function writePublishedGent(id: string, espace: Espace, immediate = false, diffuse = false): void {
   if (typeof window === "undefined") return;
   const current = readPublishedGents();
   current[id] = espace;
   writeLocalCache(current);
-  pushRemoteGent(id, espace, immediate);
+  pushRemoteGent(id, espace, immediate, diffuse);
 }
 
 /**

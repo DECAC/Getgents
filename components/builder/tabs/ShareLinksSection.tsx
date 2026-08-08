@@ -4,7 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { appAccessHeaders } from "@/lib/appAccess";
 import { AppAccessPrompt } from "@/components/shared/AppAccessPrompt";
-import { describeShareLink, shareLinkState, shareLinkUrl, type ShareLink, type ShareLinkStats } from "@/lib/shareLink";
+import {
+  describeShareLink,
+  shareLinkState,
+  shareLinkUrl,
+  shareLinkEmbedCode,
+  type ShareLink,
+  type ShareLinkStats,
+} from "@/lib/shareLink";
 import styles from "./ShareLinksSection.module.css";
 
 const EXPIRY_CHOICES = [
@@ -130,6 +137,19 @@ export function ShareLinksSection() {
     }
   }
 
+  // Canal « intégration web » : le même lien, livré sous forme d'iframe à
+  // coller sur un site. Il en garde révocation, expiration et compteurs.
+  async function copyEmbed(token: string) {
+    const code = shareLinkEmbedCode(window.location.origin, token, currentDraft.name || "Gent");
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(`embed:${token}`);
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      setError(`Copie impossible — code d'intégration :\n${code}`);
+    }
+  }
+
   const published = currentDraft.status === "published";
 
   return (
@@ -139,15 +159,16 @@ export function ShareLinksSection() {
           <h4 className={styles.title}>Lien personnalisé</h4>
           <div className={styles.sub}>
             Chaque cible reçoit son propre lien vers le gent en <b>utilisation simple</b> (artefact
-            et conversation, sans accès au studio). Vous voyez si elle l&apos;a ouvert et ce
-            qu&apos;elle en a fait.
+            et conversation, sans accès au studio). <b>Intégrer</b> livre le même lien sous forme
+            d&apos;<code>iframe</code> à coller sur un site. Vous voyez si elle l&apos;a ouvert et
+            ce qu&apos;elle en a fait.
           </div>
         </div>
       </div>
 
       {!published && (
         <div className={styles.warn}>
-          Publiez d&apos;abord le gent : un lien pointe vers sa version publiée.
+          Diffusez d&apos;abord le gent : un lien pointe vers sa version diffusée.
         </div>
       )}
 
@@ -156,7 +177,7 @@ export function ShareLinksSection() {
           ⚠ Ce gent est marqué publié ici, mais <b>absent de la base serveur</b> — les liens
           pointeront vers du vide (« Contenu indisponible » côté visiteur). Cause fréquente :
           Supabase n&apos;était pas configuré au moment de la dernière publication. Cliquez à
-          nouveau sur <b>Publier</b> (onglet Prompt) pour le pousser vers le serveur.
+          nouveau sur <b>Diffuser le gent</b> pour le pousser vers le serveur.
         </div>
       )}
 
@@ -212,7 +233,15 @@ export function ShareLinksSection() {
                   <div className={styles.rowStatus}>{describeShareLink(link, stats[link.token])}</div>
                 </div>
                 <button type="button" className={styles.smallBtn} onClick={() => void copy(link.token)}>
-                  {copied === link.token ? "✓ Copié" : "Copier"}
+                  {copied === link.token ? "✓ Copié" : "Copier le lien"}
+                </button>
+                <button
+                  type="button"
+                  className={styles.smallBtn}
+                  onClick={() => void copyEmbed(link.token)}
+                  title="Copier le code <iframe> à coller sur un site web"
+                >
+                  {copied === `embed:${link.token}` ? "✓ Copié" : "Intégrer"}
                 </button>
                 {!link.revokedAt && (
                   <button

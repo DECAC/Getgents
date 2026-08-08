@@ -1,0 +1,106 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 860px;
+}
+
+.intro {
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.choice {
+  text-align: left;
+  padding: 20px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.choice:hover {
+  border-color: var(--plum);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.choiceOn {
+  border-color: var(--plum);
+  background: var(--plum-tint);
+}
+
+.thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--plum);
+}
+.choiceOn .thumb {
+  background: #fff;
+  border-color: var(--plum);
+}
+
+.choiceTitle {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.choiceDesc {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.choiceFoot {
+  margin-top: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--plum);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.activeBadge {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--sage-tint);
+  color: var(--sage-700);
+  align-self: flex-start;
+}
+
+.note {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 13px 15px;
+  border-radius: var(--r);
+  background: var(--bg);
+  border: 1px solid var(--line-soft);
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.note svg {
+  flex: none;
+  margin-top: 2px;
+}

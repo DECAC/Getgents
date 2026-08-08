@@ -1,9 +1,9 @@
 import { getShareLink, recordShareEvent, TOKEN_RE } from "@/lib/server/shareLinks";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
+import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { canOpen } from "@/lib/shareLink";
 import { espaceForPublicLink } from "@/lib/espaceApiPayload";
 import { SharedGentShell } from "@/components/shared-link/SharedGentShell";
-import type { Espace } from "@/lib/types";
 import styles from "./page.module.css";
 
 // Jamais mis en cache : la validité du lien (révocation, expiration) doit être
@@ -62,16 +62,19 @@ export default async function SharedLinkPage({ params }: { params: { token: stri
 
   const { data, error } = await supabase
     .from("published_gents")
-    .select("espace")
+    .select(DIFFUSED_COLUMNS)
     .eq("id", link.gentId)
     .maybeSingle();
-  if (error || !data) {
-    return <Refus titre="Contenu indisponible" message="Le gent associé à ce lien n'est plus publié." />;
+  // Version DIFFUSÉE uniquement : la version de travail du créateur peut
+  // contenir une configuration à moitié réécrite, jamais destinée au public.
+  const diffused = error ? null : diffusedEspace(data);
+  if (!diffused) {
+    return <Refus titre="Contenu indisponible" message="Le gent associé à ce lien n'a pas encore été diffusé." />;
   }
 
   // Projection publique : liste blanche stricte, sans prompt système, sans
   // historique du créateur, sans secrets de connecteurs.
-  const espace = espaceForPublicLink(data.espace as Espace);
+  const espace = espaceForPublicLink(diffused);
 
   await recordShareEvent(token, "open", link.targetLabel);
 

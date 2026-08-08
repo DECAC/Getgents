@@ -10,10 +10,18 @@ import { BuilderAssistantPanel } from "./BuilderAssistantPanel";
 import styles from "./BuilderShell.module.css";
 
 function BuilderShellInner() {
-  const { railCollapsed } = useBuilder();
+  const { railCollapsed, assistantCollapsed } = useBuilder();
 
   return (
-    <div className={[styles.shell, railCollapsed ? styles.collapsed : ""].filter(Boolean).join(" ")}>
+    <div
+      className={[
+        styles.shell,
+        railCollapsed ? styles.collapsed : "",
+        assistantCollapsed ? styles.assistantCollapsed : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <BuilderRail />
       <BuilderCenter />
       <BuilderAssistantPanel />

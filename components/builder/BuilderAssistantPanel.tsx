@@ -33,6 +33,8 @@ export function BuilderAssistantPanel() {
     isThinking,
     thinkingStatus,
     stopGeneration,
+    assistantCollapsed,
+    toggleAssistant,
   } = useBuilder();
   const [composerText, setComposerText] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
@@ -43,6 +45,12 @@ export function BuilderAssistantPanel() {
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
+  // Référence indirecte : l'effet de drag ne se relie qu'au montage, il ne
+  // doit pas capturer une version périmée du callback.
+  const collapseRef = useRef(toggleAssistant);
+  useEffect(() => {
+    collapseRef.current = toggleAssistant;
+  }, [toggleAssistant]);
 
   // Drag-to-resize (edge handle) — même mécanique que le panneau assistant
   // côté espace, sur une variable CSS dédiée (--builder-assist).
@@ -50,9 +58,14 @@ export function BuilderAssistantPanel() {
     const handle = handleRef.current;
     if (!handle) return;
     let dragging = false;
+    // Un mousedown suivi d'un mouseup sans déplacement est un CLIC : la même
+    // poignée sert donc à redimensionner (glisser) et à replier (cliquer),
+    // comme le panneau conversationnel côté espace.
+    let moved = false;
 
     function onMove(e: MouseEvent) {
       if (!dragging) return;
+      moved = true;
       setBuilderAssistWidthFromPointer(e.clientX);
     }
 
@@ -61,13 +74,16 @@ export function BuilderAssistantPanel() {
       dragging = false;
       handle!.classList.remove(styles.handleActive);
       document.body.classList.remove("col-resizing");
+      if (!moved) collapseRef.current();
     }
 
     function onDown(e: MouseEvent) {
-      if (!canResizeAssist()) return;
       dragging = true;
-      handle!.classList.add(styles.handleActive);
-      document.body.classList.add("col-resizing");
+      moved = false;
+      if (canResizeAssist()) {
+        handle!.classList.add(styles.handleActive);
+        document.body.classList.add("col-resizing");
+      }
       e.preventDefault();
     }
 
@@ -413,13 +429,33 @@ export function BuilderAssistantPanel() {
     );
   }
 
+  if (assistantCollapsed && !fullscreen) {
+    return (
+      <section className={styles.collapsedStrip} aria-label="Assistant du builder (réduit)" id="builder-assistant">
+        <button
+          type="button"
+          className={styles.expandBtn}
+          onClick={toggleAssistant}
+          title="Rouvrir l'assistant du builder"
+          aria-label="Rouvrir l'assistant du builder"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M10 6l-6 6 6 6" />
+          </svg>
+        </button>
+        <span className={styles.collapsedLabel}>Assistant</span>
+        <span className={styles.collapsedIc} aria-hidden="true">🛠️</span>
+      </section>
+    );
+  }
+
   return (
     <section
       className={[styles.panel, fullscreen ? styles.panelFullscreen : ""].filter(Boolean).join(" ")}
       aria-label="Assistant du builder"
       id="builder-assistant"
     >
-      {!fullscreen && <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner" />}
+      {!fullscreen && <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner, cliquer pour replier" />}
 
       <div className={styles.head}>
         <div className={styles.headIc}>🛠️</div>

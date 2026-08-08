@@ -39,7 +39,7 @@ export async function PUT(req: Request, { params }: Params) {
   if (!supabase) return NextResponse.json({ error: "supabase_not_configured" }, { status: 503 });
   if (!ID_RE.test(params.id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
 
-  let body: { espace?: unknown };
+  let body: { espace?: unknown; diffuse?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -49,9 +49,17 @@ export async function PUT(req: Request, { params }: Params) {
     return NextResponse.json({ error: "missing_espace" }, { status: 400 });
   }
 
-  const { error } = await supabase
-    .from("published_gents")
-    .upsert({ id: params.id, espace: body.espace });
+  // `diffuse` distingue les deux gestes du créateur : enregistrer sa version
+  // de travail (Preview, sauvegardes au fil de l'eau) ne doit RIEN changer
+  // pour les utilisateurs — seul « Diffuser le gent » fige la version
+  // qu'ils reçoivent (voir lib/server/gentVersions.ts).
+  const row: Record<string, unknown> = { id: params.id, espace: body.espace };
+  if (body.diffuse) {
+    row.diffused = body.espace;
+    row.diffused_at = new Date().toISOString();
+  }
+
+  const { error } = await supabase.from("published_gents").upsert(row);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

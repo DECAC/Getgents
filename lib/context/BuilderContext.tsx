@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
-import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine, NotificationChannel } from "@/lib/types";
+import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine, NotificationChannel, Espace } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG, BUILDER_ASSISTANT_MODEL_ID } from "@/lib/mock-data/builder";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 import {
@@ -31,7 +31,14 @@ import {
   pushRemoteDraft,
 } from "@/lib/builderDraftStorage";
 
-export type BuilderTab = "prompt" | "connectors" | "artefacts" | "diffusion" | "audit";
+export type BuilderTab =
+  | "accueil"
+  | "conversationnel"
+  | "miniapp"
+  | "connectors"
+  | "knowledge"
+  | "audit"
+  | "diffusion";
 
 interface BuilderContextValue {
   drafts: GentDraftsMap;
@@ -39,16 +46,21 @@ interface BuilderContextValue {
   currentDraft: GentDraft;
   activeTab: BuilderTab;
   railCollapsed: boolean;
+  /** Panneau assistant entièrement réduit (clic sur la poignée). */
+  assistantCollapsed: boolean;
 
   switchDraft: (id: string) => void;
   switchTab: (tab: BuilderTab) => void;
   toggleRail: () => void;
+  toggleAssistant: () => void;
   createDraft: () => string;
 
   updateObjective: (text: string) => void;
   updateSystemPrompt: (text: string) => void;
   updateName: (text: string) => void;
   publishDraft: () => void;
+  /** Écrit la version de travail (Preview) sans toucher à la version diffusée. */
+  syncWorkingVersion: () => void;
 
   assignModel: (capability: ModelCapability, modelId: string | null) => void;
 
@@ -173,12 +185,19 @@ const BUILDER_ASSISTANT_REPLIES = [
 export function BuilderProvider({ children, initialId }: { children: ReactNode; initialId: string }) {
   const [drafts, setDrafts] = useState<GentDraftsMap>(() => seedDrafts(initialId));
   const [currentId, setCurrentId] = useState(initialId);
-  const [activeTab, setActiveTab] = useState<BuilderTab>("prompt");
+  const [activeTab, setActiveTab] = useState<BuilderTab>("accueil");
   const [railCollapsed, setRailCollapsed] = useState(false);
+  const [assistantCollapsed, setAssistantCollapsed] = useState(false);
   const [replyCursor, setReplyCursor] = useState(0);
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
   const currentIdRef = useRef(currentId);
+  // Miroir des brouillons pour les callbacks qui doivent lire l'état courant
+  // sans se re-créer à chaque frappe (syncWorkingVersion, appelé par Preview).
+  const draftsRef = useRef(drafts);
+  useEffect(() => {
+    draftsRef.current = drafts;
+  }, [drafts]);
   currentIdRef.current = currentId;
   const [storageReady, setStorageReady] = useState(false);
   const streamAbortRef = useRef<AbortController | null>(null);
@@ -232,12 +251,15 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
 
   const switchDraft = useCallback((id: string) => {
     setCurrentId(id);
-    setActiveTab("prompt");
+    // Arrivée sur un gent depuis Gent' space : on atterrit sur son accueil.
+    setActiveTab("accueil");
   }, []);
 
   const switchTab = useCallback((tab: BuilderTab) => setActiveTab(tab), []);
 
   const toggleRail = useCallback(() => setRailCollapsed((v) => !v), []);
+
+  const toggleAssistant = useCallback(() => setAssistantCollapsed((v) => !v), []);
 
   const createDraft = useCallback((): string => {
     const id = createDraftId();
@@ -266,61 +288,83 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     });
   }, [currentId]);
 
+  /**
+   * Fabrique l'espace à partir du brouillon courant, en préservant l'activité
+   * utilisateur déjà persistée (conversations, artefacts, profil, mémoire,
+   * historique de routine) : seule la CONFIGURATION est remplacée.
+   */
+  const buildEspaceFromDraft = useCallback(
+    (draft: GentDraft): Espace => {
+      const fresh = draftToEspace(draft);
+      const existing = readPublishedGents()[currentId];
+      if (!existing) return fresh;
+      return {
+        ...fresh,
+        version: (existing.version ?? 1) + 1,
+        conversations: existing.conversations?.length ? existing.conversations : fresh.conversations,
+        activeConversationId: existing.conversations?.length
+          ? existing.activeConversationId
+          : fresh.activeConversationId,
+        artefacts: existing.artefacts ?? fresh.artefacts,
+        themeTabs: existing.themeTabs,
+        memory: existing.memory || fresh.memory,
+        profile: existing.profile,
+        routine: fresh.routine
+          ? { ...fresh.routine, lastRunAt: existing.routine?.lastRunAt, lastRunNote: existing.routine?.lastRunNote }
+          : undefined,
+        channel: fresh.channel
+          ? { ...fresh.channel, lastDeliveryNote: existing.channel?.lastDeliveryNote }
+          : undefined,
+        // Artefact figé : quand la mission ou les entrées ont changé, le
+        // rendu précédent a été produit par une configuration obsolète — on
+        // repart d'une ardoise vierge pour que la nouvelle version soit
+        // réellement testable. Sinon (renommage…) on conserve le généré.
+        pinnedArtefact: fresh.pinnedArtefact
+          ? pinnedConfigChanged(fresh.pinnedArtefact, existing.pinnedArtefact)
+            ? { ...fresh.pinnedArtefact, runs: existing.pinnedArtefact?.runs }
+            : {
+                ...fresh.pinnedArtefact,
+                dashboard: existing.pinnedArtefact?.dashboard,
+                generatedAt: existing.pinnedArtefact?.generatedAt,
+                runs: existing.pinnedArtefact?.runs,
+                inputs: fresh.pinnedArtefact.inputs.map((i) => ({
+                  ...i,
+                  value: existing.pinnedArtefact?.inputs.find((e) => e.id === i.id)?.value ?? i.value,
+                })),
+              }
+          : undefined,
+      };
+    },
+    [currentId]
+  );
+
+  /**
+   * Version de TRAVAIL : écrite avant chaque Preview, sans toucher au statut
+   * ni à la version diffusée. C'est ce qui garantit que Preview part toujours
+   * de la configuration à l'instant — une nouvelle entrée de mini-app, un
+   * prompt modifié — au lieu de recharger la dernière version publiée.
+   */
+  const syncWorkingVersion = useCallback(() => {
+    const draft = draftsRef.current[currentId];
+    if (!draft) return;
+    // Envoi immédiat (pas de débounce) : Preview ouvre un nouvel onglet, et un
+    // push différé serait annulé ou arriverait après le chargement de l'espace.
+    writePublishedGent(currentId, buildEspaceFromDraft(draft), true);
+  }, [currentId, buildEspaceFromDraft]);
+
+  /**
+   * Diffusion : fige la version que verront les destinataires sur les canaux
+   * (lien de partage, iframe, WhatsApp, routine). Distincte de la version de
+   * travail — c'est le seul geste qui change ce que voient les utilisateurs.
+   */
   const publishDraft = useCallback(() => {
     setDrafts((prev) => {
       const draft = { ...prev[currentId], status: "published" as const, updatedAt: "à l'instant" };
       const published: GentDraft = { ...draft, publishedSnapshot: draftContentSnapshot(draft) };
-      const fresh = draftToEspace(published);
-      // Re-publication : la config (prompt, connecteurs, routine…) est
-      // remplacée, mais l'activité utilisateur déjà persistée (conversations,
-      // artefacts, profil, mémoire, historique de routine) est préservée.
-      const existing = readPublishedGents()[currentId];
-      const espace = existing
-        ? {
-            ...fresh,
-            version: (existing.version ?? 1) + 1,
-            conversations: existing.conversations?.length ? existing.conversations : fresh.conversations,
-            activeConversationId: existing.conversations?.length
-              ? existing.activeConversationId
-              : fresh.activeConversationId,
-            artefacts: existing.artefacts ?? fresh.artefacts,
-            themeTabs: existing.themeTabs,
-            memory: existing.memory || fresh.memory,
-            profile: existing.profile,
-            routine: fresh.routine
-              ? { ...fresh.routine, lastRunAt: existing.routine?.lastRunAt, lastRunNote: existing.routine?.lastRunNote }
-              : undefined,
-            channel: fresh.channel
-              ? { ...fresh.channel, lastDeliveryNote: existing.channel?.lastDeliveryNote }
-              : undefined,
-            // Artefact figé : quand la mission ou les entrées ont changé, le
-            // rendu précédent a été produit par une configuration obsolète —
-            // on repart d'une ardoise vierge pour que la nouvelle version soit
-            // réellement testable. Sinon (republication sans changement, ex.
-            // renommage) on conserve les données déjà générées.
-            pinnedArtefact: fresh.pinnedArtefact
-              ? pinnedConfigChanged(fresh.pinnedArtefact, existing.pinnedArtefact)
-                ? { ...fresh.pinnedArtefact, runs: existing.pinnedArtefact?.runs }
-                : {
-                    ...fresh.pinnedArtefact,
-                    dashboard: existing.pinnedArtefact?.dashboard,
-                    generatedAt: existing.pinnedArtefact?.generatedAt,
-                    runs: existing.pinnedArtefact?.runs,
-                    inputs: fresh.pinnedArtefact.inputs.map((i) => ({
-                      ...i,
-                      value: existing.pinnedArtefact?.inputs.find((e) => e.id === i.id)?.value ?? i.value,
-                    })),
-                  }
-              : undefined,
-          }
-        : fresh;
-      // Envoi immédiat (pas de débounce) : « Preview » est une navigation
-      // pleine page qui annulerait un push différé, et l'espace rechargerait
-      // alors la version précédente depuis le serveur.
-      writePublishedGent(currentId, espace, true);
+      writePublishedGent(currentId, buildEspaceFromDraft(published), true, true);
       return { ...prev, [currentId]: published };
     });
-  }, [currentId]);
+  }, [currentId, buildEspaceFromDraft]);
 
   const assignModel = useCallback((capability: ModelCapability, modelId: string | null) => {
     setDrafts((prev) => {
@@ -856,14 +900,17 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         currentDraft,
         activeTab,
         railCollapsed,
+        assistantCollapsed,
         switchDraft,
         switchTab,
         toggleRail,
+        toggleAssistant,
         createDraft,
         updateObjective,
         updateSystemPrompt,
         updateName,
         publishDraft,
+        syncWorkingVersion,
         assignModel,
         addKnowledgeSource,
         removeKnowledgeSource,

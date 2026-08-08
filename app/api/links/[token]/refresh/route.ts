@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import {
   describeShareLinksFailure,
@@ -70,13 +71,14 @@ export async function POST(req: Request, { params }: Params) {
 
   const { data, error } = await supabase
     .from("published_gents")
-    .select("espace")
+    .select(DIFFUSED_COLUMNS)
     .eq("id", link.gentId)
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ error: "gent_not_found" }, { status: 404 });
+  const diffused = diffusedEspace(data);
+  if (!diffused) return NextResponse.json({ error: "gent_not_found" }, { status: 404 });
 
-  let espace = data.espace as Espace;
+  let espace = diffused;
   if (body.inputs && espace.pinnedArtefact) {
     const inputs = espace.pinnedArtefact.inputs.map((i) =>
       body.inputs && i.id in body.inputs ? { ...i, value: body.inputs[i.id] } : i

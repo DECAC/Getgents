@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { isRoutineDue, runRoutine } from "@/lib/server/routineRunner";
 import type { Espace } from "@/lib/types";
@@ -20,10 +21,18 @@ async function runBatch(
   let rows: Row[] = [];
 
   if (supabase) {
-    const query = supabase.from("published_gents").select("id, espace");
+    // Une routine s'exécute pour de vrais destinataires : elle doit tourner
+    // sur la version DIFFUSÉE, pas sur la version de travail que le créateur
+    // remue en Preview.
+    const query = supabase.from("published_gents").select(`id, ${DIFFUSED_COLUMNS}`);
     const { data, error } = forced ? await query.eq("id", forced) : await query;
     if (error) throw new Error(error.message);
-    rows = (data ?? []) as Row[];
+    rows = (data ?? [])
+      .map((row) => {
+        const espace = diffusedEspace(row as { espace?: unknown; diffused?: unknown });
+        return espace ? { id: (row as { id: string }).id, espace } : null;
+      })
+      .filter((r): r is Row => r !== null);
   } else if (forced && fallbackEspace) {
     rows = [{ id: forced, espace: fallbackEspace }];
   } else if (forced) {
@@ -48,7 +57,12 @@ async function runBatch(
 
     const run = await runRoutine(espace, routine, row.id);
     if (supabase) {
-      const { error: upsertError } = await supabase.from("published_gents").upsert({ id: row.id, espace: run.espace });
+      // La note produite rejoint la version diffusée — écrire dans `espace`
+      // écraserait la configuration en cours d'édition du créateur.
+      const { error: upsertError } = await supabase
+        .from("published_gents")
+        .update({ diffused: run.espace })
+        .eq("id", row.id);
       results.push({
         id: row.id,
         status: upsertError ? `run ${run.ok ? "ok" : "ko"} mais écriture échouée : ${upsertError.message}` : run.note,

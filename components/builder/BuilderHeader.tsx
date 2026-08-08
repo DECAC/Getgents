@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useBuilder, type BuilderTab } from "@/lib/context/BuilderContext";
-import { hasCustomName, isDirtySincePublish } from "@/lib/builderSnapshot";
+import { useBuilder } from "@/lib/context/BuilderContext";
+import { hasCustomName } from "@/lib/builderSnapshot";
 import { deleteGentEverywhere } from "@/lib/deleteGent";
 import styles from "./BuilderHeader.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Brouillon",
   review: "En revue",
-  published: "Publié",
+  published: "Diffusé",
 };
 
 const STATUS_DOT_CLASS: Record<string, string> = {
@@ -19,68 +19,25 @@ const STATUS_DOT_CLASS: Record<string, string> = {
   published: styles.dotPublished,
 };
 
-const TABS: { id: BuilderTab; label: string; icon: JSX.Element }[] = [
-  {
-    id: "prompt",
-    label: "Prompt",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2M9 20h6M12 4v16" />
-      </svg>
-    ),
-  },
-  {
-    id: "connectors",
-    label: "Connecteurs",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M9 7H7a5 5 0 0 0 0 10h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8" />
-      </svg>
-    ),
-  },
-  {
-    id: "artefacts",
-    label: "Artefacts",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M14 3v5h5" />
-        <path d="M19 8v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7z" />
-      </svg>
-    ),
-  },
-  {
-    id: "diffusion",
-    label: "Diffusion",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="2.5" />
-        <path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" />
-      </svg>
-    ),
-  },
-  {
-    id: "audit",
-    label: "Audit",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="11" cy="11" r="7" />
-        <path d="M21 21l-4.3-4.3M8 11h6M11 8v6" />
-      </svg>
-    ),
-  },
-];
-
 export function BuilderHeader() {
-  const { currentDraft, activeTab, switchTab, updateName, updateObjective, publishDraft } = useBuilder();
+  const { currentDraft, updateName, updateObjective, syncWorkingVersion } = useBuilder();
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Preview part TOUJOURS de la configuration à l'instant : on écrit la
+  // version de travail avant d'ouvrir l'onglet, sinon l'espace rechargerait
+  // la version précédente et les nouveautés seraient intestables.
+  function handlePreview() {
+    syncWorkingVersion();
+    window.open(`/espace/${currentDraft.id}`, "_blank", "noopener,noreferrer");
+  }
 
   async function handleDelete() {
     const name = currentDraft.name || "ce gent";
     if (
       !window.confirm(
-        `Supprimer définitivement « ${name} » ? Cette action est irréversible : le brouillon, le gent publié et ses liens de partage seront effacés.`
+        `Supprimer définitivement « ${name} » ? Cette action est irréversible : le brouillon, la version diffusée et les liens de partage seront effacés.`
       )
     ) {
       return;
@@ -97,18 +54,6 @@ export function BuilderHeader() {
   }
 
   const nameOk = hasCustomName(currentDraft);
-  const dirty = isDirtySincePublish(currentDraft);
-  const alreadyLive = currentDraft.status === "published" && !dirty;
-  const publishDisabled = alreadyLive || !nameOk || !currentDraft.systemPrompt.trim();
-
-  let publishLabel = "Publier la V1";
-  if (alreadyLive) publishLabel = "Publié";
-  else if (currentDraft.status === "published" && dirty) publishLabel = "Publier la mise à jour";
-
-  let publishHint: string | undefined;
-  if (!nameOk) publishHint = "Donnez un nom au gent avant de publier";
-  else if (!currentDraft.systemPrompt.trim()) publishHint = "Rédigez un prompt système avant de publier";
-  else if (dirty) publishHint = "Des modifications n'ont pas encore été publiées — cliquez pour mettre à jour l'espace";
 
   return (
     <header className={styles.head}>
@@ -138,7 +83,7 @@ export function BuilderHeader() {
               </svg>
             </span>
           </div>
-          {!nameOk && <div className={styles.nameWarning}>Donnez un nom à ce gent pour pouvoir le publier</div>}
+          {!nameOk && <div className={styles.nameWarning}>Donnez un nom à ce gent pour pouvoir le diffuser</div>}
           <input
             className={styles.objectiveInput}
             value={currentDraft.objective}
@@ -148,27 +93,22 @@ export function BuilderHeader() {
           />
         </div>
         <button
-          className={styles.publishBtn}
-          onClick={publishDraft}
-          disabled={publishDisabled}
-          title={publishHint}
+          type="button"
+          className={styles.viewLiveLink}
+          onClick={handlePreview}
+          disabled={!nameOk}
+          title={
+            nameOk
+              ? "Ouvre le gent tel qu'il est configuré à l'instant, modifications comprises"
+              : "Donnez un nom au gent avant de le prévisualiser"
+          }
         >
-          {publishLabel}
+          Preview
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <path d="M15 3h6v6M10 14 21 3" />
+          </svg>
         </button>
-        {currentDraft.status === "published" && (
-          <a
-            href={`/espace/${currentDraft.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.viewLiveLink}
-          >
-            Preview
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <path d="M15 3h6v6M10 14 21 3" />
-            </svg>
-          </a>
-        )}
         <button
           type="button"
           className={styles.deleteBtn}
@@ -181,21 +121,6 @@ export function BuilderHeader() {
       </div>
 
       {deleteError && <div className={styles.deleteError}>{deleteError}</div>}
-
-      <div className={styles.threadbar} role="tablist">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            className={[styles.tab, activeTab === tab.id ? styles.tabOn : ""].filter(Boolean).join(" ")}
-            onClick={() => switchTab(tab.id)}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-          >
-            <span className={styles.tabIcon}>{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
-      </div>
     </header>
   );
 }

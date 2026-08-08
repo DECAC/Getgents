@@ -53,6 +53,22 @@ export function shareLinkUrl(origin: string, token: string): string {
   return `${origin.replace(/\/$/, "")}/l/${token}`;
 }
 
+/**
+ * Canal « intégration web » : le même lien, encapsulé dans une iframe à coller
+ * sur un site. Pas de mécanique séparée — un embed EST un lien de partage, il
+ * en garde donc la révocation, l'expiration et le compteur de régénérations.
+ */
+export function shareLinkEmbedCode(origin: string, token: string, title = "Gent"): string {
+  const src = shareLinkUrl(origin, token);
+  return [
+    `<iframe src="${src}"`,
+    `        title="${title.replace(/"/g, "&quot;")}"`,
+    `        width="100%" height="720"`,
+    `        style="border:1px solid #e5e5e5;border-radius:12px"`,
+    `        allow="clipboard-write"></iframe>`,
+  ].join("\n");
+}
+
 const DATE_FMT: Intl.DateTimeFormatOptions = {
   day: "numeric",
   month: "short",
