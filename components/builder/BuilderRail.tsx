@@ -219,6 +219,17 @@ export function BuilderRail() {
         <span className={styles.publishLabel}>{publishLabel}</span>
       </button>
 
+      {/* Un bouton grisé sans explication est une impasse : le créateur ne peut
+          ni deviner ce qui bloque, ni le corriger. La raison s'affiche donc en
+          clair, avec l'onglet où la régler. */}
+      {publishDisabled && (
+        <div className={styles.publishBlocked}>
+          {!nameOk
+            ? "Donnez un nom au gent (bandeau du haut) pour pouvoir le diffuser."
+            : "Rédigez les instructions système (onglet Gent Conversationnel) pour pouvoir diffuser."}
+        </div>
+      )}
+
       <div className={styles.nav}>
         {NAV.map((section, si) => (
           <div className={styles.section} key={section.title ?? `top-${si}`}>

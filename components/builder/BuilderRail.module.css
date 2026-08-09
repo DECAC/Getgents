@@ -150,6 +150,20 @@
   flex: none;
 }
 
+.publishBlocked {
+  margin: -8px 12px 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--gold-tint);
+  color: var(--gold);
+  font-size: 11.5px;
+  line-height: 1.45;
+  font-weight: 500;
+}
+.collapsed .publishBlocked {
+  display: none;
+}
+
 .publishLabel {
   white-space: nowrap;
   overflow: hidden;
