@@ -13,6 +13,7 @@ import { ChecklistView } from "@/components/shared/ChecklistView";
 import { MapArtefact } from "@/components/shared/MapArtefact";
 import { DashboardArtefact } from "@/components/shared/dashboard/DashboardArtefact";
 import { PinnedArtefactPanel } from "./PinnedArtefactPanel";
+import { StarterBubbles } from "./StarterBubbles";
 import styles from "./ModuleCanvas.module.css";
 
 interface ModuleLayout {
@@ -300,15 +301,9 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     return (
       <div className={styles.wrap}>
         {pinned && <PinnedArtefactPanel pinned={pinned} />}
-        {!pinned && (
-          <div className={styles.empty}>
-            <div className={styles.emptyIcon}>{espace.icon}</div>
-            <p className={styles.emptyText}>
-              Cet espace ne contient pas encore de module. Ouvrez la conversation — les artefacts
-              générés par votre assistant apparaîtront ici, librement organisables.
-            </p>
-          </div>
-        )}
+        {/* Espace vierge d'un gent conversationnel : les déclencheurs
+            remplacent le message d'attente par des amorces cliquables. */}
+        {!pinned && <StarterBubbles espace={espace} />}
       </div>
     );
   }

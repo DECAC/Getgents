@@ -29,6 +29,7 @@ import { extractImageSignal } from "@/lib/imageSignal";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import {
   espaceForPinnedRefresh,
+  espaceForStarters,
   formatApiNetworkError,
 } from "@/lib/espaceApiPayload";
 import { renderMarkdown } from "@/lib/markdown";
@@ -126,6 +127,16 @@ interface EspaceContextValue {
   sendMessage: (text: string) => void;
   /** Envoie une demande composée à partir d'un formulaire jump (voir jumpFormSignal). */
   submitJumpForm: (values: Record<string, string>) => void;
+  /** Déploie la conversation et envoie la question d'amorce cliquée. */
+  runStarter: (question: string) => void;
+  /** Génère les déclencheurs si l'espace est encore vierge (appel unique). */
+  ensureStarters: () => void;
+  /**
+   * Vrai une fois l'hydratation terminée (cache local + synchronisation
+   * serveur). Toute écriture d'espace faite avant serait écrasée par la
+   * synchronisation qui se termine ensuite.
+   */
+  storageReady: boolean;
   isThinking: boolean;
   /** Libellé de la phase en cours (réflexion, outil, rédaction…). */
   thinkingStatus: string | null;
@@ -219,6 +230,9 @@ export function EspaceProvider({
   // déclenché depuis un callback navigateur, ex. géolocalisation) : les
   // updaters setEspaces ne sont pas garantis d'être exécutés immédiatement.
   const espacesRef = useRef(espaces);
+  // Un seul appel de génération des déclencheurs par gent et par session, même
+  // si l'espace se remonte plusieurs fois (changement d'onglet, re-render).
+  const startersRequestedRef = useRef<Set<string>>(new Set());
   espacesRef.current = espaces;
   const streamAbortRef = useRef<AbortController | null>(null);
 
@@ -326,6 +340,38 @@ export function EspaceProvider({
 
   const closeAssistant = useCallback(() => {
     setAssistantOpen(false);
+  }, []);
+
+  /**
+   * Génère les déclencheurs à la première ouverture d'un espace encore vierge,
+   * puis les persiste : c'est un appel unique par gent, pas à chaque visite.
+   * Silencieux en cas d'échec — l'espace retombe sur son état vide d'origine.
+   */
+  const ensureStarters = useCallback(async () => {
+    const id = currentIdRef.current;
+    const espace = espacesRef.current[id];
+    if (!espace || espace.pinnedArtefact?.enabled) return;
+    if (espace.starters?.length) return;
+    if (startersRequestedRef.current.has(id)) return;
+    startersRequestedRef.current.add(id);
+
+    try {
+      const res = await fetch("/api/starters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ espace: espaceForStarters(espace) }),
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as { starters?: string[] };
+      if (!data.starters?.length) return;
+      setEspaces((prev) => {
+        const e = prev[id];
+        if (!e) return prev;
+        return { ...prev, [id]: { ...e, starters: data.starters, startersGeneratedAt: new Date().toISOString() } };
+      });
+    } catch {
+      // Réseau indisponible : pas de déclencheurs, l'espace reste utilisable.
+    }
   }, []);
 
   const toggleAsideCollapsed = useCallback(() => setAsideCollapsed((v) => !v), []);
@@ -709,6 +755,18 @@ export function EspaceProvider({
         setThinkingStatus(null);
       });
   }, [shareToken]);
+
+  /**
+   * Clic sur un déclencheur : la conversation se déploie et la question part
+   * aussitôt — l'utilisateur voit le gent répondre sans avoir eu à rédiger.
+   */
+  const runStarter = useCallback(
+    (question: string) => {
+      openAssistant();
+      sendMessage(question);
+    },
+    [openAssistant, sendMessage]
+  );
 
   // Compose une demande à partir d'un formulaire jump puis l'envoie au gent.
   const submitJumpForm = useCallback(
@@ -1237,6 +1295,9 @@ export function EspaceProvider({
         updateMemory,
         sendMessage,
         submitJumpForm,
+        runStarter,
+        ensureStarters,
+        storageReady,
         isThinking,
         thinkingStatus,
         stopGeneration,

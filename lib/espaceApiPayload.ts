@@ -91,6 +91,10 @@ export function espaceForPublicLink(espace: Espace): Espace {
     files: [],
     artefacts: [],
     jumpForm: espace.jumpForm,
+    // Les déclencheurs décrivent les usages du gent, pas l'activité de son
+    // créateur : ils sont donc transmis tels quels au destinataire, à qui ils
+    // servent encore plus qu'à lui (il découvre le gent).
+    starters: espace.starters,
     pinnedArtefact: pinned
       ? {
           enabled: pinned.enabled,
@@ -117,6 +121,46 @@ export function espaceForPublicLink(espace: Espace): Espace {
  */
 export function withoutSessionContext(espace: Espace): Espace {
   return { ...espace, memory: "", files: [] };
+}
+
+/**
+ * Charge utile pour générer les déclencheurs : uniquement ce qui décrit les
+ * CAPACITÉS du gent. Ni conversations, ni artefacts, ni mémoire — la question
+ * posée au modèle est « que sait faire ce gent ? », pas « qu'a fait cet
+ * utilisateur ? », et l'espace complet ferait une requête inutilement lourde.
+ */
+export function espaceForStarters(espace: Espace): Espace {
+  return {
+    icon: espace.icon,
+    name: espace.name,
+    gent: espace.gent,
+    version: espace.version,
+    status: espace.status,
+    statusLabel: espace.statusLabel,
+    sensitive: espace.sensitive,
+    metrics: [],
+    integrations: [],
+    tools: [],
+    tabs: [],
+    map: null,
+    memory: "",
+    conversations: [],
+    activeConversationId: espace.activeConversationId,
+    // Seuls les NOMS des documents comptent ici : ils situent les thèmes
+    // couverts, sans transmettre leur contenu intégral.
+    files: (espace.files ?? []).map((f) => ({ ...f, text: undefined })),
+    artefacts: [],
+    systemPrompt: espace.systemPrompt,
+    chatModelId: espace.chatModelId,
+    webSearch: espace.webSearch,
+    datasets: espace.datasets,
+    mcpServers: espace.mcpServers,
+    restApis: espace.restApis,
+    prim: espace.prim,
+    powens: espace.powens,
+    routine: espace.routine,
+    pinnedArtefact: espace.pinnedArtefact,
+  };
 }
 
 /** Coquille légère pour exécuter une routine : le fil actif est vide, le serveur n'y ajoute que les nouveaux messages. */

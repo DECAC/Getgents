@@ -1,0 +1,89 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 56px 24px;
+  text-align: center;
+}
+
+.icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.intro {
+  max-width: 460px;
+}
+
+.title {
+  font-family: "Inter", sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.bubbles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 720px;
+}
+
+.bubble {
+  padding: 11px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink);
+  text-align: left;
+  max-width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.bubble:hover:not(:disabled) {
+  border-color: var(--sage);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+  transform: translateY(-1px);
+}
+.bubble:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Squelettes pendant la génération : des bulles de largeurs variées, pour que
+   l'attente ressemble déjà à ce qui va s'afficher. */
+.skeleton {
+  flex: none;
+  height: 38px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--line-soft) 25%, var(--card) 50%, var(--line-soft) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+  .bubble:hover:not(:disabled) { transform: none; }
+}

@@ -337,6 +337,13 @@ export interface Espace {
   chatModelId?: string;
   /** Modèle de génération d'image assigné (capability "image"), ex. google/nanobanana. */
   imageModelId?: string;
+  /**
+   * « Déclencheurs » : questions d'amorce affichées dans l'espace de travail
+   * vierge, choisies par le gent lui-même d'après sa configuration (voir
+   * lib/starterSignal.ts). Générées une fois, puis persistées.
+   */
+  starters?: string[];
+  startersGeneratedAt?: string;
   /** Serveurs MCP (transport Streamable HTTP) configurés dans le builder. */
   mcpServers?: { name: string; url: string }[];
   /** Datasets open data (portails Opendatasoft) interrogeables par proximité. */
