@@ -1,15 +1,33 @@
 .page {
-  /* `html, body` sont en `overflow: hidden` (app.globals.css) : le shell
-     builder/espace gère son propre scroll interne, mais cette page publique
-     n'en avait aucun — un tableau de bord dense (plusieurs sections, tuile
-     rémunération pleine largeur…) dépassait la hauteur d'écran sans qu'on
-     puisse jamais atteindre le bas. `.page` est donc ici la zone de scroll. */
   height: 100vh;
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--bg);
   color: var(--ink);
   display: flex;
   flex-direction: column;
+}
+
+/* Conversation à gauche, espace de travail à droite — même agencement que
+   l'espace, pour que le destinataire voie ce que le créateur a prévisualisé. */
+.body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  transition: grid-template-columns 0.2s;
+}
+.bodyWithChat {
+  grid-template-columns: var(--assist, 380px) 1fr;
+}
+
+@media (max-width: 860px) {
+  .bodyWithChat {
+    grid-template-columns: 1fr;
+  }
+  /* Trop étroit pour deux colonnes : la conversation prend toute la place. */
+  .bodyWithChat .main {
+    display: none;
+  }
 }
 
 .head {
@@ -58,21 +76,17 @@
   filter: brightness(1.05);
 }
 
+/* `html, body` sont en `overflow: hidden` (app.globals.css). Un tableau de
+   bord dense dépassait la hauteur d'écran sans qu'on puisse atteindre le bas :
+   c'est donc cette colonne qui porte le scroll. */
 .main {
-  flex: 1;
-  width: 100%;
-  max-width: 1080px;
-  margin: 0 auto;
+  min-width: 0;
+  overflow-y: auto;
   padding: 24px 28px 48px;
 }
 
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 64px 24px;
-  color: var(--muted);
-  font-size: 14px;
-  text-align: center;
+.mainInner {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
 }

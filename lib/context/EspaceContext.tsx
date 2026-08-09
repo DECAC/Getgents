@@ -356,11 +356,17 @@ export function EspaceProvider({
     startersRequestedRef.current.add(id);
 
     try {
-      const res = await fetch("/api/starters", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ espace: espaceForStarters(espace) }),
-      });
+      // Par le lien : le serveur relit la version diffusée et met le résultat
+      // en cache dessus, donc un seul appel au modèle par gent quel que soit
+      // le nombre de visiteurs. Le créateur, lui, envoie sa configuration
+      // courante — elle n'est pas encore en base tant qu'il n'a pas diffusé.
+      const res = shareToken
+        ? await fetch(`/api/links/${encodeURIComponent(shareToken)}/starters`, { method: "POST" })
+        : await fetch("/api/starters", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ espace: espaceForStarters(espace) }),
+          });
       if (!res.ok) return;
       const data = (await res.json()) as { starters?: string[] };
       if (!data.starters?.length) return;
@@ -372,7 +378,7 @@ export function EspaceProvider({
     } catch {
       // Réseau indisponible : pas de déclencheurs, l'espace reste utilisable.
     }
-  }, []);
+  }, [shareToken]);
 
   const toggleAsideCollapsed = useCallback(() => setAsideCollapsed((v) => !v), []);
 

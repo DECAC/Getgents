@@ -17,22 +17,19 @@ const SKELETON_WIDTHS = ["46%", "32%", "40%", "28%", "36%"];
  * question, l'utilisateur découvre les usages en voyant le gent répondre.
  */
 export function StarterBubbles({ espace }: { espace: Espace }) {
-  const { runStarter, ensureStarters, isThinking, shareMode, storageReady } = useEspace();
+  const { runStarter, ensureStarters, isThinking, storageReady } = useEspace();
   const starters = espace.starters ?? [];
 
   useEffect(() => {
-    // Le destinataire d'un lien de partage ne déclenche jamais de génération :
-    // il lit ceux que le créateur a déjà fait produire, sinon rien. Sans ça,
-    // chaque visite d'un lien coûterait un appel au modèle.
-    if (shareMode) return;
     // On attend la fin de l'hydratation : la synchronisation initiale remplace
     // l'espace entier quand elle se termine, et effacerait des déclencheurs
-    // écrits avant elle.
+    // écrits avant elle. (En mode partage il n'y a pas d'hydratation locale :
+    // storageReady est vrai d'emblée.)
     if (!storageReady) return;
     ensureStarters();
-  }, [ensureStarters, shareMode, storageReady]);
+  }, [ensureStarters, storageReady]);
 
-  const loading = starters.length === 0 && !shareMode;
+  const loading = starters.length === 0;
 
   return (
     <div className={styles.wrap}>
