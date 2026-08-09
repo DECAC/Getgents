@@ -40,6 +40,36 @@ interface ChatBody {
   webSearch?: boolean;
 }
 
+/**
+ * Trace de diagnostic : les deux chemins (espace du créateur et relais d'un
+ * lien de partage) aboutissent ici. Quand un même gent répond différemment
+ * selon le chemin alors que sa configuration en base est identique, seule la
+ * comparaison des messages RÉELLEMENT envoyés au modèle permet de trancher —
+ * en particulier la FIN du message système, position que le modèle lit comme
+ * faisant autorité. Volontairement borné : ni le prompt entier ni le contenu
+ * de la conversation ne sont écrits dans les journaux.
+ */
+function traceChatRequest(source: string, body: ChatBody) {
+  const messages = body.messages ?? [];
+  const system = messages.find((m) => m.role === "system")?.content ?? "";
+  console.log(
+    JSON.stringify({
+      tag: "getgents:chat",
+      source,
+      model: body.model,
+      maxTokens: body.max_tokens,
+      systemMessages: messages.filter((m) => m.role === "system").length,
+      systemChars: system.length,
+      systemHead: system.slice(0, 120),
+      // La queue est le point décisif : c'est là que doit se trouver le prompt
+      // du créateur, et non une consigne de plateforme.
+      systemTail: system.slice(-240),
+      webSearch: !!body.webSearch,
+      datasets: (body.datasets ?? []).length,
+    })
+  );
+}
+
 export async function POST(req: NextRequest) {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) {
@@ -58,6 +88,8 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+
+  traceChatRequest(req.headers.get("x-getgents-source") ?? "espace", body);
 
   const mcpServers = (body.mcpServers ?? []).filter(
     (s) => typeof s?.url === "string" && /^https?:\/\//.test(s.url)

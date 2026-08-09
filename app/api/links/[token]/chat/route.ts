@@ -82,7 +82,7 @@ export async function POST(req: Request, { params }: Params) {
   const origin = new URL(req.url).origin;
   const upstream = await fetch(`${origin}/api/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-getgents-source": "share-link" },
     body: JSON.stringify({
       model: espace.chatModelId ?? "anthropic/claude-sonnet-5",
       messages: [{ role: "system", content: systemPrompt }, ...history],
