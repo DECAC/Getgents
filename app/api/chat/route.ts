@@ -459,9 +459,13 @@ function toolLoopResponse(
 
         const messages: Record<string, unknown>[] = [...(body.messages ?? [])];
         const datasetHint = buildDatasetRuntimeInstructions(datasets, datasetMetas);
-        if (datasetHint && messages.length && messages[0].role === "system") {
-          messages[0] = { ...messages[0], content: String(messages[0].content ?? "") + datasetHint };
-        } else if (datasetHint) {
+        if (datasetHint) {
+          // Message système DISTINCT, placé AVANT celui du gent — et non
+          // concaténé à sa fin comme auparavant. Ce mode d'emploi technique
+          // se retrouvait sinon en dernière position, là où un modèle lit la
+          // consigne qui fait autorité : il primait sur le style du créateur
+          // (longueur, ton) alors qu'il ne parle que d'appels d'outils. Le
+          // prompt du gent doit rester le dernier mot.
           messages.unshift({ role: "system", content: datasetHint.trim() });
         }
         let sentContent = false;
