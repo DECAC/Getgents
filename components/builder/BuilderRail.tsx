@@ -109,17 +109,27 @@ export function BuilderRail() {
   const nameOk = hasCustomName(currentDraft);
   const dirty = isDirtySincePublish(currentDraft);
   const live = currentDraft.status === "published";
-  const publishDisabled = (live && !dirty) || !nameOk || !currentDraft.systemPrompt.trim();
+  // Seules les conditions de VALIDITÉ désactivent le bouton. « Déjà à jour »
+  // n'en est pas une : cet état est déduit d'une empreinte stockée dans le
+  // brouillon local, pas de ce que contient réellement la base. Un autre
+  // navigateur, une diffusion qui a échoué côté serveur ou une reprise de
+  // données suffisent à le désaligner — et le bouton grisé enfermait alors le
+  // créateur avec une version diffusée périmée, sans aucun moyen de la
+  // réécrire. Rediffuser à l'identique est sans risque : on réécrit la même
+  // chose.
+  const publishDisabled = !nameOk || !currentDraft.systemPrompt.trim();
 
   let publishLabel = "Diffuser le gent";
-  if (live && !dirty) publishLabel = "Diffusé — à jour";
+  if (live && !dirty) publishLabel = "Rediffuser";
   else if (live && dirty) publishLabel = "Diffuser les modifications";
 
   let publishHint: string | undefined;
   if (!nameOk) publishHint = "Donnez un nom au gent avant de le diffuser";
   else if (!currentDraft.systemPrompt.trim()) publishHint = "Rédigez des instructions système avant de diffuser";
   else if (live && dirty) publishHint = "Des modifications ne sont pas encore diffusées aux utilisateurs";
-  else if (live) publishHint = "La version diffusée correspond à votre version de travail";
+  else if (live)
+    publishHint =
+      "Votre version de travail semble déjà diffusée. En cas de doute (réponses différentes entre Preview et lien), cliquez pour réécrire la version diffusée.";
   else publishHint = "Rend le gent accessible sur les canaux de l'onglet Diffusion";
 
   return (

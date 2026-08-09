@@ -74,9 +74,20 @@ function sendRemoteGent(id: string, espace: Espace, diffuse = false): Promise<vo
     // publication) : sans ça la requête est annulée par le déchargement.
     keepalive: true,
   })
-    .then((res) => {
+    .then(async (res) => {
       if (res.status === 503 || res.status === 401) remoteAvailable = false;
       else if (res.ok) remoteAvailable = true;
+      else if (diffuse) {
+        // Une diffusion qui échoue en silence est le pire cas : le créateur
+        // croit son gent à jour alors que ses destinataires lisent toujours
+        // l'ancienne version. Cause la plus fréquente : la migration 004
+        // (colonne `diffused`) pas encore exécutée sur la base.
+        const detail = await res.text().catch(() => "");
+        console.error(
+          `[Getgents] Diffusion refusée par le serveur (${res.status}). La version diffusée n'a PAS été mise à jour.`,
+          detail.slice(0, 300)
+        );
+      }
     })
     .catch(() => {
       // Réseau indisponible : le cache localStorage garde la donnée, le
