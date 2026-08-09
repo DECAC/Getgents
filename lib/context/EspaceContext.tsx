@@ -486,7 +486,16 @@ export function EspaceProvider({
 
     setEspaces((prev) => {
       const e = prev[id];
-      const conversations = e.conversations.map((t) =>
+      // Le fil actif peut ne pas exister encore : la projection publique d'un
+      // lien de partage ne transmet aucune conversation (celles du créateur ne
+      // regardent pas le destinataire) et n'annonce qu'un identifiant. Sans
+      // cette création, tous les `map` sur conversations étaient des no-op :
+      // ni la question ni la réponse n'étaient jamais stockées, et l'échange
+      // restait muet.
+      const base = e.conversations.some((t) => t.id === threadId)
+        ? e.conversations
+        : [...e.conversations, { id: threadId, startedAt: formatConversationStartedAt(), messages: [] }];
+      const conversations = base.map((t) =>
         t.id === threadId ? { ...t, messages: [...t.messages, userMsg, agentPlaceholder] } : t
       );
       return { ...prev, [id]: { ...e, conversations } };

@@ -1,4 +1,5 @@
 import type { Espace } from "@/lib/types";
+import { formatConversationStartedAt } from "@/lib/conversationUtils";
 
 /**
  * Espace minimal pour les appels serveur (preview artefact, run routine) :
@@ -86,7 +87,11 @@ export function espaceForPublicLink(espace: Espace): Espace {
     tabs: [],
     map: null,
     memory: "",
-    conversations: [],
+    // Fil vierge, mais bien PRÉSENT : les conversations du créateur ne
+    // regardent pas le destinataire, en revanche un espace qui annonce un
+    // `activeConversationId` sans le fil correspondant rend la conversation
+    // muette (rien à quoi rattacher les messages).
+    conversations: [{ id: "shared", startedAt: formatConversationStartedAt(), messages: [] }],
     activeConversationId: "shared",
     files: [],
     artefacts: [],
