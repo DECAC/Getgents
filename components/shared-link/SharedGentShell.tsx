@@ -1,8 +1,7 @@
 "use client";
 
 import { EspaceProvider, useEspace } from "@/lib/context/EspaceContext";
-import { PinnedArtefactPanel } from "@/components/center/PinnedArtefactPanel";
-import { StarterBubbles } from "@/components/center/StarterBubbles";
+import { ModuleCanvas } from "@/components/center/ModuleCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
 import type { Espace } from "@/lib/types";
 import styles from "./SharedGentShell.module.css";
@@ -20,7 +19,6 @@ import styles from "./SharedGentShell.module.css";
  */
 function SharedGentBody() {
   const { currentEspace, assistantOpen, openAssistant, miniAppMode } = useEspace();
-  const pinned = currentEspace.pinnedArtefact;
   // Un gent en mode mini-application s'utilise par son tableau de bord : le
   // destinataire n'a pas non plus accès à la conversation.
   const chatAvailable = !miniAppMode;
@@ -45,11 +43,11 @@ function SharedGentBody() {
         {chatOpen && <AssistantPanel />}
         <main className={styles.main}>
           <div className={styles.mainInner}>
-            {pinned?.enabled ? (
-              <PinnedArtefactPanel pinned={pinned} />
-            ) : (
-              <StarterBubbles espace={currentEspace} />
-            )}
+            {/* Même canvas que l'espace : il affiche les artefacts produits au
+                fil de l'échange et retombe sur les déclencheurs tant qu'il n'y
+                en a aucun. Sans lui, un artefact accepté par le destinataire
+                était bien enregistré mais ne s'affichait nulle part. */}
+            <ModuleCanvas espace={currentEspace} />
           </div>
         </main>
       </div>

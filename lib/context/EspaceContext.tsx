@@ -13,18 +13,17 @@ import type {
   PinnedRun,
   UserFile,
 } from "@/lib/types";
-import { sessionContextNote } from "@/lib/sessionContext";
 import { ESPACES as INITIAL_ESPACES } from "@/lib/mock-data/espaces";
 import {
   formatConversationStartedAt,
   getActiveConversation,
   newConversationId,
 } from "@/lib/conversationUtils";
-import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
-import { extractArtefactSignal, ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
-import { extractThemeTabSignal, describeModulesForPrompt, THEME_TAB_PROMPT_INSTRUCTION } from "@/lib/themeTabSignal";
-import { extractGeolocRequest, GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
-import { extractProfileSignal, profileContextNote, PROFILE_PROMPT_INSTRUCTION } from "@/lib/profileSignal";
+import { extractQuestions } from "@/lib/suggestions";
+import { extractArtefactSignal } from "@/lib/artefactSignal";
+import { extractThemeTabSignal } from "@/lib/themeTabSignal";
+import { extractGeolocRequest } from "@/lib/geolocSignal";
+import { extractProfileSignal } from "@/lib/profileSignal";
 import { extractImageSignal } from "@/lib/imageSignal";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import {
@@ -35,6 +34,7 @@ import {
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 import { buildJumpFormPrompt } from "@/lib/jumpFormSignal";
+import { buildGentSystemPrompt } from "@/lib/gentRuntimePrompt";
 
 const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
   report: { type: "Rapport", icon: "📄" },
@@ -450,38 +450,9 @@ export function EspaceProvider({
         content: (m.text ?? "").replace(/<[^>]+>/g, ""),
       }));
 
-    const basePrompt =
-      espace.systemPrompt?.trim() || `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`;
-    // Mémoire + documents téléversés : même contexte que celui fourni à
-    // l'artefact figé, pour que les deux modes voient la même chose.
-    const memoryNote = sessionContextNote(espace);
-    // Le modèle n'a pas d'horloge : sans cette note, il invente l'heure
-    // courante (ex. « dans 2 min (14:35) » alors qu'il est 11h01).
-    const timeNote = `\n\nDate et heure actuelles : ${new Date().toLocaleString("fr-FR", {
-      timeZone: "Europe/Paris",
-      dateStyle: "full",
-      timeStyle: "short",
-    })} (heure de Paris). Utilise exclusivement cette horloge pour toute heure, durée d'attente ou délai que tu annonces.`;
-    // Garde-fou anti-hallucination : sans source réelle, interdiction de
-    // présenter des données comme du temps réel.
-    const hasRealSource =
-      !!espace.datasets?.length ||
-      !!espace.mcpServers?.length ||
-      !!espace.webSearch ||
-      !!espace.prim ||
-      !!espace.powens ||
-      !!espace.restApis?.length;
-    const honestyNote = hasRealSource
-      ? ""
-      : "\n\nIMPORTANT : tu n'as accès à AUCUNE source de données temps réel (aucun connecteur actif, recherche web désactivée). Ne présente jamais d'horaires, de prix, de disponibilités ou de passages comme des données réelles ou « en temps réel » — tu ne peux pas les connaître. Dis-le clairement à l'utilisateur, donne au mieux des indications générales explicitement marquées comme non vérifiées, et suggère au créateur du gent de connecter une source de données réelle.";
-    const positionNote = position
-      ? `\n\nPosition de l'utilisateur (partagée avec son consentement) : latitude ${position.lat}, longitude ${position.lon}.`
-      : "";
-    const geolocNote = espace.prim ? `\n\n${GEOLOC_PROMPT_INSTRUCTION}` : "";
-    const profileNote = espace.profile ? `\n\n${profileContextNote(espace.profile)}` : "";
-    const systemPrompt =
-      `${basePrompt}${timeNote}${honestyNote}${memoryNote}${positionNote}${geolocNote}${profileNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
-      `\n\n${THEME_TAB_PROMPT_INSTRUCTION}\n\n${describeModulesForPrompt(espace)}\n\n${PROFILE_PROMPT_INSTRUCTION}`;
+    // Assemblage partagé avec le chemin « lien de partage » : un même gent
+    // doit se comporter à l'identique en Preview et chez un destinataire.
+    const systemPrompt = buildGentSystemPrompt(espace, { variant: "espace", position });
     const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
 
     setEspaces((prev) => {
