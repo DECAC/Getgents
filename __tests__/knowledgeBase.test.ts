@@ -93,3 +93,64 @@ describe("injection du contenu de la base de connaissance", () => {
     expect(espace.systemPrompt).not.toContain("Autres références");
   });
 });
+
+describe("ordre du prompt système publié", () => {
+  const CREATOR = "Tu es La Gargoulais. STYLE : réponses COURTES, 80 mots maximum.";
+
+  function draftWith(overrides: Partial<Parameters<typeof draftToEspace>[0]> = {}) {
+    return {
+      id: "g1",
+      name: "La Gargoulais",
+      icon: "🏡",
+      objective: "",
+      systemPrompt: CREATOR,
+      status: "published" as const,
+      updatedAt: "à l'instant",
+      modelAssignments: [],
+      knowledgeSources: [],
+      connectors: [],
+      builderConversation: [],
+      ...overrides,
+    };
+  }
+
+  it("termine par le prompt du créateur, même avec base de connaissance et connecteurs", () => {
+    // Régression : les blocs de plateforme (base de connaissance, formats
+    // d'artefact, modes d'emploi des connecteurs) étaient concaténés APRÈS le
+    // prompt du créateur. Ils occupaient donc la dernière position — celle que
+    // le modèle lit comme faisant autorité — et son style passait au second
+    // plan derrière des consignes purement techniques.
+    const espace = draftToEspace(
+      draftWith({
+        webSearch: true,
+        knowledgeSources: [
+          { id: "k1", kind: "file", label: "DPE.pdf", meta: "1 Mo", text: "Contenu du diagnostic" },
+        ],
+        connectors: [
+          {
+            id: "c1",
+            toolKind: "dataset",
+            name: "DVF",
+            detail: "https://public.opendatasoft.com/explore/dataset/dvf/",
+          },
+        ],
+      })
+    );
+    expect(espace.systemPrompt?.trimEnd().endsWith(CREATOR)).toBe(true);
+  });
+
+  it("conserve les blocs de plateforme, seulement déplacés avant", () => {
+    const espace = draftToEspace(
+      draftWith({
+        knowledgeSources: [
+          { id: "k1", kind: "file", label: "DPE.pdf", meta: "1 Mo", text: "Contenu du diagnostic" },
+        ],
+      })
+    );
+    expect(espace.systemPrompt).toContain("Contenu du diagnostic");
+    expect(espace.systemPrompt).toContain("Génère des artefacts");
+    expect(espace.systemPrompt!.indexOf("Contenu du diagnostic")).toBeLessThan(
+      espace.systemPrompt!.indexOf(CREATOR)
+    );
+  });
+});

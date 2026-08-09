@@ -302,22 +302,29 @@ export function draftToEspace(draft: GentDraft): Espace {
     date: "Base de connaissance",
   }));
 
-  let systemPrompt = draft.systemPrompt.trim();
-  systemPrompt += knowledgeBaseBlock(draft.knowledgeSources);
+  // Blocs ajoutés par la plateforme (base de connaissance, formats d'artefact,
+  // modes d'emploi des connecteurs). Ils sont accumulés ICI puis placés AVANT
+  // le prompt du créateur : empilés après lui, comme auparavant, ils
+  // occupaient la dernière position — celle que le modèle lit comme faisant
+  // autorité — et son style (longueur, ton) passait au second plan derrière
+  // des consignes purement techniques.
+  const platformBlocks: string[] = [];
+  platformBlocks.push(knowledgeBaseBlock(draft.knowledgeSources));
 
   // Tous les artefacts (rapport, checklist, graphique, aperçu visuel, carte) sont éligibles
   // pour tous les gents — pas de configuration côté créateur. Le modèle décide seul, au fil de
   // la conversation, quand un artefact concret apporte de la valeur (voir ARTEFACT_PROMPT_INSTRUCTION,
   // toujours injectée côté chat dans EspaceContext).
-  systemPrompt +=
-    "\n\nGénère des artefacts (rapport, checklist, graphique, aperçu visuel, carte) automatiquement et intelligemment, uniquement quand le contenu de la conversation s'y prête — n'attends jamais qu'on te le demande explicitement, et ne les propose pas non plus systématiquement hors de propos. " +
-    "L'utilisateur décide s'il ajoute chaque proposition à son espace de travail.";
+  platformBlocks.push(
+    "Génère des artefacts (rapport, checklist, graphique, aperçu visuel, carte) automatiquement et intelligemment, uniquement quand le contenu de la conversation s'y prête — n'attends jamais qu'on te le demande explicitement, et ne les propose pas non plus systématiquement hors de propos. " +
+      "L'utilisateur décide s'il ajoute chaque proposition à son espace de travail."
+  );
 
   const threadId = newConversationId();
   const chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? undefined;
   const imageModelId = draft.modelAssignments.find((a) => a.capability === "image")?.modelId ?? undefined;
   if (imageModelId) {
-    systemPrompt += `\n\n${IMAGE_PROMPT_INSTRUCTION}`;
+    platformBlocks.push(IMAGE_PROMPT_INSTRUCTION);
   }
 
   // Les connecteurs MCP dont le détail est une URL deviennent de vrais
@@ -327,14 +334,16 @@ export function draftToEspace(draft: GentDraft): Espace {
     .map((c) => ({ name: c.name, url: c.detail as string }));
 
   if (draft.webSearch) {
-    systemPrompt +=
-      "\n\nLa recherche web est activée pour cet espace : tes réponses peuvent s'appuyer sur des résultats web récents. Cite tes sources quand tu utilises une information issue du web.";
+    platformBlocks.push(
+      "La recherche web est activée pour cet espace : tes réponses peuvent s'appuyer sur des résultats web récents. Cite tes sources quand tu utilises une information issue du web."
+    );
   }
 
   if (mcpServers.length) {
-    systemPrompt +=
-      `\n\nTu disposes d'outils temps réel via ${mcpServers.length > 1 ? "les serveurs MCP" : "le serveur MCP"} ${mcpServers.map((s) => s.name).join(", ")}. ` +
-      "Utilise-les dès que la question porte sur des données qu'ils couvrent, plutôt que de répondre de mémoire, et cite la source des données obtenues.";
+    platformBlocks.push(
+      `Tu disposes d'outils temps réel via ${mcpServers.length > 1 ? "les serveurs MCP" : "le serveur MCP"} ${mcpServers.map((s) => s.name).join(", ")}. ` +
+        "Utilise-les dès que la question porte sur des données qu'ils couvrent, plutôt que de répondre de mémoire, et cite la source des données obtenues."
+    );
   }
 
   // Les connecteurs « dataset » deviennent des outils de recherche par
@@ -344,22 +353,24 @@ export function draftToEspace(draft: GentDraft): Espace {
     .map((c) => ({ name: c.name, url: c.detail as string }));
 
   if (datasets.length) {
-    systemPrompt +=
-      `\n\nTu disposes d'outils sur des jeux de données ouvertes : ${datasets.map((d) => d.name).join(", ")}. ` +
+    platformBlocks.push(
+      `Tu disposes d'outils sur des jeux de données ouvertes : ${datasets.map((d) => d.name).join(", ")}. ` +
       "Deux modes selon le dataset : (1) géolocalisé — recherche par proximité GPS, demande la position via GEOLOC_REQUEST si besoin ; " +
       "(2) tabulaire (ex. DVF transactions immobilières) — interroge par filtres (code INSEE commune, département, type de bien, surface, prix) sans demander la géolocalisation. " +
       "Pour une commune, utilise le code INSEE à 5 chiffres (pas le code postal). " +
       "Pour les datasets géolocalisés, rends chaque adresse cliquable : <a href=\"geo:LAT,LON\" data-address=\"ADRESSE\">ADRESSE</a>. " +
-      "Propose un artefact carte quand plusieurs lieux géolocalisés sont pertinents.";
+        "Propose un artefact carte quand plusieurs lieux géolocalisés sont pertinents."
+    );
   }
 
   // Connecteur IDFM PRIM : deux outils transit temps réel côté serveur.
   const prim = draft.connectors.some((c) => c.toolKind === "prim");
   if (prim) {
-    systemPrompt +=
-      "\n\nTu disposes des outils temps réel Île-de-France Mobilités (PRIM) : prim_stops_nearby(lat, lon) pour trouver les arrêts autour d'une position, puis prim_next_departures(stop_id) pour les prochains passages. " +
+    platformBlocks.push(
+      "Tu disposes des outils temps réel Île-de-France Mobilités (PRIM) : prim_stops_nearby(lat, lon) pour trouver les arrêts autour d'une position, puis prim_next_departures(stop_id) pour les prochains passages. " +
       "Pour guider vers un transport : obtiens d'abord une position (géolocalisation consentie ou lieu précis fourni), appelle prim_stops_nearby, confirme le nom de l'arrêt retenu, puis appelle prim_next_departures avec son stop_id. " +
-      "Présente chaque passage : « Ligne [X] → [direction] : HH:MM » en précisant si l'horaire est temps réel ou théorique (champ temps_reel). N'invente jamais un horaire.";
+        "Présente chaque passage : « Ligne [X] → [direction] : HH:MM » en précisant si l'horaire est temps réel ou théorique (champ temps_reel). N'invente jamais un horaire."
+    );
   }
 
   // Connecteurs API REST personnalisés : appels HTTP réels côté serveur, avec
@@ -376,22 +387,29 @@ export function draftToEspace(draft: GentDraft): Espace {
         return `« ${r.name} » — ${r.config.description}${paramNote}`;
       })
       .join(" ; ");
-    systemPrompt +=
-      `\n\nTu disposes de connecteurs API REST configurés par le créateur : ${listed}. ` +
+    platformBlocks.push(
+      `Tu disposes de connecteurs API REST configurés par le créateur : ${listed}. ` +
       "Appelle l'outil correspondant dès que la question relève de son domaine, en renseignant ses paramètres à partir de la demande de l'utilisateur (demande les informations manquantes avant d'appeler). " +
       "Renseigne CHAQUE paramètre avec une valeur normalisée et valide pour l'API — un nom de ville ou de région seul, un code, une date au format attendu — et NE recopie JAMAIS mot pour mot une phrase de l'utilisateur (ex. « toute la France avec télétravail » n'est pas une localisation valide : utilise une ville précise, ou laisse le paramètre optionnel vide pour une recherche nationale). " +
       "Si un appel échoue, LIS le message d'erreur (il indique l'URL réellement appelée et le motif) : corrige la valeur des paramètres fautifs ou retire les paramètres optionnels douteux AVANT de réessayer — ne relance jamais deux fois le même appel à l'identique. " +
-      "Fonde ta réponse uniquement sur les données réellement renvoyées par l'API — n'invente jamais un résultat. Si l'appel échoue durablement, explique-le clairement.";
+        "Fonde ta réponse uniquement sur les données réellement renvoyées par l'API — n'invente jamais un résultat. Si l'appel échoue durablement, explique-le clairement."
+    );
   }
 
   // Connecteur Powens (sandbox) : comptes & transactions bancaires de test.
   const powens = draft.connectors.some((c) => c.toolKind === "powens");
   if (powens) {
-    systemPrompt +=
-      "\n\nTu disposes des outils bancaires Powens (MODE SANDBOX — données de test, jamais de vraies données) : powens_accounts() pour lister les comptes et soldes, powens_transactions(min_date?, limit?) pour l'historique de transactions. " +
+    platformBlocks.push(
+      "Tu disposes des outils bancaires Powens (MODE SANDBOX — données de test, jamais de vraies données) : powens_accounts() pour lister les comptes et soldes, powens_transactions(min_date?, limit?) pour l'historique de transactions. " +
       "Analyse uniquement les données renvoyées par ces outils — n'invente jamais une transaction ni un montant. Masque tout identifiant de compte sensible (ex. FR76****1234). " +
-      "Si les outils renvoient une erreur de configuration ou zéro compte, explique que le créateur doit configurer les variables POWENS_* côté serveur puis lier une banque sandbox via l'onglet Connecteurs.";
+        "Si les outils renvoient une erreur de configuration ou zéro compte, explique que le créateur doit configurer les variables POWENS_* côté serveur puis lier une banque sandbox via l'onglet Connecteurs."
+    );
   }
+
+  // Le prompt du créateur FERME le message : c'est sa consigne qui gouverne.
+  const systemPrompt = [...platformBlocks.map((b) => b.trim()).filter(Boolean), draft.systemPrompt.trim()]
+    .filter(Boolean)
+    .join("\n\n");
 
   return {
     icon: draft.icon,
