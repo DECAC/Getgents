@@ -45,6 +45,7 @@ export function BuilderDashboard() {
   const [needsAccessKey, setNeedsAccessKey] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   const refreshLists = useCallback(() => {
     const visible = listVisibleDrafts();
@@ -83,6 +84,16 @@ export function BuilderDashboard() {
     refreshLists();
     void hydrateFromRemote();
   }, [refreshLists, hydrateFromRemote]);
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredDrafts = normalizedQuery
+    ? drafts.filter((d) => d.name.toLowerCase().includes(normalizedQuery))
+    : drafts;
+  const filteredOrphans = normalizedQuery
+    ? orphanedPublished.filter(({ espace }) => (espace.gent || espace.name || "").toLowerCase().includes(normalizedQuery))
+    : orphanedPublished;
+  const noResults =
+    normalizedQuery.length > 0 && filteredDrafts.length === 0 && filteredOrphans.length === 0;
 
   function handleCreate() {
     const id = allocateNewDraft();
@@ -128,6 +139,42 @@ export function BuilderDashboard() {
           </a>
         </div>
 
+        <div className={styles.searchRow}>
+          <svg
+            className={styles.searchIcon}
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.3-4.3" />
+          </svg>
+          <input
+            type="search"
+            className={styles.searchInput}
+            placeholder="Rechercher un gent par nom…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Rechercher un gent par nom"
+          />
+          {query && (
+            <button
+              type="button"
+              className={styles.searchClear}
+              onClick={() => setQuery("")}
+              aria-label="Effacer la recherche"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          )}
+        </div>
+
         {needsAccessKey && (
           <div className={styles.recoveryBanner}>
             <strong>Accès serveur requis</strong> — sans la clé, seuls les gents de démo locaux
@@ -153,8 +200,12 @@ export function BuilderDashboard() {
 
         {deleteError && <div className={styles.deleteError}>{deleteError}</div>}
 
+        {noResults && (
+          <div className={styles.noResults}>Aucun gent ne correspond à « {query.trim()} ».</div>
+        )}
+
         <div className={styles.grid}>
-          {drafts.map((d) => (
+          {filteredDrafts.map((d) => (
             <div key={d.id} className={styles.card}>
               <a href={`/builder/${d.id}`} className={styles.cardLink}>
                 <div className={styles.cardTop}>
@@ -182,7 +233,7 @@ export function BuilderDashboard() {
             </div>
           ))}
 
-          {orphanedPublished.map(({ id, espace }) => (
+          {filteredOrphans.map(({ id, espace }) => (
             <div key={id} className={[styles.card, styles.recoveryCard].join(" ")}>
               <div className={styles.cardTop}>
                 <div className={styles.ic}>{espace.icon}</div>

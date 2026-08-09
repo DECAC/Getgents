@@ -26,8 +26,10 @@ export function Rail() {
       id="rail"
     >
       <div className={styles.brand}>
-        <div className={styles.mark} aria-hidden="true" />
-        <h1 className={styles.brandName}>Getgents</h1>
+        <a href="/builder" className={styles.brandLink} title="Retour à Gent' studio">
+          <div className={styles.mark} aria-hidden="true" />
+          <h1 className={styles.brandName}>Getgents</h1>
+        </a>
         <button
           className={styles.railToggle}
           onClick={toggleRail}

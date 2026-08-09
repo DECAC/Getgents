@@ -16,6 +16,19 @@
   flex-shrink: 0;
 }
 
+.brandLink {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  border-radius: 8px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+.brandLink:hover {
+  background: var(--bg);
+}
+
 .mark {
   width: 26px;
   height: 26px;
