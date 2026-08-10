@@ -32,7 +32,13 @@ export function CenterHeader() {
       <div className={styles.eheadTop}>
         <div className={styles.ic}>{e.icon}</div>
         <div className={styles.meta}>
-          <h2 className={styles.title}>{e.name}</h2>
+          <div className={styles.titleRow}>
+            <h2 className={styles.title}>{e.name}</h2>
+            <span className={[styles.statusPill, STATUS_CLASS[e.status]].filter(Boolean).join(" ")}>
+              <span className={[styles.dot, DOT_CLASS[e.status]].filter(Boolean).join(" ")} />
+              {e.statusLabel}
+            </span>
+          </div>
           <div className={styles.gentline}>
             Propulsé par <b>{e.gent}</b> · version {e.version}
           </div>
@@ -42,10 +48,6 @@ export function CenterHeader() {
             🛠️ Ouvrir dans le gent studio
           </a>
         )}
-        <span className={[styles.statusPill, STATUS_CLASS[e.status]].filter(Boolean).join(" ")}>
-          <span className={[styles.dot, DOT_CLASS[e.status]].filter(Boolean).join(" ")} />
-          {e.statusLabel}
-        </span>
       </div>
     </header>
   );

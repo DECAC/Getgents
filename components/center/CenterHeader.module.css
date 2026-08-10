@@ -46,6 +46,13 @@
   background: var(--sage-tint);
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .title {
   font-family: "Sora", sans-serif;
   font-size: 21px;
@@ -56,6 +63,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .gentline {
