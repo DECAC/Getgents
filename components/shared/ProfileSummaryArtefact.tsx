@@ -3,7 +3,9 @@
 import type { ProfileSummaryMedia } from "@/lib/profileSummaryArtefact";
 import styles from "./ProfileSummaryArtefact.module.css";
 
-type Summary = NonNullable<import("@/lib/types").Artefact["profileSummary"]>;
+import type { ProfileSummaryStored } from "@/lib/profileSummaryArtefact";
+
+type Summary = ProfileSummaryStored;
 
 const ROLE_LABEL: Record<string, string> = {
   portrait: "Portrait",

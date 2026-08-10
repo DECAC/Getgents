@@ -55,6 +55,11 @@ export interface ProfileSummary {
   media?: ProfileSummaryMediaSpec[];
 }
 
+/** Résumé de profil une fois enregistré dans un artefact (médias matérialisés). */
+export type ProfileSummaryStored = Omit<ProfileSummary, "media"> & {
+  media?: ProfileSummaryMedia[];
+};
+
 export const PROFILE_SUMMARY_PROMPT_INSTRUCTION =
   "RÉSUMÉ DE PROFIL : dès que la conversation porte sur le parcours d'une PERSONNE EN PARTICULIER " +
   "(candidat, contact, interlocuteur, personnalité publique, profil LinkedIn/CV analysé — pas un simple métier abstrait), " +

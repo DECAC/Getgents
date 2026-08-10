@@ -268,9 +268,7 @@ export interface Artefact {
   imageCaption?: string;
   imageSource?: "generated" | "web";
   /** Résumé de profil (CV synthétique) — médias inclus. */
-  profileSummary?: import("@/lib/profileSummaryArtefact").ProfileSummary & {
-    media?: import("@/lib/profileSummaryArtefact").ProfileSummaryMedia[];
-  };
+  profileSummary?: import("@/lib/profileSummaryArtefact").ProfileSummaryStored;
 }
 
 export interface EspaceMetric {
