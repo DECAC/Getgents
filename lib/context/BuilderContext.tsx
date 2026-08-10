@@ -183,10 +183,18 @@ const BUILDER_ASSISTANT_REPLIES = [
   "Cela ressemble à une action engageante (compte tiers). Pensez à ajouter le connecteur correspondant et à documenter l'invariant de confirmation dans le prompt.",
 ];
 
-export function BuilderProvider({ children, initialId }: { children: ReactNode; initialId: string }) {
+export function BuilderProvider({
+  children,
+  initialId,
+  initialTab,
+}: {
+  children: ReactNode;
+  initialId: string;
+  initialTab?: BuilderTab;
+}) {
   const [drafts, setDrafts] = useState<GentDraftsMap>(() => seedDrafts(initialId));
   const [currentId, setCurrentId] = useState(initialId);
-  const [activeTab, setActiveTab] = useState<BuilderTab>("accueil");
+  const [activeTab, setActiveTab] = useState<BuilderTab>(initialTab ?? "accueil");
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [assistantCollapsed, setAssistantCollapsed] = useState(false);
   const [replyCursor, setReplyCursor] = useState(0);

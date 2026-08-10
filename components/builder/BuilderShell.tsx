@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { BuilderProvider, useBuilder } from "@/lib/context/BuilderContext";
+import { BuilderProvider, useBuilder, type BuilderTab } from "@/lib/context/BuilderContext";
 import { allocateNewDraft, NOUVEAU_GENT_TEMPLATE_ID } from "@/lib/builderDraftStorage";
 import { BuilderRail } from "./BuilderRail";
 import { BuilderCenter } from "./BuilderCenter";
@@ -29,7 +29,7 @@ function BuilderShellInner() {
   );
 }
 
-export function BuilderShell({ initialId }: { initialId: string }) {
+export function BuilderShell({ initialId, initialTab }: { initialId: string; initialTab?: BuilderTab }) {
   const router = useRouter();
   const isLegacyTemplateRoute = initialId === NOUVEAU_GENT_TEMPLATE_ID;
 
@@ -42,7 +42,7 @@ export function BuilderShell({ initialId }: { initialId: string }) {
   if (isLegacyTemplateRoute) return null;
 
   return (
-    <BuilderProvider initialId={initialId}>
+    <BuilderProvider initialId={initialId} initialTab={initialTab}>
       <BuilderShellInner />
     </BuilderProvider>
   );

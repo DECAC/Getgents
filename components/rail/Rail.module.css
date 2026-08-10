@@ -122,7 +122,9 @@
   background: var(--bg);
 }
 .espaceItem.active {
-  background: var(--sage-tint);
+  /* Bleu = identité « Gent'space » (le produit, côté utilisateur) — le corail
+   * reste réservé au studio de création (voir styles/tokens.css). */
+  background: var(--blue-tint);
 }
 
 .ic {
@@ -137,7 +139,7 @@
   border: 1px solid var(--line);
 }
 .icActive {
-  border-color: var(--sage);
+  border-color: var(--blue);
 }
 
 .body {
