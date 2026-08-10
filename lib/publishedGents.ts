@@ -5,6 +5,7 @@ import { formatConversationStartedAt, newConversationId } from "@/lib/conversati
 import { parseDatasetUrl } from "@/lib/opendatasoft";
 import { appAccessHeaders } from "@/lib/appAccess";
 import { IMAGE_PROMPT_INSTRUCTION } from "@/lib/imageSignal";
+import { MAX_CHARS as DOC_MAX_CHARS } from "@/lib/extractDocumentText";
 
 // Persistance des gents publiés : la source de vérité est Supabase (via les
 // routes /api/gents), le localStorage n'est plus qu'un cache local pour un
@@ -221,11 +222,12 @@ export function patchPublishedGentName(id: string, name: string): void {
 
 /**
  * Total de caractères de base de connaissance injectés dans le prompt système.
- * Chaque document est déjà borné par `extractDocumentText` (15 000 caractères
- * pour un PDF/Word, 60 000 pour un CSV), mais plusieurs documents combinés
- * pourraient alourdir excessivement un prompt figé pour toujours.
+ * Aligné sur un dossier d'environ 100 pages (voir `MAX_CHARS` d'extraction) :
+ * un unique document au plafond d'extraction doit tenir intégralement, sans
+ * être écarté « faute de place » à la publication. Au-delà (plusieurs gros
+ * fichiers), les suivants sont listés en référence seule.
  */
-const KNOWLEDGE_BASE_BUDGET = 45_000;
+export const KNOWLEDGE_BASE_BUDGET = DOC_MAX_CHARS;
 
 /**
  * Injecte le CONTENU des sources de connaissance déclarées par le créateur,

@@ -8,14 +8,20 @@ export interface ExtractedDoc {
   truncated: boolean;
 }
 
-/** Limite de caractères injectés dans la conversation (assez pour un CV, un rapport court…). */
-const MAX_CHARS = 15_000;
 /**
- * Les tableurs portent une ligne par enregistrement : la limite des documents
- * narratifs y couperait après quelques centaines de lignes (un export de
- * relations LinkedIn en compte souvent plus d'un millier).
+ * Budget d'extraction pour un document narratif (PDF, Word, texte).
+ * Visée : un dossier d'environ 100 pages (~3 000 caractères/page de prose
+ * dense). Au-delà, le texte est coupé et `truncated` est signalé à l'UI.
+ * Le modèle builder (Kimi K3, ~1M tokens) absorbe largement ce volume.
  */
-const MAX_CHARS_TABULAR = 60_000;
+export const MAX_CHARS = 300_000;
+/**
+ * Les tableurs portent une ligne par enregistrement : la limite narrative
+ * y couperait trop tôt (un export LinkedIn dépasse souvent 1 000 lignes).
+ * Un peu au-dessus du budget narratif pour laisser passer un gros export
+ * sans le raccourcir avant l'analyse.
+ */
+export const MAX_CHARS_TABULAR = 400_000;
 
 export async function extractDocumentText(file: File): Promise<ExtractedDoc> {
   const name = file.name;

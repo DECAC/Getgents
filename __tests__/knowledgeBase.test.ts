@@ -1,4 +1,4 @@
-import { draftToEspace } from "@/lib/publishedGents";
+import { draftToEspace, KNOWLEDGE_BASE_BUDGET } from "@/lib/publishedGents";
 import type { GentDraft } from "@/lib/types/builder";
 
 // Le bug rapporté : un gent « avatar » configuré avec un livre blanc en base
@@ -61,7 +61,7 @@ describe("injection du contenu de la base de connaissance", () => {
   });
 
   it("respecte le budget total et nomme ce qui est écarté", () => {
-    const gros = "x".repeat(40_000);
+    const gros = "x".repeat(KNOWLEDGE_BASE_BUDGET - 1_000);
     const espace = draftToEspace(
       draft([
         { id: "k1", kind: "file", label: "premier.docx", meta: "1 Mo", text: gros },
@@ -70,6 +70,17 @@ describe("injection du contenu de la base de connaissance", () => {
     );
     expect(espace.systemPrompt).toContain("premier.docx");
     expect(espace.systemPrompt).toContain("second.docx (non inclus faute de place)");
+  });
+
+  it("garde intégralement un dossier d'environ 100 pages (plafond d'extraction)", () => {
+    // ~300 000 car. = plafond d'extraction (≈100 pages).
+    const dossier = "x".repeat(KNOWLEDGE_BASE_BUDGET);
+    const espace = draftToEspace(
+      draft([{ id: "k1", kind: "file", label: "dossier-100p.pdf", meta: "4 Mo", text: dossier }])
+    );
+    expect(espace.systemPrompt).toContain(dossier.slice(0, 80));
+    expect(espace.systemPrompt).toContain(dossier.slice(-80));
+    expect(espace.systemPrompt).not.toContain("non inclus faute de place");
   });
 
   it("ne dit plus que le contenu n'est jamais analysé", () => {
