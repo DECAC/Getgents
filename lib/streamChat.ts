@@ -58,6 +58,9 @@ export function humanToolCallLabel(call: string): string {
   if (call.startsWith("prim_next_departures")) return "horaires de passage (PRIM)";
   if (call.startsWith("powens_accounts")) return "comptes bancaires (Powens)";
   if (call.startsWith("powens_transactions")) return "transactions bancaires (Powens)";
+  if (call.startsWith("gmail_search")) return "recherche d'e-mails (Gmail)";
+  if (call.startsWith("gmail_get_message")) return "lecture d'un e-mail (Gmail)";
+  if (call.startsWith("gmail_send")) return "envoi d'un e-mail (Gmail)";
   if (call.startsWith("dataset_")) {
     const action = call.includes("__query") ? "jeu de données (filtres)" : "jeu de données (proximité)";
     return action;
@@ -98,6 +101,8 @@ export async function streamChatCompletion(
     datasets?: { name: string; url: string }[];
     prim?: boolean;
     powens?: boolean;
+    gmail?: boolean;
+    gentId?: string;
     restApis?: RestApiConnector[];
     webSearch?: boolean;
   },

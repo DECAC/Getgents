@@ -72,6 +72,7 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
     !!espace.webSearch ||
     !!espace.prim ||
     !!espace.powens ||
+    !!espace.gmail ||
     !!espace.restApis?.length;
   if (!hasRealSource) {
     blocks.push(

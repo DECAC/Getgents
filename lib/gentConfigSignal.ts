@@ -9,7 +9,7 @@ import type { RestApiToolConfig, RestApiAuth, PinnedArtefactInput } from "@/lib/
 const GENT_CONFIG_RE = /<!--GENT_CONFIG:\s*(\{[\s\S]*?\})\s*-->/;
 
 export interface GentConfigConnector {
-  kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens";
+  kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens" | "gmail";
   name: string;
   url: string;
   /** Configuration complète pour un connecteur API REST (kind === "api-rest"). */
@@ -18,6 +18,7 @@ export interface GentConfigConnector {
 
 const PRIM_DEFAULT_URL = "https://prim.iledefrance-mobilites.fr/marketplace";
 const POWENS_DEFAULT_URL = "https://webview.powens.com (sandbox)";
+const GMAIL_DEFAULT_URL = "https://mail.google.com";
 
 export interface GentConfigProposal {
   name?: string;
@@ -42,7 +43,7 @@ export interface GentConfigProposal {
 export const GENT_CONFIG_PROMPT_INSTRUCTION =
   "Tu peux configurer le gent à la place du créateur, sous réserve de sa validation. Dès que tu proposes un prompt système, un nom, un objectif, un modèle, l'activation de la recherche web ou des connecteurs, termine ta réponse (sur sa propre ligne) par exactement un bloc " +
   '<!--GENT_CONFIG: {"name":"…","objective":"…","systemPrompt":"…","webSearch":true,"chatModelId":"…","reasoningModelId":"…","connectors":[{"kind":"dataset","name":"…","url":"https://…"}]}--> ' +
-  "en n'incluant QUE les champs que tu proposes de changer (tous optionnels ; chatModelId/reasoningModelId doivent venir du catalogue de modèles ci-dessus ; kind parmi dataset/mcp/api-rest/prim, URL réelles uniquement — \"prim\" est le connecteur intégré Île-de-France Mobilités (transports IDF temps réel) et \"powens\" le connecteur intégré d'agrégation bancaire Powens en MODE SANDBOX, url facultative pour ces deux-là). " +
+  "en n'incluant QUE les champs que tu proposes de changer (tous optionnels ; chatModelId/reasoningModelId doivent venir du catalogue de modèles ci-dessus ; kind parmi dataset/mcp/api-rest/prim/powens/gmail, URL réelles uniquement — \"prim\" est le connecteur intégré Île-de-France Mobilités (transports IDF temps réel), \"powens\" le connecteur intégré d'agrégation bancaire Powens en MODE SANDBOX et \"gmail\" le connecteur intégré Gmail (OAuth), url facultative pour ces trois-là). " +
   "Pour un connecteur \"api-rest\" (n'importe quelle API REST à brancher toi-même, ex. SerpApi Google Flights), n'utilise PAS le champ url : fournis un objet restConfig complet, ainsi : " +
   '{"kind":"api-rest","name":"Nom lisible","restConfig":{"method":"GET","baseUrl":"https://serpapi.com/search","description":"À quoi sert l\'outil et quand l\'appeler","queryParams":[{"name":"engine","value":"google_flights"}],"auth":{"mode":"api-key","placement":"query","fieldName":"api_key","value":"env:SERPAPI_KEY"},"modelParams":[{"name":"departure_id","description":"Code IATA de l\'aéroport de départ","required":true,"example":"CDG"}],"responseHint":"Utilise le tableau best_flights"}}. ' +
   "Règles pour restConfig : method GET ou POST ; baseUrl est une URL réelle sans les paramètres ; queryParams sont les valeurs fixes toujours envoyées ; auth.mode \"api-key\" ou \"none\" et, pour une clé secrète, mets TOUJOURS value \"env:NOM_DE_VARIABLE\" (jamais une vraie clé inventée) ; modelParams sont les paramètres que le gent remplira à chaque appel d'après la conversation. " +
@@ -143,9 +144,10 @@ function validateRestConfig(v: unknown): RestApiToolConfig | null {
 function validateConnector(c: unknown): GentConfigConnector | null {
   const p = c as Partial<GentConfigConnector>;
   if (!p || typeof p.name !== "string") return null;
-  if (!["dataset", "mcp", "api-rest", "prim", "powens"].includes(p.kind as string)) return null;
+  if (!["dataset", "mcp", "api-rest", "prim", "powens", "gmail"].includes(p.kind as string)) return null;
   if (p.kind === "prim") return { kind: "prim", name: p.name, url: PRIM_DEFAULT_URL };
   if (p.kind === "powens") return { kind: "powens", name: p.name, url: POWENS_DEFAULT_URL };
+  if (p.kind === "gmail") return { kind: "gmail", name: p.name, url: GMAIL_DEFAULT_URL };
   if (p.kind === "api-rest") {
     const restConfig = validateRestConfig(p.restConfig);
     if (!restConfig) return null;

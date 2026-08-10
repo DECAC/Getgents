@@ -8,6 +8,7 @@ import {
 } from "@/lib/server/opendatasoft";
 import { stopsNearby, nextDepartures } from "@/lib/server/prim";
 import { accounts as powensAccounts, transactions as powensTransactions } from "@/lib/server/powens";
+import { getMessage as gmailGetMessage, searchMessages as gmailSearch, sendMessage as gmailSend } from "@/lib/server/gmail";
 import { callRestApi } from "@/lib/server/restApi";
 import { parseDatasetUrl, type DatasetRef } from "@/lib/opendatasoft";
 import type { RestApiConnector } from "@/lib/types";
@@ -36,6 +37,9 @@ interface ChatBody {
   datasets?: { name: string; url: string }[];
   prim?: boolean;
   powens?: boolean;
+  gmail?: boolean;
+  /** Identifiant du gent — requis pour Gmail (jetons OAuth par gent). */
+  gentId?: string;
   restApis?: RestApiConnector[];
   webSearch?: boolean;
 }
@@ -106,10 +110,25 @@ export async function POST(req: NextRequest) {
   );
 
   if (
-    (mcpServers.length > 0 || datasets.length > 0 || body.prim || body.powens || restApis.length > 0) &&
+    (mcpServers.length > 0 ||
+      datasets.length > 0 ||
+      body.prim ||
+      body.powens ||
+      body.gmail ||
+      restApis.length > 0) &&
     body.stream
   ) {
-    return toolLoopResponse(body, mcpServers, datasets, !!body.prim, !!body.powens, restApis, key);
+    return toolLoopResponse(
+      body,
+      mcpServers,
+      datasets,
+      !!body.prim,
+      !!body.powens,
+      !!body.gmail,
+      body.gentId,
+      restApis,
+      key
+    );
   }
 
   const upstream = await fetch(OPENROUTER_API, {
@@ -190,6 +209,8 @@ function toolLoopResponse(
   datasets: (DatasetRef & { label: string })[],
   prim: boolean,
   powens: boolean,
+  gmail: boolean,
+  gentId: string | undefined,
   restApis: RestApiConnector[],
   key: string
 ) {
@@ -216,7 +237,7 @@ function toolLoopResponse(
         const registry = new Map<string, ServerTool>();
         const openaiTools: unknown[] = [];
 
-        if (servers.length || datasets.length || prim || powens || restApis.length) {
+        if (servers.length || datasets.length || prim || powens || gmail || restApis.length) {
           sendStatus("connecting");
         }
 
@@ -450,7 +471,105 @@ function toolLoopResponse(
           sendToolEvent({ status: "connected", server: "Powens (sandbox)", toolCount: 2 });
         }
 
-        // Connecteurs API REST personnalisés : chaque connecteur devient un
+        if (gmail) {
+          const gid = gentId?.trim() ?? "";
+          registry.set("gmail_search", {
+            exec: async (args) => {
+              if (!gid) {
+                return {
+                  text: JSON.stringify({ error: "Identifiant du gent manquant pour Gmail." }),
+                  ok: false,
+                };
+              }
+              const text = await gmailSearch(
+                gid,
+                typeof args.query === "string" ? args.query : undefined,
+                typeof args.maxResults === "number" ? args.maxResults : undefined
+              );
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          registry.set("gmail_get_message", {
+            exec: async (args) => {
+              if (!gid) {
+                return {
+                  text: JSON.stringify({ error: "Identifiant du gent manquant pour Gmail." }),
+                  ok: false,
+                };
+              }
+              const text = await gmailGetMessage(gid, typeof args.messageId === "string" ? args.messageId : "");
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          registry.set("gmail_send", {
+            exec: async (args) => {
+              if (!gid) {
+                return {
+                  text: JSON.stringify({ error: "Identifiant du gent manquant pour Gmail." }),
+                  ok: false,
+                };
+              }
+              const text = await gmailSend(
+                gid,
+                typeof args.to === "string" ? args.to : "",
+                typeof args.subject === "string" ? args.subject : "",
+                typeof args.body === "string" ? args.body : ""
+              );
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          openaiTools.push(
+            {
+              type: "function",
+              function: {
+                name: "gmail_search",
+                description:
+                  "Gmail : recherche de messages dans la boîte mail connectée (syntaxe de recherche Gmail : from:, subject:, is:unread, newer_than:7d…).",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    query: { type: "string", description: "Requête de recherche Gmail (optionnel)" },
+                    maxResults: { type: "number", description: "Nombre max de résultats (défaut 10, max 25)" },
+                  },
+                },
+              },
+            },
+            {
+              type: "function",
+              function: {
+                name: "gmail_get_message",
+                description: "Gmail : lit le contenu d'un message (en-têtes + corps texte) à partir de son identifiant.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    messageId: { type: "string", description: "Identifiant du message Gmail" },
+                  },
+                  required: ["messageId"],
+                },
+              },
+            },
+            {
+              type: "function",
+              function: {
+                name: "gmail_send",
+                description:
+                  "Gmail : envoie un e-mail depuis le compte connecté. Demande toujours confirmation explicite de l'utilisateur avant d'envoyer.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    to: { type: "string", description: "Adresse du destinataire" },
+                    subject: { type: "string", description: "Objet du message" },
+                    body: { type: "string", description: "Corps du message (texte brut)" },
+                  },
+                  required: ["to", "subject", "body"],
+                },
+              },
+            }
+          );
+          sendToolEvent({ status: "connected", server: "Gmail", toolCount: 3 });
+        }
+
+        // Connecteurs API REST personnalisés
         // outil dont le schéma est déduit des paramètres déclarés par le
         // créateur ; l'appel HTTP réel est exécuté côté serveur.
         const usedRestNames = new Set<string>();

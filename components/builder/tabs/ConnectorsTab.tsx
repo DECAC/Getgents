@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { McpConfigModal } from "../McpConfigModal";
@@ -10,8 +10,8 @@ import { parseDatasetUrl } from "@/lib/opendatasoft";
 import type { ConnectorToolKind, GentToolInstance } from "@/lib/types/builder";
 import styles from "./ConnectorsTab.module.css";
 
-/** Types réellement appelés en production (MCP, dataset open data, API REST, PRIM, Powens sandbox). */
-const REAL_KINDS: ConnectorToolKind[] = ["mcp", "dataset", "api-rest", "prim", "powens"];
+/** Types réellement appelés en production (MCP, dataset open data, API REST, PRIM, Powens sandbox, Gmail). */
+const REAL_KINDS: ConnectorToolKind[] = ["mcp", "dataset", "api-rest", "prim", "powens", "gmail"];
 
 function isRealConnector(instance: GentToolInstance): boolean {
   if (instance.toolKind === "mcp") {
@@ -25,6 +25,7 @@ function isRealConnector(instance: GentToolInstance): boolean {
   }
   if (instance.toolKind === "prim") return true;
   if (instance.toolKind === "powens") return true;
+  if (instance.toolKind === "gmail") return true;
   return false;
 }
 
@@ -38,17 +39,41 @@ function metaLine(instance: GentToolInstance): string | null {
   }
   if (instance.toolKind === "prim") return "PRIM (temps réel) — transports IDF";
   if (instance.toolKind === "powens") return "Powens SANDBOX — secrets côté serveur (POWENS_*)";
+  if (instance.toolKind === "gmail") return "Gmail — OAuth Google (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)";
   if (instance.detail) return instance.detail;
   return null;
 }
 
 export function ConnectorsTab() {
-  const { currentDraft, addToolInstance, updateToolInstance, removeToolInstance } = useBuilder();
+  const { currentId, currentDraft, addToolInstance, updateToolInstance, removeToolInstance } = useBuilder();
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [mcpModalOpen, setMcpModalOpen] = useState(false);
   const [datasetModalOpen, setDatasetModalOpen] = useState(false);
   const [restModalOpen, setRestModalOpen] = useState(false);
   const [editRestId, setEditRestId] = useState<string | null>(null);
+  const [gmailStatus, setGmailStatus] = useState<{ connected: boolean; email?: string } | null>(null);
+  const [gmailBusy, setGmailBusy] = useState(false);
+
+  const hasGmail = currentDraft.connectors.some((c) => c.toolKind === "gmail");
+
+  useEffect(() => {
+    if (!hasGmail) {
+      setGmailStatus(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/gmail/status?gentId=${encodeURIComponent(currentId)}`)
+      .then((r) => (r.ok ? r.json() : { connected: false }))
+      .then((data: { connected?: boolean; email?: string }) => {
+        if (!cancelled) setGmailStatus({ connected: !!data.connected, email: data.email });
+      })
+      .catch(() => {
+        if (!cancelled) setGmailStatus({ connected: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentId, hasGmail]);
 
   const typeByKind = Object.fromEntries(CONNECTOR_TOOL_TYPES.map((t) => [t.kind, t]));
   const activated = currentDraft.connectors.filter(isRealConnector);
@@ -56,6 +81,20 @@ export function ConnectorsTab() {
   const activableTypes = CONNECTOR_TOOL_TYPES.filter(
     (t) => REAL_KINDS.includes(t.kind) && !activatedKinds.has(t.kind)
   );
+
+  async function disconnectGmail() {
+    setGmailBusy(true);
+    try {
+      await fetch("/api/gmail/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gentId: currentId }),
+      });
+      setGmailStatus({ connected: false });
+    } finally {
+      setGmailBusy(false);
+    }
+  }
 
   function handleAddClick(kind: ConnectorToolKind) {
     setShowAddMenu(false);
@@ -81,6 +120,12 @@ export function ConnectorsTab() {
       addToolInstance("powens", {
         name: "Powens — comptes & transactions (sandbox)",
         detail: "https://webview.powens.com (sandbox)",
+      });
+    }
+    if (kind === "gmail") {
+      addToolInstance("gmail", {
+        name: "Gmail — boîte mail",
+        detail: "https://mail.google.com",
       });
     }
   }
@@ -112,6 +157,32 @@ export function ConnectorsTab() {
                       <a className={styles.rowAction} href="/api/powens/connect" target="_blank" rel="noopener noreferrer">
                         🔗 Lier un compte bancaire sandbox (webview de consentement)
                       </a>
+                    )}
+                    {instance.toolKind === "gmail" && (
+                      <>
+                        {gmailStatus?.connected ? (
+                          <div className={styles.metaLine}>
+                            Compte Google : {gmailStatus.email ?? "connecté"}
+                          </div>
+                        ) : (
+                          <a
+                            className={styles.rowAction}
+                            href={`/api/gmail/connect?gentId=${encodeURIComponent(currentId)}`}
+                          >
+                            🔗 Connecter un compte Google (OAuth)
+                          </a>
+                        )}
+                        {gmailStatus?.connected && (
+                          <button
+                            type="button"
+                            className={styles.rowAction}
+                            disabled={gmailBusy}
+                            onClick={() => void disconnectGmail()}
+                          >
+                            Déconnecter Gmail
+                          </button>
+                        )}
+                      </>
                     )}
                     {instance.toolKind === "api-rest" && instance.restConfig && (
                       <button

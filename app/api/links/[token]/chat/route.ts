@@ -96,6 +96,8 @@ export async function POST(req: Request, { params }: Params) {
       datasets: espace.datasets,
       prim: espace.prim,
       powens: espace.powens,
+      gmail: espace.gmail,
+      gentId: link.gentId,
       restApis: espace.restApis,
       webSearch: espace.webSearch,
     }),

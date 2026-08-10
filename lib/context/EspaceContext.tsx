@@ -484,6 +484,7 @@ export function EspaceProvider({
     const datasets = espace.datasets;
     const prim = espace.prim;
     const powens = espace.powens;
+    const gmail = espace.gmail;
     const restApis = espace.restApis;
     const webSearch = espace.webSearch;
     const thread = espace.conversations.find((t) => t.id === threadId);
@@ -569,6 +570,8 @@ export function EspaceProvider({
         datasets,
         prim,
         powens,
+        gmail,
+        gentId: id,
         restApis,
         webSearch,
       },
@@ -588,7 +591,9 @@ export function EspaceProvider({
             ? "PRIM"
             : call.startsWith("powens_")
               ? "Powens"
-              : call.startsWith("dataset_")
+              : call.startsWith("gmail_")
+                ? "Gmail"
+                : call.startsWith("dataset_")
                 ? "Dataset"
                 : call.startsWith("rest_")
                   ? "API REST"

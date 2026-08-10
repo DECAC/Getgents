@@ -221,7 +221,7 @@ export interface ConversationMessage {
     chatModelId?: string;
     reasoningModelId?: string;
     connectors?: {
-      kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens";
+      kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens" | "gmail";
       name: string;
       url: string;
       restConfig?: RestApiToolConfig;
@@ -370,6 +370,8 @@ export interface Espace {
   prim?: boolean;
   /** Connecteur Powens actif (agrégation bancaire sandbox, secrets côté serveur). */
   powens?: boolean;
+  /** Connecteur Gmail actif (OAuth par gent, jetons en base). */
+  gmail?: boolean;
   /** Connecteurs API REST personnalisés configurés à la main dans le builder. */
   restApis?: RestApiConnector[];
   /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */

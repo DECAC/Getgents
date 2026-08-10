@@ -38,6 +38,7 @@ export type ConnectorToolKind =
   | "dataset"
   | "prim"
   | "powens"
+  | "gmail"
   | "ordinateur";
 
 export interface ConnectorToolType {

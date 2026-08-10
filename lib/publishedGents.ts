@@ -410,6 +410,16 @@ export function draftToEspace(draft: GentDraft): Espace {
     );
   }
 
+  const gmail = draft.connectors.some((c) => c.toolKind === "gmail");
+  if (gmail) {
+    platformBlocks.push(
+      "Tu disposes des outils Gmail du compte Google connecté par le créateur : gmail_search(query?, maxResults?) pour rechercher des messages, gmail_get_message(messageId) pour lire un message, gmail_send(to, subject, body) pour envoyer un e-mail. " +
+      "Ne cite que les e-mails réellement renvoyés par ces outils — n'invente jamais un message. Respecte la confidentialité : ne répète pas inutilement des adresses ou contenus sensibles. " +
+      "Avant d'envoyer un e-mail avec gmail_send, demande TOUJOURS une confirmation explicite de l'utilisateur. " +
+      "Si Gmail n'est pas connecté ou renvoie une erreur, indique que le créateur doit cliquer sur « Connecter un compte Google » dans l'onglet Connecteurs du studio."
+    );
+  }
+
   // Le prompt du créateur FERME le message : c'est sa consigne qui gouverne.
   const systemPrompt = [...platformBlocks.map((b) => b.trim()).filter(Boolean), draft.systemPrompt.trim()]
     .filter(Boolean)
@@ -440,6 +450,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     datasets: datasets.length ? datasets : undefined,
     prim: prim || undefined,
     powens: powens || undefined,
+    gmail: gmail || undefined,
     restApis: restApis.length ? restApis : undefined,
     jumpForm: draft.jumpForm,
     routine: draft.routine,

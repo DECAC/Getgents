@@ -192,6 +192,13 @@ export const CONNECTOR_TOOL_TYPES: ConnectorToolType[] = [
       "Comptes et transactions bancaires via l'API Powens en MODE SANDBOX (données de test uniquement). Identifiants côté serveur (POWENS_DOMAIN, POWENS_CLIENT_ID, POWENS_CLIENT_SECRET) ; la banque sandbox se lie via la webview de consentement.",
   },
   {
+    kind: "gmail",
+    name: "Gmail — boîte mail",
+    icon: "📧",
+    description:
+      "Lecture et envoi d'e-mails via le compte Google du créateur. Connexion OAuth par gent (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET côté serveur) ; les jetons sont stockés de façon sécurisée en base.",
+  },
+  {
     kind: "ordinateur",
     name: "Utilisation de l'ordinateur",
     icon: "🖥️",
