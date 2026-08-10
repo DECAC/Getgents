@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveImageModelId } from "@/lib/imageModels";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -11,10 +12,8 @@ interface ImageBody {
 }
 
 /**
- * Génère une image via un modèle multimodal OpenRouter (ex. google/nanobanana)
- * distinct du modèle conversationnel du gent. Le modèle de chat ne peut pas
- * produire d'image lui-même : cette route est appelée côté client quand le
- * gent émet un signal <!--IMAGE: {...}--> (voir lib/imageSignal.ts).
+ * Génère une image via un modèle multimodal OpenRouter
+ * (ex. google/gemini-2.5-flash-image = Nanobanana).
  */
 export async function POST(req: NextRequest) {
   const key = process.env.OPENROUTER_API_KEY;
@@ -30,10 +29,11 @@ export async function POST(req: NextRequest) {
   }
 
   const prompt = body.prompt?.trim();
-  const modelId = body.modelId?.trim();
-  if (!prompt || !modelId) {
-    return NextResponse.json({ error: "missing_prompt_or_model" }, { status: 400 });
+  if (!prompt) {
+    return NextResponse.json({ error: "missing_prompt" }, { status: 400 });
   }
+  // Résout les anciens slugs (google/nanobanana → gemini-2.5-flash-image).
+  const modelId = resolveImageModelId(body.modelId);
 
   const upstream = await fetch(OPENROUTER_API, {
     method: "POST",
@@ -53,18 +53,28 @@ export async function POST(req: NextRequest) {
   if (!upstream.ok) {
     const data = await upstream.json().catch(() => ({}));
     const errText =
-      typeof data?.error === "string" ? data.error : typeof data?.error?.message === "string" ? data.error.message : "Erreur du modèle image.";
-    return NextResponse.json({ error: errText }, { status: upstream.status });
+      typeof data?.error === "string"
+        ? data.error
+        : typeof data?.error?.message === "string"
+          ? data.error.message
+          : `Erreur du modèle image (${upstream.status}).`;
+    return NextResponse.json(
+      { error: `${errText} [modèle : ${modelId}]` },
+      { status: upstream.status }
+    );
   }
 
   const data = await upstream.json();
   const msg = data?.choices?.[0]?.message ?? {};
   const imageUrl = extractImageUrl(msg);
   if (!imageUrl) {
-    return NextResponse.json({ error: "Le modèle n'a renvoyé aucune image." }, { status: 502 });
+    return NextResponse.json(
+      { error: `Le modèle n'a renvoyé aucune image. [modèle : ${modelId}]` },
+      { status: 502 }
+    );
   }
 
-  return NextResponse.json({ imageUrl });
+  return NextResponse.json({ imageUrl, modelId });
 }
 
 function extractImageUrl(msg: Record<string, unknown>): string | null {
@@ -79,6 +89,11 @@ function extractImageUrl(msg: Record<string, unknown>): string | null {
     for (const part of content as { type?: string; image_url?: { url?: string } }[]) {
       if (part?.type === "image_url" && part.image_url?.url) return part.image_url.url;
     }
+  }
+  // Certains fournisseurs renvoient un markdown ![…](data:image/…)
+  if (typeof content === "string") {
+    const m = content.match(/!\[[^\]]*\]\((data:image\/[^)]+|https:[^)]+)\)/);
+    if (m?.[1]) return m[1];
   }
   return null;
 }

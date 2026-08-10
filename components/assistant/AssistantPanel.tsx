@@ -24,6 +24,8 @@ const PROPOSAL_KIND_LABEL: Record<string, string> = {
   visual: "Aperçu visuel",
   map: "Carte",
   dashboard: "Tableau de bord",
+  "profile-summary": "Résumé de profil",
+  image: "Image",
 };
 
 /** Titre lisible d'un module (même convention d'id que ModuleCanvas.tsx : tab-<id>, map, artef-<id>). */
@@ -357,6 +359,18 @@ export function AssistantPanel() {
               Tableau de bord de {p.dashboard.blocks.length} élément{p.dashboard.blocks.length > 1 ? "s" : ""} (indicateurs, graphiques, tableaux) — s&apos;affiche en plein espace.
             </div>
           )}
+          {p.profileSummary && (
+            <div className={styles.proposalBody}>
+              <b>{p.profileSummary.name}</b>
+              {p.profileSummary.headline ? ` — ${p.profileSummary.headline}` : ""}
+              {p.profileSummary.summary
+                ? ` · ${p.profileSummary.summary.slice(0, 140)}${p.profileSummary.summary.length > 140 ? "…" : ""}`
+                : ""}
+              {p.profileSummary.media?.length
+                ? ` · ${p.profileSummary.media.length} illustration${p.profileSummary.media.length > 1 ? "s" : ""} (web / à générer)`
+                : ""}
+            </div>
+          )}
           {p.chartData && <MiniBarChart data={p.chartData} />}
           {p.mapPoints && (
             <ul className={styles.proposalItems}>
@@ -370,7 +384,7 @@ export function AssistantPanel() {
               {p.items.length > 6 && <li>… et {p.items.length - 6} de plus</li>}
             </ul>
           )}
-          {p.body && !p.items && !p.chartData && (
+          {p.body && !p.items && !p.chartData && !p.profileSummary && (
             <div className={styles.proposalBody}>{p.body.slice(0, 200)}{p.body.length > 200 ? "…" : ""}</div>
           )}
           <div className={styles.proposalActions}>
@@ -379,7 +393,7 @@ export function AssistantPanel() {
               className={styles.proposalAddBtn}
               onClick={() => confirmArtefactProposal(m.id ?? "", "add")}
             >
-              Ajouter à mon espace
+              {p.kind === "profile-summary" ? "Ajouter ce résumé" : "Ajouter à mon espace"}
             </button>
             <button
               type="button"
@@ -478,8 +492,32 @@ export function AssistantPanel() {
       }
       if (m.imageProposalStatus === "error") {
         return (
-          <div key={i} className={styles.proposalDismissed}>
-            Impossible de produire l&apos;illustration — « {prop.title} »
+          <div key={i} className={styles.proposalCard}>
+            <div className={styles.proposalHead}>
+              <span className={styles.proposalKind}>🖼️ Image</span>
+              <span className={styles.proposalTitle}>Échec — « {prop.title} »</span>
+            </div>
+            <div className={styles.proposalBody}>
+              {m.text?.trim()
+                ? m.text
+                : "Impossible de produire l'illustration. Réessayez ; si ça persiste, vérifiez le modèle image du gent (Nanobanana)."}
+            </div>
+            <div className={styles.proposalActions}>
+              <button
+                type="button"
+                className={styles.proposalAddBtn}
+                onClick={() => confirmImageProposal(m.id ?? "", "generate")}
+              >
+                Réessayer
+              </button>
+              <button
+                type="button"
+                className={styles.proposalDismissBtn}
+                onClick={() => confirmImageProposal(m.id ?? "", "dismiss")}
+              >
+                Abandonner
+              </button>
+            </div>
           </div>
         );
       }

@@ -8,6 +8,7 @@ import { ChecklistView } from "./ChecklistView";
 import { MapArtefact } from "./MapArtefact";
 import { DashboardArtefact } from "./dashboard/DashboardArtefact";
 import { ImageArtefact } from "./ImageArtefact";
+import { ProfileSummaryArtefact } from "./ProfileSummaryArtefact";
 import styles from "./Modal.module.css";
 
 function VisualGrid() {
@@ -43,7 +44,15 @@ function VisualGrid() {
 }
 
 export function ArtefactModal() {
-  const { currentEspace, modalArtefactId, closeModal, toggleChecklistItem, userPosition, removeArtefact } = useEspace();
+  const {
+    currentEspace,
+    modalArtefactId,
+    closeModal,
+    toggleChecklistItem,
+    userPosition,
+    removeArtefact,
+    generateProfileSummaryMedia,
+  } = useEspace();
 
   const artefact = modalArtefactId
     ? currentEspace.artefacts.find((a) => a.id === modalArtefactId) ?? null
@@ -90,6 +99,14 @@ export function ArtefactModal() {
 
         <div className={styles.body}>
           {artefact.dashboard && <DashboardArtefact spec={artefact.dashboard} />}
+          {artefact.profileSummary && (
+            <ProfileSummaryArtefact
+              summary={artefact.profileSummary}
+              artefactId={artefact.id}
+              canGenerate
+              onGenerateMedia={(mediaId) => generateProfileSummaryMedia(artefact.id, mediaId)}
+            />
+          )}
           {artefact.imageUrl && (
             <ImageArtefact
               src={artefact.imageUrl}
@@ -98,7 +115,7 @@ export function ArtefactModal() {
               source={artefact.imageSource}
             />
           )}
-          {artefact.visual && !artefact.imageUrl && (
+          {artefact.visual && !artefact.imageUrl && !artefact.profileSummary && (
             <div className={styles.visualWrap}>
               <VisualGrid />
             </div>
@@ -111,7 +128,9 @@ export function ArtefactModal() {
               onToggle={(i) => toggleChecklistItem(artefact.id, i)}
             />
           )}
-          {artefact.body && !artefact.imageUrl && <SafeHTMLDoc html={artefact.body} />}
+          {artefact.body && !artefact.imageUrl && !artefact.profileSummary && (
+            <SafeHTMLDoc html={artefact.body} />
+          )}
         </div>
 
         <div className={styles.foot}>

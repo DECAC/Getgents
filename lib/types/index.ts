@@ -131,7 +131,7 @@ export interface MapPoint {
 }
 
 export interface ArtefactProposal {
-  kind: "report" | "checklist" | "chart" | "visual" | "map" | "dashboard" | "image";
+  kind: "report" | "checklist" | "chart" | "visual" | "map" | "dashboard" | "image" | "profile-summary";
   title: string;
   body?: string;
   items?: string[];
@@ -139,6 +139,8 @@ export interface ArtefactProposal {
   mapPoints?: MapPoint[];
   /** Schéma de tableau de bord (rendu Recharts + cartes en plein espace). */
   dashboard?: import("@/lib/dashboardArtefact").DashboardSpec;
+  /** CV synthétique d'une personne (parcours, skills, médias). */
+  profileSummary?: import("@/lib/profileSummaryArtefact").ProfileSummary;
   /** Illustration (générée ou photo web) — renseignée après autorisation. */
   imageUrl?: string;
   imageCaption?: string;
@@ -265,6 +267,10 @@ export interface Artefact {
   imageUrl?: string;
   imageCaption?: string;
   imageSource?: "generated" | "web";
+  /** Résumé de profil (CV synthétique) — médias inclus. */
+  profileSummary?: import("@/lib/profileSummaryArtefact").ProfileSummary & {
+    media?: import("@/lib/profileSummaryArtefact").ProfileSummaryMedia[];
+  };
 }
 
 export interface EspaceMetric {
@@ -349,7 +355,7 @@ export interface Espace {
   themeTabs?: ThemeTab[];
   systemPrompt?: string;
   chatModelId?: string;
-  /** Modèle de génération d'image assigné (capability "image"), ex. google/nanobanana. */
+  /** Modèle de génération d'image assigné (capability "image"), ex. google/gemini-2.5-flash-image. */
   imageModelId?: string;
   /**
    * « Déclencheurs » : questions d'amorce affichées dans l'espace de travail

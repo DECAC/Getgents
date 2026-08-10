@@ -8,8 +8,20 @@ const ARTEFACT_RE = /<!--ARTEFACT:\s*(\{[\s\S]*?\})\s*-->/;
 const TRUNCATED_MARKER_RE = /<!--ARTEFACT:[\s\S]*$/;
 
 import { parseDashboard, DASHBOARD_PROMPT_INSTRUCTION, type DashboardSpec } from "@/lib/dashboardArtefact";
+import {
+  parseProfileSummary,
+  PROFILE_SUMMARY_PROMPT_INSTRUCTION,
+  type ProfileSummary,
+} from "@/lib/profileSummaryArtefact";
 
-export type ArtefactKind = "report" | "checklist" | "chart" | "visual" | "map" | "dashboard";
+export type ArtefactKind =
+  | "report"
+  | "checklist"
+  | "chart"
+  | "visual"
+  | "map"
+  | "dashboard"
+  | "profile-summary";
 
 export interface ArtefactSignal {
   kind: ArtefactKind;
@@ -19,7 +31,18 @@ export interface ArtefactSignal {
   chartData?: { label: string; value: number }[];
   mapPoints?: { label: string; lat: number; lon: number }[];
   dashboard?: DashboardSpec;
+  profileSummary?: ProfileSummary;
 }
+
+const KIND_LIST: ArtefactKind[] = [
+  "report",
+  "checklist",
+  "chart",
+  "visual",
+  "map",
+  "dashboard",
+  "profile-summary",
+];
 
 export const ARTEFACT_PROMPT_INSTRUCTION =
   "Propose systématiquement un artefact sauvegardable dès que ta réponse contient du contenu structuré exploitable — ne te limite pas aux seuls cas « parfaits ». " +
@@ -33,9 +56,12 @@ export const ARTEFACT_PROMPT_INSTRUCTION =
   '<!--ARTEFACT: {"kind":"map","title":"Titre court","points":[{"label":"Lyon","lat":45.7578,"lon":4.832},{"label":"Annecy","lat":45.8992,"lon":6.1294}]}--> ' +
   "dès que la réponse mentionne des lieux, un itinéraire, des adresses ou des zones géographiques — fournis des coordonnées WGS84 (lat/lon) précises pour chaque point, la carte est rendue sur fond IGN (cartes.gouv.fr). " +
   "Choisis le kind le plus utile : si plusieurs formats conviennent, privilégie checklist pour l'actionnable et report pour les textes longs — SAUF si la réponse contient un scoring, des indicateurs clés (KPI) ou plusieurs angles chiffrés à comparer, auquel cas privilégie TOUJOURS dashboard (voir instruction dédiée ci-dessous) plutôt qu'un report : un lecteur doit saisir les chiffres clés et leur comparaison en un coup d'œil, pas en lisant un paragraphe. " +
+  "Dès que tu résumes le parcours d'une PERSONNE en particulier, privilégie profile-summary (voir instruction dédiée) plutôt qu'un report générique. " +
   "Invite brièvement l'utilisateur à l'ajouter à son espace (bouton dans le chat) — ne dis jamais qu'il est déjà ajouté. " +
-  "Vise à proposer un artefact dans la majorité des réponses substantielles (guides, listes, modèles, budgets). N'en ajoute jamais plus d'un par réponse.\n\n" +
-  DASHBOARD_PROMPT_INSTRUCTION;
+  "Vise à proposer un artefact dans la majorité des réponses substantielles (guides, listes, modèles, budgets, profils). N'en ajoute jamais plus d'un par réponse.\n\n" +
+  DASHBOARD_PROMPT_INSTRUCTION +
+  "\n\n" +
+  PROFILE_SUMMARY_PROMPT_INSTRUCTION;
 
 export function extractArtefactSignal(raw: string): { text: string; artefact: ArtefactSignal | null } {
   const match = raw.match(ARTEFACT_RE);
@@ -48,35 +74,41 @@ export function extractArtefactSignal(raw: string): { text: string; artefact: Ar
   let artefact: ArtefactSignal | null = null;
   try {
     const parsed = JSON.parse(match[1]);
-    if (
-      parsed &&
-      typeof parsed.title === "string" &&
-      ["report", "checklist", "chart", "visual", "map", "dashboard"].includes(parsed.kind)
-    ) {
-      artefact = {
-        kind: parsed.kind,
-        title: parsed.title,
-        body: typeof parsed.body === "string" ? parsed.body : undefined,
-        dashboard: parsed.kind === "dashboard" ? parseDashboard(parsed.dashboard) ?? undefined : undefined,
-        items: Array.isArray(parsed.items)
-          ? parsed.items.filter((s: unknown): s is string => typeof s === "string").slice(0, 30)
-          : undefined,
-        chartData: Array.isArray(parsed.chartData)
-          ? parsed.chartData
-              .filter((d: unknown): d is { label: string; value: number } =>
-                !!d && typeof (d as { label?: unknown }).label === "string" && typeof (d as { value?: unknown }).value === "number"
-              )
-              .slice(0, 12)
-          : undefined,
-        mapPoints: Array.isArray(parsed.points)
-          ? parsed.points
-              .filter((pt: unknown): pt is { label: string; lat: number; lon: number } => {
-                const o = pt as { label?: unknown; lat?: unknown; lon?: unknown };
-                return !!o && typeof o.label === "string" && typeof o.lat === "number" && typeof o.lon === "number";
-              })
-              .slice(0, 25)
-          : undefined,
-      };
+    if (parsed && typeof parsed.title === "string" && KIND_LIST.includes(parsed.kind)) {
+      const profileSummary =
+        parsed.kind === "profile-summary" ? parseProfileSummary(parsed.profileSummary) ?? undefined : undefined;
+      // Un profile-summary sans nom valide est ignoré (évite une carte vide).
+      if (parsed.kind === "profile-summary" && !profileSummary) {
+        artefact = null;
+      } else {
+        artefact = {
+          kind: parsed.kind,
+          title: parsed.title,
+          body: typeof parsed.body === "string" ? parsed.body : undefined,
+          dashboard: parsed.kind === "dashboard" ? parseDashboard(parsed.dashboard) ?? undefined : undefined,
+          profileSummary,
+          items: Array.isArray(parsed.items)
+            ? parsed.items.filter((s: unknown): s is string => typeof s === "string").slice(0, 30)
+            : undefined,
+          chartData: Array.isArray(parsed.chartData)
+            ? parsed.chartData
+                .filter((d: unknown): d is { label: string; value: number } =>
+                  !!d &&
+                  typeof (d as { label?: unknown }).label === "string" &&
+                  typeof (d as { value?: unknown }).value === "number"
+                )
+                .slice(0, 12)
+            : undefined,
+          mapPoints: Array.isArray(parsed.points)
+            ? parsed.points
+                .filter((pt: unknown): pt is { label: string; lat: number; lon: number } => {
+                  const o = pt as { label?: unknown; lat?: unknown; lon?: unknown };
+                  return !!o && typeof o.label === "string" && typeof o.lat === "number" && typeof o.lon === "number";
+                })
+                .slice(0, 25)
+            : undefined,
+        };
+      }
     }
   } catch {
     // ignore malformed block

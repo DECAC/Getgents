@@ -8,6 +8,7 @@ export { isRoutineDue } from "@/lib/routineSchedule";
 import { extractArtefactSignal } from "@/lib/artefactSignal";
 import { ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
 import { profileContextNote } from "@/lib/profileSignal";
+import { materializeProfileMedia } from "@/lib/profileSummaryArtefact";
 import { renderMarkdown } from "@/lib/markdown";
 import { sendWhatsAppText, sendWhatsAppTemplate } from "@/lib/server/whatsapp";
 import { sendBrevoEmail } from "@/lib/server/brevo";
@@ -21,6 +22,7 @@ const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
   visual: { type: "Aperçu visuel", icon: "🖼️" },
   map: { type: "Carte", icon: "🗺️" },
   dashboard: { type: "Tableau de bord", icon: "📈" },
+  "profile-summary": { type: "Résumé de profil", icon: "👤" },
 };
 
 function nowTimeParis(): string {
@@ -167,6 +169,9 @@ export async function runRoutine(espace: Espace, routine: Routine, gentId = ""):
       checklistItems: sig.items?.map((label) => ({ label, checked: false })),
       mapPoints: sig.mapPoints,
       dashboard: sig.dashboard,
+      profileSummary: sig.profileSummary
+        ? { ...sig.profileSummary, media: materializeProfileMedia(sig.profileSummary.media) }
+        : undefined,
     };
     artefacts = [artefact, ...espace.artefacts];
     newMessages.push({ role: "artef-new", ref: artefactId, icon: meta.icon, title: sig.title, t });

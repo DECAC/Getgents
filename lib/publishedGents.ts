@@ -5,6 +5,7 @@ import { formatConversationStartedAt, newConversationId } from "@/lib/conversati
 import { parseDatasetUrl } from "@/lib/opendatasoft";
 import { appAccessHeaders } from "@/lib/appAccess";
 import { MAX_CHARS as DOC_MAX_CHARS } from "@/lib/extractDocumentText";
+import { resolveImageModelId } from "@/lib/imageModels";
 
 // Persistance des gents publiés : la source de vérité est Supabase (via les
 // routes /api/gents), le localStorage n'est plus qu'un cache local pour un
@@ -317,7 +318,7 @@ export function draftToEspace(draft: GentDraft): Espace {
   // la conversation, quand un artefact concret apporte de la valeur (voir ARTEFACT_PROMPT_INSTRUCTION,
   // toujours injectée côté chat dans EspaceContext).
   platformBlocks.push(
-    "Génère des artefacts (rapport, checklist, graphique, aperçu visuel, carte, image) automatiquement et intelligemment, uniquement quand le contenu de la conversation s'y prête — n'attends jamais qu'on te le demande explicitement, et ne les propose pas non plus systématiquement hors de propos. " +
+    "Génère des artefacts (rapport, checklist, graphique, aperçu visuel, carte, image, résumé de profil) automatiquement et intelligemment, uniquement quand le contenu de la conversation s'y prête — n'attends jamais qu'on te le demande explicitement, et ne les propose pas non plus systématiquement hors de propos. " +
       "L'utilisateur décide s'il ajoute chaque proposition à son espace de travail. " +
       "Pour les illustrations (générées ou photos web), demande toujours son autorisation avant production."
   );
@@ -326,7 +327,9 @@ export function draftToEspace(draft: GentDraft): Espace {
   const chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? undefined;
   // Les consignes IMAGE sont injectées à l'exécution (buildGentSystemPrompt)
   // selon imageModelId / webSearch — pas bakées dans le prompt système.
-  const imageModelId = draft.modelAssignments.find((a) => a.capability === "image")?.modelId ?? undefined;
+  // resolveImageModelId corrige l'ancien slug google/nanobanana à la publication.
+  const rawImageModelId = draft.modelAssignments.find((a) => a.capability === "image")?.modelId ?? undefined;
+  const imageModelId = rawImageModelId ? resolveImageModelId(rawImageModelId) : undefined;
 
   // Les connecteurs MCP dont le détail est une URL deviennent de vrais
   // serveurs d'outils côté chat (transport Streamable HTTP, ex. datagouv).

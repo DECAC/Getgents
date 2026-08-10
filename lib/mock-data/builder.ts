@@ -78,12 +78,21 @@ export const MODEL_CATALOG: OpenRouterModel[] = [
     tagline: "Raisonnement pas-à-pas, adapté aux calculs et à la planification.",
   },
   {
-    id: "google/nanobanana",
+    // Surnom « Nanobanana » = Gemini 2.5 Flash Image sur OpenRouter.
+    id: "google/gemini-2.5-flash-image",
     label: "Nanobanana",
     provider: "Google",
     capability: "image",
-    pricing: { input: 0, output: 30 },
+    pricing: { input: 0.3, output: 2.5 },
     tagline: "Génération d'images stylisées à bas coût — modèle recommandé par défaut.",
+  },
+  {
+    id: "google/gemini-3.1-flash-image",
+    label: "Nanobanana 2",
+    provider: "Google",
+    capability: "image",
+    pricing: { input: 0.5, output: 3 },
+    tagline: "Nano Banana 2 — meilleure qualité, un peu plus cher.",
   },
   {
     id: "black-forest-labs/flux-1.1-pro",
@@ -264,7 +273,7 @@ Règles impératives :
     modelAssignments: [
       { capability: "chat", modelId: "anthropic/claude-sonnet-5" },
       { capability: "reasoning", modelId: null },
-      { capability: "image", modelId: "google/nanobanana" },
+      { capability: "image", modelId: "google/gemini-2.5-flash-image" },
       { capability: "tts", modelId: null },
       { capability: "stt", modelId: null },
     ],
@@ -500,7 +509,7 @@ Comportement :
       { capability: "reasoning", modelId: null },
       // Nanobanana : modèle image bon marché, activé par défaut pour illustrer
       // les propos (la génération reste soumise à l'autorisation utilisateur).
-      { capability: "image", modelId: "google/nanobanana" },
+      { capability: "image", modelId: "google/gemini-2.5-flash-image" },
       { capability: "tts", modelId: null },
       { capability: "stt", modelId: null },
     ],

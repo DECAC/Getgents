@@ -9,6 +9,7 @@ import { BudgetTab } from "./tabs/BudgetTab";
 import { MapTab } from "./tabs/MapTab";
 import { SafeHTMLDoc } from "@/components/shared/SafeHTML";
 import { ImageArtefact } from "@/components/shared/ImageArtefact";
+import { ProfileSummaryArtefact } from "@/components/shared/ProfileSummaryArtefact";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { ChecklistView } from "@/components/shared/ChecklistView";
 import { MapArtefact } from "@/components/shared/MapArtefact";
@@ -113,6 +114,14 @@ function artefactLayout(a: Artefact): ModuleLayout {
   if (a.chartData?.length) return { cols: 4, height: 300 };
   if (a.mapPoints?.length) return { cols: 4, height: 300 };
   if (a.imageUrl) return { cols: 3, height: 320 };
+  if (a.profileSummary) {
+    const blocks =
+      1 +
+      (a.profileSummary.experience?.length ?? 0) +
+      (a.profileSummary.skills?.length ? 1 : 0) +
+      (a.profileSummary.media?.length ?? 0);
+    return { cols: 4, height: Math.min(720, 280 + blocks * 48) };
+  }
 
   const plainTextLength = (a.body ?? "").replace(/<[^>]+>/g, " ").trim().length;
   if (a.visual) return { cols: 3, height: clampPreferredHeight(170 + plainTextLength / 5) };
@@ -147,7 +156,15 @@ function DropZone({ index, active, onDragOver, onDrop, onDragLeave }: DropZonePr
 }
 
 export function ModuleCanvas({ espace }: { espace: Espace }) {
-  const { openArtefactModal, toggleChecklistItem, userPosition, removeArtefact } = useEspace();
+  const {
+    openArtefactModal,
+    toggleChecklistItem,
+    userPosition,
+    removeArtefact,
+    generateProfileSummaryMedia,
+  } = useEspace();
+  // Toujours possible : sans modèle assigné, on retombe sur Nanobanana (défaut).
+  const canGenerateImages = true;
 
   const [viewMode, setViewMode] = useState<"modules" | "themes">("modules");
   const [activeViewTabId, setActiveViewTabId] = useState<string | null>(null);
@@ -200,6 +217,15 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       render: () => (
         <>
           {a.dashboard && <DashboardArtefact spec={a.dashboard} />}
+          {a.profileSummary && (
+            <ProfileSummaryArtefact
+              summary={a.profileSummary}
+              artefactId={a.id}
+              canGenerate={canGenerateImages}
+              onGenerateMedia={(mediaId) => generateProfileSummaryMedia(a.id, mediaId)}
+              compact
+            />
+          )}
           {a.imageUrl && (
             <ImageArtefact
               src={a.imageUrl}
@@ -213,7 +239,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
           {a.checklistItems && (
             <ChecklistView items={a.checklistItems} onToggle={(i) => toggleChecklistItem(a.id, i)} />
           )}
-          {a.body && !a.imageUrl && <SafeHTMLDoc html={a.body} />}
+          {a.body && !a.imageUrl && !a.profileSummary && <SafeHTMLDoc html={a.body} />}
         </>
       ),
     })),

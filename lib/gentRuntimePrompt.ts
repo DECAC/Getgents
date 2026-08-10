@@ -5,7 +5,7 @@ import { ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
 import { THEME_TAB_PROMPT_INSTRUCTION, describeModulesForPrompt } from "@/lib/themeTabSignal";
 import { GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
 import { profileContextNote, PROFILE_PROMPT_INSTRUCTION } from "@/lib/profileSignal";
-import { IMAGE_PROMPT_INSTRUCTION, WEB_IMAGE_PROMPT_INSTRUCTION } from "@/lib/imageSignal";
+import { IMAGE_PROMPT_INSTRUCTION } from "@/lib/imageSignal";
 
 /**
  * Assemble le message système d'un gent à l'exécution.
@@ -104,13 +104,9 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
   // qu'on lui dise jamais comment les encoder — il n'en produisait donc aucun.
   blocks.push(ARTEFACT_PROMPT_INSTRUCTION);
 
-  // Illustrations : génération (modèle image bon marché) et/ou photo web.
+  // Illustrations : génération (Nanobanana par défaut côté client) et photos web.
   // L'autorisation utilisateur est gérée côté client avant tout appel coûteux.
-  if (espace.imageModelId) {
-    blocks.push(IMAGE_PROMPT_INSTRUCTION);
-  } else if (espace.webSearch) {
-    blocks.push(WEB_IMAGE_PROMPT_INSTRUCTION);
-  }
+  blocks.push(IMAGE_PROMPT_INSTRUCTION);
 
   // Onglets thématiques et construction de profil réorganisent l'espace de
   // l'utilisateur : hors de propos pour un invité de passage.
