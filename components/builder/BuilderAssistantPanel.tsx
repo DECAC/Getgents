@@ -10,6 +10,7 @@ import { setBuilderAssistWidthFromPointer, canResizeAssist } from "@/lib/assistR
 import { buildBuilderReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
 import { ThinkingIndicator } from "@/components/shared/ThinkingIndicator";
+import { extractDocumentText, type ExtractedDoc } from "@/lib/extractDocumentText";
 import styles from "./BuilderAssistantPanel.module.css";
 
 const CHAT_MODELS = MODEL_CATALOG.filter((m) => m.capability === "chat");
@@ -37,6 +38,9 @@ export function BuilderAssistantPanel() {
     toggleAssistant,
   } = useBuilder();
   const [composerText, setComposerText] = useState("");
+  const [attachment, setAttachment] = useState<ExtractedDoc | null>(null);
+  const [attaching, setAttaching] = useState(false);
+  const [attachError, setAttachError] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [expandedReasoning, setExpandedReasoning] = useState<Record<number, boolean>>({});
   // Sélection des connecteurs candidats, par message : URL → cochée (tout
@@ -44,6 +48,7 @@ export function BuilderAssistantPanel() {
   const [suggestionChecks, setSuggestionChecks] = useState<Record<string, Record<string, boolean>>>({});
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
   // Référence indirecte : l'effet de drag ne se relie qu'au montage, il ne
   // doit pas capturer une version périmée du callback.
@@ -120,11 +125,37 @@ export function BuilderAssistantPanel() {
   const handleSend = useCallback(() => {
     if (isThinking) return;
     const txt = composerText.trim();
-    if (!txt) return;
-    sendBuilderMessage(txt);
+    if (!txt && !attachment) return;
+    const parts: string[] = [];
+    if (attachment) {
+      parts.push(
+        `Document joint « ${attachment.name} » :\n"""\n${attachment.text}\n"""` +
+          (attachment.truncated ? "\n(document tronqué)" : "")
+      );
+    }
+    if (txt) parts.push(txt);
+    sendBuilderMessage(parts.join("\n\n"));
     setComposerText("");
+    setAttachment(null);
+    setAttachError(null);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
-  }, [composerText, sendBuilderMessage, isThinking]);
+  }, [composerText, attachment, sendBuilderMessage, isThinking]);
+
+  const handleFilePick = useCallback(async (file: File | undefined) => {
+    if (!file) return;
+    setAttachError(null);
+    setAttaching(true);
+    try {
+      const doc = await extractDocumentText(file);
+      setAttachment(doc);
+    } catch (err) {
+      setAttachment(null);
+      setAttachError((err as Error).message || "Impossible de lire ce document.");
+    } finally {
+      setAttaching(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }, []);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -469,6 +500,8 @@ export function BuilderAssistantPanel() {
           onClick={() => {
             startNewBuilderConversation();
             setComposerText("");
+            setAttachment(null);
+            setAttachError(null);
             setExpandedReasoning({});
           }}
           title="Démarrer une nouvelle discussion avec l'assistant"
@@ -538,12 +571,72 @@ export function BuilderAssistantPanel() {
       </div>
 
       <div className={styles.composerWrap}>
+        {attaching && (
+          <div className={styles.attachLoading}>
+            <span aria-hidden="true">⏳</span> Lecture du document…
+          </div>
+        )}
+        {attachError && <div className={styles.attachError}>{attachError}</div>}
+        {attachment && !attaching && (
+          <div className={styles.attachChip}>
+            <span className={styles.attachChipIcon} aria-hidden="true">
+              📎
+            </span>
+            <div className={styles.attachChipBody}>
+              <div className={styles.attachChipName}>{attachment.name}</div>
+              <div className={styles.attachChipMeta}>
+                {attachment.text.length.toLocaleString("fr-FR")} caractères
+                {attachment.truncated ? " (tronqué)" : ""} · joint au prochain message
+              </div>
+            </div>
+            <button
+              type="button"
+              className={styles.attachChipRemove}
+              onClick={() => setAttachment(null)}
+              aria-label="Retirer le document"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.docx,.txt,.md,.csv,.tsv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv"
+          style={{ display: "none" }}
+          onChange={(e) => handleFilePick(e.target.files?.[0])}
+        />
         <div className={styles.composer}>
+          <button
+            type="button"
+            className={styles.attachBtn}
+            aria-label="Joindre un document (PDF, Word, texte)"
+            title="Joindre un document (PDF, Word, texte)"
+            disabled={attaching || isThinking}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+          </button>
           <textarea
             ref={textareaRef}
             className={styles.composerTextarea}
             rows={1}
-            placeholder="Décrivez ce que ce gent doit faire…"
+            placeholder={
+              attachment
+                ? "Ajouter un message (facultatif)…"
+                : "Décrivez ce que ce gent doit faire…"
+            }
             aria-label="Votre message à l'assistant du builder"
             value={composerText}
             onChange={handleTextareaChange}
@@ -566,10 +659,19 @@ export function BuilderAssistantPanel() {
               type="button"
               className={styles.sendBtn}
               aria-label="Envoyer"
-              disabled={!composerText.trim()}
+              disabled={!composerText.trim() && !attachment}
               onClick={handleSend}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </button>
