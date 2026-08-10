@@ -101,6 +101,8 @@
 .row {
   display: flex;
   align-items: center;
+  /* Le panneau d'intégration passe à la ligne sous les actions du lien. */
+  flex-wrap: wrap;
   gap: 10px;
   background: var(--bg);
   border: 1px solid var(--line);
@@ -161,6 +163,82 @@
   color: #b4462f;
 }
 .note {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ---------- Intégration web (iframe) ---------- */
+/* Le panneau occupe toute la largeur sous la ligne du lien : .row est une
+   grille, on force donc le passage à la ligne suivante. */
+.embedPanel {
+  width: 100%;
+  margin-top: 4px;
+  padding: 14px;
+  border-radius: var(--r);
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.embedTitle {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.embedSub {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.embedCode {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  resize: vertical;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.embedActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.embedCopyBtn {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--plum);
+  color: #fff;
+}
+.embedCopyBtn:hover {
+  filter: brightness(1.08);
+}
+
+.embedPreviewLink {
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.embedPreviewLink:hover {
+  color: var(--ink);
+}
+
+.embedNote {
+  margin-top: 10px;
   font-size: 11.5px;
   color: var(--muted);
   line-height: 1.5;

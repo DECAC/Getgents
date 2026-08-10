@@ -39,6 +39,10 @@ export function ShareLinksSection() {
   const [expiryDays, setExpiryDays] = useState(30);
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [embedToken, setEmbedToken] = useState<string | null>(null);
+  // window n'existe pas au rendu serveur : l'origine est lue après montage.
+  const [origin, setOrigin] = useState("");
+  useEffect(() => setOrigin(window.location.origin), []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -139,8 +143,12 @@ export function ShareLinksSection() {
 
   // Canal « intégration web » : le même lien, livré sous forme d'iframe à
   // coller sur un site. Il en garde révocation, expiration et compteurs.
+  function embedSnippet(token: string): string {
+    return shareLinkEmbedCode(origin || "https://votre-domaine", token, currentDraft.name || "Gent");
+  }
+
   async function copyEmbed(token: string) {
-    const code = shareLinkEmbedCode(window.location.origin, token, currentDraft.name || "Gent");
+    const code = embedSnippet(token);
     try {
       await navigator.clipboard.writeText(code);
       setCopied(`embed:${token}`);
@@ -238,10 +246,11 @@ export function ShareLinksSection() {
                 <button
                   type="button"
                   className={styles.smallBtn}
-                  onClick={() => void copyEmbed(link.token)}
-                  title="Copier le code <iframe> à coller sur un site web"
+                  onClick={() => setEmbedToken((t) => (t === link.token ? null : link.token))}
+                  aria-expanded={embedToken === link.token}
+                  title="Afficher le code à coller sur un site web"
                 >
-                  {copied === `embed:${link.token}` ? "✓ Copié" : "Intégrer"}
+                  {embedToken === link.token ? "Masquer l’intégration" : "Intégrer"}
                 </button>
                 {!link.revokedAt && (
                   <button
@@ -252,6 +261,46 @@ export function ShareLinksSection() {
                   >
                     Révoquer
                   </button>
+                )}
+
+                {embedToken === link.token && (
+                  <div className={styles.embedPanel}>
+                    <div className={styles.embedTitle}>Intégrer sur un site web</div>
+                    <div className={styles.embedSub}>
+                      Collez ce code dans le HTML de votre page, à l&apos;endroit où le gent doit
+                      apparaître. Il fonctionne sur n&apos;importe quel site (WordPress, Webflow,
+                      Notion, Squarespace…) et ne demande aucune installation.
+                    </div>
+                    <textarea
+                      className={styles.embedCode}
+                      readOnly
+                      rows={5}
+                      value={embedSnippet(link.token)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      aria-label="Code d'intégration iframe"
+                    />
+                    <div className={styles.embedActions}>
+                      <button
+                        type="button"
+                        className={styles.embedCopyBtn}
+                        onClick={() => void copyEmbed(link.token)}
+                      >
+                        {copied === `embed:${link.token}` ? "✓ Code copié" : "Copier le code"}
+                      </button>
+                      <a
+                        href={shareLinkUrl(origin, link.token)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.embedPreviewLink}
+                      >
+                        Ouvrir en plein écran ↗
+                      </a>
+                    </div>
+                    <div className={styles.embedNote}>
+                      Ce cadre affiche exactement le lien ci-dessus : le révoquer désactive aussi
+                      l&apos;intégration, et le quota de régénérations reste celui du lien.
+                    </div>
+                  </div>
                 )}
               </div>
             );
