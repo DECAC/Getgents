@@ -9,6 +9,7 @@ import { MapArtefact } from "./MapArtefact";
 import { DashboardArtefact } from "./dashboard/DashboardArtefact";
 import { ImageArtefact } from "./ImageArtefact";
 import { ProfileSummaryArtefact } from "./ProfileSummaryArtefact";
+import { DocumentViewerModal } from "./DocumentViewerModal";
 import styles from "./Modal.module.css";
 
 function VisualGrid() {
@@ -68,6 +69,10 @@ export function ArtefactModal() {
   }, [artefact]);
 
   if (!artefact) return null;
+
+  // Mise en page radicalement différente (pleine fenêtre, sommaire + pages) :
+  // ne partage rien avec la carte centrée des autres artefacts.
+  if (artefact.document) return <DocumentViewerModal artefact={artefact} />;
 
   const isDashboard = !!artefact.dashboard;
 

@@ -122,6 +122,8 @@ function artefactLayout(a: Artefact): ModuleLayout {
       (a.profileSummary.media?.length ?? 0);
     return { cols: 4, height: Math.min(720, 280 + blocks * 48) };
   }
+  // Vignette d'appel — la lecture se fait en plein écran, pas dans la carte.
+  if (a.document) return { cols: 3, height: 220 };
 
   const plainTextLength = (a.body ?? "").replace(/<[^>]+>/g, " ").trim().length;
   if (a.visual) return { cols: 3, height: clampPreferredHeight(170 + plainTextLength / 5) };
@@ -240,6 +242,16 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
             <ChecklistView items={a.checklistItems} onToggle={(i) => toggleChecklistItem(a.id, i)} />
           )}
           {a.body && !a.imageUrl && !a.profileSummary && <SafeHTMLDoc html={a.body} />}
+          {a.document && (
+            <div className={styles.docPreview}>
+              <div className={styles.docPreviewIcon}>📖</div>
+              <div className={styles.docPreviewMeta}>
+                {a.document.pageCount} page{a.document.pageCount > 1 ? "s" : ""}
+                {a.document.toc.length > 0 ? ` · ${a.document.toc.length} entrées de sommaire` : ""}
+              </div>
+              <div className={styles.docPreviewHint}>Cliquer pour ouvrir la visionneuse</div>
+            </div>
+          )}
         </>
       ),
     })),

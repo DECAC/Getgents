@@ -121,9 +121,10 @@ export function compactDelimited(raw: string, delimiter: string): string {
 
 async function extractPdf(file: File): Promise<string> {
   const pdfjs = await import("pdfjs-dist");
-  // Worker chargé depuis un CDN, à la version exacte du paquet installé.
+  // Worker servi localement (public/pdfjs) plutôt que depuis un CDN tiers :
+  // évite toute dépendance réseau externe au runtime.
   (pdfjs as unknown as { GlobalWorkerOptions: { workerSrc: string } }).GlobalWorkerOptions.workerSrc =
-    `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+    "/pdfjs/pdf.worker.min.mjs";
 
   const data = await file.arrayBuffer();
   const doc = await pdfjs.getDocument({ data }).promise;

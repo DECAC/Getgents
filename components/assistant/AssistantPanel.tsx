@@ -7,6 +7,7 @@ import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
 import { FollowupChips } from "@/components/shared/FollowupChips";
 import { JumpFormCard } from "@/components/shared/JumpFormCard";
 import { extractDocumentText, type ExtractedDoc } from "@/lib/extractDocumentText";
+import { extractDocumentForViewer } from "@/lib/documentViewer";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { MapAppModal, type MapDestination } from "@/components/shared/MapAppModal";
 import type { ConversationMessage, Espace } from "@/lib/types";
@@ -68,6 +69,7 @@ export function AssistantPanel() {
     geoStatus,
     confirmGeoRequest,
     shareMode,
+    addDocumentArtefact,
   } = useEspace();
 
   const [cdView, setCdView] = useState<"chat" | "hist">("chat");
@@ -77,6 +79,9 @@ export function AssistantPanel() {
   const [attaching, setAttaching] = useState(false);
   const [attachError, setAttachError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const viewerInputRef = useRef<HTMLInputElement>(null);
+  const [viewerLoading, setViewerLoading] = useState(false);
+  const [viewerError, setViewerError] = useState<string | null>(null);
   const [expandedReasoning, setExpandedReasoning] = useState<Record<number, boolean>>({});
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [mapDestination, setMapDestination] = useState<MapDestination | null>(null);
@@ -170,6 +175,30 @@ export function AssistantPanel() {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, []);
+
+  // Ouvre un document en pleine page plutôt que de le joindre à un message :
+  // extraction intégrale (pas la limite de 15k caractères de la pièce
+  // jointe conversationnelle), pagination et sommaire, artefact créé sans
+  // passer par une proposition du modèle — un document de plusieurs
+  // centaines de pages n'a de toute façon aucun moyen de tenir dans un bloc
+  // de signal.
+  const handleViewerFilePick = useCallback(
+    async (file: File | undefined) => {
+      if (!file) return;
+      setViewerError(null);
+      setViewerLoading(true);
+      try {
+        const spec = await extractDocumentForViewer(file);
+        addDocumentArtefact(spec);
+      } catch (err) {
+        setViewerError((err as Error).message || "Impossible d'ouvrir ce document.");
+      } finally {
+        setViewerLoading(false);
+        if (viewerInputRef.current) viewerInputRef.current.value = "";
+      }
+    },
+    [addDocumentArtefact]
+  );
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -959,6 +988,12 @@ export function AssistantPanel() {
             </div>
           )}
           {attachError && <div className={styles.attachError}>{attachError}</div>}
+          {viewerLoading && (
+            <div className={styles.attachLoading}>
+              <span aria-hidden="true">⏳</span> Ouverture du document (extraction complète)…
+            </div>
+          )}
+          {viewerError && <div className={styles.attachError}>{viewerError}</div>}
           {attachment && !attaching && (
             <div className={styles.attachChip}>
               <span className={styles.attachChipIcon} aria-hidden="true">📎</span>
@@ -986,17 +1021,37 @@ export function AssistantPanel() {
             style={{ display: "none" }}
             onChange={(e) => handleFilePick(e.target.files?.[0])}
           />
+          <input
+            ref={viewerInputRef}
+            type="file"
+            accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+            style={{ display: "none" }}
+            onChange={(e) => handleViewerFilePick(e.target.files?.[0])}
+          />
           <div className={[styles.composer, !composerText.trim() ? styles.composerOff : ""].join(" ")}>
             <button
               type="button"
               className={styles.attachBtn}
               aria-label="Joindre un document (PDF, Word, texte)"
-              title="Joindre un document (PDF, Word, texte)"
+              title="Joindre un document au message"
               disabled={attaching}
               onClick={() => fileInputRef.current?.click()}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={styles.attachBtn}
+              aria-label="Ouvrir un document en visionneuse pleine page"
+              title="Ouvrir en visionneuse (lecture immersive, document entier)"
+              disabled={viewerLoading}
+              onClick={() => viewerInputRef.current?.click()}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
+                <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H19v3H6.5A2.5 2.5 0 0 1 4 20.5z" />
               </svg>
             </button>
             <textarea

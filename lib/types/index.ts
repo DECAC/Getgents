@@ -269,6 +269,33 @@ export interface Artefact {
   imageSource?: "generated" | "web";
   /** Résumé de profil (CV synthétique) — médias inclus. */
   profileSummary?: import("@/lib/profileSummaryArtefact").ProfileSummaryStored;
+  /** Visionneuse de document : lecture immersive paginée, avec sommaire. */
+  document?: DocumentViewerSpec;
+}
+
+/** Une entrée de sommaire, cliquable, pointant vers une page du document. */
+export interface DocumentViewerSection {
+  id: string;
+  title: string;
+  /** Niveau d'indentation (1 = titre de premier rang). */
+  level: number;
+  /** Page (0-indexée) où commence cette section. */
+  page: number;
+}
+
+/**
+ * Contenu complet d'un document ouvert en visionneuse — pagination réelle
+ * (PDF) ou reconstituée par découpage (Word, texte). Le sommaire vient des
+ * signets du PDF quand ils existent, sinon des titres détectés dans le texte.
+ */
+export interface DocumentViewerSpec {
+  sourceName: string;
+  sourceKind: "pdf" | "docx" | "text";
+  pageCount: number;
+  pages: string[];
+  toc: DocumentViewerSection[];
+  /** Vrai si le document dépassait le budget de caractères et a été coupé. */
+  truncated: boolean;
 }
 
 export interface EspaceMetric {

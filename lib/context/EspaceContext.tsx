@@ -13,6 +13,7 @@ import type {
   ThemeTabProposalAction,
   PinnedRun,
   UserFile,
+  DocumentViewerSpec,
 } from "@/lib/types";
 import { ESPACES as INITIAL_ESPACES } from "@/lib/mock-data/espaces";
 import {
@@ -228,6 +229,8 @@ interface EspaceContextValue {
   /** Ajoute un document à la session (texte déjà extrait côté navigateur). */
   addFile: (file: UserFile) => void;
   removeFile: (fileId: string) => void;
+  /** Ouvre un document en visionneuse pleine page (sommaire + pagination). */
+  addDocumentArtefact: (spec: DocumentViewerSpec) => void;
 }
 
 const EspaceContext = createContext<EspaceContextValue | null>(null);
@@ -467,6 +470,54 @@ export function EspaceProvider({
       return { ...prev, [currentId]: { ...e, files: e.files.filter((f) => f.id !== fileId) } };
     });
   }, [currentId]);
+
+  /**
+   * Ouvre un document en visionneuse pleine page. Contrairement aux autres
+   * artefacts, celui-ci n'est jamais proposé par le modèle (son contenu peut
+   * atteindre des centaines de milliers de caractères, hors de portée d'un
+   * bloc de signal) : le créateur — ou l'utilisateur — le dépose directement
+   * depuis le composer, et l'artefact est créé côté client, immédiatement.
+   *
+   * Le texte rejoint aussi `files` (borné par sessionContextNote) pour que
+   * l'assistant puisse en discuter et proposer d'autres artefacts à l'appui
+   * de la lecture — mêmes règles que n'importe quel document joint.
+   */
+  const addDocumentArtefact = useCallback(
+    (spec: DocumentViewerSpec) => {
+      const id = currentIdRef.current;
+      const artefactId = `doc-${Date.now()}`;
+      const fileId = `file-${Date.now()}`;
+      setEspaces((prev) => {
+        const e = prev[id];
+        const artefact = {
+          id: artefactId,
+          title: spec.sourceName,
+          type: "Visionneuse de document",
+          icon: "📖",
+          date: nowTime(),
+          document: spec,
+        };
+        const file = {
+          id: fileId,
+          name: spec.sourceName,
+          size: `${spec.pageCount} page${spec.pageCount > 1 ? "s" : ""}`,
+          date: "Visionneuse",
+          text: spec.pages.join("\n\n"),
+          truncated: spec.truncated,
+        };
+        return {
+          ...prev,
+          [id]: {
+            ...e,
+            artefacts: [...e.artefacts, artefact],
+            files: [file, ...e.files.filter((f) => f.id !== fileId)],
+          },
+        };
+      });
+      openArtefactModal(artefactId);
+    },
+    [openArtefactModal]
+  );
 
   const sendMessage = useCallback((text: string) => {
     if (streamAbortRef.current) return; // une génération est déjà en cours
@@ -1628,6 +1679,7 @@ export function EspaceProvider({
         miniAppMode: !!currentEspace.pinnedArtefact?.enabled,
         addFile,
         removeFile,
+        addDocumentArtefact,
         confirmArtefactProposal,
         confirmThemeProposal,
         confirmImageProposal,

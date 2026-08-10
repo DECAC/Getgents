@@ -3,6 +3,7 @@
 import { EspaceProvider, useEspace } from "@/lib/context/EspaceContext";
 import { ModuleCanvas } from "@/components/center/ModuleCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
+import { ArtefactModal } from "@/components/shared/ArtefactModal";
 import type { Espace } from "@/lib/types";
 import styles from "./SharedGentShell.module.css";
 
@@ -51,6 +52,8 @@ function SharedGentBody() {
           </div>
         </main>
       </div>
+
+      <ArtefactModal />
     </div>
   );
 }
