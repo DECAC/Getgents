@@ -2,10 +2,11 @@
 // <!--QUESTIONS: [{"q":"...","options":["...","..."],"multi":false}]-->
 // quand la réponse pose une ou plusieurs questions fermées. On l'extrait
 // avant affichage pour construire des puces cliquables numérotées.
+//
+// Relances conversationnelles (distinctes) :
+// <!--FOLLOWUPS: ["Question libre 1 ?","Question libre 2 ?"]-->
 const QUESTIONS_RE = /<!--QUESTIONS:\s*(\[[\s\S]*?\])\s*-->/;
-// Repère un bloc tronqué (réponse coupée par max_tokens avant la balise fermante) :
-// on masque au moins l'artefact brut même si on ne peut pas parser les questions.
-const TRUNCATED_MARKER_RE = /<!--QUESTIONS:[\s\S]*$/;
+const FOLLOWUPS_RE = /<!--FOLLOWUPS:\s*(\[[\s\S]*?\])\s*-->/;
 
 export interface QuestionBlock {
   q: string;
@@ -20,10 +21,24 @@ export const SUGGESTIONS_PROMPT_INSTRUCTION =
   "Exemple : après avoir trouvé trois arrêts, termine par <!--QUESTIONS: [{\"q\":\"Quel arrêt choisissez-vous pour vous rendre à La Défense ?\",\"options\":[\"La Colline (192 m)\",\"Pont de Saint-Cloud - Rive Gauche (266 m)\",\"Parc de Saint-Cloud (276–365 m)\"],\"multi\":false}]-->. " +
   "N'ajoute ce bloc que si au moins une vraie question fermée a été posée.";
 
+/**
+ * Relances pour poursuivre l'échange — régulièrement, pas à chaque message.
+ * Affichées en puces : un clic envoie la question telle quelle.
+ */
+export const FOLLOWUPS_PROMPT_INSTRUCTION =
+  "Pour inciter l'utilisateur à poursuivre la conversation, propose RÉGULIÈREMENT (environ une réponse sur deux ou trois quand tu as livré une info utile, un conseil ou un récap) " +
+  "2 ou 3 questions de suite pertinentes, formulées comme l'utilisateur les poserait. " +
+  "Termine alors ta réponse (après le texte visible et après un éventuel bloc QUESTIONS, sur sa propre ligne) par exactement : " +
+  '<!--FOLLOWUPS: ["Question libre 1 ?","Question libre 2 ?","Question libre 3 ?"]--> ' +
+  "Règles : (1) questions courtes en français, concrètes, liées au fil en cours ; (2) 2 ou 3 max ; (3) PAS à chaque réponse — saute les messages purement procéduraux " +
+  "(simple accusé, demande d'une seule info manquante, oui/non, ou quand tu viens déjà d'émettre un bloc QUESTIONS fermées) ; " +
+  "(4) ne liste PAS ces relances dans le texte visible — l'interface les affichera en boutons ; " +
+  "(5) n'émets jamais plus d'un bloc FOLLOWUPS par réponse.";
+
 export function extractQuestions(raw: string): { text: string; questions: QuestionBlock[] } {
   const match = raw.match(QUESTIONS_RE);
   if (!match) {
-    const truncated = raw.match(TRUNCATED_MARKER_RE);
+    const truncated = raw.match(/<!--QUESTIONS:[\s\S]*$/);
     if (truncated) return { text: raw.slice(0, truncated.index).trim(), questions: [] };
     return { text: raw, questions: [] };
   }
@@ -52,4 +67,30 @@ export function extractQuestions(raw: string): { text: string; questions: Questi
   const start = match.index ?? 0;
   const text = (raw.slice(0, start) + raw.slice(start + match[0].length)).trim();
   return { text, questions };
+}
+
+export function extractFollowups(raw: string): { text: string; followups: string[] } {
+  const match = raw.match(FOLLOWUPS_RE);
+  if (!match) {
+    const truncated = raw.match(/<!--FOLLOWUPS:[\s\S]*$/);
+    if (truncated) return { text: raw.slice(0, truncated.index).trim(), followups: [] };
+    return { text: raw, followups: [] };
+  }
+
+  let followups: string[] = [];
+  try {
+    const parsed = JSON.parse(match[1]);
+    if (Array.isArray(parsed)) {
+      followups = parsed
+        .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+        .map((s) => s.trim().slice(0, 160))
+        .slice(0, 3);
+    }
+  } catch {
+    // ignore malformed block
+  }
+
+  const start = match.index ?? 0;
+  const text = (raw.slice(0, start) + raw.slice(start + match[0].length)).trim();
+  return { text, followups };
 }

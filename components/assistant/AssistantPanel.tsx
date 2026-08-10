@@ -4,6 +4,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
+import { FollowupChips } from "@/components/shared/FollowupChips";
 import { JumpFormCard } from "@/components/shared/JumpFormCard";
 import { extractDocumentText, type ExtractedDoc } from "@/lib/extractDocumentText";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
@@ -55,6 +56,7 @@ export function AssistantPanel() {
     submitJumpForm,
     confirmArtefactProposal,
     confirmThemeProposal,
+    confirmImageProposal,
     confirmProfileProposal,
     startNewConversation,
     switchConversation,
@@ -444,6 +446,91 @@ export function AssistantPanel() {
       );
     }
 
+    if (m.role === "image-proposal" && m.imageProposal) {
+      const prop = m.imageProposal;
+      const isGenerate = prop.kind === "generate";
+      if (m.imageProposalStatus === "added") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            ✓ {isGenerate ? "Illustration générée" : "Photo ajoutée"} — « {prop.title} »
+            {m.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={m.imageUrl}
+                alt={prop.title}
+                style={{ maxWidth: "100%", borderRadius: 12, marginTop: 8, display: "block" }}
+              />
+            )}
+            {m.ref && (
+              <button type="button" className={styles.proposalDismissBtn} style={{ marginTop: 8 }} onClick={() => openArtefactModal(m.ref!)}>
+                Voir dans Images
+              </button>
+            )}
+          </div>
+        );
+      }
+      if (m.imageProposalStatus === "dismissed") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            Illustration refusée — « {prop.title} »
+          </div>
+        );
+      }
+      if (m.imageProposalStatus === "error") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            Impossible de produire l&apos;illustration — « {prop.title} »
+          </div>
+        );
+      }
+      if (m.imageProposalStatus === "generating") {
+        return (
+          <div key={i} className={styles.proposalCard}>
+            <div className={styles.proposalHead}>
+              <span className={styles.proposalKind}>🖼️ Image</span>
+              <span className={styles.proposalTitle}>Génération en cours…</span>
+            </div>
+            <div className={styles.proposalBody}>« {prop.title} » — cela peut prendre quelques secondes.</div>
+          </div>
+        );
+      }
+      return (
+        <div key={i} className={styles.proposalCard}>
+          <div className={styles.proposalHead}>
+            <span className={styles.proposalKind}>🖼️ Image</span>
+            <span className={styles.proposalTitle}>{prop.title}</span>
+          </div>
+          <div className={styles.proposalBody}>
+            {isGenerate
+              ? "Le gent propose de générer une illustration pour éclairer ce propos. La génération n'a lieu qu'avec votre autorisation (modèle économique)."
+              : "Le gent propose d'afficher une photo trouvée sur le web pour illustrer ce propos."}
+            {prop.caption ? ` Légende : ${prop.caption}` : ""}
+            {!isGenerate && prop.url ? (
+              <div style={{ marginTop: 6, fontSize: 11, color: "var(--faint)", wordBreak: "break-all" }}>
+                {prop.url}
+              </div>
+            ) : null}
+          </div>
+          <div className={styles.proposalActions}>
+            <button
+              type="button"
+              className={styles.proposalAddBtn}
+              onClick={() => confirmImageProposal(m.id ?? "", "generate")}
+            >
+              {isGenerate ? "Autoriser la génération" : "Afficher la photo"}
+            </button>
+            <button
+              type="button"
+              className={styles.proposalDismissBtn}
+              onClick={() => confirmImageProposal(m.id ?? "", "dismiss")}
+            >
+              Refuser
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     if (m.role === "theme-proposal" && m.themeProposal) {
       const action = m.themeProposal;
       const headline =
@@ -656,6 +743,9 @@ export function AssistantPanel() {
           </div>
           {isAgent && isLastMessage && !!m.questions?.length && (
             <QuickReplyQuestions questions={m.questions} onSubmit={sendMessage} />
+          )}
+          {isAgent && isLastMessage && !!m.followups?.length && (
+            <FollowupChips followups={m.followups} onPick={sendMessage} />
           )}
         </div>
       </div>

@@ -80,6 +80,7 @@ export type ConversationRole =
   | "artef-proposal"
   | "theme-proposal"
   | "geo-request"
+  | "image-proposal"
   | "connector-proposal"
   | "config-proposal"
   | "jump-form-proposal"
@@ -130,7 +131,7 @@ export interface MapPoint {
 }
 
 export interface ArtefactProposal {
-  kind: "report" | "checklist" | "chart" | "visual" | "map" | "dashboard";
+  kind: "report" | "checklist" | "chart" | "visual" | "map" | "dashboard" | "image";
   title: string;
   body?: string;
   items?: string[];
@@ -138,6 +139,10 @@ export interface ArtefactProposal {
   mapPoints?: MapPoint[];
   /** Schéma de tableau de bord (rendu Recharts + cartes en plein espace). */
   dashboard?: import("@/lib/dashboardArtefact").DashboardSpec;
+  /** Illustration (générée ou photo web) — renseignée après autorisation. */
+  imageUrl?: string;
+  imageCaption?: string;
+  imageSource?: "generated" | "web";
 }
 
 /**
@@ -175,13 +180,18 @@ export interface ConversationMessage {
   title?: string;
   link?: string;
   questions?: { q: string; options: string[]; multi?: boolean }[];
-  /** Image générée par le modèle image assigné au gent (data URL base64). */
+  /** Relances conversationnelles (questions libres cliquables dans le fil). */
+  followups?: string[];
+  /** Image générée / affichée après autorisation (data URL ou https). */
   imageUrl?: string;
   imageStatus?: "pending" | "done" | "error";
   proposal?: ArtefactProposal;
   proposalStatus?: "pending" | "added" | "dismissed";
   themeProposal?: ThemeTabProposalAction;
   themeProposalStatus?: "pending" | "applied" | "dismissed";
+  /** Illustration proposée (génération IA ou photo web) — jamais sans accord. */
+  imageProposal?: import("@/lib/imageSignal").ImageProposal;
+  imageProposalStatus?: "pending" | "generating" | "added" | "dismissed" | "error";
   /** Profil utilisateur proposé par le gent (onboarding/CV), à valider. */
   profileProposal?: import("@/lib/profileSignal").UserProfile;
   profileProposalStatus?: "pending" | "applied" | "dismissed";
@@ -251,6 +261,10 @@ export interface Artefact {
   mapPoints?: MapPoint[];
   /** Schéma de tableau de bord (rendu Recharts + cartes en plein espace). */
   dashboard?: import("@/lib/dashboardArtefact").DashboardSpec;
+  /** Illustration générée ou photo web (data URL / https). */
+  imageUrl?: string;
+  imageCaption?: string;
+  imageSource?: "generated" | "web";
 }
 
 export interface EspaceMetric {

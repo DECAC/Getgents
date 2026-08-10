@@ -8,6 +8,7 @@ import { ReservationsTab } from "./tabs/ReservationsTab";
 import { BudgetTab } from "./tabs/BudgetTab";
 import { MapTab } from "./tabs/MapTab";
 import { SafeHTMLDoc } from "@/components/shared/SafeHTML";
+import { ImageArtefact } from "@/components/shared/ImageArtefact";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { ChecklistView } from "@/components/shared/ChecklistView";
 import { MapArtefact } from "@/components/shared/MapArtefact";
@@ -111,6 +112,7 @@ function artefactLayout(a: Artefact): ModuleLayout {
   }
   if (a.chartData?.length) return { cols: 4, height: 300 };
   if (a.mapPoints?.length) return { cols: 4, height: 300 };
+  if (a.imageUrl) return { cols: 3, height: 320 };
 
   const plainTextLength = (a.body ?? "").replace(/<[^>]+>/g, " ").trim().length;
   if (a.visual) return { cols: 3, height: clampPreferredHeight(170 + plainTextLength / 5) };
@@ -198,12 +200,20 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       render: () => (
         <>
           {a.dashboard && <DashboardArtefact spec={a.dashboard} />}
+          {a.imageUrl && (
+            <ImageArtefact
+              src={a.imageUrl}
+              alt={a.title}
+              caption={a.imageCaption}
+              source={a.imageSource}
+            />
+          )}
           {a.chartData && <MiniBarChart data={a.chartData} />}
           {a.mapPoints && <MapArtefact points={a.mapPoints} userPosition={userPosition} />}
           {a.checklistItems && (
             <ChecklistView items={a.checklistItems} onToggle={(i) => toggleChecklistItem(a.id, i)} />
           )}
-          {a.body && <SafeHTMLDoc html={a.body} />}
+          {a.body && !a.imageUrl && <SafeHTMLDoc html={a.body} />}
         </>
       ),
     })),

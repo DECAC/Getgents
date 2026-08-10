@@ -4,7 +4,6 @@ import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { formatConversationStartedAt, newConversationId } from "@/lib/conversationUtils";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
 import { appAccessHeaders } from "@/lib/appAccess";
-import { IMAGE_PROMPT_INSTRUCTION } from "@/lib/imageSignal";
 import { MAX_CHARS as DOC_MAX_CHARS } from "@/lib/extractDocumentText";
 
 // Persistance des gents publiés : la source de vérité est Supabase (via les
@@ -318,16 +317,16 @@ export function draftToEspace(draft: GentDraft): Espace {
   // la conversation, quand un artefact concret apporte de la valeur (voir ARTEFACT_PROMPT_INSTRUCTION,
   // toujours injectée côté chat dans EspaceContext).
   platformBlocks.push(
-    "Génère des artefacts (rapport, checklist, graphique, aperçu visuel, carte) automatiquement et intelligemment, uniquement quand le contenu de la conversation s'y prête — n'attends jamais qu'on te le demande explicitement, et ne les propose pas non plus systématiquement hors de propos. " +
-      "L'utilisateur décide s'il ajoute chaque proposition à son espace de travail."
+    "Génère des artefacts (rapport, checklist, graphique, aperçu visuel, carte, image) automatiquement et intelligemment, uniquement quand le contenu de la conversation s'y prête — n'attends jamais qu'on te le demande explicitement, et ne les propose pas non plus systématiquement hors de propos. " +
+      "L'utilisateur décide s'il ajoute chaque proposition à son espace de travail. " +
+      "Pour les illustrations (générées ou photos web), demande toujours son autorisation avant production."
   );
 
   const threadId = newConversationId();
   const chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? undefined;
+  // Les consignes IMAGE sont injectées à l'exécution (buildGentSystemPrompt)
+  // selon imageModelId / webSearch — pas bakées dans le prompt système.
   const imageModelId = draft.modelAssignments.find((a) => a.capability === "image")?.modelId ?? undefined;
-  if (imageModelId) {
-    platformBlocks.push(IMAGE_PROMPT_INSTRUCTION);
-  }
 
   // Les connecteurs MCP dont le détail est une URL deviennent de vrais
   // serveurs d'outils côté chat (transport Streamable HTTP, ex. datagouv).

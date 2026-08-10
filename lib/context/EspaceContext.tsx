@@ -19,12 +19,12 @@ import {
   getActiveConversation,
   newConversationId,
 } from "@/lib/conversationUtils";
-import { extractQuestions } from "@/lib/suggestions";
+import { extractQuestions, extractFollowups } from "@/lib/suggestions";
 import { extractArtefactSignal } from "@/lib/artefactSignal";
 import { extractThemeTabSignal } from "@/lib/themeTabSignal";
 import { extractGeolocRequest } from "@/lib/geolocSignal";
 import { extractProfileSignal } from "@/lib/profileSignal";
-import { extractImageSignal } from "@/lib/imageSignal";
+import { extractImageSignal, IMAGES_THEME_LABEL, type ImageProposal } from "@/lib/imageSignal";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import {
   espaceForPinnedRefresh,
@@ -43,7 +43,20 @@ const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
   visual: { type: "Aperçu visuel", icon: "🖼️" },
   map: { type: "Carte", icon: "🗺️" },
   dashboard: { type: "Tableau de bord", icon: "📈" },
+  image: { type: "Image", icon: "🖼️" },
 };
+
+/** Ajoute le module à la rubrique « Images » (créée si besoin). */
+function upsertImagesThemeTab(themeTabs: ThemeTab[], moduleId: string): ThemeTab[] {
+  const existing = themeTabs.find((t) => t.label === IMAGES_THEME_LABEL);
+  if (existing) {
+    if (existing.moduleIds.includes(moduleId)) return themeTabs;
+    return themeTabs.map((t) =>
+      t.id === existing.id ? { ...t, moduleIds: [...t.moduleIds, moduleId] } : t
+    );
+  }
+  return [...themeTabs, { id: `theme-images-${Date.now()}`, label: IMAGES_THEME_LABEL, moduleIds: [moduleId] }];
+}
 
 /** Applique une action de thème (create/rename/delete) — un module n'appartient qu'à un seul onglet thématique à la fois. */
 function applyThemeTabAction(themeTabs: ThemeTab[], action: ThemeTabProposalAction): ThemeTab[] {
@@ -164,6 +177,11 @@ interface EspaceContextValue {
   pinnedError: string | null;
   confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss") => void;
   confirmThemeProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
+  /**
+   * Autorise ou refuse une illustration proposée (génération IA ou photo web).
+   * La génération / l'ajout à la rubrique Images n'ont lieu qu'après « generate ».
+   */
+  confirmImageProposal: (messageId: string, decision: "generate" | "dismiss") => void;
   /** Valide ou ignore le profil utilisateur proposé par le gent. */
   confirmProfileProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
   toggleChecklistItem: (artefactId: string, itemIndex: number) => void;
@@ -561,7 +579,8 @@ export function EspaceProvider({
     )
       .then(({ text: fullRaw, reasoning, truncated }) => {
         const afterQuestions = extractQuestions(fullRaw);
-        const afterArtefact = extractArtefactSignal(afterQuestions.text);
+        const afterFollowups = extractFollowups(afterQuestions.text);
+        const afterArtefact = extractArtefactSignal(afterFollowups.text);
         const afterTheme = extractThemeTabSignal(afterArtefact.text);
         const afterGeo = extractGeolocRequest(afterTheme.text);
         const afterProfile = extractProfileSignal(afterGeo.text);
@@ -571,6 +590,7 @@ export function EspaceProvider({
           (truncated
             ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — écrivez « continue » pour obtenir la suite, ou demandez une version plus courte.</em></p>'
             : "");
+        const followups = afterFollowups.followups;
 
         // Profil proposé par le gent (onboarding, CV joint) : carte de
         // validation dans le fil — jamais appliqué sans accord explicite.
@@ -636,6 +656,7 @@ export function EspaceProvider({
                   ...msgs[lastIdx],
                   text: finalHtml,
                   questions: afterQuestions.questions,
+                  followups,
                   reasoning: reasoning || undefined,
                 };
               msgs.push({
@@ -663,6 +684,7 @@ export function EspaceProvider({
                   ...msgs[lastIdx],
                   text: finalHtml,
                   questions: afterQuestions.questions,
+                  followups,
                   reasoning: reasoning || undefined,
                 };
               msgs.push({
@@ -681,43 +703,44 @@ export function EspaceProvider({
             ...m,
             text: finalHtml,
             questions: afterQuestions.questions,
+            followups,
             reasoning: reasoning || undefined,
           }));
         }
+        // Illustration proposée : carte d'autorisation dans le fil — jamais
+        // de génération ni d'affichage sans accord explicite (coût modèle).
+        function pushImageProposalIfAny() {
+          const proposal = afterImage.image;
+          if (!proposal) return;
+          // Génération IA uniquement si un modèle image est assigné.
+          if (proposal.kind === "generate" && !espace.imageModelId) return;
+          const imgMsgId = `img-${Date.now()}`;
+          setEspaces((p) => {
+            const e = p[id];
+            const convs = e.conversations.map((t) =>
+              t.id === threadId
+                ? {
+                    ...t,
+                    messages: [
+                      ...t.messages,
+                      {
+                        id: imgMsgId,
+                        role: "image-proposal" as const,
+                        imageProposal: proposal,
+                        imageProposalStatus: "pending" as const,
+                        t: nowTime(),
+                      },
+                    ],
+                  }
+                : t
+            );
+            return { ...p, [id]: { ...e, conversations: convs } };
+          });
+        }
+
         pushGeoRequestIfAny();
         pushProfileProposalIfAny();
-
-        // Image demandée par le gent : générée côté serveur via le modèle
-        // image assigné, distinct du modèle conversationnel (voir /api/image).
-        if (afterImage.image && espace.imageModelId) {
-          const prompt = afterImage.image.prompt;
-          const modelId = espace.imageModelId;
-          updateLastMessage((m) => ({ ...m, imageStatus: "pending" as const }));
-          fetch("/api/image", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt, modelId }),
-          })
-            .then((r) => r.json())
-            .then((data: { imageUrl?: string; error?: string }) => {
-              if (data.imageUrl) {
-                updateLastMessage((m) => ({ ...m, imageUrl: data.imageUrl, imageStatus: "done" as const }));
-              } else {
-                updateLastMessage((m) => ({
-                  ...m,
-                  text: (m.text ?? "") + `<p>⚠️ <em>Génération d'image impossible${data.error ? ` : ${data.error}` : ""}.</em></p>`,
-                  imageStatus: "error" as const,
-                }));
-              }
-            })
-            .catch((err: Error) => {
-              updateLastMessage((m) => ({
-                ...m,
-                text: (m.text ?? "") + `<p>⚠️ <em>Génération d'image impossible : ${err.message}.</em></p>`,
-                imageStatus: "error" as const,
-              }));
-            });
-        }
+        pushImageProposalIfAny();
       })
       .catch((err: Error) => {
         if (err?.name === "AbortError") {
@@ -995,6 +1018,202 @@ export function EspaceProvider({
       setPinnedRefreshing(false);
     }
   }, [shareToken]);
+
+  /**
+   * Ajoute une illustration autorisée à l'espace (artefact + rubrique Images)
+   * et met à jour le message de proposition.
+   */
+  function commitImageArtefact(
+    messageId: string,
+    proposal: ImageProposal,
+    imageUrl: string,
+    source: "generated" | "web"
+  ) {
+    const id = currentIdRef.current;
+    const artefactId = `artef-${Date.now()}`;
+    const moduleId = `artef-${artefactId}`;
+    const meta = ARTEFACT_KIND_META.image;
+    const newArtefact: Artefact = {
+      id: artefactId,
+      title: proposal.title,
+      type: meta.type,
+      icon: meta.icon,
+      date: "à l'instant",
+      imageUrl,
+      imageCaption: proposal.caption,
+      imageSource: source,
+      body: proposal.caption ? `<p>${proposal.caption.replace(/</g, "&lt;")}</p>` : undefined,
+    };
+
+    setEspaces((prev) => {
+      const espace = prev[id];
+      const conversations = espace.conversations.map((t) => ({
+        ...t,
+        messages: t.messages.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                imageProposalStatus: "added" as const,
+                imageUrl,
+                imageStatus: "done" as const,
+                ref: artefactId,
+              }
+            : m
+        ),
+      }));
+      return {
+        ...prev,
+        [id]: {
+          ...espace,
+          artefacts: [newArtefact, ...espace.artefacts],
+          themeTabs: upsertImagesThemeTab(espace.themeTabs ?? [], moduleId),
+          conversations,
+        },
+      };
+    });
+  }
+
+  const confirmImageProposal = useCallback((messageId: string, decision: "generate" | "dismiss") => {
+    const id = currentIdRef.current;
+    const espace = espacesRef.current[id];
+    if (!espace) return;
+    let proposal: ImageProposal | undefined;
+    for (const t of espace.conversations) {
+      const found = t.messages.find((m) => m.id === messageId);
+      if (found?.imageProposal) {
+        proposal = found.imageProposal;
+        break;
+      }
+    }
+    if (!proposal) return;
+
+    if (decision === "dismiss") {
+      setEspaces((prev) => {
+        const e = prev[id];
+        return {
+          ...prev,
+          [id]: {
+            ...e,
+            conversations: e.conversations.map((t) => ({
+              ...t,
+              messages: t.messages.map((m) =>
+                m.id === messageId ? { ...m, imageProposalStatus: "dismissed" as const } : m
+              ),
+            })),
+          },
+        };
+      });
+      return;
+    }
+
+    // Photo web : pas d'appel modèle, affichage immédiat après autorisation.
+    if (proposal.kind === "web" && proposal.url) {
+      commitImageArtefact(messageId, proposal, proposal.url, "web");
+      return;
+    }
+
+    if (proposal.kind !== "generate" || !proposal.prompt || !espace.imageModelId) {
+      setEspaces((prev) => {
+        const e = prev[id];
+        return {
+          ...prev,
+          [id]: {
+            ...e,
+            conversations: e.conversations.map((t) => ({
+              ...t,
+              messages: t.messages.map((m) =>
+                m.id === messageId ? { ...m, imageProposalStatus: "error" as const } : m
+              ),
+            })),
+          },
+        };
+      });
+      return;
+    }
+
+    setEspaces((prev) => {
+      const e = prev[id];
+      return {
+        ...prev,
+        [id]: {
+          ...e,
+          conversations: e.conversations.map((t) => ({
+            ...t,
+            messages: t.messages.map((m) =>
+              m.id === messageId
+                ? { ...m, imageProposalStatus: "generating" as const, imageStatus: "pending" as const }
+                : m
+            ),
+          })),
+        },
+      };
+    });
+
+    const prompt = proposal.prompt;
+    const modelId = espace.imageModelId;
+    fetch("/api/image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, modelId }),
+    })
+      .then((r) => r.json())
+      .then((data: { imageUrl?: string; error?: string }) => {
+        if (data.imageUrl) {
+          commitImageArtefact(messageId, proposal!, data.imageUrl, "generated");
+        } else {
+          setEspaces((prev) => {
+            const e = prev[id];
+            return {
+              ...prev,
+              [id]: {
+                ...e,
+                conversations: e.conversations.map((t) => ({
+                  ...t,
+                  messages: t.messages.map((m) =>
+                    m.id === messageId
+                      ? {
+                          ...m,
+                          imageProposalStatus: "error" as const,
+                          imageStatus: "error" as const,
+                          text:
+                            (m.text ?? "") +
+                            `<p>⚠️ <em>Génération d'image impossible${data.error ? ` : ${data.error}` : ""}.</em></p>`,
+                        }
+                      : m
+                  ),
+                })),
+              },
+            };
+          });
+        }
+      })
+      .catch((err: Error) => {
+        setEspaces((prev) => {
+          const e = prev[id];
+          return {
+            ...prev,
+            [id]: {
+              ...e,
+              conversations: e.conversations.map((t) => ({
+                ...t,
+                messages: t.messages.map((m) =>
+                  m.id === messageId
+                    ? {
+                        ...m,
+                        imageProposalStatus: "error" as const,
+                        imageStatus: "error" as const,
+                        text:
+                          (m.text ?? "") +
+                          `<p>⚠️ <em>Génération d'image impossible : ${err.message}.</em></p>`,
+                      }
+                    : m
+                ),
+              })),
+            },
+          };
+        });
+      });
+  }, []);
 
   const confirmArtefactProposal = useCallback((proposalId: string, decision: "add" | "dismiss") => {
     const id = currentIdRef.current;
@@ -1304,6 +1523,7 @@ export function EspaceProvider({
         removeFile,
         confirmArtefactProposal,
         confirmThemeProposal,
+        confirmImageProposal,
         confirmProfileProposal,
         toggleChecklistItem,
         startNewConversation,

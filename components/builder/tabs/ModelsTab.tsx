@@ -9,7 +9,7 @@ import styles from "./ModelsTab.module.css";
 const CAPABILITY_META: Record<ModelCapability, { title: string; required: boolean }> = {
   chat: { title: "Conversation", required: true },
   reasoning: { title: "Raisonnement approfondi", required: false },
-  image: { title: "Génération d'image", required: false },
+  image: { title: "Génération d'image (Nanobanana recommandé — bon marché)", required: false },
   tts: { title: "Synthèse vocale (text-to-speech)", required: false },
   stt: { title: "Transcription vocale (speech-to-text)", required: false },
 };

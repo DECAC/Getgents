@@ -89,4 +89,14 @@ describe("assemblage du message système d'un gent", () => {
     expect(own).toContain("<!--PROFILE:");
     expect(shared).not.toContain("<!--PROFILE:");
   });
+
+  it("injecte les consignes d'illustration selon le modèle image ou la recherche web", () => {
+    expect(buildGentSystemPrompt(espace(), { variant: "espace" })).not.toContain("<!--IMAGE:");
+    expect(buildGentSystemPrompt(espace({ imageModelId: "google/nanobanana" }), { variant: "espace" })).toContain(
+      '<!--IMAGE: {"kind":"generate"'
+    );
+    expect(buildGentSystemPrompt(espace({ webSearch: true }), { variant: "espace" })).toContain(
+      '<!--IMAGE: {"kind":"web"'
+    );
+  });
 });

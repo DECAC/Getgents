@@ -7,6 +7,7 @@ import { MiniBarChart } from "./MiniBarChart";
 import { ChecklistView } from "./ChecklistView";
 import { MapArtefact } from "./MapArtefact";
 import { DashboardArtefact } from "./dashboard/DashboardArtefact";
+import { ImageArtefact } from "./ImageArtefact";
 import styles from "./Modal.module.css";
 
 function VisualGrid() {
@@ -89,7 +90,15 @@ export function ArtefactModal() {
 
         <div className={styles.body}>
           {artefact.dashboard && <DashboardArtefact spec={artefact.dashboard} />}
-          {artefact.visual && (
+          {artefact.imageUrl && (
+            <ImageArtefact
+              src={artefact.imageUrl}
+              alt={artefact.title}
+              caption={artefact.imageCaption}
+              source={artefact.imageSource}
+            />
+          )}
+          {artefact.visual && !artefact.imageUrl && (
             <div className={styles.visualWrap}>
               <VisualGrid />
             </div>
@@ -102,7 +111,7 @@ export function ArtefactModal() {
               onToggle={(i) => toggleChecklistItem(artefact.id, i)}
             />
           )}
-          {artefact.body && <SafeHTMLDoc html={artefact.body} />}
+          {artefact.body && !artefact.imageUrl && <SafeHTMLDoc html={artefact.body} />}
         </div>
 
         <div className={styles.foot}>

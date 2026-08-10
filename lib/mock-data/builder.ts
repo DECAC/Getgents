@@ -83,7 +83,7 @@ export const MODEL_CATALOG: OpenRouterModel[] = [
     provider: "Google",
     capability: "image",
     pricing: { input: 0, output: 30 },
-    tagline: "Génération d'images stylisées à partir de descriptions textuelles.",
+    tagline: "Génération d'images stylisées à bas coût — modèle recommandé par défaut.",
   },
   {
     id: "black-forest-labs/flux-1.1-pro",
@@ -91,7 +91,7 @@ export const MODEL_CATALOG: OpenRouterModel[] = [
     provider: "Black Forest Labs",
     capability: "image",
     pricing: { input: 0, output: 40 },
-    tagline: "Illustrations haute fidélité, rendu photo ou artistique.",
+    tagline: "Illustrations haute fidélité (plus coûteux que Nanobanana).",
   },
   {
     id: "elevenlabs/tts-v3",
@@ -498,7 +498,9 @@ Comportement :
     modelAssignments: [
       { capability: "chat", modelId: null },
       { capability: "reasoning", modelId: null },
-      { capability: "image", modelId: null },
+      // Nanobanana : modèle image bon marché, activé par défaut pour illustrer
+      // les propos (la génération reste soumise à l'autorisation utilisateur).
+      { capability: "image", modelId: "google/nanobanana" },
       { capability: "tts", modelId: null },
       { capability: "stt", modelId: null },
     ],
