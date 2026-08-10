@@ -145,7 +145,7 @@ export function BudgetTab({ tab }: { tab: EspaceTab }) {
             x1={pad} y1={envY.toFixed(1)} x2={W - pad} y2={envY.toFixed(1)}
             stroke="var(--gold)" strokeWidth="1.5" strokeDasharray="4 4"
           />
-          <text x={W - pad} y={(envY - 6).toFixed(1)} textAnchor="end" fontSize="10" fill="var(--gold)" fontFamily="Inter">
+          <text x={W - pad} y={(envY - 6).toFixed(1)} textAnchor="end" fontSize="10" fill="var(--gold)" fontFamily="Sora">
             Enveloppe
           </text>
           <path d={areaPath} fill="var(--sage-tint)" opacity="0.6" />
@@ -154,7 +154,7 @@ export function BudgetTab({ tab }: { tab: EspaceTab }) {
             <circle key={i} cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r="3.5" fill="var(--sage-700)" />
           ))}
           {pts.map((p, i) => (
-            <text key={i} x={p.x.toFixed(1)} y={H - 8} textAnchor="middle" fontSize="10" fill="var(--faint)" fontFamily="Inter">
+            <text key={i} x={p.x.toFixed(1)} y={H - 8} textAnchor="middle" fontSize="10" fill="var(--faint)" fontFamily="Sora">
               {p.h.day}
             </text>
           ))}

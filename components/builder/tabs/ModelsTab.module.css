@@ -15,7 +15,7 @@
 }
 
 .groupTitle {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 14.5px;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -50,7 +50,7 @@
   cursor: pointer;
 }
 .comboTrigger:hover {
-  border-color: var(--plum);
+  border-color: var(--sage);
 }
 
 .comboPlaceholder {
@@ -70,19 +70,19 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--plum-tint);
+  background: var(--sage-tint);
   border-radius: 20px;
   padding: 3px 6px 3px 10px;
   font-size: 11.5px;
 }
 
 .chipCap {
-  color: var(--plum);
+  color: var(--sage);
   font-weight: 600;
 }
 .chipCap::after {
   content: " · ";
-  color: var(--plum);
+  color: var(--sage);
   opacity: 0.5;
 }
 
@@ -97,13 +97,13 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  color: var(--plum);
+  color: var(--sage);
   font-size: 13px;
   line-height: 1;
   cursor: pointer;
 }
 .chipRemove:hover {
-  background: var(--plum);
+  background: var(--sage);
   color: #fff;
 }
 
@@ -198,10 +198,10 @@
   background: var(--bg);
 }
 .comboOptionActive {
-  background: var(--plum-tint);
+  background: var(--sage-tint);
 }
 .comboOptionActive:hover {
-  background: var(--plum-tint);
+  background: var(--sage-tint);
 }
 
 .comboOptionMain {
@@ -243,7 +243,7 @@
 
 .comboCheck {
   flex: none;
-  color: var(--plum);
+  color: var(--sage);
 }
 
 .comboEmpty {

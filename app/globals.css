@@ -1,5 +1,5 @@
 @import "../styles/tokens.css";
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 
 *,
 *::before,
@@ -20,7 +20,7 @@ body {
 }
 
 body {
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Sora", system-ui, sans-serif;
   background: var(--bg);
   color: var(--ink);
   font-size: 14px;
@@ -94,7 +94,7 @@ body.col-resizing {
 .gendoc h2,
 .gendoc h3,
 .gendoc h4 {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   letter-spacing: -0.015em;
   line-height: 1.25;
   margin: 22px 0 10px;

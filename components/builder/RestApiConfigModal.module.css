@@ -35,7 +35,7 @@
 }
 .rowDelete:hover {
   background: var(--card);
-  color: var(--plum);
+  color: var(--sage);
 }
 
 .addRowBtn {
@@ -48,8 +48,8 @@
   font-weight: 600;
 }
 .addRowBtn:hover {
-  border-color: var(--plum);
-  color: var(--plum);
+  border-color: var(--sage);
+  color: var(--sage);
 }
 
 .reqCheck {
@@ -62,7 +62,7 @@
   white-space: nowrap;
 }
 .reqCheck input {
-  accent-color: var(--plum);
+  accent-color: var(--sage);
   width: 15px;
   height: 15px;
 }

@@ -33,7 +33,7 @@
   gap: 13px;
   /* Bandeau teinté : donne immédiatement une identité visuelle à l'artefact */
   background:
-    radial-gradient(90% 140% at 0% 0%, var(--plum-tint) 0%, transparent 55%),
+    radial-gradient(90% 140% at 0% 0%, var(--sage-tint) 0%, transparent 55%),
     radial-gradient(80% 140% at 100% 0%, var(--sage-tint) 0%, transparent 50%),
     var(--card);
 }
@@ -41,7 +41,7 @@
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--gold-tint), var(--plum-tint));
+  background: linear-gradient(135deg, var(--gold-tint), var(--sage-tint));
   color: var(--gold);
   display: grid;
   place-items: center;
@@ -54,7 +54,7 @@
   height: 20px;
 }
 .title {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 18px;
   font-weight: 700;
   margin: 0;
@@ -76,8 +76,8 @@
   letter-spacing: 0.05em;
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--plum-tint);
-  color: var(--plum);
+  background: var(--sage-tint);
+  color: var(--sage);
 }
 .closeBtn {
   margin-left: auto;

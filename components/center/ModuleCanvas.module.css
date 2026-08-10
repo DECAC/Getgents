@@ -153,7 +153,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--plum), var(--sage) 55%, var(--gold));
+  background: linear-gradient(90deg, var(--sage), var(--sage) 55%, var(--gold));
   opacity: 0.65;
   pointer-events: none;
 }

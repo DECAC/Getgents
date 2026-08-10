@@ -41,13 +41,13 @@
   white-space: nowrap;
 }
 .builderLink:hover {
-  border-color: var(--plum);
-  color: var(--plum);
-  background: var(--plum-tint);
+  border-color: var(--sage);
+  color: var(--sage);
+  background: var(--sage-tint);
 }
 
 .title {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 21px;
   font-weight: 700;
   margin: 0;
@@ -99,7 +99,7 @@
   border-radius: 50%;
   flex: none;
 }
-.dotLive { background: var(--sage); }
+.dotLive { background: var(--success); }
 .dotPaused { background: var(--gold); }
 .dotDone { background: var(--faint); }
 

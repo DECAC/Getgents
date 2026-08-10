@@ -67,7 +67,7 @@
   min-width: 0;
 }
 .headTitle {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 15px;
   font-weight: 700;
   margin: 0;
@@ -110,8 +110,8 @@
   white-space: nowrap;
 }
 .reportBtn:hover {
-  border-color: var(--plum);
-  color: var(--plum);
+  border-color: var(--sage);
+  color: var(--sage);
 }
 .closeBtn {
   width: 30px;
@@ -229,8 +229,8 @@
   font-weight: 600;
 }
 .jumpFormToggle:hover {
-  border-color: var(--plum);
-  color: var(--plum);
+  border-color: var(--sage);
+  color: var(--sage);
 }
 
 /* Messages */
@@ -255,8 +255,8 @@
   color: #fff;
 }
 .msgUser .av {
-  background: var(--plum-tint);
-  color: var(--plum);
+  background: var(--sage-tint);
+  color: var(--sage);
   border-radius: 50%;
 }
 .msgBody {
@@ -521,8 +521,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--plum);
-  background: var(--plum-tint);
+  color: var(--sage);
+  background: var(--sage-tint);
   padding: 2px 7px;
   border-radius: 5px;
 }
@@ -553,11 +553,11 @@
   border-radius: 8px;
   font-size: 12.5px;
   font-weight: 600;
-  background: var(--plum);
+  background: var(--sage);
   color: #fff;
 }
 .proposalAddBtn:hover {
-  background: #5a3049;
+  background: var(--sage-700);
 }
 .proposalDismissBtn {
   padding: 8px 12px;
@@ -589,7 +589,7 @@
   background: var(--gold-tint);
 }
 .picSent {
-  background: var(--plum-tint);
+  background: var(--sage-tint);
 }
 .ptext {
   flex: 1;
@@ -743,12 +743,12 @@
 }
 .attachChipRemove:hover {
   background: var(--bg);
-  color: var(--plum);
+  color: var(--sage);
 }
 .attachError {
   margin-bottom: 8px;
   font-size: 11.5px;
-  color: var(--plum);
+  color: var(--sage);
 }
 .attachLoading {
   display: flex;

@@ -15,8 +15,8 @@
   white-space: nowrap;
 }
 .btn:hover {
-  border-color: var(--plum);
-  color: var(--plum);
+  border-color: var(--sage);
+  color: var(--sage);
 }
 
 .menu {
@@ -45,6 +45,6 @@
   white-space: nowrap;
 }
 .item:hover {
-  background: var(--plum-tint);
-  color: var(--plum);
+  background: var(--sage-tint);
+  color: var(--sage);
 }

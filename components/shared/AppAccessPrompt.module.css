@@ -30,7 +30,7 @@
 }
 .input:focus {
   outline: none;
-  border-color: var(--plum);
+  border-color: var(--sage);
 }
 .btn {
   flex: none;
@@ -38,9 +38,9 @@
   font-weight: 600;
   padding: 8px 14px;
   border-radius: 8px;
-  background: var(--plum);
+  background: var(--sage);
   color: #fff;
-  border: 1px solid var(--plum);
+  border: 1px solid var(--sage);
 }
 .btn:hover:not(:disabled) {
   filter: brightness(1.05);

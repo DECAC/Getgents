@@ -1,20 +1,40 @@
-/* Design tokens — style inspiré d'OpenRouter (fond blanc, accent indigo, gris neutres) */
+/* Design tokens — piste "Chaleureux grand public" (retenue à l'issue du
+ * dossier de refonte). Accent corail chaud, cartes plus arrondies, boutons et
+ * badges en pilule. Les noms sage/gold/plum sont conservés pour ne pas casser
+ * les références dans les composants, mais portent désormais les VRAIES
+ * couleurs qu'ils décrivent (contrairement à l'ancienne palette « indigo/rose
+ * nommés sage/plum »). Handoff : GetGent_restyling_proposals.zip. */
 :root {
-  --ink: #111827;
-  --muted: #6b7280;
-  --faint: #9ca3af;
-  --bg: #f4f5f7;
-  --card: #ffffff;
-  --line: #e5e7eb;
-  --line-soft: #f0f1f3;
-  --sage: #6366f1;
-  --sage-700: #4f46e5;
-  --sage-tint: #eef2ff;
-  --gold: #d97706;
-  --gold-tint: #fef3c7;
-  --plum: #db2777;
-  --plum-tint: #fce7f3;
-  --r: 10px;
+  --ink: #2a1f19;
+  --muted: #73665f;
+  --faint: #a2958f;
+  --bg: #fbf3ed;
+  --card: #fffdf9;
+  --line: #eadbd3;
+  --line-soft: #f3e9e3;
+
+  /* Accent principal : corail. Boutons primaires, liens, focus, mode actif. */
+  --sage: #e65d76;
+  --sage-700: #c73758;
+  --sage-tint: #ffdee2;
+
+  /* Avertissement / mise en avant secondaire. */
+  --gold: #dca331;
+  --gold-tint: #fde4bb;
+
+  /* Danger / destructif. */
+  --plum: #d64651;
+  --plum-tint: #ffdbda;
+
+  /* Statuts sémantiques : à utiliser pour Publié/Actif plutôt que de
+   * réutiliser --sage ou --gold au hasard — un badge ne doit jamais mélanger
+   * ces rôles. */
+  --success: #57a45b;
+  --success-tint: #d4f1d4;
+
+  --r: 18px;
+  --r-pill: 999px;
+
   --rail: 248px;
   --rail-min: 66px;
   --aside: 336px;

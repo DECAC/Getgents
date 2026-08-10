@@ -47,7 +47,7 @@
 }
 .ticLecture { background: #f1f2f4; color: var(--muted); }
 .ticEcriture { background: var(--gold-tint); color: var(--gold); }
-.ticCompte { background: var(--plum-tint); color: var(--plum); }
+.ticCompte { background: var(--sage-tint); color: var(--sage); }
 
 .info {
   flex: 1;
@@ -79,7 +79,7 @@
 }
 .riskLecture { background: #f1f2f4; color: var(--muted); }
 .riskEcriture { background: var(--gold-tint); color: var(--gold); }
-.riskCompte { background: var(--plum-tint); color: var(--plum); }
+.riskCompte { background: var(--sage-tint); color: var(--sage); }
 
 .connectOff {
   flex: none;
@@ -88,11 +88,11 @@
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
-  background: var(--plum);
+  background: var(--sage);
   color: #fff;
 }
 .connectOff:hover {
-  background: #5a3049;
+  background: var(--sage-700);
 }
 .connectOn {
   flex: none;

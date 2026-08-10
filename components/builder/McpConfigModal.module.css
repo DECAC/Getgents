@@ -31,7 +31,7 @@
 }
 
 .title {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 16px;
   font-weight: 700;
   margin: 0;
@@ -103,7 +103,7 @@
 }
 
 .req {
-  color: var(--plum);
+  color: var(--sage);
 }
 
 .infoDot {
@@ -122,8 +122,8 @@
 }
 .input:focus {
   outline: none;
-  border-color: var(--plum);
-  box-shadow: 0 0 0 3px var(--plum-tint);
+  border-color: var(--sage);
+  box-shadow: 0 0 0 3px var(--sage-tint);
 }
 
 .textarea {
@@ -139,8 +139,8 @@
 }
 .textarea:focus {
   outline: none;
-  border-color: var(--plum);
-  box-shadow: 0 0 0 3px var(--plum-tint);
+  border-color: var(--sage);
+  box-shadow: 0 0 0 3px var(--sage-tint);
 }
 
 .hint {
@@ -164,7 +164,7 @@
   cursor: pointer;
 }
 .radio input {
-  accent-color: var(--plum);
+  accent-color: var(--sage);
   width: 15px;
   height: 15px;
 }
@@ -211,7 +211,7 @@
   border-radius: 9px;
   font-weight: 600;
   font-size: 13px;
-  background: var(--plum);
+  background: var(--sage);
   color: #fff;
 }
 .btnPrim:hover {

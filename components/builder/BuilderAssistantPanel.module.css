@@ -74,8 +74,8 @@
   white-space: nowrap;
 }
 .newConvBtn:hover:not(:disabled) {
-  color: var(--plum);
-  background: var(--plum-tint);
+  color: var(--sage);
+  background: var(--sage-tint);
 }
 .newConvBtn:disabled {
   opacity: 0.4;
@@ -89,7 +89,7 @@
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  background: var(--plum);
+  background: var(--sage);
   color: #fff;
   display: grid;
   place-items: center;
@@ -101,7 +101,7 @@
   min-width: 0;
 }
 .headTitle {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 15px;
   font-weight: 700;
   margin: 0;
@@ -135,8 +135,8 @@
   white-space: nowrap;
 }
 .reportBtn:hover {
-  border-color: var(--plum);
-  color: var(--plum);
+  border-color: var(--sage);
+  color: var(--sage);
 }
 
 .scope {
@@ -144,10 +144,10 @@
   align-items: center;
   gap: 7px;
   padding: 9px 18px;
-  background: var(--plum-tint);
+  background: var(--sage-tint);
   border-bottom: 1px solid var(--line-soft);
   font-size: 11px;
-  color: var(--plum);
+  color: var(--sage);
   flex: none;
 }
 .scope svg {
@@ -187,7 +187,7 @@
   font-weight: 600;
 }
 .msgAgent .av {
-  background: var(--plum);
+  background: var(--sage);
   color: #fff;
 }
 .msgUser .av {
@@ -224,7 +224,7 @@
   margin-top: 7px;
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--plum);
+  color: var(--sage);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -235,9 +235,9 @@
 
 /* Proposition de connecteur préparée par l'assistant, à valider */
 .connectorCard {
-  border: 1px solid var(--plum);
+  border: 1px solid var(--sage);
   border-radius: 14px;
-  background: var(--plum-tint);
+  background: var(--sage-tint);
   padding: 12px 14px;
   margin-bottom: 16px;
 }
@@ -246,7 +246,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--plum);
+  color: var(--sage);
   margin-bottom: 4px;
 }
 .connectorName {
@@ -271,11 +271,11 @@
   border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
-  background: var(--plum);
+  background: var(--sage);
   color: #fff;
 }
 .connectorAddBtn:hover {
-  background: #5a3049;
+  background: var(--sage-700);
 }
 .connectorDismissBtn {
   padding: 7px 12px;
@@ -309,7 +309,7 @@
   line-height: 1.45;
 }
 .configList b {
-  color: var(--plum);
+  color: var(--sage);
   font-weight: 700;
 }
 
@@ -323,7 +323,7 @@
 }
 .suggestionRow input {
   margin-top: 3px;
-  accent-color: var(--plum);
+  accent-color: var(--sage);
 }
 .suggestionInfo {
   display: flex;
@@ -367,7 +367,7 @@
   gap: 7px;
 }
 .composer:focus-within {
-  border-color: var(--plum);
+  border-color: var(--sage);
 }
 .composerTextarea {
   flex: 1;
@@ -385,14 +385,14 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: var(--plum);
+  background: var(--sage);
   color: #fff;
   display: grid;
   place-items: center;
   flex: none;
 }
 .sendBtn:hover {
-  background: #5a3049;
+  background: var(--sage-700);
 }
 .sendBtn:disabled {
   background: var(--line);
