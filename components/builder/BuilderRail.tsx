@@ -9,6 +9,9 @@ interface NavEntry {
   id: BuilderTab;
   label: string;
   icon: JSX.Element;
+  /** Bleu plutôt que corail : distingue « Mes gents » (le produit, côté
+   * Gent'space) des onglets de construction d'UN gent. */
+  blue?: boolean;
 }
 
 interface NavSection {
@@ -22,6 +25,14 @@ const ICON = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M3 10.5 12 3l9 7.5" />
       <path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" />
+    </svg>
+  ),
+  mesgents: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="7.5" height="7.5" rx="2" />
+      <rect x="13.5" y="3" width="7.5" height="7.5" rx="2" />
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="2" />
+      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" />
     </svg>
   ),
   conversationnel: (
@@ -66,6 +77,7 @@ const ICON = {
 // Contexte et non dans le gent conversationnel : la mini-app s'en sert aussi.
 const NAV: NavSection[] = [
   { entries: [{ id: "accueil", label: "Accueil", icon: ICON.accueil }] },
+  { entries: [{ id: "mesgents", label: "Mes gents", icon: ICON.mesgents, blue: true }] },
   {
     title: "Créer",
     entries: [
@@ -182,16 +194,17 @@ export function BuilderRail() {
 
         {menuOpen && (
           <div className={styles.brandMenu} role="menu">
-            <a href="/builder" className={styles.brandMenuItem} role="menuitem">
+            {/* Gent' space = le produit tel que le voit l'utilisateur final,
+                pas la liste des gents à construire (déplacée dans l'onglet
+                « Mes gents » ci-dessous). Bleu pour le distinguer du corail
+                du studio. */}
+            <a href={`/espace/${currentDraft.id}`} className={styles.brandMenuItemBlue} role="menuitem">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7.5" height="7.5" rx="2" />
-                <rect x="13.5" y="3" width="7.5" height="7.5" rx="2" />
-                <rect x="3" y="13.5" width="7.5" height="7.5" rx="2" />
-                <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" />
+                <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-4.6A8.4 8.4 0 1 1 21 11.5z" />
               </svg>
               <span>
                 <span className={styles.brandMenuLabel}>Gent&apos; space</span>
-                <span className={styles.brandMenuSub}>Tous vos gents</span>
+                <span className={styles.brandMenuSub}>Voir ce gent côté utilisateur</span>
               </span>
             </a>
           </div>
@@ -237,7 +250,11 @@ export function BuilderRail() {
             {section.entries.map((entry) => (
               <button
                 key={entry.id}
-                className={[styles.navItem, activeTab === entry.id ? styles.navItemOn : ""]
+                className={[
+                  styles.navItem,
+                  entry.blue ? styles.navItemBlue : "",
+                  activeTab === entry.id ? (entry.blue ? styles.navItemOnBlue : styles.navItemOn) : "",
+                ]
                   .filter(Boolean)
                   .join(" ")}
                 onClick={() => switchTab(entry.id)}

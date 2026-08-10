@@ -90,6 +90,19 @@
   background: var(--sage-tint);
 }
 
+.brandMenuItemBlue {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--blue-700);
+}
+.brandMenuItemBlue:hover {
+  background: var(--blue-tint);
+}
+
 .brandMenuLabel {
   display: block;
   font-size: 13px;
@@ -215,6 +228,20 @@
   font-weight: 600;
 }
 
+/* « Mes gents » : bleu plutôt que corail — distingue le Gent'space (le
+   produit) des onglets de construction d'UN gent, actif ou non. */
+.navItemBlue {
+  color: var(--blue-700);
+}
+.navItemBlue:hover {
+  background: var(--blue-tint);
+}
+.navItemOnBlue {
+  background: var(--blue-tint);
+  color: var(--blue-700);
+  font-weight: 600;
+}
+
 .navIcon {
   flex: none;
   width: 18px;
@@ -229,6 +256,12 @@
 }
 .navItemOn .navIcon {
   color: var(--sage);
+}
+.navItemBlue .navIcon {
+  color: var(--blue);
+}
+.navItemOnBlue .navIcon {
+  color: var(--blue-700);
 }
 
 .navLabel {

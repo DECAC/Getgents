@@ -3,6 +3,7 @@
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { BuilderHeader } from "./BuilderHeader";
 import { AccueilTab } from "./tabs/AccueilTab";
+import { MesGentsTab } from "./tabs/MesGentsTab";
 import { ConversationnelTab } from "./tabs/ConversationnelTab";
 import { MiniAppTab } from "./tabs/MiniAppTab";
 import { ConnectorsTab } from "./tabs/ConnectorsTab";
@@ -15,6 +16,7 @@ export function BuilderCenter() {
   const { activeTab } = useBuilder();
 
   function renderContent() {
+    if (activeTab === "mesgents") return <MesGentsTab />;
     if (activeTab === "conversationnel") return <ConversationnelTab />;
     if (activeTab === "miniapp") return <MiniAppTab />;
     if (activeTab === "connectors") return <ConnectorsTab />;

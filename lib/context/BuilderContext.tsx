@@ -33,6 +33,7 @@ import {
 
 export type BuilderTab =
   | "accueil"
+  | "mesgents"
   | "conversationnel"
   | "miniapp"
   | "connectors"

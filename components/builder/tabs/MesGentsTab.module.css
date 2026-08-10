@@ -1,0 +1,332 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.headRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.searchRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 13px;
+  color: var(--faint);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 10px 36px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 13.5px;
+}
+.searchInput:focus {
+  border-color: var(--blue);
+}
+
+.searchClear {
+  position: absolute;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.searchClear:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* Bascule tuile / liste */
+.viewToggle {
+  flex: none;
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.viewBtn {
+  padding: 8px 12px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: var(--card);
+}
+.viewBtn:hover {
+  color: var(--ink);
+}
+.viewBtnOn {
+  background: var(--blue-tint);
+  color: var(--blue-700);
+}
+
+.newBtn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.newBtn:hover {
+  background: var(--blue-700);
+}
+
+.banner {
+  padding: 12px 14px;
+  border-radius: var(--r);
+  background: var(--blue-tint);
+  border: 1px solid rgba(79, 124, 201, 0.25);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.deleteError {
+  padding: 12px 14px;
+  border-radius: var(--r);
+  background: #fbeeea;
+  border: 1px solid #e3b5aa;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #b4462f;
+}
+
+.noResults {
+  padding: 14px 16px;
+  border-radius: var(--r);
+  background: var(--card);
+  border: 1px solid var(--line-soft);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---------- Vue tuile ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 16px;
+  text-align: left;
+}
+.card:hover {
+  border-color: var(--blue);
+  box-shadow: 0 4px 14px rgba(21, 33, 43, 0.06);
+}
+
+.cardLink {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.ic {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--blue-tint);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  flex: none;
+}
+
+.name {
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: -0.01em;
+}
+
+.statusBadge {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 3px;
+  display: inline-block;
+}
+.statusDraft { background: var(--line-soft); color: var(--muted); }
+.statusReview { background: var(--gold-tint); color: var(--gold); }
+.statusPublished { background: var(--success-tint); color: var(--success); }
+
+.objective {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 8px;
+  min-height: 32px;
+}
+
+.meta {
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.cardActions {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.deleteBtn {
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: var(--r-pill);
+  padding: 5px 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.deleteBtn:hover:not(:disabled) {
+  border-color: #e3b5aa;
+  color: #b4462f;
+  background: #fbeeea;
+}
+.deleteBtn:disabled {
+  color: var(--faint);
+  cursor: default;
+}
+
+.newCard {
+  border: 1px dashed var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--blue);
+  font-weight: 600;
+  font-size: 12.5px;
+  min-height: 128px;
+  cursor: pointer;
+}
+.newCard:hover {
+  background: var(--blue-tint);
+  border-color: var(--blue);
+}
+
+/* ---------- Vue liste ---------- */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r);
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.row:hover {
+  border-color: var(--blue);
+}
+
+.rowLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.rowName {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowMeta {
+  font-size: 11px;
+  color: var(--faint);
+  flex: none;
+}
+
+.recoveryCard {
+  border-color: rgba(79, 124, 201, 0.35);
+}
+
+.recoveryActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.recoveryLink,
+.recoveryBtn {
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: var(--r-pill);
+  padding: 5px 10px;
+}
+
+.recoveryLink {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.recoveryBtn {
+  background: var(--blue);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+}
+.recoveryBtn:hover {
+  filter: brightness(0.95);
+}

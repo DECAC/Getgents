@@ -32,6 +32,13 @@
   --success: #57a45b;
   --success-tint: #d4f1d4;
 
+  /* Bleu pastel — distingue « Gent' space » (le produit, côté utilisateur)
+   * du corail réservé au studio (l'outil de création). Même famille de
+   * lumière/chroma que --sage, teinte différente. */
+  --blue: #4f7cc9;
+  --blue-700: #3a5fa3;
+  --blue-tint: #dbe7fb;
+
   --r: 18px;
   --r-pill: 999px;
 
