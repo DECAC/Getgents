@@ -1,4 +1,5 @@
-import type { Espace, EspacesMap, Tool, UserFile, RestApiConnector } from "@/lib/types";
+import type { Espace, EspacesMap, Tool, UserFile, RestApiConnector, DocumentViewerSpec } from "@/lib/types";
+import { documentsBudgetFor } from "@/lib/sessionContext";
 import type { GentDraft, KnowledgeSource } from "@/lib/types/builder";
 import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { formatConversationStartedAt, newConversationId } from "@/lib/conversationUtils";
@@ -239,6 +240,49 @@ export function patchPublishedGentName(id: string, name: string): void {
 export const KNOWLEDGE_BASE_BUDGET = DOC_MAX_CHARS;
 
 /**
+ * Texte intégral du document d'un gent « visionneuse », paginé, injecté dans le
+ * prompt système à la publication.
+ *
+ * Il passe par le prompt et non par les fichiers de session parce que ces
+ * derniers appartiennent à l'utilisateur : ils sont retirés des espaces servis
+ * par lien de partage. Le document du créateur, lui, fait partie de la
+ * définition du gent — sans ça, le destinataire d'une visionneuse diffusée
+ * lisait un document que le gent, lui, n'avait jamais vu.
+ *
+ * Les marqueurs de page permettent au gent de situer ses réponses (« page 42 »)
+ * sur la même pagination que celle affichée au lecteur.
+ */
+function visionneuseDocumentBlock(doc: DocumentViewerSpec, chatModelId?: string): string {
+  const budget = documentsBudgetFor(chatModelId);
+  const kept: string[] = [];
+  let used = 0;
+  let cut = false;
+
+  for (let i = 0; i < doc.pages.length; i++) {
+    const marked = `[Page ${i + 1}]\n${doc.pages[i]}`;
+    if (used + marked.length > budget) {
+      cut = true;
+      break;
+    }
+    used += marked.length;
+    kept.push(marked);
+  }
+
+  const head =
+    `\n\nTEXTE INTÉGRAL DU DOCUMENT « ${doc.sourceName} » — c'est TA source primaire, ` +
+    "cite-la plutôt que tes connaissances générales, et situe tes réponses par numéro de page :\n";
+
+  if (!kept.length) return "";
+  if (!cut) return `${head}${kept.join("\n\n")}`;
+
+  return (
+    `${head}${kept.join("\n\n")}` +
+    `\n\n[Le document continue au-delà de la page ${kept.length} : cette partie dépasse ce que tu peux recevoir. ` +
+    "Si la question porte sur une page ultérieure, dis-le franchement au lecteur au lieu d'improviser.]"
+  );
+}
+
+/**
  * Injecte le CONTENU des sources de connaissance déclarées par le créateur,
  * pas seulement leur nom. Baké dans le systemPrompt à la publication — c'est
  * là que vivent déjà tous les autres réglages figés du créateur (connecteurs,
@@ -317,15 +361,20 @@ export function draftToEspace(draft: GentDraft): Espace {
   // conversation (même mécanisme que les fichiers joints — voir
   // sessionContext.ts) et devient un artefact d'accueil pour que l'espace
   // s'ouvre directement dessus (voir EspaceContext, visionneuseMode).
+  const chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? undefined;
+
   const visionneuseDoc = draft.visionneuse?.enabled ? draft.visionneuse.document : undefined;
   if (visionneuseDoc) {
+    // Listé sans son texte : le contenu part dans le prompt système (bloc
+    // ci-dessous) et non par `files`. Les fichiers de session appartiennent à
+    // l'utilisateur — ils sont retirés des espaces servis par lien de partage,
+    // et le destinataire d'une visionneuse diffusée se serait retrouvé face à
+    // un gent incapable de citer le document qu'il est en train de lire.
     files.push({
       id: "visionneuse-doc-file",
       name: visionneuseDoc.sourceName,
       size: `${visionneuseDoc.pageCount} page${visionneuseDoc.pageCount > 1 ? "s" : ""}`,
       date: "Visionneuse",
-      text: visionneuseDoc.pages.join("\n\n"),
-      truncated: visionneuseDoc.truncated,
     });
   }
 
@@ -342,11 +391,12 @@ export function draftToEspace(draft: GentDraft): Espace {
     const instructions = draft.visionneuse?.instructions?.trim();
     platformBlocks.push(
       `Ce gent est une VISIONNEUSE DE DOCUMENT : l'utilisateur lit « ${visionneuseDoc.sourceName} » (${visionneuseDoc.pageCount} pages) ouvert en pleine page à côté de la conversation. ` +
-        "Ton rôle est d'accompagner cette lecture — résume, explique, répond sur le contenu réel du document (fourni ci-dessous en base de connaissance), et propose un artefact (rapport, graphique, image) quand ça aide à mieux comprendre une section. " +
+        "Ton rôle est d'accompagner cette lecture — résume, explique, répond sur le contenu réel du document (reproduit intégralement plus bas), et propose un artefact (rapport, graphique, image) quand ça aide à mieux comprendre une section. " +
         "Ne propose jamais d'ouvrir un AUTRE document : celui-ci est fixé par le créateur. " +
         "IMPORTANT — quand tu viens de produire un artefact, ne demande pas au lecteur d'aller le consulter tout de suite : il est en pleine lecture. Termine simplement ta réponse en lui indiquant qu'il le retrouvera dans son espace de travail lorsqu'il quittera la visionneuse." +
         (instructions ? `\n\nConsignes du créateur : ${instructions}` : "")
     );
+    platformBlocks.push(visionneuseDocumentBlock(visionneuseDoc, chatModelId));
   }
 
   // Tous les artefacts (rapport, checklist, graphique, aperçu visuel, carte) sont éligibles
@@ -360,7 +410,6 @@ export function draftToEspace(draft: GentDraft): Espace {
   );
 
   const threadId = newConversationId();
-  const chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? undefined;
   // Les consignes IMAGE sont injectées à l'exécution (buildGentSystemPrompt)
   // selon imageModelId / webSearch — pas bakées dans le prompt système.
   // resolveImageModelId corrige l'ancien slug google/nanobanana à la publication.
