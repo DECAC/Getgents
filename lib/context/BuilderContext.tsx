@@ -16,7 +16,13 @@ import {
 } from "@/lib/connectorSignal";
 import { GENT_CONFIG_PROMPT_INSTRUCTION, extractGentConfigSignal, type GentConfigProposal } from "@/lib/gentConfigSignal";
 import { JUMP_FORM_PROMPT_INSTRUCTION, extractJumpFormSignal } from "@/lib/jumpFormSignal";
-import { writePublishedGent, draftToEspace, patchPublishedGentName, readPublishedGents } from "@/lib/publishedGents";
+import {
+  writePublishedGent,
+  draftToEspace,
+  patchPublishedGentName,
+  readPublishedGents,
+  mergeVisionneuseArtefact,
+} from "@/lib/publishedGents";
 import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel } from "@/lib/streamChat";
@@ -365,7 +371,13 @@ export function BuilderProvider({
         activeConversationId: existing.conversations?.length
           ? existing.activeConversationId
           : fresh.activeConversationId,
-        artefacts: existing.artefacts ?? fresh.artefacts,
+        // Les artefacts appartiennent à l'utilisateur : republier ne doit pas
+        // effacer son travail. Le document d'un gent « visionneuse » fait
+        // exception — il relève de la CONFIGURATION du gent, pas de l'usage.
+        // Sans cette fusion, attacher un document à un gent existant restait
+        // sans effet : l'artefact fraîchement produit était écrasé par la
+        // liste d'artefacts d'avant, et la visionneuse n'avait rien à ouvrir.
+        artefacts: mergeVisionneuseArtefact(existing.artefacts ?? fresh.artefacts, fresh.artefacts),
         themeTabs: existing.themeTabs,
         memory: existing.memory || fresh.memory,
         profile: existing.profile,

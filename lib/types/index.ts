@@ -414,6 +414,14 @@ export interface Espace {
   /** Canal de diffusion de la note produite par la routine (WhatsApp…). */
   channel?: NotificationChannel;
   /**
+   * Horodatage ISO de la dernière écriture de la version de travail. Sert à
+   * départager le cache local et le serveur à l'hydratation : le compteur
+   * `version` ne suffit pas, il est calculé depuis le cache local seul et
+   * repart donc à 1 sur une machine où ce cache est froid — le serveur
+   * l'emportait alors et Preview rouvrait la configuration précédente.
+   */
+  workingUpdatedAt?: string;
+  /**
    * Type de gent « visionneuse » : le document est fixé par le créateur, et
    * l'espace s'ouvre directement en lecture immersive plutôt qu'en
    * conversation vide — la conversation reste possible mais reste scopée à

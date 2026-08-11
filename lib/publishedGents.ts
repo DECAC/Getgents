@@ -138,10 +138,24 @@ function pushRemoteGent(id: string, espace: Espace, immediate = false, diffuse =
  */
 export function writePublishedGent(id: string, espace: Espace, immediate = false, diffuse = false): void {
   if (typeof window === "undefined") return;
+  // Estampillé à chaque écriture : c'est ce qui permet à l'hydratation de
+  // savoir que la version de travail locale est plus fraîche que celle du
+  // serveur, même quand le compteur `version` est reparti de 1.
+  const stamped: Espace = { ...espace, workingUpdatedAt: new Date().toISOString() };
   const current = readPublishedGents();
-  current[id] = espace;
+  current[id] = stamped;
   writeLocalCache(current);
-  pushRemoteGent(id, espace, immediate, diffuse);
+  pushRemoteGent(id, stamped, immediate, diffuse);
+}
+
+/** Vrai si la version de travail locale a été écrite après celle du serveur. */
+export function localIsFresher(local: Espace | undefined, remote: Espace): boolean {
+  if (!local) return false;
+  const l = Date.parse(local.workingUpdatedAt ?? "");
+  const r = Date.parse(remote.workingUpdatedAt ?? "");
+  if (Number.isFinite(l) && (!Number.isFinite(r) || l > r)) return true;
+  // Espaces antérieurs à l'horodatage : on retombe sur le compteur de version.
+  return (local.version ?? 1) > (remote.version ?? 1);
 }
 
 /**
@@ -160,11 +174,11 @@ export async function syncPublishedGentsFromRemote(): Promise<EspacesMap | null 
 
   for (const [id, remoteEspace] of Object.entries(remote)) {
     const localEspace = local[id];
-    // Le distant fait autorité, SAUF s'il est en retard d'une publication : une
-    // version locale plus récente signifie que le push n'a pas encore abouti.
-    // Sans ce garde-fou, republier puis ouvrir l'espace aussitôt ramenait la
-    // configuration précédente (nouveaux champs d'entrée invisibles).
-    if (localEspace && (localEspace.version ?? 1) > (remoteEspace.version ?? 1)) {
+    // Le distant fait autorité, SAUF s'il est en retard d'une écriture locale :
+    // le push n'a alors pas encore abouti. Sans ce garde-fou, ouvrir l'espace
+    // juste après « Preview » ramenait la configuration précédente — le
+    // document tout juste attaché à une visionneuse restait invisible.
+    if (localIsFresher(localEspace, remoteEspace)) {
       stale.push(id);
       continue;
     }
@@ -238,6 +252,28 @@ export function patchPublishedGentName(id: string, name: string): void {
  * fichiers), les suivants sont listés en référence seule.
  */
 export const KNOWLEDGE_BASE_BUDGET = DOC_MAX_CHARS;
+
+/** Identifiant de l'artefact portant le document d'un gent « visionneuse ». */
+export const VISIONNEUSE_ARTEFACT_ID = "visionneuse-doc";
+
+/**
+ * Réinjecte le document de la visionneuse dans les artefacts conservés d'un
+ * espace déjà existant (voir buildEspaceFromDraft).
+ *
+ * Les artefacts d'un espace sont le travail de son utilisateur : republier un
+ * gent les préserve. Mais le document d'un gent « visionneuse » est défini par
+ * le CRÉATEUR — le remplacer par la liste d'artefacts d'avant revenait à
+ * ignorer purement et simplement tout document attaché à un gent DÉJÀ
+ * existant, qui restait alors intestable en Preview. On repart donc des
+ * artefacts de l'utilisateur, on retire l'éventuel document périmé, et on
+ * remet celui de la configuration courante — absent s'il a été retiré ou si le
+ * type visionneuse a été désactivé.
+ */
+export function mergeVisionneuseArtefact(kept: Espace["artefacts"], fresh: Espace["artefacts"]): Espace["artefacts"] {
+  const freshDoc = fresh.find((a) => a.id === VISIONNEUSE_ARTEFACT_ID);
+  const withoutDoc = kept.filter((a) => a.id !== VISIONNEUSE_ARTEFACT_ID);
+  return freshDoc ? [freshDoc, ...withoutDoc] : withoutDoc;
+}
 
 /**
  * Texte intégral du document d'un gent « visionneuse », paginé, injecté dans le
