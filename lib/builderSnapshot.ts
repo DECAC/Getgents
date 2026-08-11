@@ -1,5 +1,5 @@
 import type { GentDraft } from "@/lib/types/builder";
-import type { NotificationChannel, PinnedArtefact, Routine } from "@/lib/types";
+import type { NotificationChannel, PinnedArtefact, Routine, VisionneuseConfig } from "@/lib/types";
 
 export const DEFAULT_DRAFT_NAME = "Nouveau gent";
 
@@ -28,6 +28,17 @@ function routineSnapshot(routine?: Routine) {
     frequency: routine.frequency,
     hour: routine.hour,
     mission: routine.mission,
+  };
+}
+
+/** Empreinte visionneuse — le document (potentiellement volumineux) compte par sa taille, pas son contenu. */
+function visionneuseSnapshot(visionneuse?: VisionneuseConfig) {
+  if (!visionneuse) return null;
+  return {
+    enabled: visionneuse.enabled,
+    instructions: visionneuse.instructions,
+    documentName: visionneuse.document?.sourceName ?? null,
+    documentPages: visionneuse.document?.pageCount ?? null,
   };
 }
 
@@ -64,6 +75,7 @@ export function draftContentSnapshot(draft: GentDraft): string {
     webSearch: draft.webSearch,
     jumpForm: draft.jumpForm,
     pinnedArtefact: pinnedSnapshot(draft.pinnedArtefact),
+    visionneuse: visionneuseSnapshot(draft.visionneuse),
     routine: routineSnapshot(draft.routine),
     channel: channelSnapshot(draft.channel),
   });

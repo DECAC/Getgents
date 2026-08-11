@@ -73,6 +73,12 @@ export function espaceForPinnedRefresh(espace: Espace, inputs?: Record<string, s
  */
 export function espaceForPublicLink(espace: Espace): Espace {
   const pinned = espace.pinnedArtefact;
+  // Type « visionneuse » : le document fixé par le créateur est un
+  // livrable public du gent (comme starters/jumpForm), pas une donnée
+  // personnelle du créateur — le destinataire doit pouvoir l'ouvrir.
+  const visionneuseDoc = espace.visionneuse?.enabled
+    ? espace.artefacts.find((a) => a.id === "visionneuse-doc")
+    : undefined;
   return {
     icon: espace.icon,
     name: espace.name,
@@ -94,7 +100,8 @@ export function espaceForPublicLink(espace: Espace): Espace {
     conversations: [{ id: "shared", startedAt: formatConversationStartedAt(), messages: [] }],
     activeConversationId: "shared",
     files: [],
-    artefacts: [],
+    artefacts: visionneuseDoc ? [visionneuseDoc] : [],
+    visionneuse: espace.visionneuse?.enabled ? { enabled: true } : undefined,
     jumpForm: espace.jumpForm,
     // Les déclencheurs décrivent les usages du gent, pas l'activité de son
     // créateur : ils sont donc transmis tels quels au destinataire, à qui ils

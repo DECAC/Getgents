@@ -413,6 +413,26 @@ export interface Espace {
   pinnedArtefact?: PinnedArtefact;
   /** Canal de diffusion de la note produite par la routine (WhatsApp…). */
   channel?: NotificationChannel;
+  /**
+   * Type de gent « visionneuse » : le document est fixé par le créateur, et
+   * l'espace s'ouvre directement en lecture immersive plutôt qu'en
+   * conversation vide — la conversation reste possible mais reste scopée à
+   * ce document (voir DocumentViewerModal), ce n'est jamais l'un OU l'autre.
+   */
+  visionneuse?: VisionneuseConfig;
+}
+
+/**
+ * Type de gent dédié à la lecture immersive d'un document unique, fixé une
+ * fois par le créateur (à l'inverse du bouton « Ouvrir en visionneuse » du
+ * gent conversationnel, où l'utilisateur choisit son document à l'usage).
+ */
+export interface VisionneuseConfig {
+  enabled: boolean;
+  /** Consignes du créateur pour l'assistant qui accompagne la lecture (ex. angle, ton). */
+  instructions?: string;
+  /** Document extrait une fois à la configuration, servi tel quel à chaque visite. */
+  document?: DocumentViewerSpec;
 }
 
 /**

@@ -38,6 +38,7 @@ export type BuilderTab =
   | "mesgents"
   | "conversationnel"
   | "miniapp"
+  | "visionneuse"
   | "connectors"
   | "knowledge"
   | "audit"
@@ -88,6 +89,8 @@ interface BuilderContextValue {
   updateChannel: (patch: Partial<NotificationChannel>) => void;
   /** Modifie l'artefact figé « mini-app » du brouillon (patch partiel). */
   updatePinnedArtefact: (patch: Partial<import("@/lib/types").PinnedArtefact>) => void;
+  /** Modifie la configuration du gent « visionneuse » du brouillon (patch partiel). */
+  updateVisionneuse: (patch: Partial<import("@/lib/types").VisionneuseConfig>) => void;
 
   sendBuilderMessage: (text: string) => void;
   /** Vide le fil courant pour démarrer un nouvel échange avec l'assistant. */
@@ -530,6 +533,20 @@ export function BuilderProvider({
         return {
           ...prev,
           [currentId]: { ...prev[currentId], pinnedArtefact: { ...current, ...patch }, updatedAt: "à l'instant" },
+        };
+      });
+    },
+    [currentId]
+  );
+
+  // Type de gent « visionneuse » : patch partiel fusionné sur la config du brouillon.
+  const updateVisionneuse = useCallback(
+    (patch: Partial<import("@/lib/types").VisionneuseConfig>) => {
+      setDrafts((prev) => {
+        const current = prev[currentId].visionneuse ?? { enabled: false, instructions: "" };
+        return {
+          ...prev,
+          [currentId]: { ...prev[currentId], visionneuse: { ...current, ...patch }, updatedAt: "à l'instant" },
         };
       });
     },
@@ -979,6 +996,7 @@ export function BuilderProvider({
         updateRoutine,
         updateChannel,
         updatePinnedArtefact,
+        updateVisionneuse,
         sendBuilderMessage,
         startNewBuilderConversation,
         applyBuilderSuggestion,

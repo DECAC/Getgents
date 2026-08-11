@@ -10,8 +10,10 @@ import styles from "./AccueilTab.module.css";
  * gent conversationnel (et l'inverse) après coup.
  */
 export function AccueilTab() {
-  const { currentDraft, switchTab, updatePinnedArtefact } = useBuilder();
+  const { currentDraft, switchTab, updatePinnedArtefact, updateVisionneuse } = useBuilder();
   const miniAppOn = !!currentDraft.pinnedArtefact?.enabled;
+  const visionneuseOn = !!currentDraft.visionneuse?.enabled;
+  const modeActuel = visionneuseOn ? "visionneuse" : miniAppOn ? "miniapp" : "conversationnel";
 
   function chooseConversationnel() {
     switchTab("conversationnel");
@@ -20,6 +22,11 @@ export function AccueilTab() {
   function chooseMiniApp() {
     if (!miniAppOn) updatePinnedArtefact({ enabled: true });
     switchTab("miniapp");
+  }
+
+  function chooseVisionneuse() {
+    if (!visionneuseOn) updateVisionneuse({ enabled: true });
+    switchTab("visionneuse");
   }
 
   return (
@@ -33,7 +40,7 @@ export function AccueilTab() {
       <div className={styles.choices}>
         <button
           type="button"
-          className={[styles.choice, !miniAppOn ? styles.choiceOn : ""].filter(Boolean).join(" ")}
+          className={[styles.choice, modeActuel === "conversationnel" ? styles.choiceOn : ""].filter(Boolean).join(" ")}
           onClick={chooseConversationnel}
         >
           <span className={styles.thumb}>
@@ -41,7 +48,7 @@ export function AccueilTab() {
               <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-4.6A8.4 8.4 0 1 1 21 11.5z" />
             </svg>
           </span>
-          {!miniAppOn && <span className={styles.activeBadge}>Mode actuel</span>}
+          {modeActuel === "conversationnel" && <span className={styles.activeBadge}>Mode actuel</span>}
           <span className={styles.choiceTitle}>Créer un gent conversationnel</span>
           <span className={styles.choiceDesc}>
             L&apos;utilisateur dialogue avec le gent. Vous définissez son rôle, ses règles, ses
@@ -58,7 +65,7 @@ export function AccueilTab() {
 
         <button
           type="button"
-          className={[styles.choice, miniAppOn ? styles.choiceOn : ""].filter(Boolean).join(" ")}
+          className={[styles.choice, modeActuel === "miniapp" ? styles.choiceOn : ""].filter(Boolean).join(" ")}
           onClick={chooseMiniApp}
         >
           <span className={styles.thumb}>
@@ -67,7 +74,7 @@ export function AccueilTab() {
               <path d="M8 8h8M8 12h5M8 16h8" />
             </svg>
           </span>
-          {miniAppOn && <span className={styles.activeBadge}>Mode actuel</span>}
+          {modeActuel === "miniapp" && <span className={styles.activeBadge}>Mode actuel</span>}
           <span className={styles.choiceTitle}>Créer une mini app</span>
           <span className={styles.choiceDesc}>
             Pas de conversation : l&apos;utilisateur renseigne quelques entrées (un CV, un lien
@@ -75,7 +82,33 @@ export function AccueilTab() {
             rafraîchit avec de nouvelles données.
           </span>
           <span className={styles.choiceFoot}>
-            {miniAppOn ? "Configurer le tableau de bord" : "Activer et configurer"}
+            {modeActuel === "miniapp" ? "Configurer le tableau de bord" : "Activer et configurer"}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className={[styles.choice, modeActuel === "visionneuse" ? styles.choiceOn : ""].filter(Boolean).join(" ")}
+          onClick={chooseVisionneuse}
+        >
+          <span className={styles.thumb}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+              <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v18H6.5A2.5 2.5 0 0 1 4 18.5z" />
+              <path d="M8 8h7M8 12h7M8 16h4" />
+            </svg>
+          </span>
+          {modeActuel === "visionneuse" && <span className={styles.activeBadge}>Mode actuel</span>}
+          <span className={styles.choiceTitle}>Créer une visionneuse</span>
+          <span className={styles.choiceDesc}>
+            Ni chat vide ni tableau de bord : l&apos;espace s&apos;ouvre directement en pleine page
+            sur UN document que vous fixez ici (sommaire, pagination). La conversation reste
+            possible, mais toujours au service de la lecture — jamais l&apos;un ou l&apos;autre.
+          </span>
+          <span className={styles.choiceFoot}>
+            {modeActuel === "visionneuse" ? "Configurer le document" : "Activer et configurer"}
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>

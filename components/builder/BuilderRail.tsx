@@ -46,6 +46,12 @@ const ICON = {
       <path d="M8 8h8M8 12h5M8 16h8" />
     </svg>
   ),
+  visionneuse: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v18H6.5A2.5 2.5 0 0 1 4 18.5z" />
+      <path d="M8 8h7M8 12h7M8 16h4" />
+    </svg>
+  ),
   connectors: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M9 7H7a5 5 0 0 0 0 10h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8" />
@@ -83,6 +89,7 @@ const NAV: NavSection[] = [
     entries: [
       { id: "conversationnel", label: "Gent Conversationnel", icon: ICON.conversationnel },
       { id: "miniapp", label: "Mini App", icon: ICON.miniapp },
+      { id: "visionneuse", label: "Visionneuse", icon: ICON.visionneuse },
     ],
   },
   {

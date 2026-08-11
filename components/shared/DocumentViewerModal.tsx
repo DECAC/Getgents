@@ -16,6 +16,9 @@ export function DocumentViewerModal({ artefact }: { artefact: Artefact }) {
   const { closeModal, openAssistant, sendMessage, removeArtefact } = useEspace();
   const doc = artefact.document!;
   const [page, setPage] = useState(0);
+  // Document fixé par le créateur (type de gent « visionneuse ») : pas de
+  // bouton pour le retirer, contrairement à un document ouvert à l'usage.
+  const locked = artefact.id === "visionneuse-doc";
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -61,20 +64,22 @@ export function DocumentViewerModal({ artefact }: { artefact: Artefact }) {
                 <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-4.6A8.4 8.4 0 1 1 21 11.5z" />
               </svg>
             </button>
-            <button
-              type="button"
-              className={styles.navBtn}
-              onClick={() => {
-                removeArtefact(artefact.id);
-                closeModal();
-              }}
-              title="Retirer ce document de l'espace"
-              aria-label="Retirer ce document de l'espace"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
-              </svg>
-            </button>
+            {!locked && (
+              <button
+                type="button"
+                className={styles.navBtn}
+                onClick={() => {
+                  removeArtefact(artefact.id);
+                  closeModal();
+                }}
+                title="Retirer ce document de l'espace"
+                aria-label="Retirer ce document de l'espace"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
+                </svg>
+              </button>
+            )}
             <button type="button" className={styles.closeBtn} onClick={closeModal} aria-label="Fermer">
               ✕
             </button>

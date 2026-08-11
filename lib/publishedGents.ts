@@ -304,6 +304,22 @@ export function draftToEspace(draft: GentDraft): Espace {
     date: "Base de connaissance",
   }));
 
+  // Type « visionneuse » : le document fixé par le créateur nourrit aussi la
+  // conversation (même mécanisme que les fichiers joints — voir
+  // sessionContext.ts) et devient un artefact d'accueil pour que l'espace
+  // s'ouvre directement dessus (voir EspaceContext, visionneuseMode).
+  const visionneuseDoc = draft.visionneuse?.enabled ? draft.visionneuse.document : undefined;
+  if (visionneuseDoc) {
+    files.push({
+      id: "visionneuse-doc-file",
+      name: visionneuseDoc.sourceName,
+      size: `${visionneuseDoc.pageCount} page${visionneuseDoc.pageCount > 1 ? "s" : ""}`,
+      date: "Visionneuse",
+      text: visionneuseDoc.pages.join("\n\n"),
+      truncated: visionneuseDoc.truncated,
+    });
+  }
+
   // Blocs ajoutés par la plateforme (base de connaissance, formats d'artefact,
   // modes d'emploi des connecteurs). Ils sont accumulés ICI puis placés AVANT
   // le prompt du créateur : empilés après lui, comme auparavant, ils
@@ -312,6 +328,16 @@ export function draftToEspace(draft: GentDraft): Espace {
   // des consignes purement techniques.
   const platformBlocks: string[] = [];
   platformBlocks.push(knowledgeBaseBlock(draft.knowledgeSources));
+
+  if (visionneuseDoc) {
+    const instructions = draft.visionneuse?.instructions?.trim();
+    platformBlocks.push(
+      `Ce gent est une VISIONNEUSE DE DOCUMENT : l'utilisateur lit « ${visionneuseDoc.sourceName} » (${visionneuseDoc.pageCount} pages) ouvert en pleine page à côté de la conversation. ` +
+        "Ton rôle est d'accompagner cette lecture — résume, explique, répond sur le contenu réel du document (fourni ci-dessous en base de connaissance), et propose un artefact (rapport, graphique, image) quand ça aide à mieux comprendre une section. " +
+        "Ne propose jamais d'ouvrir un AUTRE document : celui-ci est fixé par le créateur." +
+        (instructions ? `\n\nConsignes du créateur : ${instructions}` : "")
+    );
+  }
 
   // Tous les artefacts (rapport, checklist, graphique, aperçu visuel, carte) sont éligibles
   // pour tous les gents — pas de configuration côté créateur. Le modèle décide seul, au fil de
@@ -442,7 +468,18 @@ export function draftToEspace(draft: GentDraft): Espace {
     conversations: [{ id: threadId, startedAt: formatConversationStartedAt(), messages: [] }],
     activeConversationId: threadId,
     files,
-    artefacts: [],
+    artefacts: visionneuseDoc
+      ? [
+          {
+            id: "visionneuse-doc",
+            title: visionneuseDoc.sourceName,
+            type: "Visionneuse de document",
+            icon: "📖",
+            date: "Document du gent",
+            document: visionneuseDoc,
+          },
+        ]
+      : [],
     systemPrompt,
     chatModelId,
     imageModelId,
@@ -456,6 +493,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     routine: draft.routine,
     channel: draft.channel,
     pinnedArtefact: draft.pinnedArtefact,
+    visionneuse: draft.visionneuse,
     webSearch: draft.webSearch || undefined,
   };
 }

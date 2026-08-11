@@ -115,6 +115,8 @@ export interface GentDraft {
   channel?: import("@/lib/types").NotificationChannel;
   /** Artefact figé « mini-app » défini par le créateur. */
   pinnedArtefact?: import("@/lib/types").PinnedArtefact;
+  /** Type de gent « visionneuse » : document fixé par le créateur, lu en immersion. */
+  visionneuse?: import("@/lib/types").VisionneuseConfig;
   /** Empreinte du contenu au moment de la dernière publication (voir builderSnapshot.ts). */
   publishedSnapshot?: string;
 }

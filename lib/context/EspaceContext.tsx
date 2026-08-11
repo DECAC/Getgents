@@ -448,6 +448,19 @@ export function EspaceProvider({
     setModalResvId(null);
   }, []);
 
+  // Type « visionneuse » : l'espace s'ouvre directement sur le document fixé
+  // par le créateur, une fois par visite — pas un chat vide qu'il faudrait
+  // penser à quitter pour lire, ni un choix entre les deux.
+  const visionneuseAutoOpenedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!currentEspace?.visionneuse?.enabled) return;
+    if (visionneuseAutoOpenedRef.current.has(currentId)) return;
+    const hasDoc = currentEspace.artefacts.some((a) => a.id === "visionneuse-doc");
+    if (!hasDoc) return;
+    visionneuseAutoOpenedRef.current.add(currentId);
+    openArtefactModal("visionneuse-doc");
+  }, [currentEspace, currentId, openArtefactModal]);
+
   const updateMemory = useCallback((text: string) => {
     setEspaces((prev) => {
       const next = { ...prev, [currentId]: { ...prev[currentId], memory: text } };
