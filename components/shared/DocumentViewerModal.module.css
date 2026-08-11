@@ -2,7 +2,10 @@
   position: fixed;
   inset: 0;
   background: rgba(21, 33, 43, 0.55);
-  z-index: 110;
+  /* Sous la carte modale des autres artefacts (z-index 100) : un rapport
+     généré pendant la lecture se superpose au document, et le refermer
+     ramène le lecteur exactement où il en était. */
+  z-index: 90;
   display: flex;
   align-items: stretch;
   justify-content: stretch;
@@ -17,6 +20,27 @@
   grid-template-rows: auto 1fr;
 }
 
+/* Conversation ouverte : troisième colonne à DROITE — la gauche appartient
+   au sommaire, qui structure la lecture. */
+.frameWithChat {
+  grid-template-columns: 280px 1fr clamp(320px, 26vw, 420px);
+}
+
+.chatCol {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--line);
+}
+/* Le panneau porte une bordure droite dans la coquille de l'espace ; ici
+   c'est la colonne qui borde, à gauche. */
+.chatCol > * {
+  border-right: none;
+  flex: 1;
+  min-height: 0;
+}
+
 /* ---------- En-tête ---------- */
 .head {
   grid-column: 1 / -1;
@@ -29,6 +53,9 @@
 .headIcon {
   font-size: 22px;
   flex: none;
+}
+.headText {
+  min-width: 0;
 }
 .headTitle {
   font-family: "Sora", sans-serif;
@@ -144,6 +171,12 @@
   opacity: 0.4;
   cursor: default;
 }
+/* Bulle active : la conversation est ouverte à droite. */
+.navBtnOn {
+  background: var(--blue-tint);
+  border-color: var(--blue);
+  color: var(--blue-700);
+}
 .navIndicator {
   font-size: 12.5px;
   color: var(--muted);
@@ -161,8 +194,23 @@
   border-bottom: 1px solid var(--line);
 }
 
+/* Étroit : la conversation prend toute la place quand elle est ouverte —
+   lire et discuter côte à côte n'a plus de sens sous cette largeur. */
+@media (max-width: 1100px) {
+  .frameWithChat {
+    grid-template-columns: 280px 1fr;
+  }
+  .frameWithChat .pageArea {
+    display: none;
+  }
+  .frameWithChat .chatCol {
+    border-left: none;
+  }
+}
+
 @media (max-width: 780px) {
-  .frame {
+  .frame,
+  .frameWithChat {
     grid-template-columns: 1fr;
   }
   .toc {

@@ -243,14 +243,22 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
           )}
           {a.body && !a.imageUrl && !a.profileSummary && <SafeHTMLDoc html={a.body} />}
           {a.document && (
-            <div className={styles.docPreview}>
-              <div className={styles.docPreviewIcon}>📖</div>
-              <div className={styles.docPreviewMeta}>
+            // Vignette cliquable dans son ENTIER : l'invite « cliquer pour
+            // ouvrir » ne valait auparavant que pour le bouton « ouvrir en
+            // grand » de l'en-tête, cliquer la vignette ne faisait rien.
+            <button
+              type="button"
+              className={styles.docPreview}
+              onClick={() => openArtefactModal(a.id)}
+              aria-label={`Ouvrir ${a.title} en visionneuse`}
+            >
+              <span className={styles.docPreviewIcon} aria-hidden="true">📖</span>
+              <span className={styles.docPreviewMeta}>
                 {a.document.pageCount} page{a.document.pageCount > 1 ? "s" : ""}
                 {a.document.toc.length > 0 ? ` · ${a.document.toc.length} entrées de sommaire` : ""}
-              </div>
-              <div className={styles.docPreviewHint}>Cliquer pour ouvrir la visionneuse</div>
-            </div>
+              </span>
+              <span className={styles.docPreviewHint}>Cliquer pour ouvrir la visionneuse</span>
+            </button>
           )}
         </>
       ),

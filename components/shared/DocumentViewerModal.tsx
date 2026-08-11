@@ -2,56 +2,87 @@
 
 import { useEffect, useState } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
-import type { Artefact } from "@/lib/types";
+import { AssistantPanel } from "@/components/assistant/AssistantPanel";
 import styles from "./DocumentViewerModal.module.css";
 
 /**
- * Lecture immersive d'un document ouvert en visionneuse : sommaire à gauche
- * (signets du PDF ou titres détectés), page courante à droite, navigation
- * précédent/suivant. Composant à part plutôt qu'une branche de plus dans
- * ArtefactModal — la mise en page (pleine fenêtre, deux colonnes) n'a rien à
+ * Lecture immersive d'un document : sommaire à gauche (signets du PDF ou
+ * titres détectés), page courante au centre, conversation à droite quand le
+ * lecteur l'ouvre. Composant à part plutôt qu'une branche de plus dans
+ * ArtefactModal — la mise en page (pleine fenêtre, trois colonnes) n'a rien à
  * voir avec la carte centrée des autres artefacts.
+ *
+ * Le panneau conversationnel est à DROITE et non à gauche comme ailleurs :
+ * le sommaire occupe déjà la gauche, et c'est lui qui structure la lecture.
+ * Il coexiste avec la page — poser une question ne remplace jamais le
+ * document, et un artefact généré pendant l'échange se superpose sans faire
+ * perdre sa page au lecteur (voir openArtefactModal dans EspaceContext).
  */
-export function DocumentViewerModal({ artefact }: { artefact: Artefact }) {
-  const { closeModal, openAssistant, sendMessage, removeArtefact } = useEspace();
-  const doc = artefact.document!;
+export function DocumentViewerModal() {
+  const {
+    currentEspace,
+    viewerArtefactId,
+    closeDocumentViewer,
+    modalArtefactId,
+    modalResvId,
+    assistantOpen,
+    openAssistant,
+    closeAssistant,
+    removeArtefact,
+  } = useEspace();
+
+  const artefact = viewerArtefactId
+    ? currentEspace.artefacts.find((a) => a.id === viewerArtefactId) ?? null
+    : null;
   const [page, setPage] = useState(0);
-  // Document fixé par le créateur (type de gent « visionneuse ») : pas de
-  // bouton pour le retirer, contrairement à un document ouvert à l'usage.
-  const locked = artefact.id === "visionneuse-doc";
+
+  // Chaque document repart de sa première page : rouvrir un autre document
+  // en gardant l'index du précédent affichait une page arbitraire.
+  useEffect(() => {
+    setPage(0);
+  }, [viewerArtefactId]);
+
+  const open = !!artefact?.document;
 
   useEffect(() => {
+    if (!open) return;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
     };
-  }, []);
+  }, [open]);
+
+  const pageCount = artefact?.document?.pages.length ?? 0;
+  // Une carte ouverte PAR-DESSUS la visionneuse (artefact ou réservation)
+  // capte Échap et les flèches : sans ça, refermer un rapport généré pendant
+  // la lecture refermait aussi le document en arrière-plan.
+  const covered = !!modalArtefactId || !!modalResvId;
 
   useEffect(() => {
+    if (!open || covered) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") closeModal();
-      else if (e.key === "ArrowRight") setPage((p) => Math.min(p + 1, doc.pages.length - 1));
+      if (e.key === "Escape") closeDocumentViewer();
+      else if (e.key === "ArrowRight") setPage((p) => Math.min(p + 1, pageCount - 1));
       else if (e.key === "ArrowLeft") setPage((p) => Math.max(p - 1, 0));
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [closeModal, doc.pages.length]);
+  }, [open, covered, closeDocumentViewer, pageCount]);
 
-  function askAboutPage() {
-    openAssistant();
-    sendMessage(
-      `Peux-tu m'aider à comprendre la page ${page + 1} de « ${doc.sourceName} » ? N'hésite pas à me proposer un artefact (rapport ou image) si ça aide.`
-    );
-  }
+  if (!artefact?.document) return null;
+  const doc = artefact.document;
 
+  // Document fixé par le créateur (type de gent « visionneuse ») : pas de
+  // bouton pour le retirer, contrairement à un document ouvert à l'usage.
+  const locked = artefact.id === "visionneuse-doc";
   const activeTocId = [...doc.toc].reverse().find((t) => t.page <= page)?.id;
 
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-label={doc.sourceName}>
-      <div className={styles.frame}>
+      <div className={[styles.frame, assistantOpen ? styles.frameWithChat : ""].filter(Boolean).join(" ")}>
         <div className={styles.head}>
           <span className={styles.headIcon} aria-hidden="true">📖</span>
-          <div>
+          <div className={styles.headText}>
             <div className={styles.headTitle}>{doc.sourceName}</div>
             <div className={styles.headMeta}>
               {doc.pageCount} page{doc.pageCount > 1 ? "s" : ""}
@@ -59,7 +90,14 @@ export function DocumentViewerModal({ artefact }: { artefact: Artefact }) {
             </div>
           </div>
           <div className={styles.headActions}>
-            <button type="button" className={styles.navBtn} onClick={askAboutPage} title="Demander de l'aide sur cette page" aria-label="Demander de l'aide sur cette page">
+            <button
+              type="button"
+              className={[styles.navBtn, assistantOpen ? styles.navBtnOn : ""].filter(Boolean).join(" ")}
+              onClick={() => (assistantOpen ? closeAssistant() : openAssistant())}
+              title={assistantOpen ? "Masquer la conversation" : "Poser une question sur ce document"}
+              aria-label={assistantOpen ? "Masquer la conversation" : "Poser une question sur ce document"}
+              aria-pressed={assistantOpen}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-4.6A8.4 8.4 0 1 1 21 11.5z" />
               </svg>
@@ -70,7 +108,7 @@ export function DocumentViewerModal({ artefact }: { artefact: Artefact }) {
                 className={styles.navBtn}
                 onClick={() => {
                   removeArtefact(artefact.id);
-                  closeModal();
+                  closeDocumentViewer();
                 }}
                 title="Retirer ce document de l'espace"
                 aria-label="Retirer ce document de l'espace"
@@ -80,7 +118,7 @@ export function DocumentViewerModal({ artefact }: { artefact: Artefact }) {
                 </svg>
               </button>
             )}
-            <button type="button" className={styles.closeBtn} onClick={closeModal} aria-label="Fermer">
+            <button type="button" className={styles.closeBtn} onClick={closeDocumentViewer} aria-label="Fermer">
               ✕
             </button>
           </div>
@@ -145,6 +183,12 @@ export function DocumentViewerModal({ artefact }: { artefact: Artefact }) {
             </button>
           </div>
         </div>
+
+        {assistantOpen && (
+          <div className={styles.chatCol}>
+            <AssistantPanel embedded />
+          </div>
+        )}
       </div>
     </div>
   );

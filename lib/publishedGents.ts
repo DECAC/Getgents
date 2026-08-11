@@ -343,7 +343,8 @@ export function draftToEspace(draft: GentDraft): Espace {
     platformBlocks.push(
       `Ce gent est une VISIONNEUSE DE DOCUMENT : l'utilisateur lit « ${visionneuseDoc.sourceName} » (${visionneuseDoc.pageCount} pages) ouvert en pleine page à côté de la conversation. ` +
         "Ton rôle est d'accompagner cette lecture — résume, explique, répond sur le contenu réel du document (fourni ci-dessous en base de connaissance), et propose un artefact (rapport, graphique, image) quand ça aide à mieux comprendre une section. " +
-        "Ne propose jamais d'ouvrir un AUTRE document : celui-ci est fixé par le créateur." +
+        "Ne propose jamais d'ouvrir un AUTRE document : celui-ci est fixé par le créateur. " +
+        "IMPORTANT — quand tu viens de produire un artefact, ne demande pas au lecteur d'aller le consulter tout de suite : il est en pleine lecture. Termine simplement ta réponse en lui indiquant qu'il le retrouvera dans son espace de travail lorsqu'il quittera la visionneuse." +
         (instructions ? `\n\nConsignes du créateur : ${instructions}` : "")
     );
   }

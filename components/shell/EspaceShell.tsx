@@ -7,23 +7,31 @@ import { AssistantPanel } from "@/components/assistant/AssistantPanel";
 import { Center } from "@/components/center/Center";
 import { Aside } from "@/components/aside/Aside";
 import { ArtefactModal } from "@/components/shared/ArtefactModal";
+import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
 import { ResvModal } from "@/components/shared/ResvModal";
 import styles from "./EspaceShell.module.css";
 
 function ShellInner() {
-  const { railCollapsed, assistantOpen, asideCollapsed, closeModal, closeAssistant, miniAppMode } = useEspace();
+  const { railCollapsed, assistantOpen, asideCollapsed, closeModal, closeAssistant, miniAppMode, documentViewerOpen } =
+    useEspace();
   // Mode mini-application : le gent s'utilise par son tableau de bord ; le
   // panneau conversationnel n'est ni rendu ni atteignable.
-  const chatOpen = assistantOpen && !miniAppMode;
+  // Visionneuse ouverte : c'est ELLE qui héberge la conversation, à droite du
+  // document — la monter ici en plus en ferait deux instances, dont une
+  // invisible sous la visionneuse.
+  const chatOpen = assistantOpen && !miniAppMode && !documentViewerOpen;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        // La visionneuse gère son propre Échap (fermer le document, pas la
+        // conversation qu'on vient d'y ouvrir).
+        if (documentViewerOpen) return;
         closeModal();
         closeAssistant();
       }
     },
-    [closeModal, closeAssistant]
+    [closeModal, closeAssistant, documentViewerOpen]
   );
 
   useEffect(() => {
@@ -52,6 +60,7 @@ function ShellInner() {
         <Center />
         <Aside />
       </div>
+      <DocumentViewerModal />
       <ArtefactModal />
       <ResvModal />
     </>

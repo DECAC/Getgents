@@ -47,7 +47,13 @@ function themeTabLabel(espace: Espace, tabId: string): string {
   return espace.themeTabs?.find((t) => t.id === tabId)?.label ?? "cet onglet";
 }
 
-export function AssistantPanel() {
+/**
+ * `embedded` : le panneau est monté dans un conteneur qui gère lui-même sa
+ * largeur (la visionneuse de document), et non dans la grille de l'espace.
+ * La poignée de redimensionnement pilote une variable CSS de cette grille :
+ * hors d'elle, c'est un contrôle mort — on ne l'affiche pas.
+ */
+export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}) {
   const {
     currentEspace,
     activeConversation,
@@ -871,7 +877,9 @@ export function AssistantPanel() {
       aria-label="Assistant"
       aria-modal="false"
     >
-      {!fullscreen && <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner" />}
+      {!fullscreen && !embedded && (
+        <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner" />
+      )}
 
       <div className={styles.head}>
         <div className={styles.headIc}>{currentEspace.icon}</div>

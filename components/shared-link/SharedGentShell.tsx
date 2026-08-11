@@ -4,6 +4,7 @@ import { EspaceProvider, useEspace } from "@/lib/context/EspaceContext";
 import { ModuleCanvas } from "@/components/center/ModuleCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
 import { ArtefactModal } from "@/components/shared/ArtefactModal";
+import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
 import type { Espace } from "@/lib/types";
 import styles from "./SharedGentShell.module.css";
 
@@ -19,11 +20,13 @@ import styles from "./SharedGentShell.module.css";
  * une interface que le créateur n'avait jamais vue en Preview.
  */
 function SharedGentBody() {
-  const { currentEspace, assistantOpen, openAssistant, miniAppMode } = useEspace();
+  const { currentEspace, assistantOpen, openAssistant, miniAppMode, documentViewerOpen } = useEspace();
   // Un gent en mode mini-application s'utilise par son tableau de bord : le
   // destinataire n'a pas non plus accès à la conversation.
   const chatAvailable = !miniAppMode;
-  const chatOpen = chatAvailable && assistantOpen;
+  // Visionneuse ouverte : la conversation y est déjà rendue, à droite du
+  // document (voir DocumentViewerModal) — ne pas la monter deux fois.
+  const chatOpen = chatAvailable && assistantOpen && !documentViewerOpen;
 
   return (
     <div className={styles.page}>
@@ -53,6 +56,7 @@ function SharedGentBody() {
         </main>
       </div>
 
+      <DocumentViewerModal />
       <ArtefactModal />
     </div>
   );

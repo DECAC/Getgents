@@ -148,6 +148,14 @@ interface EspaceContextValue {
   selectedDay: number | null;
   modalArtefactId: string | null;
   modalResvId: string | null;
+  /**
+   * Emplacement PROPRE à la visionneuse, distinct de `modalArtefactId` : les
+   * deux doivent pouvoir coexister. Un artefact ouvert depuis la conversation
+   * pendant la lecture se superpose à la visionneuse au lieu de la remplacer —
+   * le lecteur ne perd jamais sa page.
+   */
+  viewerArtefactId: string | null;
+  documentViewerOpen: boolean;
   currentEspace: Espace;
   activeConversation: ConversationThread;
 
@@ -161,6 +169,8 @@ interface EspaceContextValue {
   openArtefactModal: (id: string) => void;
   openResvModal: (id: string) => void;
   closeModal: () => void;
+  /** Ferme la visionneuse sans toucher à un éventuel artefact ouvert par-dessus. */
+  closeDocumentViewer: () => void;
   updateMemory: (text: string) => void;
   sendMessage: (text: string) => void;
   /** Envoie une demande composée à partir d'un formulaire jump (voir jumpFormSignal). */
@@ -262,6 +272,7 @@ export function EspaceProvider({
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [modalArtefactId, setModalArtefactId] = useState<string | null>(null);
   const [modalResvId, setModalResvId] = useState<string | null>(null);
+  const [viewerArtefactId, setViewerArtefactId] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
   const [storageReady, setStorageReady] = useState(false);
@@ -433,10 +444,21 @@ export function EspaceProvider({
     setSelectedDay((prev) => (prev === day ? null : day));
   }, []);
 
+  // Un artefact « document » va dans l'emplacement visionneuse, les autres
+  // dans la carte modale classique : c'est ce qui permet d'ouvrir un rapport
+  // généré en cours de lecture SANS fermer le document qu'on est en train de
+  // lire (l'artefact se superpose, la visionneuse reste dessous).
   const openArtefactModal = useCallback((id: string) => {
+    const espace = espacesRef.current[currentIdRef.current];
+    if (espace?.artefacts.find((a) => a.id === id)?.document) {
+      setViewerArtefactId(id);
+      return;
+    }
     setModalArtefactId(id);
     setModalResvId(null);
   }, []);
+
+  const closeDocumentViewer = useCallback(() => setViewerArtefactId(null), []);
 
   const openResvModal = useCallback((id: string) => {
     setModalResvId(id);
@@ -458,8 +480,8 @@ export function EspaceProvider({
     const hasDoc = currentEspace.artefacts.some((a) => a.id === "visionneuse-doc");
     if (!hasDoc) return;
     visionneuseAutoOpenedRef.current.add(currentId);
-    openArtefactModal("visionneuse-doc");
-  }, [currentEspace, currentId, openArtefactModal]);
+    setViewerArtefactId("visionneuse-doc");
+  }, [currentEspace, currentId]);
 
   const updateMemory = useCallback((text: string) => {
     setEspaces((prev) => {
@@ -527,9 +549,13 @@ export function EspaceProvider({
           },
         };
       });
-      openArtefactModal(artefactId);
+      // Emplacement visionneuse visé DIRECTEMENT : passer par
+      // openArtefactModal relirait espacesRef, qui ne contient pas encore
+      // l'artefact tout juste créé (la mise à jour d'état n'a pas eu lieu) —
+      // le document s'ouvrait alors dans la carte modale générique, vide.
+      setViewerArtefactId(artefactId);
     },
-    [openArtefactModal]
+    []
   );
 
   const sendMessage = useCallback((text: string) => {
@@ -1656,6 +1682,8 @@ export function EspaceProvider({
         selectedDay,
         modalArtefactId,
         modalResvId,
+        viewerArtefactId,
+        documentViewerOpen: !!viewerArtefactId,
         currentEspace,
         activeConversation,
         switchEspace,
@@ -1668,6 +1696,7 @@ export function EspaceProvider({
         openArtefactModal,
         openResvModal,
         closeModal,
+        closeDocumentViewer,
         updateMemory,
         sendMessage,
         submitJumpForm,
