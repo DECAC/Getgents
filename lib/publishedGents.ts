@@ -45,15 +45,21 @@ export function resetPublishedRemoteAvailability(): void {
   remoteAvailable = null;
 }
 
-/** Récupère les gents publiés depuis le serveur — null si indisponible. */
-export async function fetchRemoteGents(): Promise<EspacesMap | null> {
+/** Récupère les gents publiés depuis le serveur — null si indisponible, 'unauthorized' si 401. */
+export async function fetchRemoteGents(): Promise<EspacesMap | null | "unauthorized"> {
   if (remoteAvailable === false) return null;
   try {
-    const res = await fetch("/api/gents", { cache: "no-store", headers: appAccessHeaders() });
-    if (res.status === 503 || res.status === 401) {
-      // 503 : Supabase non configuré. 401 : secret d'accès absent ou invalide
-      // (ouvrir l'app une fois avec ?key=… pour l'enregistrer). Dans les deux
-      // cas on cesse d'interroger le serveur et le cache local prend le relais.
+    const res = await fetch("/api/gents", {
+      cache: "no-store",
+      credentials: "include",
+      headers: appAccessHeaders(),
+    });
+    if (res.status === 401) {
+      remoteAvailable = false;
+      return "unauthorized";
+    }
+    if (res.status === 503) {
+      // Supabase non configuré — cache local uniquement.
       remoteAvailable = false;
       return null;
     }
@@ -69,6 +75,7 @@ export async function fetchRemoteGents(): Promise<EspacesMap | null> {
 function sendRemoteGent(id: string, espace: Espace, diffuse = false): Promise<void> {
   return fetch(`/api/gents/${encodeURIComponent(id)}`, {
     method: "PUT",
+    credentials: "include",
     headers: { "Content-Type": "application/json", ...appAccessHeaders() },
     body: JSON.stringify({ espace, ...(diffuse ? { diffuse: true } : {}) }),
     // Survit à une navigation immédiate (clic sur « Preview » juste après la
@@ -141,8 +148,9 @@ export function writePublishedGent(id: string, espace: Espace, immediate = false
  * le cache local, met le cache à jour, et renvoie la map fusionnée — ou null si
  * le distant est indisponible (le cache local reste alors la seule source).
  */
-export async function syncPublishedGentsFromRemote(): Promise<EspacesMap | null> {
+export async function syncPublishedGentsFromRemote(): Promise<EspacesMap | null | "unauthorized"> {
   const remote = await fetchRemoteGents();
+  if (remote === "unauthorized") return "unauthorized";
   if (remote === null) return null;
 
   const local = readPublishedGents();
@@ -195,6 +203,7 @@ export async function deletePublishedGent(id: string): Promise<{ ok: boolean; er
   try {
     const res = await fetch(`/api/gents/${encodeURIComponent(id)}`, {
       method: "DELETE",
+      credentials: "include",
       headers: appAccessHeaders(),
     });
     if (res.status === 503 || res.status === 401) {

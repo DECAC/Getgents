@@ -63,12 +63,20 @@ export function resetDraftsRemoteAvailability(): void {
   remoteAvailable = null;
 }
 
-/** Récupère les brouillons depuis le serveur — null si indisponible. */
-export async function fetchRemoteDrafts(): Promise<GentDraftsMap | null> {
+/** Récupère les brouillons depuis le serveur — null si indisponible, 'unauthorized' si 401. */
+export async function fetchRemoteDrafts(): Promise<GentDraftsMap | null | "unauthorized"> {
   if (remoteAvailable === false) return null;
   try {
-    const res = await fetch("/api/drafts", { cache: "no-store", headers: appAccessHeaders() });
-    if (res.status === 503 || res.status === 401) {
+    const res = await fetch("/api/drafts", {
+      cache: "no-store",
+      credentials: "include",
+      headers: appAccessHeaders(),
+    });
+    if (res.status === 401) {
+      remoteAvailable = false;
+      return "unauthorized";
+    }
+    if (res.status === 503) {
       remoteAvailable = false;
       return null;
     }
@@ -94,6 +102,7 @@ export function pushRemoteDraft(id: string, draft: GentDraft): void {
       pushTimers.delete(id);
       fetch(`/api/drafts/${encodeURIComponent(id)}`, {
         method: "PUT",
+        credentials: "include",
         headers: { "Content-Type": "application/json", ...appAccessHeaders() },
         body: JSON.stringify({ draft }),
       })
@@ -116,8 +125,9 @@ export function pushRemoteDraft(id: string, draft: GentDraft): void {
  * Les brouillons présents seulement en local (créés hors ligne ou avant la
  * configuration de Supabase) remontent vers le serveur.
  */
-export async function syncDraftsFromRemote(): Promise<GentDraftsMap | null> {
+export async function syncDraftsFromRemote(): Promise<GentDraftsMap | null | "unauthorized"> {
   const remote = await fetchRemoteDrafts();
+  if (remote === "unauthorized") return "unauthorized";
   if (remote === null) return null;
   const merged = { ...readStoredDrafts(), ...remote };
   writeStoredDrafts(merged);
@@ -148,9 +158,14 @@ export async function deleteRemoteDraft(id: string): Promise<{ ok: boolean; erro
   try {
     const res = await fetch(`/api/drafts/${encodeURIComponent(id)}`, {
       method: "DELETE",
+      credentials: "include",
       headers: appAccessHeaders(),
     });
-    if (res.status === 503 || res.status === 401) {
+    if (res.status === 401) {
+      remoteAvailable = false;
+      return { ok: true };
+    }
+    if (res.status === 503) {
       remoteAvailable = false;
       return { ok: true };
     }

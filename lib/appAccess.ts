@@ -1,10 +1,11 @@
 // Pendant client de lib/server/appAccess : le secret d'accès aux routes
 // /api/gents* n'est pas embarqué dans le bundle (ce serait le publier). Il est
-// saisi une fois via ?key=... dans l'URL, puis conservé en localStorage pour
-// les requêtes suivantes.
-const KEY = "getgents:app-secret";
-export const APP_ACCESS_HEADER = "x-app-secret";
+// saisi une fois via ?key=... dans l'URL, conservé en localStorage, ou posé
+// automatiquement en cookie httpOnly par middleware.ts sur /builder et /espace.
+import { APP_ACCESS_HEADER } from "@/lib/appAccessConstants";
 
+export { APP_ACCESS_HEADER };
+const KEY = "getgents:app-secret";
 /** Capture ?key=... au chargement, le range, et le retire de la barre d'adresse. */
 export function captureAppSecretFromUrl(): void {
   if (typeof window === "undefined") return;
@@ -65,5 +66,17 @@ export function appAccessHeaders(): Record<string, string> {
     captureAppSecretFromUrl();
   }
   const secret = readAppSecret();
+  // Le cookie httpOnly posé par le middleware suffit pour same-origin ; le
+  // header reste utile en local ou après saisie manuelle / ?key=…
   return secret ? { [APP_ACCESS_HEADER]: secret } : {};
+}
+
+/** Options fetch recommandées pour les routes protégées (cookie + header). */
+export function appAccessFetchInit(init: RequestInit = {}): RequestInit {
+  appAccessHeaders(); // capture ?key=… au premier appel
+  return {
+    ...init,
+    credentials: "include",
+    headers: { ...init.headers, ...appAccessHeaders() },
+  };
 }

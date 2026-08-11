@@ -325,7 +325,7 @@ export function EspaceProvider({
     syncPublishedGentsFromRemote()
       .then((merged) => {
         if (cancelled) return;
-        if (merged && Object.keys(merged).length) {
+        if (merged && merged !== "unauthorized" && Object.keys(merged).length) {
           setEspaces((prev) => ({ ...prev, ...merged }));
         }
       })

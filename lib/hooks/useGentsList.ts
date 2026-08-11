@@ -8,7 +8,6 @@ import {
   syncDraftsFromRemote,
 } from "@/lib/builderDraftStorage";
 import { readPublishedGents, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
-import { readAppSecret } from "@/lib/appAccess";
 import { deleteGentEverywhere } from "@/lib/deleteGent";
 import type { GentDraft } from "@/lib/types/builder";
 import type { Espace } from "@/lib/types";
@@ -46,21 +45,13 @@ export function useGentsList() {
     setSyncing(true);
     setNeedsAccessKey(false);
     try {
-      // Sans clé, les routes /api/drafts et /api/gents répondent 401 : on
-      // propose tout de suite la saisie plutôt que d'afficher seulement les démos.
-      if (!readAppSecret()) {
-        setNeedsAccessKey(true);
-      }
       const [remoteDrafts, remotePublished] = await Promise.all([
         syncDraftsFromRemote(),
         syncPublishedGentsFromRemote(),
       ]);
-      // Si aucune sync n'a abouti alors qu'une clé est (censée être) présente,
-      // elle est peut‑être invalide — on réaffiche le champ.
-      if (remoteDrafts === null && remotePublished === null && readAppSecret()) {
+      if (remoteDrafts === "unauthorized" || remotePublished === "unauthorized") {
         setNeedsAccessKey(true);
-      }
-      if (remoteDrafts !== null || remotePublished !== null) {
+      } else if (remoteDrafts !== null || remotePublished !== null) {
         setNeedsAccessKey(false);
       }
       refreshLists();

@@ -252,7 +252,7 @@ export function BuilderProvider({
     let cancelled = false;
     syncDraftsFromRemote()
       .then((merged) => {
-        if (cancelled || !merged || !Object.keys(merged).length) return;
+        if (cancelled || merged === "unauthorized" || !merged || !Object.keys(merged).length) return;
         setDrafts((prev) => ({ ...prev, ...merged }));
       })
       .finally(() => {

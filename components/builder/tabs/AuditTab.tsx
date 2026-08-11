@@ -67,6 +67,7 @@ export function AuditTab() {
     setLinksNeedAccessKey(false);
     fetch(`/api/links?gentId=${encodeURIComponent(currentDraft.id)}`, {
       cache: "no-store",
+      credentials: "include",
       headers: appAccessHeaders(),
     })
       .then((res) => {

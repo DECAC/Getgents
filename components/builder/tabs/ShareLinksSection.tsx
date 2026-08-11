@@ -51,6 +51,7 @@ export function ShareLinksSection() {
     try {
       const res = await fetch(`/api/links?gentId=${encodeURIComponent(gentId)}`, {
         cache: "no-store",
+        credentials: "include",
         headers: appAccessHeaders(),
       });
       const data = (await res.json()) as {
@@ -90,6 +91,7 @@ export function ShareLinksSection() {
         expiryDays > 0 ? new Date(Date.now() + expiryDays * 86_400_000).toISOString() : null;
       const res = await fetch("/api/links", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json", ...appAccessHeaders() },
         body: JSON.stringify({ gentId, targetLabel: label, expiresAt }),
       });
@@ -113,6 +115,7 @@ export function ShareLinksSection() {
     try {
       const res = await fetch(`/api/links/${encodeURIComponent(token)}`, {
         method: "DELETE",
+        credentials: "include",
         headers: appAccessHeaders(),
       });
       if (!res.ok) {
