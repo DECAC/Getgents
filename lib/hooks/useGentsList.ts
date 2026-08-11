@@ -129,7 +129,7 @@ export function useGentsList() {
     deletingId,
     deleteError,
     hydrateFromRemote,
-    handleCreate,
+    refreshLists,
     handleRestore,
     handleDelete,
   };

@@ -26,9 +26,11 @@ import {
   createDraftId,
   draftsForPersistence,
   mergeStoredDrafts,
+  readStoredDrafts,
   seedDrafts,
   syncDraftsFromRemote,
   pushRemoteDraft,
+  writeStoredDrafts,
 } from "@/lib/builderDraftStorage";
 
 export type BuilderTab =
@@ -210,6 +212,29 @@ export function BuilderProvider({
   currentIdRef.current = currentId;
   const [storageReady, setStorageReady] = useState(false);
   const streamAbortRef = useRef<AbortController | null>(null);
+  const prevInitialIdRef = useRef(initialId);
+
+  // Changement de gent via l'URL (/builder/[gentId]) : le Provider n'est pas
+  // remonté par Next.js, donc currentId doit suivre initialId — sinon
+  // l'assistant affiche encore la conversation du gent précédent.
+  useEffect(() => {
+    if (prevInitialIdRef.current === initialId) return;
+    prevInitialIdRef.current = initialId;
+
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = null;
+    setIsThinking(false);
+    setThinkingStatus(null);
+    setReplyCursor(0);
+    setCurrentId(initialId);
+    setActiveTab(initialTab ?? "accueil");
+    setDrafts((prev) => {
+      if (prev[initialId]) return prev;
+      const stored = readStoredDrafts();
+      if (stored[initialId]) return { ...prev, [initialId]: stored[initialId] };
+      return { ...prev, [initialId]: freshDraftFromTemplate(initialId) };
+    });
+  }, [initialId, initialTab]);
 
   const stopGeneration = useCallback(() => {
     streamAbortRef.current?.abort();
@@ -256,11 +281,21 @@ export function BuilderProvider({
     }
   }, [drafts, storageReady]);
 
-  const currentDraft = drafts[currentId];
+  const currentDraft = drafts[currentId] ?? freshDraftFromTemplate(currentId);
 
   const switchDraft = useCallback((id: string) => {
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = null;
+    setIsThinking(false);
+    setThinkingStatus(null);
+    setReplyCursor(0);
     setCurrentId(id);
-    // Arrivée sur un gent depuis Gent' space : on atterrit sur son accueil.
+    setDrafts((prev) => {
+      if (prev[id]) return prev;
+      const stored = readStoredDrafts();
+      if (stored[id]) return { ...prev, [id]: stored[id] };
+      return { ...prev, [id]: freshDraftFromTemplate(id) };
+    });
     setActiveTab("accueil");
   }, []);
 
@@ -272,10 +307,23 @@ export function BuilderProvider({
 
   const createDraft = useCallback((): string => {
     const id = createDraftId();
+    const draft = freshDraftFromTemplate(id);
     setDrafts((prev) => ({
       ...prev,
-      [id]: freshDraftFromTemplate(id),
+      [id]: draft,
     }));
+    const stored = readStoredDrafts();
+    stored[id] = draft;
+    writeStoredDrafts(stored);
+    pushRemoteDraft(id, draft);
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = null;
+    setIsThinking(false);
+    setThinkingStatus(null);
+    setReplyCursor(0);
+    setCurrentId(id);
+    prevInitialIdRef.current = id;
+    setActiveTab("accueil");
     return id;
   }, []);
 

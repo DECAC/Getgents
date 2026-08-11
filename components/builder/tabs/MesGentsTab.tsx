@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useBuilder } from "@/lib/context/BuilderContext";
 import { useGentsList } from "@/lib/hooks/useGentsList";
 import { AppAccessPrompt } from "@/components/shared/AppAccessPrompt";
 import styles from "./MesGentsTab.module.css";
@@ -26,6 +28,8 @@ type View = "tuile" | "liste";
  * accessible depuis l'intérieur du studio via cet onglet.
  */
 export function MesGentsTab() {
+  const router = useRouter();
+  const { createDraft } = useBuilder();
   const {
     query,
     setQuery,
@@ -38,10 +42,16 @@ export function MesGentsTab() {
     deletingId,
     deleteError,
     hydrateFromRemote,
-    handleCreate,
+    refreshLists,
     handleRestore,
     handleDelete,
   } = useGentsList();
+
+  function handleCreateNew() {
+    const id = createDraft();
+    refreshLists();
+    router.push(`/builder/${id}`);
+  }
   const [view, setView] = useState<View>("tuile");
 
   return (
@@ -118,7 +128,7 @@ export function MesGentsTab() {
           </button>
         </div>
 
-        <button type="button" className={styles.newBtn} onClick={handleCreate}>
+        <button type="button" className={styles.newBtn} onClick={handleCreateNew}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
             <path d="M12 5v14M5 12h14" />
           </svg>
@@ -207,7 +217,7 @@ export function MesGentsTab() {
             </div>
           ))}
 
-          <button className={[styles.card, styles.newCard].join(" ")} onClick={handleCreate}>
+          <button className={[styles.card, styles.newCard].join(" ")} onClick={handleCreateNew}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
               <path d="M12 5v14M5 12h14" />
             </svg>

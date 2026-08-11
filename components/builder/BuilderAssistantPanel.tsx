@@ -113,6 +113,15 @@ export function BuilderAssistantPanel() {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [currentDraft.builderConversation, isThinking, thinkingStatus]);
 
+  // Nouveau gent (ou retour sur un autre) : vider le composeur local.
+  useEffect(() => {
+    setComposerText("");
+    setAttachment(null);
+    setAttachError(null);
+    setSuggestionChecks({});
+    setExpandedReasoning({});
+  }, [currentDraft.id]);
+
   function toggleReasoning(i: number) {
     setExpandedReasoning((prev) => ({ ...prev, [i]: !prev[i] }));
   }

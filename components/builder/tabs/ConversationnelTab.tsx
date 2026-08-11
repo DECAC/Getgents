@@ -70,11 +70,9 @@ export function ConversationnelTab() {
   const lastPushedRef = useRef(currentDraft.systemPrompt);
 
   useEffect(() => {
-    if (currentDraft.systemPrompt !== lastPushedRef.current) {
-      setPromptValue(currentDraft.systemPrompt);
-      lastPushedRef.current = currentDraft.systemPrompt;
-    }
-  }, [currentDraft.systemPrompt]);
+    setPromptValue(currentDraft.systemPrompt);
+    lastPushedRef.current = currentDraft.systemPrompt;
+  }, [currentDraft.id, currentDraft.systemPrompt]);
 
   function handlePromptChange(text: string) {
     setPromptValue(text);

@@ -13,7 +13,7 @@ import { AuditTab } from "./tabs/AuditTab";
 import styles from "./BuilderCenter.module.css";
 
 export function BuilderCenter() {
-  const { activeTab } = useBuilder();
+  const { activeTab, currentId } = useBuilder();
 
   function renderContent() {
     if (activeTab === "mesgents") return <MesGentsTab />;
@@ -29,7 +29,9 @@ export function BuilderCenter() {
   return (
     <main className={styles.center} id="builder-main">
       <BuilderHeader />
-      <div className={styles.content}>{renderContent()}</div>
+      <div className={styles.content} key={currentId}>
+        {renderContent()}
+      </div>
     </main>
   );
 }
