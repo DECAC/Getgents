@@ -1,4 +1,4 @@
-import { describeGents, isRoutableGent, resolveRouting, suggestionsFromGents } from "@/lib/superGent";
+import { buildSuperGentReport, describeGents, isRoutableGent, resolveRouting, suggestionsFromGents, SUPER_GENT_ROUTER_MODEL } from "@/lib/superGent";
 import type { Espace, EspacesMap } from "@/lib/types";
 
 function gent(patch: Partial<Espace>): Espace {
@@ -100,5 +100,54 @@ describe("décision de routage", () => {
 
   it("reste robuste à une sortie illisible", () => {
     expect(resolveRouting("je ne sais pas", descriptors).gentId).toBeNull();
+  });
+});
+
+describe("rapport d'administration", () => {
+  const descriptors = describeGents(espaces);
+
+  it("expose le vivier de routage et le modèle du routeur", () => {
+    const md = buildSuperGentReport([], descriptors, SUPER_GENT_ROUTER_MODEL);
+    expect(md).toContain("Modèle du routeur");
+    expect(md).toContain(SUPER_GENT_ROUTER_MODEL);
+    expect(md).toContain("`voyage`");
+    expect(md).toContain("Radar Emploi");
+    expect(md).toContain("Aucun échange");
+  });
+
+  it("restitue l'aiguillage de chaque question, motif et durée compris", () => {
+    const md = buildSuperGentReport(
+      [
+        {
+          question: "Où partir en juillet ?",
+          gentName: "Compagnon de voyage",
+          gentId: "voyage",
+          reason: "voyage",
+          model: "anthropic/claude-sonnet-5",
+          durationMs: 4200,
+          answer: "En Italie.",
+        },
+      ],
+      descriptors,
+      SUPER_GENT_ROUTER_MODEL
+    );
+    expect(md).toContain("Où partir en juillet ?");
+    expect(md).toContain("Compagnon de voyage");
+    expect(md).toContain("Motif du routeur");
+    expect(md).toContain("4.2 s");
+    expect(md).toContain("En Italie.");
+  });
+
+  it("compte les mobilisations par gent — c'est ce qui révèle un routage biaisé", () => {
+    const e = (gentName: string) => ({ question: "q", gentName, answer: "a" });
+    const md = buildSuperGentReport([e("Radar Emploi"), e("Radar Emploi"), e("Compagnon de voyage")], descriptors, "m");
+    expect(md).toMatch(/\| Radar Emploi \| 2 \|/);
+    expect(md).toMatch(/\| Compagnon de voyage \| 1 \|/);
+  });
+
+  it("signale explicitement les questions qu'aucun gent n'a couvertes", () => {
+    const md = buildSuperGentReport([{ question: "météo ?", answer: "…" }], descriptors, "m");
+    expect(md).toContain("aucun (question hors du domaine");
+    expect(md).toContain("— aucun gent —");
   });
 });

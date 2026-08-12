@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
-import { resolveRouting, routingPrompt, type GentDescriptor } from "@/lib/superGent";
+import { resolveRouting, routingPrompt, SUPER_GENT_ROUTER_MODEL, type GentDescriptor } from "@/lib/superGent";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
-// Le routage est une tâche de classement courte : un modèle rapide du
-// catalogue suffit et garde la page d'accueil réactive. La RÉPONSE, elle, est
-// produite ensuite par le gent choisi avec son propre modèle.
-const ROUTER_MODEL = "google/gemini-2.5-flash";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -47,7 +43,7 @@ export async function POST(req: Request) {
         "X-Title": "Getgents",
       },
       body: JSON.stringify({
-        model: ROUTER_MODEL,
+        model: SUPER_GENT_ROUTER_MODEL,
         messages: [
           { role: "system", content: routingPrompt(gents, body.currentGentId) },
           { role: "user", content: question },

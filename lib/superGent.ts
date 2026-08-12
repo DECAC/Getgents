@@ -9,6 +9,14 @@ import type { Espace, EspacesMap } from "@/lib/types";
  * classifieur. L'appel au modèle vit dans app/api/supergent/route.ts.
  */
 
+/**
+ * Modèle du routeur. Le classement est une tâche courte et cadrée (choisir un
+ * identifiant dans une liste) : un modèle rapide et bon marché y suffit, et
+ * c'est ce qui garde la page d'accueil réactive. La RÉPONSE, elle, reste
+ * produite par le modèle propre au gent retenu.
+ */
+export const SUPER_GENT_ROUTER_MODEL = "google/gemini-2.5-flash";
+
 /** Fiche compacte d'un gent, envoyée au classifieur. Jamais son prompt entier. */
 export interface GentDescriptor {
   id: string;
@@ -140,6 +148,80 @@ export function resolveRouting(
     return { gentId: currentGentId && known.has(currentGentId) ? currentGentId : null, reason };
   }
   return { gentId: null, reason };
+}
+
+/** Un échange du fil, tel que le rapport d'administration le restitue. */
+export interface SuperGentReportEntry {
+  question: string;
+  /** Gent mobilisé — absent quand aucun ne couvrait le sujet. */
+  gentName?: string;
+  gentId?: string;
+  /** Motif renvoyé par le routeur. */
+  reason?: string;
+  /** Modèle qui a produit la réponse (celui du gent, pas celui du routeur). */
+  model?: string;
+  durationMs?: number;
+  answer: string;
+}
+
+/**
+ * Rapport d'administration du super gent.
+ *
+ * Il ne restitue pas seulement le transcript : il expose le ROUTAGE, seule
+ * partie réellement opaque de la fonctionnalité. Pour chaque question on voit
+ * le vivier de gents disponibles, celui qui a été retenu, le motif, le modèle
+ * et le temps de réponse — de quoi diagnostiquer un mauvais aiguillage plutôt
+ * que de le constater sans pouvoir l'expliquer.
+ */
+export function buildSuperGentReport(
+  entries: SuperGentReportEntry[],
+  descriptors: GentDescriptor[],
+  routerModel: string
+): string {
+  const lines: string[] = [];
+  lines.push("# Rapport — Super gent");
+  lines.push(`Généré le ${new Date().toLocaleString("fr-FR")}`);
+  lines.push("");
+
+  lines.push("## Vivier de routage");
+  lines.push(`- **Modèle du routeur** : ${routerModel}`);
+  lines.push(`- **Gents interrogeables** : ${descriptors.length}`);
+  for (const d of descriptors) lines.push(`  - \`${d.id}\` — ${d.name}`);
+  lines.push("");
+
+  lines.push("## Aiguillage");
+  if (entries.length === 0) {
+    lines.push("_Aucun échange dans cette session._");
+  } else {
+    const counts = new Map<string, number>();
+    for (const e of entries) {
+      const key = e.gentName ?? "— aucun gent —";
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    lines.push("| Gent mobilisé | Questions |");
+    lines.push("| --- | --- |");
+    for (const [name, n] of Array.from(counts.entries()).sort((a, b) => b[1] - a[1])) {
+      lines.push(`| ${name} | ${n} |`);
+    }
+    lines.push("");
+
+    lines.push("## Échanges");
+    entries.forEach((e, i) => {
+      lines.push(`### ${i + 1}. ${e.question}`);
+      lines.push(
+        `- **Gent** : ${e.gentName ?? "aucun (question hors du domaine des gents actifs)"}` +
+          (e.gentId ? ` (\`${e.gentId}\`)` : "")
+      );
+      if (e.reason) lines.push(`- **Motif du routeur** : ${e.reason}`);
+      if (e.model) lines.push(`- **Modèle de réponse** : ${e.model}`);
+      if (typeof e.durationMs === "number") lines.push(`- **Durée** : ${(e.durationMs / 1000).toFixed(1)} s`);
+      lines.push("");
+      lines.push(e.answer.trim() || "_(réponse vide)_");
+      lines.push("");
+    });
+  }
+
+  return lines.join("\n");
 }
 
 /** Consigne de classement envoyée au modèle. */

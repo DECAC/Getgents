@@ -7,7 +7,14 @@ import { ThinkingIndicator } from "@/components/shared/ThinkingIndicator";
 import { buildGentSystemPrompt } from "@/lib/gentRuntimePrompt";
 import { streamChatCompletion, CHAT_MAX_TOKENS } from "@/lib/streamChat";
 import { renderMarkdown } from "@/lib/markdown";
-import { describeGents, suggestionsFromGents } from "@/lib/superGent";
+import { ReportMenu } from "@/components/shared/ReportMenu";
+import {
+  buildSuperGentReport,
+  describeGents,
+  suggestionsFromGents,
+  SUPER_GENT_ROUTER_MODEL,
+  type SuperGentReportEntry,
+} from "@/lib/superGent";
 import type { Espace } from "@/lib/types";
 import styles from "./SuperGentHome.module.css";
 
@@ -17,6 +24,11 @@ interface Turn {
   /** Gent mobilisé pour ce tour — affiché en tête de réponse. */
   gentName?: string;
   gentIcon?: string;
+  /** Diagnostic de routage, restitué dans le rapport d'administration. */
+  gentId?: string;
+  reason?: string;
+  model?: string;
+  durationMs?: number;
 }
 
 /**
@@ -39,6 +51,9 @@ export function SuperGentHome() {
   // Inertie du routage : le gent en cours reste privilégié pour les relances.
   const currentGentIdRef = useRef<string | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
+  // Permet à « Nouvel échange » d'interrompre une réponse en cours plutôt que
+  // de laisser un flux orphelin écrire dans un fil déjà vidé.
+  const abortRef = useRef<AbortController | null>(null);
 
   const descriptors = useMemo(() => describeGents(espaces), [espaces]);
   const suggestions = useMemo(() => suggestionsFromGents(espaces), [espaces]);
@@ -60,7 +75,9 @@ export function SuperGentHome() {
     setStatus("Recherche du gent le mieux placé…");
 
     // 1) Routage — quel gent doit répondre ?
+    const startedAt = Date.now();
     let gentId: string | null = null;
+    let reason: string | undefined;
     try {
       const res = await fetch("/api/supergent", {
         method: "POST",
@@ -68,7 +85,9 @@ export function SuperGentHome() {
         body: JSON.stringify({ question: q, gents: descriptors, currentGentId: currentGentIdRef.current }),
       });
       if (!res.ok) throw new Error(`routage indisponible (${res.status})`);
-      gentId = ((await res.json()) as { gentId?: string | null }).gentId ?? null;
+      const decision = (await res.json()) as { gentId?: string | null; reason?: string };
+      gentId = decision.gentId ?? null;
+      reason = decision.reason;
     } catch (err) {
       setBusy(false);
       setStatus(null);
@@ -98,10 +117,24 @@ export function SuperGentHome() {
     }
 
     currentGentIdRef.current = gentId;
+    const model = espace.chatModelId ?? "anthropic/claude-sonnet-5";
     setStatus(`${espace.gent || espace.name} rédige sa réponse…`);
-    setTurns((t) => [...t, { role: "gent", text: "", gentName: espace.gent || espace.name, gentIcon: espace.icon }]);
+    setTurns((t) => [
+      ...t,
+      {
+        role: "gent",
+        text: "",
+        gentName: espace.gent || espace.name,
+        gentIcon: espace.icon,
+        gentId: gentId ?? undefined,
+        reason,
+        model,
+      },
+    ]);
 
     // 2) Réponse — le gent désigné répond avec son runtime complet.
+    const controller = new AbortController();
+    abortRef.current = controller;
     const history = turns
       .filter((t) => t.role !== "none")
       .map((t) => ({ role: t.role === "user" ? ("user" as const) : ("assistant" as const), content: t.text }));
@@ -109,7 +142,7 @@ export function SuperGentHome() {
     try {
       await streamChatCompletion(
         {
-          model: espace.chatModelId ?? "anthropic/claude-sonnet-5",
+          model,
           messages: [
             { role: "system", content: buildGentSystemPrompt(espace, { variant: "superGent" }) },
             ...history,
@@ -131,14 +164,52 @@ export function SuperGentHome() {
         },
         (ev) => {
           if (ev.status === "running" && ev.call) setStatus(`${espace.gent || espace.name} consulte ${ev.call}…`);
-        }
+        },
+        undefined,
+        "/api/chat",
+        controller.signal
       );
     } catch (err) {
-      setError((err as Error).message);
+      // Interruption volontaire (« Nouvel échange ») : rien à signaler.
+      if ((err as Error).name !== "AbortError") setError((err as Error).message);
     } finally {
+      const durationMs = Date.now() - startedAt;
+      setTurns((t) => t.map((turn, i) => (i === t.length - 1 && turn.role === "gent" ? { ...turn, durationMs } : turn)));
+      abortRef.current = null;
       setBusy(false);
       setStatus(null);
     }
+  }
+
+  /** Repart d'une page vierge — la session du super gent n'est pas persistée. */
+  function newExchange() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    currentGentIdRef.current = null;
+    setTurns([]);
+    setDraft("");
+    setError(null);
+    setStatus(null);
+    setBusy(false);
+  }
+
+  function report(): string {
+    const entries: SuperGentReportEntry[] = [];
+    for (let i = 0; i < turns.length; i++) {
+      const t = turns[i];
+      if (t.role !== "user") continue;
+      const answer = turns[i + 1];
+      entries.push({
+        question: t.text,
+        gentName: answer?.role === "gent" ? answer.gentName : undefined,
+        gentId: answer?.gentId,
+        reason: answer?.reason,
+        model: answer?.model,
+        durationMs: answer?.durationMs,
+        answer: answer?.text ?? "",
+      });
+    }
+    return buildSuperGentReport(entries, descriptors, SUPER_GENT_ROUTER_MODEL);
   }
 
   return (
@@ -198,6 +269,17 @@ export function SuperGentHome() {
         </div>
       ) : (
         <>
+          {/* Barre d'actions — absente de la page vierge, qui doit rester nue. */}
+          <div className={styles.bar}>
+            <button type="button" className={styles.barBtn} onClick={newExchange} title="Repartir d'une page vierge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Nouvel échange
+            </button>
+            <ReportMenu getMarkdown={report} baseName="super-gent" />
+          </div>
+
           <div className={styles.thread} ref={threadRef}>
             {turns.map((t, i) => (
               <div key={i} className={styles.turn}>
