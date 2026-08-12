@@ -11,6 +11,11 @@
   gap: 14px;
 }
 
+.icWrap {
+  position: relative;
+  flex: none;
+}
+
 .ic {
   width: 42px;
   height: 42px;
@@ -19,7 +24,43 @@
   display: grid;
   place-items: center;
   font-size: 21px;
-  flex: none;
+  border: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+.ic:hover,
+.ic[aria-expanded="true"] {
+  border-color: var(--sage);
+}
+
+.iconMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(7, 34px);
+  gap: 2px;
+  padding: 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(42, 31, 25, 0.14);
+}
+
+.iconChoice {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+.iconChoice:hover {
+  background: var(--bg);
+}
+.iconChoiceOn {
+  background: var(--sage-tint);
+  box-shadow: inset 0 0 0 1.5px var(--sage);
 }
 
 .meta {

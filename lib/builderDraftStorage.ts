@@ -2,6 +2,7 @@ import type { GentDraft, GentDraftsMap } from "@/lib/types/builder";
 import type { Espace } from "@/lib/types";
 import { GENT_DRAFTS } from "@/lib/mock-data/builder";
 import { appAccessHeaders } from "@/lib/appAccess";
+import { suggestGentIcon } from "@/lib/gentIcons";
 
 export const DRAFTS_STORAGE_KEY = "getgents:gent-drafts";
 export const NOUVEAU_GENT_TEMPLATE_ID = "nouveau-gent";
@@ -210,14 +211,16 @@ export function allocateNewDraft(): string {
  * dans le bandeau et la liste des gents) et reste en attente dans
  * `pendingBuilderMessage` : le builder la rejoue dans l'assistant à
  * l'ouverture, pour que l'échange se poursuive sans que le créateur ait à se
- * répéter.
+ * répéter. L'emblème vient de l'exemple choisi, ou se déduit de la
+ * description — sans quoi tous les gents naîtraient avec la même étoile.
  */
-export function allocateDraftFromDescription(description: string): string {
+export function allocateDraftFromDescription(description: string, icon?: string): string {
   const role = description.trim();
   const id = createDraftId();
   const stored = readStoredDrafts();
   const draft: GentDraft = {
     ...freshDraftFromTemplate(id),
+    icon: icon?.trim() || suggestGentIcon(role),
     objective: role.slice(0, 240),
     pendingBuilderMessage: role,
   };

@@ -49,13 +49,13 @@ export function StudioHome() {
   }, []);
 
   const start = useCallback(
-    (description: string, tab: StudioCreationTab = "conversationnel") => {
+    (description: string, tab: StudioCreationTab = "conversationnel", icon?: string) => {
       const text = description.trim();
       if (!text || creating) return;
       // `creating` reste vrai jusqu'à la navigation : un double clic ne doit
       // pas fabriquer deux brouillons pour une seule intention.
       setCreating(true);
-      const id = allocateDraftFromDescription(text);
+      const id = allocateDraftFromDescription(text, icon);
       router.push(`/builder/${id}?tab=${tab}`);
     },
     [creating, router]
@@ -196,13 +196,13 @@ function ExampleCard({
 }: {
   example: StudioExample;
   disabled: boolean;
-  onPick: (description: string, tab: StudioCreationTab) => void;
+  onPick: (description: string, tab: StudioCreationTab, icon?: string) => void;
 }) {
   return (
     <button
       type="button"
       className={styles.card}
-      onClick={() => onPick(example.prompt, exampleTab(example))}
+      onClick={() => onPick(example.prompt, exampleTab(example), example.icon)}
       disabled={disabled}
     >
       <span className={styles.cardIcon} aria-hidden="true">

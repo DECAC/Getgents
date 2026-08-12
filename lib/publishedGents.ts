@@ -245,6 +245,14 @@ export function patchPublishedGentName(id: string, name: string): void {
   writePublishedGent(id, { ...existing, name, gent: name });
 }
 
+/** Idem pour l'emblème : le rail du Gent' space le reflète sans rediffusion. */
+export function patchPublishedGentIcon(id: string, icon: string): void {
+  if (typeof window === "undefined") return;
+  const existing = readPublishedGents()[id];
+  if (!existing) return;
+  writePublishedGent(id, { ...existing, icon });
+}
+
 /**
  * Total de caractères de base de connaissance injectés dans le prompt système.
  * Aligné sur un dossier d'environ 100 pages (voir `MAX_CHARS` d'extraction) :

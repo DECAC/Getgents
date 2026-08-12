@@ -21,6 +21,7 @@ import {
   writePublishedGent,
   draftToEspace,
   patchPublishedGentName,
+  patchPublishedGentIcon,
   readPublishedGents,
   mergeVisionneuseArtefact,
 } from "@/lib/publishedGents";
@@ -70,6 +71,8 @@ interface BuilderContextValue {
   updateObjective: (text: string) => void;
   updateSystemPrompt: (text: string) => void;
   updateName: (text: string) => void;
+  /** Change l'emblème (emoji) du gent — bandeau, liste, rail utilisateur. */
+  updateIcon: (icon: string) => void;
   publishDraft: () => void;
   /** Écrit la version de travail (Preview) sans toucher à la version diffusée. */
   syncWorkingVersion: () => void;
@@ -351,6 +354,16 @@ export function BuilderProvider({
       const draft = { ...prev[currentId], name: text, updatedAt: "à l'instant" };
       if (draft.status === "published") {
         patchPublishedGentName(currentId, text);
+      }
+      return { ...prev, [currentId]: draft };
+    });
+  }, [currentId]);
+
+  const updateIcon = useCallback((icon: string) => {
+    setDrafts((prev) => {
+      const draft = { ...prev[currentId], icon, updatedAt: "à l'instant" };
+      if (draft.status === "published") {
+        patchPublishedGentIcon(currentId, icon);
       }
       return { ...prev, [currentId]: draft };
     });
@@ -1013,6 +1026,7 @@ export function BuilderProvider({
         updateObjective,
         updateSystemPrompt,
         updateName,
+        updateIcon,
         publishDraft,
         syncWorkingVersion,
         assignModel,

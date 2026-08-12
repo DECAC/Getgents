@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { hasCustomName } from "@/lib/builderSnapshot";
 import { deleteGentEverywhere } from "@/lib/deleteGent";
+import { GENT_ICON_PALETTE } from "@/lib/gentIcons";
 import styles from "./BuilderHeader.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -20,10 +21,28 @@ const STATUS_DOT_CLASS: Record<string, string> = {
 };
 
 export function BuilderHeader() {
-  const { currentDraft, updateName, updateObjective, syncWorkingVersion } = useBuilder();
+  const { currentDraft, updateName, updateObjective, updateIcon, syncWorkingVersion } = useBuilder();
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [iconMenuOpen, setIconMenuOpen] = useState(false);
+  const iconRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!iconMenuOpen) return;
+    function onDocClick(e: MouseEvent) {
+      if (!iconRef.current?.contains(e.target as Node)) setIconMenuOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setIconMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [iconMenuOpen]);
 
   // Preview part TOUJOURS de la configuration à l'instant : on écrit la
   // version de travail avant d'ouvrir l'onglet, sinon l'espace rechargerait
@@ -58,7 +77,40 @@ export function BuilderHeader() {
   return (
     <header className={styles.head}>
       <div className={styles.top}>
-        <div className={styles.ic}>{currentDraft.icon}</div>
+        <div className={styles.icWrap} ref={iconRef}>
+          <button
+            type="button"
+            className={styles.ic}
+            onClick={() => setIconMenuOpen((v) => !v)}
+            aria-expanded={iconMenuOpen}
+            aria-haspopup="menu"
+            aria-label={`Emblème du gent : ${currentDraft.icon}. Cliquer pour changer.`}
+            title="Changer l'emblème du gent"
+          >
+            {currentDraft.icon}
+          </button>
+          {iconMenuOpen && (
+            <div className={styles.iconMenu} role="menu" aria-label="Choisir un emblème">
+              {GENT_ICON_PALETTE.map((icon) => (
+                <button
+                  key={icon}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={icon === currentDraft.icon}
+                  className={[styles.iconChoice, icon === currentDraft.icon ? styles.iconChoiceOn : ""]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onClick={() => {
+                    updateIcon(icon);
+                    setIconMenuOpen(false);
+                  }}
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className={styles.meta}>
           <label className={styles.nameLabel} htmlFor="gent-name">
             Nom du gent
