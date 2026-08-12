@@ -124,7 +124,8 @@ export interface RoutingDecision {
 export function resolveRouting(
   raw: string,
   descriptors: GentDescriptor[],
-  currentGentId?: string | null
+  currentGentId?: string | null,
+  options?: { hasConversationContext?: boolean }
 ): RoutingDecision {
   const known = new Set(descriptors.map((d) => d.id));
 
@@ -138,14 +139,25 @@ export function resolveRouting(
     }
   }
 
-  const picked = typeof parsed?.gentId === "string" ? parsed.gentId.trim() : "";
+  const pickedRaw = parsed?.gentId;
+  const picked =
+    typeof pickedRaw === "string"
+      ? pickedRaw.trim()
+      : pickedRaw === null
+        ? "null"
+        : "";
   const reason = typeof parsed?.reason === "string" ? parsed.reason.trim() : undefined;
+  const isExplicitNone = !picked || picked.toLowerCase() === "null" || picked.toLowerCase() === "aucun";
 
-  if (picked && known.has(picked)) return { gentId: picked, reason };
-  // « aucun » explicite, ou identifiant inventé : on ne force jamais un gent au
-  // hasard — mieux vaut le dire (voir SuperGentThread).
-  if (picked && picked.toLowerCase() !== "null" && picked.toLowerCase() !== "aucun") {
+  if (picked && !isExplicitNone && known.has(picked)) return { gentId: picked, reason };
+  // Id inventé : on retombe sur le gent en cours plutôt que d'échouer.
+  if (picked && !isExplicitNone) {
     return { gentId: currentGentId && known.has(currentGentId) ? currentGentId : null, reason };
+  }
+  // « aucun » explicite dans un fil en cours : conserver le gent mobilisé pour
+  // les relances elliptiques (ex. « synthèse MyClaw » après un bilan Gmail).
+  if (options?.hasConversationContext && currentGentId && known.has(currentGentId)) {
+    return { gentId: currentGentId, reason: reason ?? "suite du fil en cours" };
   }
   return { gentId: null, reason };
 }
@@ -227,20 +239,41 @@ export function buildSuperGentReport(
 /** Consigne de classement envoyée au modèle. */
 export function routingPrompt(descriptors: GentDescriptor[], currentGentId?: string | null): string {
   const list = descriptors.map((d) => `- id="${d.id}" — ${d.name} : ${d.summary}`).join("\n");
+  const current = currentGentId ? descriptors.find((d) => d.id === currentGentId) : undefined;
   const inertie = currentGentId
-    ? `\n\nLe gent « ${currentGentId} » répond déjà dans cette conversation. Si la question est une relance, ` +
-      "une précision ou reste dans son domaine — y compris quand elle est elliptique (« et pour Lyon ? », " +
-      "« combien ? ») — GARDE-LE. Ne change que si la question relève clairement d'un autre gent."
+    ? `\n\nLe gent « ${current?.name ?? currentGentId} » (id="${currentGentId}") répond déjà dans ce fil. ` +
+      "Si la nouvelle question est une relance, une précision, une synthèse ou un approfondissement du même sujet — " +
+      "y compris elliptique (« et pour Lyon ? », « synthèse des derniers sujets », « compare avec X ») — " +
+      "GARDE CE GENT. Les entités ou marques déjà évoquées dans le fil (newsletter, expéditeur, produit…) " +
+      "restent dans le domaine du gent en cours tant que la question s'y rattache. " +
+      "Ne change que si la question relève clairement et entièrement d'un autre gent."
     : "";
 
   return (
-    "Tu es un routeur. On te donne la liste des gents (assistants spécialisés) d'un utilisateur et sa question. " +
+    "Tu es un routeur. On te donne la liste des gents (assistants spécialisés) d'un utilisateur, " +
+    "le fil récent de la conversation (s'il existe) et sa nouvelle question. " +
     "Désigne LE gent le mieux placé pour y répondre.\n\n" +
     `GENTS DISPONIBLES :\n${list}${inertie}\n\n` +
     "Réponds UNIQUEMENT par un objet JSON, sans texte autour :\n" +
     '{"gentId":"<id exact d\'un gent ci-dessus, ou null>","reason":"<10 mots max>"}\n\n' +
-    "Mets null si AUCUN gent ne couvre le sujet : ne rattache jamais une question à un gent " +
-    "par simple proximité de vocabulaire — un utilisateur préfère un « aucun de vos gents ne couvre ça » " +
-    "à une réponse hors sujet."
+    "Mets null UNIQUEMENT si AUCUN gent ne couvre le sujet ET que ce n'est pas une suite du fil en cours. " +
+    "Ne rattache jamais une question à un gent par simple proximité de vocabulaire si un autre est plus adapté — " +
+    "mais une relance sur le même sujet doit rester sur le gent déjà mobilisé."
   );
+}
+
+/** Formate le fil récent pour le classifieur (questions + réponses tronquées). */
+export function formatRoutingConversationContext(
+  turns: { role: string; text: string; gentName?: string }[]
+): string {
+  return turns
+    .filter((t) => t.text.trim())
+    .map((t) => {
+      if (t.role === "user") return `Utilisateur : ${t.text.trim()}`;
+      const who = t.gentName ? `Gent « ${t.gentName} »` : "Assistant";
+      const body = t.text.trim();
+      const short = body.length > 900 ? `${body.slice(0, 900)}…` : body;
+      return `${who} : ${short}`;
+    })
+    .join("\n\n");
 }

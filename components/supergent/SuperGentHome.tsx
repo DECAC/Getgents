@@ -11,6 +11,7 @@ import { ReportMenu } from "@/components/shared/ReportMenu";
 import {
   buildSuperGentReport,
   describeGents,
+  formatRoutingConversationContext,
   suggestionsFromGents,
   SUPER_GENT_ROUTER_MODEL,
   type SuperGentReportEntry,
@@ -74,6 +75,10 @@ export function SuperGentHome() {
     setBusy(true);
     setStatus("Recherche du gent le mieux placé…");
 
+    const conversationContext = formatRoutingConversationContext(
+      turns.filter((t) => t.role === "user" || t.role === "gent")
+    );
+
     // 1) Routage — quel gent doit répondre ?
     const startedAt = Date.now();
     let gentId: string | null = null;
@@ -82,7 +87,12 @@ export function SuperGentHome() {
       const res = await fetch("/api/supergent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q, gents: descriptors, currentGentId: currentGentIdRef.current }),
+        body: JSON.stringify({
+          question: q,
+          gents: descriptors,
+          currentGentId: currentGentIdRef.current,
+          conversationContext: conversationContext || undefined,
+        }),
       });
       if (!res.ok) throw new Error(`routage indisponible (${res.status})`);
       const decision = (await res.json()) as { gentId?: string | null; reason?: string };
@@ -98,8 +108,8 @@ export function SuperGentHome() {
     const espace: Espace | undefined = gentId ? espaces[gentId] : undefined;
     if (!espace) {
       // Aucun gent ne couvre le sujet : on le dit, plutôt que de forcer une
-      // réponse hors domaine (voir routingPrompt).
-      currentGentIdRef.current = null;
+      // réponse hors domaine (voir routingPrompt). On conserve currentGentIdRef
+      // pour que la prochaine relance puisse encore bénéficier de l'inertie.
       setTurns((t) => [
         ...t,
         {

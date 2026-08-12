@@ -1,4 +1,4 @@
-import { buildSuperGentReport, describeGents, isRoutableGent, resolveRouting, suggestionsFromGents, SUPER_GENT_ROUTER_MODEL } from "@/lib/superGent";
+import { buildSuperGentReport, describeGents, formatRoutingConversationContext, isRoutableGent, resolveRouting, suggestionsFromGents, SUPER_GENT_ROUTER_MODEL } from "@/lib/superGent";
 import type { Espace, EspacesMap } from "@/lib/types";
 
 function gent(patch: Partial<Espace>): Espace {
@@ -85,8 +85,14 @@ describe("décision de routage", () => {
     expect(d.gentId).toBe("voyage");
   });
 
-  it("renvoie null quand aucun gent ne couvre le sujet", () => {
+  it("renvoie null quand aucun gent ne couvre le sujet (premier message)", () => {
     expect(resolveRouting('{"gentId":null}', descriptors).gentId).toBeNull();
+  });
+
+  it("conserve le gent en cours quand le classifieur renvoie null dans un fil actif", () => {
+    expect(
+      resolveRouting('{"gentId":null}', descriptors, "voyage", { hasConversationContext: true }).gentId
+    ).toBe("voyage");
   });
 
   it("ne force jamais un gent inventé par le modèle", () => {
@@ -100,6 +106,17 @@ describe("décision de routage", () => {
 
   it("reste robuste à une sortie illisible", () => {
     expect(resolveRouting("je ne sais pas", descriptors).gentId).toBeNull();
+  });
+});
+
+describe("contexte de fil pour le routeur", () => {
+  it("formate utilisateur et réponses des gents", () => {
+    const ctx = formatRoutingConversationContext([
+      { role: "user", text: "Newsletters myclaw ?" },
+      { role: "gent", text: "Voici le bilan.", gentName: "Assistant Email" },
+    ]);
+    expect(ctx).toContain("Utilisateur : Newsletters myclaw");
+    expect(ctx).toContain("Gent « Assistant Email »");
   });
 });
 

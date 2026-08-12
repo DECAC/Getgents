@@ -18,7 +18,12 @@ export async function POST(req: Request) {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return NextResponse.json({ error: "openrouter_not_configured" }, { status: 503 });
 
-  let body: { question?: string; gents?: GentDescriptor[]; currentGentId?: string | null };
+  let body: {
+    question?: string;
+    gents?: GentDescriptor[];
+    currentGentId?: string | null;
+    conversationContext?: string;
+  };
   try {
     body = await req.json();
   } catch {
@@ -27,10 +32,15 @@ export async function POST(req: Request) {
 
   const question = (body.question ?? "").trim();
   const gents = Array.isArray(body.gents) ? body.gents : [];
+  const conversationContext = (body.conversationContext ?? "").trim();
   if (!question) return NextResponse.json({ error: "missing_question" }, { status: 400 });
   if (!gents.length) return NextResponse.json({ gentId: null, reason: "aucun gent actif" });
   // Un seul gent routable : le classement n'apporte rien, on économise l'appel.
   if (gents.length === 1) return NextResponse.json({ gentId: gents[0].id });
+
+  const userContent = conversationContext
+    ? `FIL RÉCENT (du plus ancien au plus récent) :\n${conversationContext}\n\nNOUVELLE QUESTION :\n${question}`
+    : question;
 
   let upstream: Response;
   try {
@@ -46,7 +56,7 @@ export async function POST(req: Request) {
         model: SUPER_GENT_ROUTER_MODEL,
         messages: [
           { role: "system", content: routingPrompt(gents, body.currentGentId) },
-          { role: "user", content: question },
+          { role: "user", content: userContent },
         ],
         max_tokens: 120,
         temperature: 0,
@@ -63,5 +73,7 @@ export async function POST(req: Request) {
 
   const data = (await upstream.json()) as { choices?: { message?: { content?: string } }[] };
   const raw = data.choices?.[0]?.message?.content ?? "";
-  return NextResponse.json(resolveRouting(raw, gents, body.currentGentId));
+  return NextResponse.json(
+    resolveRouting(raw, gents, body.currentGentId, { hasConversationContext: !!conversationContext })
+  );
 }
