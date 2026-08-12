@@ -50,6 +50,16 @@ export function Rail() {
         </button>
       </div>
 
+      {/* Au-dessus de la liste : le point d'entrée unique, où l'on interroge
+          l'ensemble de ses gents sans avoir à choisir lequel ouvrir. */}
+      <a href="/accueil" className={styles.homeLink} title="Interroger tous vos gents">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 10.5 12 3l9 7.5" />
+          <path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" />
+        </svg>
+        <span className={styles.homeLinkLabel}>Accueil</span>
+      </a>
+
       <div className={styles.railLabel}>Mes gents actifs</div>
 
       <ul className={styles.espaceList} role="list">

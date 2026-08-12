@@ -30,14 +30,30 @@ export interface GentPromptOptions {
    * « espace » : le créateur chez lui, tout le canvas est disponible.
    * « sharedLink » : un invité, sans mémoire ni documents du créateur, et
    * sans les mécanismes qui écriraient dans un espace qui n'est pas le sien.
+   * « superGent » : le gent est mobilisé depuis la page d'accueil, pour
+   * répondre à UNE question hors de son espace. Il garde toute son expertise
+   * et son outillage, mais rien de ce qui écrit quelque part : ni artefact,
+   * ni onglet, ni profil — il n'a pas d'espace où les déposer.
    */
-  variant: "espace" | "sharedLink";
+  variant: "espace" | "sharedLink" | "superGent";
   position?: { lat: number; lon: number } | null;
 }
 
 export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions): string {
   const shared = options.variant === "sharedLink";
+  const superGent = options.variant === "superGent";
   const blocks: string[] = [];
+
+  if (superGent) {
+    blocks.push(
+      "Tu es mobilisé depuis la page d'accueil de Getgents : l'utilisateur a posé une question à l'ensemble de ses gents, " +
+        "et c'est TOI qui as été identifié comme le mieux placé pour y répondre. " +
+        "Réponds directement, dans ton domaine, avec toute ton expertise et tes sources habituelles. " +
+        "Tu es ici hors de ton espace de travail : ne propose AUCUN artefact, aucune illustration, aucun onglet, aucun formulaire — " +
+        "tu n'aurais nulle part où les déposer. Une réponse écrite, utile et directe, rien d'autre. " +
+        "Si la question déborde de ton domaine, dis simplement ce que tu peux en couvrir et ce que tu ne couvres pas."
+    );
+  }
 
   if (shared) {
     // La consigne interdisait aussi « le contenu des documents de ton
@@ -85,8 +101,9 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
   }
 
   // Mémoire et documents appartiennent à l'utilisateur de l'espace : ils ne
-  // suivent jamais un lien de partage vers quelqu'un d'autre.
-  if (!shared) {
+  // suivent jamais un lien de partage vers quelqu'un d'autre. Le super gent
+  // n'a pas non plus d'espace de mémoire dédié et ne reçoit pas de fichiers.
+  if (!shared && !superGent) {
     const memory = sessionContextNote(espace);
     if (memory.trim()) blocks.push(memory.trim());
   }
@@ -100,20 +117,25 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
   if (espace.profile) blocks.push(profileContextNote(espace.profile));
   if (espace.gmail) blocks.push(GMAIL_PROMPT_INSTRUCTION);
 
-  blocks.push(SUGGESTIONS_PROMPT_INSTRUCTION);
   blocks.push(FOLLOWUPS_PROMPT_INSTRUCTION);
-  // Le format exact du bloc <!--ARTEFACT: {…}--> vit ici. Il manquait au chemin
-  // « lien de partage » : le gent y était invité à produire des artefacts sans
-  // qu'on lui dise jamais comment les encoder — il n'en produisait donc aucun.
-  blocks.push(ARTEFACT_PROMPT_INSTRUCTION);
 
-  // Illustrations : génération (Nanobanana par défaut côté client) et photos web.
-  // L'autorisation utilisateur est gérée côté client avant tout appel coûteux.
-  blocks.push(IMAGE_PROMPT_INSTRUCTION);
+  // Tout ce qui PRODUIT quelque chose dans un espace est retiré au super gent :
+  // il répond depuis une page d'accueil qui n'a ni canvas ni espace de dépôt.
+  if (!superGent) {
+    blocks.push(SUGGESTIONS_PROMPT_INSTRUCTION);
+    // Le format exact du bloc <!--ARTEFACT: {…}--> vit ici. Il manquait au chemin
+    // « lien de partage » : le gent y était invité à produire des artefacts sans
+    // qu'on lui dise jamais comment les encoder — il n'en produisait donc aucun.
+    blocks.push(ARTEFACT_PROMPT_INSTRUCTION);
+
+    // Illustrations : génération (Nanobanana par défaut côté client) et photos web.
+    // L'autorisation utilisateur est gérée côté client avant tout appel coûteux.
+    blocks.push(IMAGE_PROMPT_INSTRUCTION);
+  }
 
   // Onglets thématiques et construction de profil réorganisent l'espace de
   // l'utilisateur : hors de propos pour un invité de passage.
-  if (!shared) {
+  if (!shared && !superGent) {
     blocks.push(THEME_TAB_PROMPT_INSTRUCTION);
     blocks.push(describeModulesForPrompt(espace));
     blocks.push(PROFILE_PROMPT_INSTRUCTION);
