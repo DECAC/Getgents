@@ -6,7 +6,14 @@ import { SafeHTML } from "@/components/shared/SafeHTML";
 import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
 import { FollowupChips } from "@/components/shared/FollowupChips";
 import { JumpFormCard } from "@/components/shared/JumpFormCard";
-import { extractDocumentText, type ExtractedDoc } from "@/lib/extractDocumentText";
+import { extractDocumentText } from "@/lib/extractDocumentText";
+import { extractVideoFrames } from "@/lib/extractVideoFrames";
+import {
+  type ChatAttachment,
+  formatVideoDuration,
+  isVideoAttachment,
+  isVideoFile,
+} from "@/lib/chatAttachment";
 import { extractDocumentForViewer } from "@/lib/documentViewer";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { MapAppModal, type MapDestination } from "@/components/shared/MapAppModal";
@@ -81,8 +88,9 @@ export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}
   const [cdView, setCdView] = useState<"chat" | "hist">("chat");
   const [jumpFormOpen, setJumpFormOpen] = useState(false);
   const [composerText, setComposerText] = useState("");
-  const [attachment, setAttachment] = useState<ExtractedDoc | null>(null);
+  const [attachment, setAttachment] = useState<ChatAttachment | null>(null);
   const [attaching, setAttaching] = useState(false);
+  const [attachStatus, setAttachStatus] = useState<string | null>(null);
   const [attachError, setAttachError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const viewerInputRef = useRef<HTMLInputElement>(null);
@@ -147,37 +155,83 @@ export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}
     };
   }, []);
 
-  const handleSend = useCallback(() => {
-    if (isThinking) return;
+  const handleSend = useCallback(async () => {
+    if (isThinking || attaching) return;
     const txt = composerText.trim();
     if (!txt && !attachment) return;
     const parts: string[] = [];
+
     if (attachment) {
-      parts.push(
-        `Document joint « ${attachment.name} » :\n"""\n${attachment.text}\n"""` +
-          (attachment.truncated ? "\n(document tronqué)" : "")
-      );
+      if (isVideoAttachment(attachment)) {
+        setAttaching(true);
+        setAttachStatus("Analyse de la vidéo par vision…");
+        setAttachError(null);
+        try {
+          const res = await fetch("/api/video/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              frames: attachment.frames.map((f) => f.dataUrl),
+              frameTimesSec: attachment.frames.map((f) => f.timeSec),
+              durationSec: attachment.durationSec,
+              name: attachment.name,
+              question: txt || undefined,
+            }),
+          });
+          const data = (await res.json()) as { analysis?: string; error?: string };
+          if (!res.ok || !data.analysis) {
+            throw new Error(data.error || "Analyse vidéo impossible.");
+          }
+          parts.push(
+            `Vidéo jointe « ${attachment.name} » (${formatVideoDuration(attachment.durationSec)}, ${attachment.frames.length} images analysées) :\n"""\n${data.analysis}\n"""`
+          );
+          if (txt) parts.push(txt);
+        } catch (err) {
+          setAttachError((err as Error).message || "Impossible d'analyser cette vidéo.");
+          setAttaching(false);
+          setAttachStatus(null);
+          return;
+        } finally {
+          setAttaching(false);
+          setAttachStatus(null);
+        }
+      } else {
+        parts.push(
+          `Document joint « ${attachment.name} » :\n"""\n${attachment.text}\n"""` +
+            (attachment.truncated ? "\n(document tronqué)" : "")
+        );
+        if (txt) parts.push(txt);
+      }
+    } else if (txt) {
+      parts.push(txt);
     }
-    if (txt) parts.push(txt);
+
     sendMessage(parts.join("\n\n"));
     setComposerText("");
     setAttachment(null);
     setAttachError(null);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
-  }, [composerText, attachment, sendMessage, isThinking]);
+  }, [composerText, attachment, sendMessage, isThinking, attaching]);
 
   const handleFilePick = useCallback(async (file: File | undefined) => {
     if (!file) return;
     setAttachError(null);
     setAttaching(true);
+    setAttachStatus(isVideoFile(file) ? "Extraction des images de la vidéo…" : "Lecture du document…");
     try {
-      const doc = await extractDocumentText(file);
-      setAttachment(doc);
+      if (isVideoFile(file)) {
+        const video = await extractVideoFrames(file);
+        setAttachment(video);
+      } else {
+        const doc = await extractDocumentText(file);
+        setAttachment(doc);
+      }
     } catch (err) {
       setAttachment(null);
-      setAttachError((err as Error).message || "Impossible de lire ce document.");
+      setAttachError((err as Error).message || "Impossible de lire ce fichier.");
     } finally {
       setAttaching(false);
+      setAttachStatus(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, []);
@@ -990,9 +1044,9 @@ export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}
 
       {cdView === "chat" && (
         <div className={styles.composerWrap}>
-          {attaching && (
+          {attaching && attachStatus && (
             <div className={styles.attachLoading}>
-              <span aria-hidden="true">⏳</span> Lecture du document…
+              <span aria-hidden="true">⏳</span> {attachStatus}
             </div>
           )}
           {attachError && <div className={styles.attachError}>{attachError}</div>}
@@ -1008,15 +1062,18 @@ export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}
               <div className={styles.attachChipBody}>
                 <div className={styles.attachChipName}>{attachment.name}</div>
                 <div className={styles.attachChipMeta}>
-                  {attachment.text.length.toLocaleString("fr-FR")} caractères
-                  {attachment.truncated ? " (tronqué)" : ""} · joint au prochain message
+                  {isVideoAttachment(attachment)
+                    ? `${formatVideoDuration(attachment.durationSec)} · ${attachment.frames.length} images · analyse au prochain envoi`
+                    : `${attachment.text.length.toLocaleString("fr-FR")} caractères${
+                        attachment.truncated ? " (tronqué)" : ""
+                      } · joint au prochain message`}
                 </div>
               </div>
               <button
                 type="button"
                 className={styles.attachChipRemove}
                 onClick={() => setAttachment(null)}
-                aria-label="Retirer le document"
+                aria-label="Retirer la pièce jointe"
               >
                 ✕
               </button>
@@ -1025,7 +1082,7 @@ export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.docx,.txt,.md,.csv,.tsv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv"
+            accept=".pdf,.docx,.txt,.md,.csv,.tsv,.mp4,.webm,.mov,.m4v,.ogv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg"
             style={{ display: "none" }}
             onChange={(e) => handleFilePick(e.target.files?.[0])}
           />
@@ -1066,7 +1123,13 @@ export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}
               ref={textareaRef}
               className={styles.composerTextarea}
               rows={1}
-              placeholder={attachment ? "Ajouter un message (facultatif)…" : "Écrire à votre assistant…"}
+              placeholder={
+                attachment
+                  ? isVideoAttachment(attachment)
+                    ? "Question sur la vidéo (facultatif)…"
+                    : "Ajouter un message (facultatif)…"
+                  : "Écrire à votre assistant…"
+              }
               aria-label="Votre message"
               value={composerText}
               onChange={handleTextareaChange}
@@ -1089,7 +1152,7 @@ export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}
                 type="button"
                 className={styles.sendBtn}
                 aria-label="Envoyer"
-                disabled={!composerText.trim() && !attachment}
+                disabled={attaching || (!composerText.trim() && !attachment)}
                 onClick={handleSend}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
