@@ -1,0 +1,364 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+}
+
+/* ---------- Barre de marque : aucune action sur un gent ---------- */
+.topBar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px clamp(16px, 5vw, 48px);
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--sage);
+  position: relative;
+  flex: none;
+}
+.mark::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 3px;
+  background: #fff;
+  opacity: 0.85;
+}
+
+.brandName {
+  font-family: "Sora", sans-serif;
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.topLinks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topLink,
+.topLinkBlue {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.topLink:hover {
+  border-color: var(--sage);
+  background: var(--sage-tint);
+  color: var(--sage-700);
+}
+.topLinkBlue:hover {
+  border-color: var(--blue);
+  background: var(--blue-tint);
+  color: var(--blue-700);
+}
+
+.count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ---------- Corps défilant ---------- */
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 clamp(16px, 5vw, 48px) 56px;
+}
+
+/* ---------- Champ unique ---------- */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  /* Assez d'air pour que le champ soit la seule chose visible à l'ouverture,
+     sans masquer complètement les exemples qui suivent. */
+  padding: clamp(48px, 11vh, 104px) 0 clamp(32px, 6vh, 56px);
+}
+
+.title {
+  font-family: "Sora", sans-serif;
+  font-size: clamp(26px, 3.4vw, 38px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  text-align: center;
+  text-wrap: balance;
+}
+
+.sub {
+  font-size: 14.5px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: -4px;
+  max-width: 44ch;
+  text-wrap: balance;
+}
+
+.composer {
+  width: 100%;
+  max-width: 680px;
+  margin-top: 8px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px 8px 8px 18px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: 0 6px 24px rgba(42, 31, 25, 0.06);
+}
+.composer:focus-within {
+  border-color: var(--sage);
+  box-shadow: 0 6px 28px rgba(42, 31, 25, 0.1);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink);
+  padding: 8px 0;
+  resize: none;
+  max-height: 140px;
+  overflow-y: auto;
+}
+.input:focus {
+  outline: none;
+}
+.input::placeholder {
+  color: var(--faint);
+}
+
+.send {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--sage);
+  color: #fff;
+}
+.send:hover:not(:disabled) {
+  background: var(--sage-700);
+}
+.send:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--faint);
+  text-align: center;
+}
+
+/* ---------- Sections ---------- */
+.sectionHead {
+  max-width: 720px;
+  margin: 0 auto 18px;
+  text-align: center;
+}
+
+.sectionTitle {
+  font-family: "Sora", sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.sectionSub {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+  text-wrap: balance;
+}
+
+.examples {
+  padding-top: 8px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 12px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+/* ---------- Carte d'exemple ---------- */
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--card);
+  text-align: left;
+  transition:
+    border-color 0.15s,
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.card:hover:not(:disabled) {
+  border-color: var(--sage);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(42, 31, 25, 0.08);
+}
+.card:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.cardIcon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.cardTitle {
+  font-family: "Sora", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.cardPrompt {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.tag {
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  background: var(--sage-tint);
+  color: var(--sage-700);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---------- Gents existants ---------- */
+.recent {
+  padding-top: 40px;
+}
+
+.recentList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 10px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.recentItem {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--card);
+  min-width: 0;
+}
+.recentItem:hover {
+  border-color: var(--sage);
+  background: var(--sage-tint);
+}
+
+.recentIcon {
+  font-size: 19px;
+  flex: none;
+}
+
+.recentBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.recentName {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recentMeta {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.allLink {
+  display: block;
+  width: fit-content;
+  margin: 14px auto 0;
+  padding: 7px 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.allLink:hover {
+  border-color: var(--sage);
+  color: var(--sage-700);
+}

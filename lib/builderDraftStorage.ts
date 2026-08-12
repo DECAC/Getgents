@@ -203,6 +203,39 @@ export function allocateNewDraft(): string {
   return id;
 }
 
+/**
+ * Crée un brouillon à partir du rôle décrit sur l'accueil du studio.
+ *
+ * La description sert d'objectif provisoire (elle s'affiche donc immédiatement
+ * dans le bandeau et la liste des gents) et reste en attente dans
+ * `pendingBuilderMessage` : le builder la rejoue dans l'assistant à
+ * l'ouverture, pour que l'échange se poursuive sans que le créateur ait à se
+ * répéter.
+ */
+export function allocateDraftFromDescription(description: string): string {
+  const role = description.trim();
+  const id = createDraftId();
+  const stored = readStoredDrafts();
+  const draft: GentDraft = {
+    ...freshDraftFromTemplate(id),
+    objective: role.slice(0, 240),
+    pendingBuilderMessage: role,
+  };
+  stored[id] = draft;
+  writeStoredDrafts(stored);
+  pushRemoteDraft(id, draft);
+  return id;
+}
+
+/** Retire la description en attente du cache local (elle vient d'être rejouée). */
+export function clearStoredPendingBuilderMessage(id: string): void {
+  const stored = readStoredDrafts();
+  const draft = stored[id];
+  if (!draft?.pendingBuilderMessage) return;
+  stored[id] = { ...draft, pendingBuilderMessage: undefined };
+  writeStoredDrafts(stored);
+}
+
 export function seedDrafts(initialId: string): GentDraftsMap {
   const drafts: GentDraftsMap = JSON.parse(JSON.stringify(GENT_DRAFTS));
   drafts[NOUVEAU_GENT_TEMPLATE_ID] = JSON.parse(JSON.stringify(GENT_DRAFTS[NOUVEAU_GENT_TEMPLATE_ID]));

@@ -1,23 +1,11 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { allocateNewDraft, listVisibleDrafts } from "@/lib/builderDraftStorage";
+import { StudioHome } from "@/components/builder/StudioHome";
 
 /**
- * /builder n'affiche plus de tableau de bord séparé : la liste des gents vit
- * désormais dans l'onglet « Mes gents » du studio (voir MesGentsTab). On
- * atterrit donc directement sur le gent le plus récent avec cet onglet actif
- * — sinon on en crée un pour ne jamais laisser cette route vide.
+ * Accueil du Gent' studio : une page nue avec un champ unique où le créateur
+ * décrit le rôle de son gent (voir StudioHome). Cette route ne redirige plus
+ * vers le dernier gent ouvert — ouvrir le studio ne doit pas revenir à éditer
+ * un gent qu'on n'a pas choisi.
  */
 export default function BuilderPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const drafts = listVisibleDrafts();
-    const id = drafts[0]?.id ?? allocateNewDraft();
-    router.replace(`/builder/${id}?tab=mesgents`);
-  }, [router]);
-
-  return null;
+  return <StudioHome />;
 }

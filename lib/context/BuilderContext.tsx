@@ -29,6 +29,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel } from "@/lib/streamChat";
 import {
   DRAFTS_STORAGE_KEY,
+  clearStoredPendingBuilderMessage,
   freshDraftFromTemplate,
   createDraftId,
   draftsForPersistence,
@@ -783,6 +784,22 @@ export function BuilderProvider({
         setThinkingStatus(null);
       });
   }, []);
+
+  // Le créateur a décrit le rôle de son gent sur l'accueil du studio : cette
+  // description est rejouée ici, une seule fois, pour que l'assistant reprenne
+  // l'échange au lieu de redemander ce qui vient d'être écrit. On attend
+  // l'hydratation du stockage, sinon on jouerait le gabarit vierge — la
+  // description ne vit que dans le cache local à cet instant.
+  const seededDraftsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!storageReady) return;
+    const pending = drafts[currentId]?.pendingBuilderMessage?.trim();
+    if (!pending || seededDraftsRef.current.has(currentId)) return;
+    seededDraftsRef.current.add(currentId);
+    clearStoredPendingBuilderMessage(currentId);
+    setDrafts((prev) => ({ ...prev, [currentId]: { ...prev[currentId], pendingBuilderMessage: undefined } }));
+    sendBuilderMessage(pending);
+  }, [drafts, currentId, storageReady, sendBuilderMessage]);
 
   const startNewBuilderConversation = useCallback(() => {
     streamAbortRef.current?.abort();

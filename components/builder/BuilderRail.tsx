@@ -201,6 +201,20 @@ export function BuilderRail() {
 
         {menuOpen && (
           <div className={styles.brandMenu} role="menu">
+            {/* Seule sortie vers l'accueil du studio : sans elle, un créateur
+                entré dans un gent n'a plus aucun moyen de revenir au champ de
+                création — le rail ne parle que du gent courant. */}
+            <a href="/builder" className={styles.brandMenuItem} role="menuitem">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 10.5 12 3l9 7.5" />
+                <path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" />
+              </svg>
+              <span>
+                <span className={styles.brandMenuLabel}>Accueil du studio</span>
+                <span className={styles.brandMenuSub}>Décrire et construire un nouveau gent</span>
+              </span>
+            </a>
+
             {/* Gent' space = le produit tel que le voit l'utilisateur final,
                 pas la liste des gents à construire (déplacée dans l'onglet
                 « Mes gents » ci-dessous). Bleu pour le distinguer du corail

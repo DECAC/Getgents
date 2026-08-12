@@ -119,6 +119,13 @@ export interface GentDraft {
   visionneuse?: import("@/lib/types").VisionneuseConfig;
   /** Empreinte du contenu au moment de la dernière publication (voir builderSnapshot.ts). */
   publishedSnapshot?: string;
+  /**
+   * Rôle décrit par le créateur sur l'accueil du studio, en attente d'être
+   * rejoué dans l'assistant à l'ouverture du gent. Consommé une seule fois
+   * (voir BuilderProvider), puis effacé — c'est ce qui permet de poursuivre
+   * dans le builder l'échange commencé sur la page d'accueil.
+   */
+  pendingBuilderMessage?: string;
 }
 
 export type GentDraftsMap = Record<string, GentDraft>;
