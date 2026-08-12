@@ -5,6 +5,7 @@ import { describeShareLinksFailure, getShareLink, recordShareEvent, TOKEN_RE } f
 import { canChat } from "@/lib/shareLink";
 import { CHAT_MAX_TOKENS } from "@/lib/streamChat";
 import { buildGentSystemPrompt } from "@/lib/gentRuntimePrompt";
+import { supportsReasoningStream } from "@/lib/openRouterReasoning";
 import type { Espace } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -80,18 +81,19 @@ export async function POST(req: Request, { params }: Params) {
 
   // Relais serveur-à-serveur vers /api/chat : même origine, flux SSE retransmis.
   const origin = new URL(req.url).origin;
+  const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
   const upstream = await fetch(`${origin}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-getgents-source": "share-link" },
     body: JSON.stringify({
-      model: espace.chatModelId ?? "anthropic/claude-sonnet-5",
+      model: chatModelId,
       messages: [{ role: "system", content: systemPrompt }, ...history],
       stream: true,
       // Même plafond que l'espace : sans lui, le relais laissait la valeur par
       // défaut du fournisseur, bien plus haute — une réponse déjà trop longue
       // n'était même pas bornée.
       max_tokens: CHAT_MAX_TOKENS.espace,
-      reasoning: { enabled: true },
+      ...(supportsReasoningStream(chatModelId) ? { reasoning: { enabled: true } } : {}),
       mcpServers: espace.mcpServers,
       datasets: espace.datasets,
       prim: espace.prim,

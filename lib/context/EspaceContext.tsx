@@ -37,6 +37,7 @@ import {
 } from "@/lib/espaceApiPayload";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
+import { supportsReasoningStream } from "@/lib/openRouterReasoning";
 import { buildJumpFormPrompt } from "@/lib/jumpFormSignal";
 import { buildGentSystemPrompt } from "@/lib/gentRuntimePrompt";
 
@@ -655,7 +656,7 @@ export function EspaceProvider({
         model: chatModelId,
         messages: [{ role: "system", content: systemPrompt }, ...history],
         max_tokens: CHAT_MAX_TOKENS.espace,
-        reasoning: { enabled: true },
+        ...(supportsReasoningStream(chatModelId) ? { reasoning: { enabled: true } } : {}),
         mcpServers,
         datasets,
         prim,

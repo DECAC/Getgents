@@ -14,6 +14,7 @@ import { parseDatasetUrl, type DatasetRef } from "@/lib/opendatasoft";
 import type { RestApiConnector } from "@/lib/types";
 import type { StatusEvent, ThinkingPhase } from "@/lib/streamChat";
 import { defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
+import { formatOpenRouterError, supportsReasoningStream } from "@/lib/openRouterReasoning";
 
 // Un tour de conversation avec recherche web, boucle d'outils ou un prompt
 // système volumineux (base de connaissance) peut dépasser la limite par
@@ -667,15 +668,15 @@ function toolLoopResponse(
               stream: true,
               ...(withTools ? { tools: openaiTools } : {}),
               ...(body.webSearch ? { plugins: [{ id: "web" }] } : {}),
-              ...(body.reasoning ? { reasoning: body.reasoning } : {}),
+              ...(body.reasoning?.enabled && supportsReasoningStream(body.model)
+                ? { reasoning: body.reasoning }
+                : {}),
             }),
           });
 
           if (!res.ok || !res.body) {
             const data = await res.json().catch(() => ({}));
-            const err = data?.error;
-            const errText =
-              typeof err === "string" ? err : typeof err?.message === "string" ? err.message : JSON.stringify(data);
+            const errText = formatOpenRouterError(data);
             sendContent(`Erreur API : ${errText}`);
             sentContent = true;
             break;

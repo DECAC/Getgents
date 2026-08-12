@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useRef, useEff
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
 import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine, NotificationChannel, Espace } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG, BUILDER_ASSISTANT_MODEL_ID } from "@/lib/mock-data/builder";
+import { supportsReasoningStream } from "@/lib/openRouterReasoning";
 import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 import {
   CONNECTOR_PROMPT_INSTRUCTION,
@@ -664,7 +665,7 @@ export function BuilderProvider({
         // Les réponses du builder embarquent souvent un prompt système complet
         // + un bloc GENT_CONFIG : un plafond trop bas tronquait les propositions.
         max_tokens: CHAT_MAX_TOKENS.builder,
-        reasoning: { enabled: true },
+        ...(supportsReasoningStream(chatModelId) ? { reasoning: { enabled: true } } : {}),
         // Recherche web en tâche de fond : l'assistant s'en sert pour
         // découvrir des connecteurs candidats (datasets, MCP, API).
         webSearch: true,
