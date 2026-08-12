@@ -513,7 +513,12 @@ function toolLoopResponse(
                 gid,
                 typeof args.to === "string" ? args.to : "",
                 typeof args.subject === "string" ? args.subject : "",
-                typeof args.body === "string" ? args.body : ""
+                typeof args.body === "string" ? args.body : "",
+                {
+                  htmlBody: typeof args.htmlBody === "string" ? args.htmlBody : undefined,
+                  imageUrl: typeof args.imageUrl === "string" ? args.imageUrl : undefined,
+                  imagePrompt: typeof args.imagePrompt === "string" ? args.imagePrompt : undefined,
+                }
               );
               return { text, ok: !text.includes('"error"') };
             },
@@ -553,13 +558,26 @@ function toolLoopResponse(
               function: {
                 name: "gmail_send",
                 description:
-                  "Gmail : envoie un e-mail depuis le compte connecté. Demande toujours confirmation explicite de l'utilisateur avant d'envoyer.",
+                  "Gmail : envoie un e-mail depuis le compte connecté. Demande confirmation explicite avant d'appeler. Pour une illustration inline, passe imagePrompt (description en anglais) ou imageUrl (https ou data:image). Le corps texte va dans body ; htmlBody est optionnel.",
                 parameters: {
                   type: "object",
                   properties: {
                     to: { type: "string", description: "Adresse du destinataire" },
                     subject: { type: "string", description: "Objet du message" },
-                    body: { type: "string", description: "Corps du message (texte brut)" },
+                    body: { type: "string", description: "Corps texte du message" },
+                    htmlBody: {
+                      type: "string",
+                      description: "Corps HTML optionnel (sinon généré à partir de body)",
+                    },
+                    imagePrompt: {
+                      type: "string",
+                      description:
+                        "Description en anglais d'une illustration à générer et intégrer inline dans l'e-mail",
+                    },
+                    imageUrl: {
+                      type: "string",
+                      description: "URL https ou data:image d'une image à intégrer inline",
+                    },
                   },
                   required: ["to", "subject", "body"],
                 },

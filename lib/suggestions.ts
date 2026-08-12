@@ -14,12 +14,15 @@ export interface QuestionBlock {
   multi?: boolean;
 }
 
+/** Ajoutée automatiquement par l'interface — ne pas demander au modèle de l'inclure. */
+export const QUICK_REPLY_OTHER_LABEL = "Autre";
+
 export const SUGGESTIONS_PROMPT_INSTRUCTION =
-  "Dès que tu poses une question fermée (l'utilisateur doit choisir parmi quelques options précises — arrêt, date, lieu, oui/non, etc.), tu DOIS terminer ta réponse (après le texte visible, sur sa propre ligne, jamais dans le corps du message) par un bloc : " +
+  "Dès que tu poses une question à l'utilisateur (choix à faire, confirmation, préférence, suite à donner), tu DOIS terminer ta réponse (après le texte visible, sur sa propre ligne, jamais dans le corps du message) par un bloc : " +
   '<!--QUESTIONS: [{"q":"Intitulé exact de la question","options":["Option A","Option B","Option C"],"multi":false}]--> ' +
-  "Règles impératives : (1) une entrée par question posée, dans l'ordre ; (2) 2 à 5 options courtes en français, reprenant les choix que tu viens d'énumérer (même libellés) ; (3) \"multi\": false par défaut (boutons radio) — \"multi\": true seulement si plusieurs choix simultanés ont du sens ; (4) ne liste PAS les options en puces ou tirets dans le texte visible quand tu émets ce bloc — résume le contexte en une phrase puis pose la question (ex. « Voici les arrêts trouvés à proximité. Quel arrêt choisissez-vous pour vous rendre à La Défense ? » + bloc avec les trois noms d'arrêt) ; l'interface affichera des boutons radio cliquables à partir du bloc. " +
-  "Exemple : après avoir trouvé trois arrêts, termine par <!--QUESTIONS: [{\"q\":\"Quel arrêt choisissez-vous pour vous rendre à La Défense ?\",\"options\":[\"La Colline (192 m)\",\"Pont de Saint-Cloud - Rive Gauche (266 m)\",\"Parc de Saint-Cloud (276–365 m)\"],\"multi\":false}]-->. " +
-  "N'ajoute ce bloc que si au moins une vraie question fermée a été posée.";
+  "Règles impératives : (1) SYSTÉMATIQUE — chaque question posée dans ta réponse exige ce bloc, sans exception ; (2) une entrée par question posée, dans l'ordre ; (3) 2 à 4 options courtes en français, contextualisées au fil (reprends les choix que tu viens d'évoquer) ; (4) \"multi\": false par défaut — \"multi\": true seulement si plusieurs choix simultanés ont du sens ; (5) ne liste PAS les options en puces ou tirets dans le texte visible — pose la question en une phrase puis laisse l'interface afficher les boutons ; (6) n'inclus PAS l'option « Autre » dans le JSON — l'interface l'ajoute automatiquement avec un champ libre. " +
+  "Exemple : « Veux-tu que j'envoie cet e-mail ? » → <!--QUESTIONS: [{\"q\":\"Veux-tu que j'envoie cet e-mail ?\",\"options\":[\"Oui, envoie-le\",\"Non, prépare seulement un brouillon\"],\"multi\":false}]-->. " +
+  "Si tu ne poses aucune question, n'émet pas de bloc QUESTIONS.";
 
 /**
  * Relances pour poursuivre l'échange — régulièrement, pas à chaque message.

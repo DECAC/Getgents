@@ -9,20 +9,37 @@ export function ImageArtefact({
   alt,
   caption,
   source,
+  embedded = false,
+  onNaturalSize,
 }: {
   src: string;
   alt: string;
   caption?: string;
   source?: "generated" | "web";
+  /** Mode tuile module : pas de plafond de hauteur, image entière visible. */
+  embedded?: boolean;
+  /** Dimensions naturelles une fois l'image chargée (ajustement de la tuile). */
+  onNaturalSize?: (width: number, height: number) => void;
 }) {
   if (!isAllowedImageSrc(src)) {
     return <p className={styles.fallback}>Image indisponible (adresse non autorisée).</p>;
   }
 
   return (
-    <figure className={styles.figure}>
+    <figure className={[styles.figure, embedded ? styles.figureEmbedded : ""].filter(Boolean).join(" ")}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className={styles.img} src={src} alt={alt} loading="lazy" />
+      <img
+        className={embedded ? styles.imgEmbedded : styles.img}
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+            onNaturalSize?.(img.naturalWidth, img.naturalHeight);
+          }
+        }}
+      />
       {(caption || source) && (
         <figcaption className={styles.caption}>
           {caption}

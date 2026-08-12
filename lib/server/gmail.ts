@@ -1,4 +1,4 @@
-// Connecteur Gmail — OAuth Google + API Gmail (lecture et envoi).
+import { generateImageFromPrompt } from "@/lib/server/generateImage";
 // Les jetons sont stockés par gent dans Supabase (integration_credentials).
 // Secrets plateforme : GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
 
@@ -289,30 +289,132 @@ export async function getMessage(gentId: string, messageId: string): Promise<str
   }
 }
 
-function encodeRawEmail(to: string, subject: string, body: string): string {
+function encodeSubject(subject: string): string {
+  if (/^[\x20-\x7E]*$/.test(subject)) return subject;
+  const b64 = Buffer.from(subject, "utf8").toString("base64");
+  return `=?UTF-8?B?${b64}?=`;
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function resolveImageBytes(
+  imageUrl?: string,
+  imagePrompt?: string
+): Promise<{ bytes: Buffer; mimeType: string } | { error: string }> {
+  let url = imageUrl?.trim();
+  if (!url && imagePrompt?.trim()) {
+    const generated = await generateImageFromPrompt(imagePrompt.trim());
+    if ("error" in generated) return generated;
+    url = generated.imageUrl;
+  }
+  if (!url) return { error: "Aucune image fournie (imageUrl ou imagePrompt requis)." };
+
+  if (url.startsWith("data:")) {
+    const m = url.match(/^data:([^;]+);base64,(.+)$/);
+    if (!m) return { error: "URL data:image invalide." };
+    return { bytes: Buffer.from(m[2], "base64"), mimeType: m[1] || "image/png" };
+  }
+
+  if (!url.startsWith("https://")) {
+    return { error: "imageUrl doit être une URL https:// ou data:image/…" };
+  }
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    return { error: `Impossible de télécharger l'image (${res.status}).` };
+  }
+  const mimeType = res.headers.get("content-type")?.split(";")[0]?.trim() || "image/png";
+  const bytes = Buffer.from(await res.arrayBuffer());
+  if (!bytes.length) return { error: "Image téléchargée vide." };
+  return { bytes, mimeType };
+}
+
+function encodePlainEmail(to: string, subject: string, body: string): string {
   const lines = [
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${encodeSubject(subject)}`,
     'Content-Type: text/plain; charset="UTF-8"',
+    "MIME-Version: 1.0",
     "",
     body,
   ].join("\r\n");
   return Buffer.from(lines, "utf8").toString("base64url");
 }
 
-/** Envoi d'un e-mail via le compte Gmail connecté. */
+function encodeHtmlEmailWithInlineImage(
+  to: string,
+  subject: string,
+  htmlBody: string,
+  imageBytes: Buffer,
+  mimeType: string
+): string {
+  const boundary = `getgents_${Date.now()}`;
+  const cid = "inline-image";
+  const imageBase64 = imageBytes.toString("base64");
+  const lines = [
+    `To: ${to}`,
+    `Subject: ${encodeSubject(subject)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/related; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    htmlBody.includes("cid:") ? htmlBody : `${htmlBody}<br><img src="cid:${cid}" alt="Illustration" style="max-width:480px;height:auto;" />`,
+    `--${boundary}`,
+    `Content-Type: ${mimeType}`,
+    "Content-Transfer-Encoding: base64",
+    `Content-ID: <${cid}>`,
+    "",
+    imageBase64,
+    `--${boundary}--`,
+  ].join("\r\n");
+  return Buffer.from(lines, "utf8").toString("base64url");
+}
+
+export interface GmailSendOptions {
+  htmlBody?: string;
+  imageUrl?: string;
+  imagePrompt?: string;
+}
+
+/** Envoi d'un e-mail via le compte Gmail connecté (texte, HTML et image inline optionnels). */
 export async function sendMessage(
   gentId: string,
   to: string,
   subject: string,
-  body: string
+  body: string,
+  options?: GmailSendOptions
 ): Promise<string> {
   if (!to?.trim() || !subject?.trim()) {
     return JSON.stringify({ error: "Destinataire (to) et objet (subject) sont requis." });
   }
   const auth = await validAccessToken(gentId);
   if ("error" in auth) return auth.error;
-  const raw = encodeRawEmail(to.trim(), subject.trim(), body ?? "");
+
+  const hasImage = !!(options?.imageUrl?.trim() || options?.imagePrompt?.trim());
+  let raw: string;
+
+  if (hasImage) {
+    const image = await resolveImageBytes(options?.imageUrl, options?.imagePrompt);
+    if ("error" in image) return JSON.stringify({ error: image.error });
+    const html =
+      options?.htmlBody?.trim() ||
+      (body?.trim()
+        ? `<html><body><p>${escapeHtml(body.trim())}</p></body></html>`
+        : "<html><body></body></html>");
+    raw = encodeHtmlEmailWithInlineImage(to.trim(), subject.trim(), html, image.bytes, image.mimeType);
+  } else {
+    raw = encodePlainEmail(to.trim(), subject.trim(), body ?? "");
+  }
+
   const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
     method: "POST",
     headers: {

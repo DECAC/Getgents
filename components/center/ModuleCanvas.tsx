@@ -16,6 +16,7 @@ import { MapArtefact } from "@/components/shared/MapArtefact";
 import { DashboardArtefact } from "@/components/shared/dashboard/DashboardArtefact";
 import { PinnedArtefactPanel } from "./PinnedArtefactPanel";
 import { StarterBubbles } from "./StarterBubbles";
+import { computeImageModuleHeight } from "@/lib/moduleImageLayout";
 import styles from "./ModuleCanvas.module.css";
 
 interface ModuleLayout {
@@ -45,6 +46,8 @@ interface ModuleDef {
   onRemove?: () => void;
   /** Taille de départ si l'utilisateur n'a pas encore redimensionné. */
   preferredLayout?: ModuleLayout;
+  /** Corps sans scroll interne (ex. image entière visible). */
+  contentFit?: boolean;
 }
 
 /** Un onglet affiché dans la vue par thème : soit un thème dynamique (plusieurs modules), soit un module isolé. */
@@ -113,7 +116,7 @@ function artefactLayout(a: Artefact): ModuleLayout {
   }
   if (a.chartData?.length) return { cols: 4, height: 300 };
   if (a.mapPoints?.length) return { cols: 4, height: 300 };
-  if (a.imageUrl) return { cols: 3, height: 320 };
+  if (a.imageUrl) return { cols: 4, height: 400 };
   if (a.profileSummary) {
     const blocks =
       1 +
@@ -174,6 +177,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
   const [conf, setConf] = useState<Record<string, ModuleLayout>>({});
   const [savedConf, setSavedConf] = useState<Record<string, ModuleLayout> | null>(null);
   const dragId = useRef<string | null>(null);
+  const userResizedRef = useRef<Set<string>>(new Set());
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const resizeState = useRef<{
     id: string;
@@ -183,6 +187,22 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     startHeight: number;
     colWidth: number;
   } | null>(null);
+
+  const fitImageModuleLayout = useCallback(
+    (moduleId: string, naturalWidth: number, naturalHeight: number, hasCaption: boolean) => {
+      if (userResizedRef.current.has(moduleId)) return;
+      const card = document.querySelector(`[data-module-id="${moduleId}"]`) as HTMLElement | null;
+      const cardWidth = card?.getBoundingClientRect().width ?? 360;
+      const height = computeImageModuleHeight(cardWidth, naturalWidth, naturalHeight, hasCaption);
+      setConf((prev) => {
+        const current = prev[moduleId];
+        const cols = current?.cols ?? 4;
+        if (current?.height === height && current?.cols === cols) return prev;
+        return { ...prev, [moduleId]: { cols, height } };
+      });
+    },
+    []
+  );
 
   const modules: ModuleDef[] = [
     ...espace.tabs.map((tab): ModuleDef => ({
@@ -208,12 +228,15 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
           render: () => <MapTab map={espace.map!} />,
         }]
       : []),
-    ...espace.artefacts.map((a): ModuleDef => ({
-      id: `artef-${a.id}`,
+    ...espace.artefacts.map((a): ModuleDef => {
+      const moduleId = `artef-${a.id}`;
+      return {
+      id: moduleId,
       title: a.title,
       sub: `${a.type} · ${a.date}`,
       kind: "artefact",
       preferredLayout: artefactLayout(a),
+      contentFit: !!a.imageUrl,
       openModal: () => openArtefactModal(a.id),
       onRemove: () => removeArtefact(a.id),
       render: () => (
@@ -230,10 +253,27 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
           )}
           {a.imageUrl && (
             <ImageArtefact
+              embedded
               src={a.imageUrl}
               alt={a.title}
               caption={a.imageCaption}
               source={a.imageSource}
+              onNaturalSize={(width, height) => {
+                fitImageModuleLayout(
+                  moduleId,
+                  width,
+                  height,
+                  !!(a.imageCaption || a.imageSource)
+                );
+                requestAnimationFrame(() =>
+                  fitImageModuleLayout(
+                    moduleId,
+                    width,
+                    height,
+                    !!(a.imageCaption || a.imageSource)
+                  )
+                );
+              }}
             />
           )}
           {a.chartData && <MiniBarChart data={a.chartData} />}
@@ -262,7 +302,8 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
           )}
         </>
       ),
-    })),
+    };
+    }),
   ];
 
   function orderList(list: ModuleDef[]): ModuleDef[] {
@@ -297,6 +338,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
   }
 
   function beginResize(e: React.PointerEvent<HTMLSpanElement>, id: string) {
+    userResizedRef.current.add(id);
     e.preventDefault();
     e.stopPropagation();
     const card = e.currentTarget.parentElement as HTMLElement | null;
@@ -407,6 +449,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
               />
               <section
                 className={[styles.card, isCompact ? styles.cardCompact : ""].filter(Boolean).join(" ")}
+                data-module-id={m.id}
                 style={{
                   gridColumn: `span ${layout.cols}`,
                   height: `${layout.height}px`,
@@ -478,7 +521,15 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                     )}
                   </span>
                 </header>
-                {!isCompact && <div className={styles.cardBody}>{m.render()}</div>}
+                {!isCompact && (
+                  <div
+                    className={[styles.cardBody, m.contentFit ? styles.cardBodyFit : ""]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    {m.render()}
+                  </div>
+                )}
                 <span
                   className={styles.resizeHandle}
                   onPointerDown={(e) => beginResize(e, m.id)}

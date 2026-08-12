@@ -242,6 +242,10 @@
   padding: 14px;
 }
 
+.cardBodyFit {
+  overflow: hidden;
+}
+
 .resizeHandle {
   position: absolute;
   right: 0;

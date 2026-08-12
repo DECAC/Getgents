@@ -5,6 +5,7 @@ import { ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
 import { THEME_TAB_PROMPT_INSTRUCTION, describeModulesForPrompt } from "@/lib/themeTabSignal";
 import { GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
 import { profileContextNote, PROFILE_PROMPT_INSTRUCTION } from "@/lib/profileSignal";
+import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import { IMAGE_PROMPT_INSTRUCTION } from "@/lib/imageSignal";
 
 /**
@@ -97,6 +98,7 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
   }
   if (espace.prim) blocks.push(GEOLOC_PROMPT_INSTRUCTION);
   if (espace.profile) blocks.push(profileContextNote(espace.profile));
+  if (espace.gmail) blocks.push(GMAIL_PROMPT_INSTRUCTION);
 
   blocks.push(SUGGESTIONS_PROMPT_INSTRUCTION);
   blocks.push(FOLLOWUPS_PROMPT_INSTRUCTION);
