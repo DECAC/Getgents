@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useBuilder, type BuilderTab } from "@/lib/context/BuilderContext";
+import { listVisibleDrafts } from "@/lib/builderDraftStorage";
 import { hasCustomName, isDirtySincePublish } from "@/lib/builderSnapshot";
+import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
 import styles from "./BuilderRail.module.css";
 
 interface NavEntry {
   id: BuilderTab;
   label: string;
   icon: JSX.Element;
-  /** Bleu plutôt que corail : distingue « Mes gents » (le produit, côté
-   * Gent'space) des onglets de construction d'UN gent. */
   blue?: boolean;
 }
 
 interface NavSection {
-  /** Absent pour une entrée de premier niveau (Accueil, Diffusion). */
   title?: string;
   entries: NavEntry[];
 }
@@ -77,10 +77,6 @@ const ICON = {
   ),
 };
 
-// La navigation suit le parcours de construction : on choisit ce qu'on
-// fabrique (Créer), on lui donne de quoi travailler (Contexte), on vérifie
-// (Monitor), puis on l'ouvre au monde (Diffusion). Connaissances vit dans
-// Contexte et non dans le gent conversationnel : la mini-app s'en sert aussi.
 const NAV: NavSection[] = [
   { entries: [{ id: "accueil", label: "Accueil", icon: ICON.accueil }] },
   { entries: [{ id: "mesgents", label: "Mes gents", icon: ICON.mesgents, blue: true }] },
@@ -103,39 +99,60 @@ const NAV: NavSection[] = [
   { entries: [{ id: "diffusion", label: "Diffusion", icon: ICON.diffusion }] },
 ];
 
-export function BuilderRail() {
-  const { currentDraft, activeTab, switchTab, railCollapsed, toggleRail, publishDraft } = useBuilder();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const brandRef = useRef<HTMLDivElement>(null);
+function firstDraftId(): string | null {
+  return listVisibleDrafts()[0]?.id ?? null;
+}
 
-  // Fermeture du menu de marque au clic extérieur / Échap.
-  useEffect(() => {
-    if (!menuOpen) return;
-    function onDocClick(e: MouseEvent) {
-      if (!brandRef.current?.contains(e.target as Node)) setMenuOpen(false);
+/** Rail studio au niveau liste — sans gent ouvert ni bouton Diffuser. */
+function BuilderRailList() {
+  const router = useRouter();
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  const activeTab: BuilderTab = "mesgents";
+
+  function handleNav(tab: BuilderTab) {
+    if (tab === "mesgents") {
+      router.push("/builder/mesgents");
+      return;
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
+    if (tab === "accueil") {
+      router.push("/builder");
+      return;
     }
-    document.addEventListener("mousedown", onDocClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [menuOpen]);
+    const id = firstDraftId();
+    if (!id) {
+      router.push("/builder");
+      return;
+    }
+    router.push(`/builder/${id}?tab=${tab}`);
+  }
+
+  return (
+    <RailChrome
+      railCollapsed={railCollapsed}
+      onToggleRail={() => setRailCollapsed((v) => !v)}
+      activeTab={activeTab}
+      onNav={handleNav}
+      showPublish={false}
+    />
+  );
+}
+
+/** Rail dans la vue d'un gent — configuration, diffusion, assistant. */
+function BuilderRailGent() {
+  const router = useRouter();
+  const { currentDraft, activeTab, switchTab, railCollapsed, toggleRail, publishDraft } = useBuilder();
+
+  function handleNav(tab: BuilderTab) {
+    if (tab === "mesgents") {
+      router.push("/builder/mesgents");
+      return;
+    }
+    switchTab(tab);
+  }
 
   const nameOk = hasCustomName(currentDraft);
   const dirty = isDirtySincePublish(currentDraft);
   const live = currentDraft.status === "published";
-  // Seules les conditions de VALIDITÉ désactivent le bouton. « Déjà à jour »
-  // n'en est pas une : cet état est déduit d'une empreinte stockée dans le
-  // brouillon local, pas de ce que contient réellement la base. Un autre
-  // navigateur, une diffusion qui a échoué côté serveur ou une reprise de
-  // données suffisent à le désaligner — et le bouton grisé enfermait alors le
-  // créateur avec une version diffusée périmée, sans aucun moyen de la
-  // réécrire. Rediffuser à l'identique est sans risque : on réécrit la même
-  // chose.
   const publishDisabled = !nameOk || !currentDraft.systemPrompt.trim();
 
   let publishLabel = "Diffuser le gent";
@@ -152,37 +169,64 @@ export function BuilderRail() {
   else publishHint = "Rend le gent accessible sur les canaux de l'onglet Diffusion";
 
   return (
+    <RailChrome
+      railCollapsed={railCollapsed}
+      onToggleRail={toggleRail}
+      activeTab={activeTab}
+      onNav={handleNav}
+      showPublish
+      publishLabel={publishLabel}
+      publishDisabled={publishDisabled}
+      publishHint={publishHint}
+      publishLive={live && !dirty}
+      onPublish={publishDraft}
+      publishBlocked={
+        publishDisabled
+          ? !nameOk
+            ? "Donnez un nom au gent (bandeau du haut) pour pouvoir le diffuser."
+            : "Rédigez les instructions système (onglet Gent Conversationnel) pour pouvoir diffuser."
+          : undefined
+      }
+    />
+  );
+}
+
+function RailChrome({
+  railCollapsed,
+  onToggleRail,
+  activeTab,
+  onNav,
+  showPublish,
+  publishLabel,
+  publishDisabled,
+  publishHint,
+  publishLive,
+  onPublish,
+  publishBlocked,
+}: {
+  railCollapsed: boolean;
+  onToggleRail: () => void;
+  activeTab: BuilderTab;
+  onNav: (tab: BuilderTab) => void;
+  showPublish: boolean;
+  publishLabel?: string;
+  publishDisabled?: boolean;
+  publishHint?: string;
+  publishLive?: boolean;
+  onPublish?: () => void;
+  publishBlocked?: string;
+}) {
+  return (
     <nav
       className={[styles.rail, railCollapsed ? styles.collapsed : ""].filter(Boolean).join(" ")}
       aria-label="Configuration du gent"
       id="builder-rail"
     >
-      <div className={styles.brand} ref={brandRef}>
-        <button
-          type="button"
-          className={styles.brandBtn}
-          onClick={() => setMenuOpen((v) => !v)}
-          aria-expanded={menuOpen}
-          aria-haspopup="menu"
-          title="Gent' studio"
-        >
-          <span className={styles.mark} aria-hidden="true" />
-          <span className={styles.brandName}>Gent&apos; studio</span>
-          <svg
-            className={styles.brandChevron}
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.4"
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </button>
+      <div className={styles.brand}>
+        <ProductBrandMenu surface="studio" />
         <button
           className={styles.railToggle}
-          onClick={toggleRail}
+          onClick={onToggleRail}
           aria-label={railCollapsed ? "Déployer la colonne" : "Réduire la colonne"}
           title={railCollapsed ? "Déployer" : "Réduire"}
         >
@@ -198,70 +242,32 @@ export function BuilderRail() {
             <path d="M14 6l-6 6 6 6" />
           </svg>
         </button>
-
-        {menuOpen && (
-          <div className={styles.brandMenu} role="menu">
-            {/* Seule sortie vers l'accueil du studio : sans elle, un créateur
-                entré dans un gent n'a plus aucun moyen de revenir au champ de
-                création — le rail ne parle que du gent courant. */}
-            <a href="/builder" className={styles.brandMenuItem} role="menuitem">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 10.5 12 3l9 7.5" />
-                <path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" />
-              </svg>
-              <span>
-                <span className={styles.brandMenuLabel}>Accueil du studio</span>
-                <span className={styles.brandMenuSub}>Décrire et construire un nouveau gent</span>
-              </span>
-            </a>
-
-            {/* Gent' space = le produit tel que le voit l'utilisateur final,
-                pas la liste des gents à construire (déplacée dans l'onglet
-                « Mes gents » ci-dessous). Bleu pour le distinguer du corail
-                du studio. */}
-            <a href={`/espace/${currentDraft.id}`} className={styles.brandMenuItemBlue} role="menuitem">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-4.6A8.4 8.4 0 1 1 21 11.5z" />
-              </svg>
-              <span>
-                <span className={styles.brandMenuLabel}>Gent&apos; space</span>
-                <span className={styles.brandMenuSub}>Voir ce gent côté utilisateur</span>
-              </span>
-            </a>
-          </div>
-        )}
       </div>
 
-      <button
-        type="button"
-        className={[styles.publishBtn, live && !dirty ? styles.publishBtnLive : ""].filter(Boolean).join(" ")}
-        onClick={publishDraft}
-        disabled={publishDisabled}
-        title={publishHint}
-      >
-        <svg
-          className={styles.publishIcon}
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.2"
-        >
-          <path d="M12 19V5M5 12l7-7 7 7" />
-        </svg>
-        <span className={styles.publishLabel}>{publishLabel}</span>
-      </button>
-
-      {/* Un bouton grisé sans explication est une impasse : le créateur ne peut
-          ni deviner ce qui bloque, ni le corriger. La raison s'affiche donc en
-          clair, avec l'onglet où la régler. */}
-      {publishDisabled && (
-        <div className={styles.publishBlocked}>
-          {!nameOk
-            ? "Donnez un nom au gent (bandeau du haut) pour pouvoir le diffuser."
-            : "Rédigez les instructions système (onglet Gent Conversationnel) pour pouvoir diffuser."}
-        </div>
+      {showPublish && onPublish && (
+        <>
+          <button
+            type="button"
+            className={[styles.publishBtn, publishLive ? styles.publishBtnLive : ""].filter(Boolean).join(" ")}
+            onClick={onPublish}
+            disabled={publishDisabled}
+            title={publishHint}
+          >
+            <svg
+              className={styles.publishIcon}
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+            >
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+            <span className={styles.publishLabel}>{publishLabel}</span>
+          </button>
+          {publishBlocked && <div className={styles.publishBlocked}>{publishBlocked}</div>}
+        </>
       )}
 
       <div className={styles.nav}>
@@ -278,7 +284,7 @@ export function BuilderRail() {
                 ]
                   .filter(Boolean)
                   .join(" ")}
-                onClick={() => switchTab(entry.id)}
+                onClick={() => onNav(entry.id)}
                 title={entry.label}
                 aria-current={activeTab === entry.id ? "page" : undefined}
               >
@@ -291,4 +297,9 @@ export function BuilderRail() {
       </div>
     </nav>
   );
+}
+
+export function BuilderRail({ mode = "gent" }: { mode?: "gent" | "list" }) {
+  if (mode === "list") return <BuilderRailList />;
+  return <BuilderRailGent />;
 }

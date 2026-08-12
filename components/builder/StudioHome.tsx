@@ -15,6 +15,7 @@ import {
   type StudioExample,
 } from "@/lib/studioExamples";
 import type { GentDraft } from "@/lib/types/builder";
+import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
 import styles from "./StudioHome.module.css";
 
 const MAX_RECENT = 6;
@@ -77,21 +78,13 @@ export function StudioHome() {
   return (
     <div className={styles.page}>
       <header className={styles.topBar}>
-        <div className={styles.brand}>
-          <span className={styles.mark} aria-hidden="true" />
-          <span className={styles.brandName}>Gent&apos; studio</span>
-        </div>
-        <nav className={styles.topLinks}>
-          {recent.length > 0 && (
-            <a href="#mes-gents" className={styles.topLink}>
-              Mes gents
-              <span className={styles.count}>{recent.length}</span>
-            </a>
-          )}
-          <a href="/accueil" className={styles.topLinkBlue}>
-            Gent&apos; space
+        <ProductBrandMenu surface="studio" />
+        {recent.length > 0 && (
+          <a href="/builder/mesgents" className={styles.topLink}>
+            Mes gents
+            <span className={styles.count}>{recent.length}</span>
           </a>
-        </nav>
+        )}
       </header>
 
       <div className={styles.body}>
@@ -178,7 +171,7 @@ export function StudioHome() {
               ))}
             </div>
             {recent.length > MAX_RECENT && (
-              <a href={`/builder/${recent[0].id}?tab=mesgents`} className={styles.allLink}>
+              <a href="/builder/mesgents" className={styles.allLink}>
                 Voir les {recent.length} gents
               </a>
             )}

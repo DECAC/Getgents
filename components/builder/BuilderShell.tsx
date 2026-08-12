@@ -58,7 +58,16 @@ export function BuilderShell({ initialId }: { initialId: string }) {
     }
   }, [isLegacyTemplateRoute, router]);
 
+  // Mes gents vit au niveau studio (/builder/mesgents), pas dans la vue d'un
+  // gent avec son bandeau — les anciennes URLs ?tab=mesgents sont redirigées.
+  useEffect(() => {
+    if (requested === "mesgents") {
+      router.replace("/builder/mesgents");
+    }
+  }, [requested, router]);
+
   if (isLegacyTemplateRoute) return null;
+  if (requested === "mesgents") return null;
 
   return (
     <BuilderProvider initialId={initialId} initialTab={initialTab}>

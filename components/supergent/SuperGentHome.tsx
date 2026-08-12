@@ -269,11 +269,8 @@ export function SuperGentHome() {
           )}
           {storageReady && suggestions.length === 0 && descriptors.length === 0 && (
             <p className={styles.empty}>
-              Aucun gent actif pour l&apos;instant. Construisez-en un depuis le{" "}
-              <a href="/builder" className={styles.link}>
-                Gent&apos; studio
-              </a>
-              .
+              Aucun gent actif pour l&apos;instant. Construisez-en un depuis le Gent&apos; studio
+              (menu en haut à gauche).
             </p>
           )}
         </div>

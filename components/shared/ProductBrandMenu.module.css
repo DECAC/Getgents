@@ -1,0 +1,145 @@
+.wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 6px;
+  border-radius: var(--r);
+  text-align: left;
+}
+.btn:hover {
+  background: var(--bg);
+}
+
+.markStudio {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--sage);
+  position: relative;
+  flex: none;
+}
+.markStudio::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 3px;
+  background: #fff;
+  opacity: 0.85;
+}
+
+.markSpace {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--sage);
+  position: relative;
+  flex: none;
+}
+.markSpace::before,
+.markSpace::after {
+  content: "";
+  position: absolute;
+  background: #fff;
+  border-radius: 1px;
+}
+.markSpace::before {
+  width: 11px;
+  height: 2px;
+  left: 7px;
+  top: 11px;
+}
+.markSpace::after {
+  width: 2px;
+  height: 11px;
+  left: 12px;
+  top: 7px;
+  background: var(--gold-tint);
+}
+
+.name {
+  font-family: "Sora", sans-serif;
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.nameSpace {
+  font-family: "Sora", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.chevron {
+  flex: none;
+  color: var(--muted);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% - 2px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 12px 28px rgba(42, 31, 25, 0.13);
+  padding: 5px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.menuItem:hover {
+  background: var(--sage-tint);
+}
+
+.menuItemBlue {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--blue-700);
+}
+.menuItemBlue:hover {
+  background: var(--blue-tint);
+}
+
+.menuLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.menuSub {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 1px;
+}

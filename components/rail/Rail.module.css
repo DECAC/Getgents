@@ -11,9 +11,10 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 6px;
   padding: 18px 16px 14px;
   flex-shrink: 0;
+  position: relative;
 }
 
 .brandLink {

@@ -3,20 +3,22 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
 import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine, NotificationChannel, Espace } from "@/lib/types";
-import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG, BUILDER_ASSISTANT_MODEL_ID } from "@/lib/mock-data/builder";
+import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, BUILDER_ASSISTANT_MODEL_ID } from "@/lib/mock-data/builder";
 import { supportsReasoningStream } from "@/lib/openRouterReasoning";
-import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
+import { extractQuestions } from "@/lib/suggestions";
 import {
-  CONNECTOR_PROMPT_INSTRUCTION,
-  CONNECTOR_DISCOVERY_INSTRUCTION,
-  REST_API_MANUAL_INSTRUCTION,
   extractConnectorSignal,
   extractConnectorSuggestions,
   detectConnectorInText,
   type ConnectorProposal,
 } from "@/lib/connectorSignal";
-import { GENT_CONFIG_PROMPT_INSTRUCTION, extractGentConfigSignal, type GentConfigProposal } from "@/lib/gentConfigSignal";
-import { JUMP_FORM_PROMPT_INSTRUCTION, extractJumpFormSignal } from "@/lib/jumpFormSignal";
+import { extractGentConfigSignal, type GentConfigProposal } from "@/lib/gentConfigSignal";
+import { extractJumpFormSignal } from "@/lib/jumpFormSignal";
+import {
+  buildBuilderSystemPrompt,
+  frameBuilderObjectiveMessage,
+  isBuilderObjectiveSeedTurn,
+} from "@/lib/builderAssistantPrompt";
 import {
   writePublishedGent,
   draftToEspace,
@@ -174,24 +176,6 @@ function pinnedConfigChanged(
     p.inputs.map((i) => `${i.id}|${i.kind}|${i.label}`).join("~");
   return shape(fresh) !== shape(existing);
 }
-
-const MODEL_CAPABILITY_LABEL: Record<string, string> = {
-  chat: "Conversation",
-  reasoning: "Raisonnement approfondi",
-  image: "Génération d'image",
-  tts: "Synthèse vocale",
-  stt: "Transcription vocale",
-};
-
-const MODEL_CATALOG_SUMMARY = MODEL_CATALOG.map(
-  (m) =>
-    `- id="${m.id}" [${MODEL_CAPABILITY_LABEL[m.capability] ?? m.capability}] ${m.label} (${m.provider}) — ${m.tagline} (env. $${m.pricing.input}/$${m.pricing.output} par 1M tokens en entrée/sortie)`
-).join("\n");
-
-const MODEL_RECOMMENDATION_INSTRUCTION =
-  `Voici le catalogue des modèles disponibles pour ce gent (une seule clé API OpenRouter donne accès à tous) :\n${MODEL_CATALOG_SUMMARY}\n\n` +
-  "L'assistant du builder utilise toujours Kimi K3 (Moonshot AI) pour vous guider — le modèle « chat » ci-dessous concerne le gent une fois publié. " +
-  "Dès que l'objectif ou les instructions données par le créateur laissent deviner un besoin particulier (raisonnement complexe, génération d'image, restitution vocale, budget serré, gros volume de texte...), recommande explicitement, capacité par capacité, le ou les modèles les plus adaptés parmi cette liste, en une phrase de justification, et propose leur assignation via le bloc GENT_CONFIG en recopiant EXACTEMENT les id=\"…\" du catalogue (ex. chatModelId=\"anthropic/claude-sonnet-5\", reasoningModelId=\"deepseek/deepseek-r1\") — jamais le seul libellé.";
 
 const BUILDER_ASSISTANT_REPLIES = [
   "Bien noté. J'ai reformulé ce point dans un langage plus directif pour le modèle — regardez le prompt mis à jour.",
@@ -631,18 +615,18 @@ export function BuilderProvider({
     let systemPrompt = "";
     let chatModelId = BUILDER_ASSISTANT_MODEL_ID;
     let existingConnectorUrls: string[] = [];
+    // Texte envoyé au modèle : sur le 1er tour d'objectif, on cadre explicitement
+    // (sinon une phrase comme « analyse DPE… » est traitée comme une question métier).
+    let apiUserContent = text;
 
     setDrafts((prev) => {
       const draft = prev[id];
       existingConnectorUrls = draft.connectors.map((c) => c.detail ?? "").filter(Boolean);
-      const connectorsNote = draft.connectors.length
-        ? `\n\nConnecteurs déjà configurés : ${draft.connectors.map((c) => `${c.name}${c.detail ? ` (${c.detail})` : ""}`).join(", ")}.`
-        : "";
-      systemPrompt = `${
-        draft.systemPrompt
-          ? `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
-          : `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace.`
-      }${connectorsNote}\n\n${MODEL_RECOMMENDATION_INSTRUCTION}\n\n${GENT_CONFIG_PROMPT_INSTRUCTION}\n\n${CONNECTOR_PROMPT_INSTRUCTION}\n\n${CONNECTOR_DISCOVERY_INSTRUCTION}\n\n${REST_API_MANUAL_INSTRUCTION}\n\n${JUMP_FORM_PROMPT_INSTRUCTION}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
+      const seedObjective = isBuilderObjectiveSeedTurn(draft);
+      systemPrompt = buildBuilderSystemPrompt(draft);
+      if (seedObjective) {
+        apiUserContent = frameBuilderObjectiveMessage(text);
+      }
       history = draft.builderConversation
         .filter((m) => m.role === "agent" || m.role === "user")
         .map((m) => ({
@@ -652,7 +636,11 @@ export function BuilderProvider({
       chatModelId = BUILDER_ASSISTANT_MODEL_ID;
 
       const builderConversation = [...draft.builderConversation, userMsg, agentPlaceholder];
-      return { ...prev, [id]: { ...draft, builderConversation } };
+      // Premier message = objectif : on le range aussi dans le champ Objectif du
+      // brouillon (accueil studio le fait déjà ; saisie directe dans l'assistant non).
+      const objective =
+        seedObjective && !(draft.objective ?? "").trim() ? text.trim().slice(0, 240) : draft.objective;
+      return { ...prev, [id]: { ...draft, objective, builderConversation } };
     });
 
     setIsThinking(true);
@@ -675,7 +663,7 @@ export function BuilderProvider({
     streamChatCompletion(
       {
         model: chatModelId,
-        messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: text }],
+        messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: apiUserContent }],
         // Les réponses du builder embarquent souvent un prompt système complet
         // + un bloc GENT_CONFIG : un plafond trop bas tronquait les propositions.
         max_tokens: CHAT_MAX_TOKENS.builder,

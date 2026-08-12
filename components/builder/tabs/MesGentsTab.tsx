@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useBuilder } from "@/lib/context/BuilderContext";
+import { allocateNewDraft } from "@/lib/builderDraftStorage";
 import { useGentsList } from "@/lib/hooks/useGentsList";
 import { AppAccessPrompt } from "@/components/shared/AppAccessPrompt";
 import styles from "./MesGentsTab.module.css";
@@ -22,14 +22,13 @@ const STATUS_CLASS: Record<string, string> = {
 type View = "tuile" | "liste";
 
 /**
- * Liste des gents, embarquée dans le studio — c'est le contenu qui vivait
- * auparavant sur /builder (Gent'space). Le bouton « Gent' space » du menu de
- * marque mène désormais à l'espace utilisateur ; cette liste reste
- * accessible depuis l'intérieur du studio via cet onglet.
+ * Liste des gents au niveau studio (/builder/mesgents) : tuiles ou lignes,
+ * sans bandeau ni assistant d'un gent ouvert. Accessible via « Mes gents »
+ * dans le rail ; la bascule vers Gent' space se fait uniquement par le menu
+ * titre en haut à gauche.
  */
 export function MesGentsTab() {
   const router = useRouter();
-  const { createDraft } = useBuilder();
   const {
     query,
     setQuery,
@@ -48,7 +47,7 @@ export function MesGentsTab() {
   } = useGentsList();
 
   function handleCreateNew() {
-    const id = createDraft();
+    const id = allocateNewDraft();
     refreshLists();
     router.push(`/builder/${id}`);
   }
