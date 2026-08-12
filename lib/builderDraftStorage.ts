@@ -19,10 +19,20 @@ export function createDraftId(): string {
   return `draft-${Date.now()}`;
 }
 
+/** Identifiants réservés au système — jamais des vrais gents. */
+export const RESERVED_DRAFT_IDS = [NOUVEAU_GENT_TEMPLATE_ID, "_dashboard"] as const;
+
+export function isPersistableDraftId(id: string): boolean {
+  return !!id.trim() && !(RESERVED_DRAFT_IDS as readonly string[]).includes(id);
+}
+
 /** Retire le slot gabarit de la carte persistée (il ne doit pas être sauvegardé). */
 export function draftsForPersistence(drafts: GentDraftsMap): GentDraftsMap {
-  const { [NOUVEAU_GENT_TEMPLATE_ID]: _removed, ...rest } = drafts;
-  return rest;
+  const out: GentDraftsMap = {};
+  for (const [id, draft] of Object.entries(drafts)) {
+    if (isPersistableDraftId(id)) out[id] = draft;
+  }
+  return out;
 }
 
 export function readStoredDrafts(): GentDraftsMap {
@@ -31,7 +41,7 @@ export function readStoredDrafts(): GentDraftsMap {
     const raw = window.localStorage.getItem(DRAFTS_STORAGE_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as GentDraftsMap;
-    delete parsed[NOUVEAU_GENT_TEMPLATE_ID];
+    for (const reserved of RESERVED_DRAFT_IDS) delete parsed[reserved];
     return parsed;
   } catch {
     return {};
@@ -210,11 +220,14 @@ export function mergeStoredDrafts(prev: GentDraftsMap): GentDraftsMap {
   return merged;
 }
 
-/** Liste tous les brouillons visibles (mock + localStorage), hors gabarit. */
+/** Liste tous les brouillons visibles (mock + localStorage), hors gabarits système. */
 export function listVisibleDrafts(): GentDraft[] {
-  const merged = mergeStoredDrafts(seedDrafts("_dashboard"));
+  const base: GentDraftsMap = JSON.parse(JSON.stringify(GENT_DRAFTS));
+  for (const reserved of RESERVED_DRAFT_IDS) delete base[reserved];
+  const merged = mergeStoredDrafts(base);
+  for (const reserved of RESERVED_DRAFT_IDS) delete merged[reserved];
   return Object.values(merged)
-    .filter((d) => d.id !== NOUVEAU_GENT_TEMPLATE_ID)
+    .filter((d) => isPersistableDraftId(d.id))
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 }
 

@@ -12,9 +12,10 @@ import {
 export const GMAIL_PROVIDER = "gmail";
 
 export const GMAIL_SCOPES = [
+  "openid",
+  "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.send",
-  "https://www.googleapis.com/auth/userinfo.email",
 ].join(" ");
 
 const MISSING_CONF = JSON.stringify({
