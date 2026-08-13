@@ -18,6 +18,7 @@ export function ConversationnelTab() {
     currentDraft,
     updateSystemPrompt,
     toggleWebSearch,
+    updateFileDownload,
     updateRoutine,
   } = useBuilder();
   const wordCount = currentDraft.systemPrompt.trim().split(/\s+/).filter(Boolean).length;
@@ -214,6 +215,60 @@ export function ConversationnelTab() {
               )}
             </div>
             {routineRunResult && <div className={styles.routineResult}>{routineRunResult}</div>}
+          </div>
+        )}
+      </div>
+
+      <div className={styles.card}>
+        <div className={styles.webSearchRow}>
+          <div className={styles.capabilityHead}>
+            <span className={styles.capabilityIcon} aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 3v12M7 8l5-5 5 5" />
+                <path d="M5 21h14" />
+              </svg>
+            </span>
+            <div>
+              <h4 className={styles.title}>Permettre le téléchargement de fichiers</h4>
+              <div className={styles.sub}>
+                Le lecteur peut télécharger le document du gent (connaissances ou visionneuse) au
+                format PDF. Sans cette option, aucun bouton n&apos;apparaît dans l&apos;espace.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!!currentDraft.fileDownloadEnabled}
+            className={[styles.switch, currentDraft.fileDownloadEnabled ? styles.switchOn : ""].filter(Boolean).join(" ")}
+            onClick={() => updateFileDownload({ fileDownloadEnabled: !currentDraft.fileDownloadEnabled })}
+            aria-label="Permettre le téléchargement de fichiers"
+          >
+            <span className={styles.knob} />
+          </button>
+        </div>
+        {currentDraft.fileDownloadEnabled && (
+          <div className={styles.subOption}>
+            <div>
+              <div className={styles.subOptionTitle}>Formulaire de téléchargement</div>
+              <div className={styles.sub}>
+                Avant le PDF, demander le nom, le prénom et l&apos;e-mail (plus une case « Vous
+                n&apos;êtes pas un robot »). Seules les personnes qui valident ce formulaire et
+                téléchargent apparaissent dans Monitor → Marketing.
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!currentDraft.fileDownloadFormEnabled}
+              className={[styles.switch, currentDraft.fileDownloadFormEnabled ? styles.switchOn : ""].filter(Boolean).join(" ")}
+              onClick={() =>
+                updateFileDownload({ fileDownloadFormEnabled: !currentDraft.fileDownloadFormEnabled })
+              }
+              aria-label="Activer le formulaire de téléchargement"
+            >
+              <span className={styles.knob} />
+            </button>
           </div>
         )}
       </div>

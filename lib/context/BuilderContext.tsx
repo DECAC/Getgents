@@ -60,7 +60,8 @@ export type BuilderTab =
   | "connectors"
   | "knowledge"
   | "audit"
-  | "diffusion";
+  | "diffusion"
+  | "marketing";
 
 interface BuilderContextValue {
   drafts: GentDraftsMap;
@@ -103,6 +104,8 @@ interface BuilderContextValue {
   removeToolInstance: (instanceId: string) => void;
 
   toggleWebSearch: () => void;
+  /** Active ou non le téléchargement de fichiers côté lecteur, et son formulaire. */
+  updateFileDownload: (patch: { fileDownloadEnabled?: boolean; fileDownloadFormEnabled?: boolean }) => void;
   /** Modifie la routine planifiée du brouillon (patch partiel). */
   updateRoutine: (patch: Partial<Routine>) => void;
   /** Modifie le canal de diffusion du brouillon (patch partiel). */
@@ -544,6 +547,27 @@ export function BuilderProvider({
       [currentId]: { ...prev[currentId], webSearch: !prev[currentId].webSearch, updatedAt: "à l'instant" },
     }));
   }, [currentId]);
+
+  const updateFileDownload = useCallback(
+    (patch: { fileDownloadEnabled?: boolean; fileDownloadFormEnabled?: boolean }) => {
+      setDrafts((prev) => {
+        const draft = prev[currentId];
+        const fileDownloadEnabled = patch.fileDownloadEnabled ?? !!draft.fileDownloadEnabled;
+        return {
+          ...prev,
+          [currentId]: {
+            ...draft,
+            fileDownloadEnabled,
+            fileDownloadFormEnabled: fileDownloadEnabled
+              ? (patch.fileDownloadFormEnabled ?? !!draft.fileDownloadFormEnabled)
+              : draft.fileDownloadFormEnabled,
+            updatedAt: "à l'instant",
+          },
+        };
+      });
+    },
+    [currentId]
+  );
 
   // Artefact figé « mini-app » : patch partiel fusionné sur la config du brouillon.
   const updatePinnedArtefact = useCallback(
@@ -1145,6 +1169,7 @@ export function BuilderProvider({
         updateToolInstance,
         removeToolInstance,
         toggleWebSearch,
+        updateFileDownload,
         updateRoutine,
         updateChannel,
         updatePinnedArtefact,

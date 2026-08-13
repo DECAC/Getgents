@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTMLDoc } from "./SafeHTML";
 import { MiniBarChart } from "./MiniBarChart";
@@ -47,16 +47,31 @@ export function ArtefactModal() {
   const {
     currentEspace,
     modalArtefactId,
+    pendingArtefactVerdict,
     closeModal,
     toggleChecklistItem,
     userPosition,
     removeArtefact,
     generateProfileSummaryMedia,
+    confirmArtefactProposal,
   } = useEspace();
 
-  const artefact = modalArtefactId
-    ? currentEspace.artefacts.find((a) => a.id === modalArtefactId) ?? null
-    : null;
+  const isVerdict = !!pendingArtefactVerdict;
+  const artefact = pendingArtefactVerdict
+    ? pendingArtefactVerdict.preview
+    : modalArtefactId
+      ? currentEspace.artefacts.find((a) => a.id === modalArtefactId) ?? null
+      : null;
+
+  // Fermer sans choisir = Jeter : évite de laisser l'espace pollué ou
+  // l'utilisateur coincé avec une popup sans décision.
+  const dismissOrClose = useCallback(() => {
+    if (pendingArtefactVerdict) {
+      confirmArtefactProposal(pendingArtefactVerdict.proposalMessageId, "dismiss");
+      return;
+    }
+    closeModal();
+  }, [pendingArtefactVerdict, confirmArtefactProposal, closeModal]);
 
   useEffect(() => {
     if (artefact) {
@@ -66,6 +81,15 @@ export function ArtefactModal() {
     }
     return () => { document.body.style.overflow = ""; };
   }, [artefact]);
+
+  useEffect(() => {
+    if (!artefact) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") dismissOrClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [artefact, dismissOrClose]);
 
   if (!artefact) return null;
 
@@ -77,7 +101,7 @@ export function ArtefactModal() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+      onClick={(e) => { if (e.target === e.currentTarget) dismissOrClose(); }}
     >
       <div className={[styles.modal, isDashboard ? styles.modalWide : ""].filter(Boolean).join(" ")}>
         <div className={styles.head}>
@@ -92,7 +116,7 @@ export function ArtefactModal() {
               <span>{artefact.date}</span>
             </div>
           </div>
-          <button className={styles.closeBtn} onClick={closeModal} aria-label="Fermer">
+          <button className={styles.closeBtn} onClick={dismissOrClose} aria-label="Fermer">
             ✕
           </button>
         </div>
@@ -103,8 +127,12 @@ export function ArtefactModal() {
             <ProfileSummaryArtefact
               summary={artefact.profileSummary}
               artefactId={artefact.id}
-              canGenerate
-              onGenerateMedia={(mediaId) => generateProfileSummaryMedia(artefact.id, mediaId)}
+              canGenerate={!isVerdict}
+              onGenerateMedia={
+                isVerdict
+                  ? undefined
+                  : (mediaId) => generateProfileSummaryMedia(artefact.id, mediaId)
+              }
             />
           )}
           {artefact.imageUrl && (
@@ -125,7 +153,7 @@ export function ArtefactModal() {
           {artefact.checklistItems && (
             <ChecklistView
               items={artefact.checklistItems}
-              onToggle={(i) => toggleChecklistItem(artefact.id, i)}
+              onToggle={isVerdict ? () => undefined : (i) => toggleChecklistItem(artefact.id, i)}
             />
           )}
           {artefact.body && !artefact.imageUrl && !artefact.profileSummary && (
@@ -133,23 +161,42 @@ export function ArtefactModal() {
           )}
         </div>
 
-        <div className={styles.foot}>
-          <span className={styles.footLabel}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z" />
-            </svg>
-            Généré par Getgents · gabarit standard
-          </span>
-          <button className={styles.btnGhost} onClick={() => removeArtefact(artefact.id)}>
-            Retirer de l&apos;espace
-          </button>
-          <button className={styles.btnGhost} onClick={() => alert("Export PDF — non implémenté dans ce commit.")}>
-            Exporter en PDF
-          </button>
-          <button className={styles.btnPrim} onClick={() => alert("Mise à jour — non implémentée dans ce commit.")}>
-            Mettre à jour
-          </button>
-        </div>
+        {isVerdict && pendingArtefactVerdict ? (
+          <div className={[styles.foot, styles.footVerdict].join(" ")}>
+            <button
+              type="button"
+              className={styles.btnGhost}
+              onClick={() => confirmArtefactProposal(pendingArtefactVerdict.proposalMessageId, "dismiss")}
+            >
+              Jeter
+            </button>
+            <button
+              type="button"
+              className={styles.btnPrim}
+              onClick={() => confirmArtefactProposal(pendingArtefactVerdict.proposalMessageId, "add")}
+            >
+              Garder dans l&apos;espace
+            </button>
+          </div>
+        ) : (
+          <div className={styles.foot}>
+            <span className={styles.footLabel}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z" />
+              </svg>
+              Généré par Getgents · gabarit standard
+            </span>
+            <button className={styles.btnGhost} onClick={() => removeArtefact(artefact.id)}>
+              Retirer de l&apos;espace
+            </button>
+            <button className={styles.btnGhost} onClick={() => alert("Export PDF — non implémenté dans ce commit.")}>
+              Exporter en PDF
+            </button>
+            <button className={styles.btnPrim} onClick={() => alert("Mise à jour — non implémentée dans ce commit.")}>
+              Mettre à jour
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

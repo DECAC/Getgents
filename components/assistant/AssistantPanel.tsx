@@ -421,7 +421,7 @@ export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}
           <button key={i} className={styles.artefPointer} onClick={() => viewArtefact(m.id ?? "")}>
             <div className={[styles.pic, styles.picSent].join(" ")}>✓</div>
             <div className={styles.ptext}>
-              <div className={styles.ptitle}>Ajouté à votre espace — {p.title}</div>
+              <div className={styles.ptitle}>Gardé dans l&apos;espace — {p.title}</div>
             </div>
             <div className={styles.plink}>
               Voir
@@ -435,7 +435,7 @@ export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}
       if (m.proposalStatus === "dismissed") {
         return (
           <div key={i} className={styles.proposalDismissed}>
-            Proposition ignorée — {p.title}
+            Jeté — {p.title}
           </div>
         );
       }
@@ -484,14 +484,14 @@ export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}
               className={styles.proposalAddBtn}
               onClick={() => confirmArtefactProposal(m.id ?? "", "add")}
             >
-              {p.kind === "profile-summary" ? "Ajouter ce résumé" : "Ajouter à mon espace"}
+              Garder dans l&apos;espace
             </button>
             <button
               type="button"
               className={styles.proposalDismissBtn}
               onClick={() => confirmArtefactProposal(m.id ?? "", "dismiss")}
             >
-              Ignorer
+              Jeter
             </button>
           </div>
         </div>

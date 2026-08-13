@@ -11,6 +11,7 @@ import type {
   ArtefactProposal,
   ThemeTab,
   ThemeTabProposalAction,
+  PendingArtefactVerdict,
   PinnedRun,
   UserFile,
   DocumentViewerSpec,
@@ -23,7 +24,11 @@ import {
 } from "@/lib/conversationUtils";
 import { extractQuestions, extractFollowups } from "@/lib/suggestions";
 import { extractArtefactSignal } from "@/lib/artefactSignal";
-import { extractThemeTabSignal } from "@/lib/themeTabSignal";
+import {
+  extractThemeTabSignal,
+  themeActionWithArtefact,
+  upsertArtefactThemeTab,
+} from "@/lib/themeTabSignal";
 import { extractGeolocRequest } from "@/lib/geolocSignal";
 import { extractProfileSignal } from "@/lib/profileSignal";
 import { extractImageSignal, IMAGES_THEME_LABEL, type ImageProposal } from "@/lib/imageSignal";
@@ -150,6 +155,11 @@ interface EspaceContextValue {
   modalArtefactId: string | null;
   modalResvId: string | null;
   /**
+   * Artefact tout juste généré, affiché en popup avant d'être ajouté à
+   * l'espace — null tant qu'aucun verdict (Garder / Jeter) n'est en attente.
+   */
+  pendingArtefactVerdict: PendingArtefactVerdict | null;
+  /**
    * Emplacement PROPRE à la visionneuse, distinct de `modalArtefactId` : les
    * deux doivent pouvoir coexister. Un artefact ouvert depuis la conversation
    * pendant la lecture se superpose à la visionneuse au lieu de la remplacer —
@@ -273,6 +283,7 @@ export function EspaceProvider({
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [modalArtefactId, setModalArtefactId] = useState<string | null>(null);
   const [modalResvId, setModalResvId] = useState<string | null>(null);
+  const [pendingArtefactVerdict, setPendingArtefactVerdict] = useState<PendingArtefactVerdict | null>(null);
   const [viewerArtefactId, setViewerArtefactId] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
@@ -767,6 +778,9 @@ export function EspaceProvider({
         if (afterArtefact.artefact) {
           const sig = afterArtefact.artefact;
           const proposalId = `prop-${Date.now()}`;
+          const attachedTheme = afterTheme.themeAction ?? undefined;
+          // Prévisualisation seulement : l'artefact n'entre dans l'espace qu'au Garder.
+          const preview = artefactFromProposal(sig, `pending-${proposalId}`);
           setEspaces((p) => {
             const e = p[id];
             const convs = e.conversations.map((t) => {
@@ -786,12 +800,17 @@ export function EspaceProvider({
                 role: "artef-proposal" as const,
                 proposal: sig,
                 proposalStatus: "pending" as const,
+                themeProposal: attachedTheme,
+                themeProposalStatus: attachedTheme ? ("pending" as const) : undefined,
                 t: nowTime(),
               });
               return { ...t, messages: msgs };
             });
             return { ...p, [id]: { ...e, conversations: convs } };
           });
+          setModalArtefactId(null);
+          setModalResvId(null);
+          setPendingArtefactVerdict({ proposalMessageId: proposalId, preview });
         } else if (afterTheme.themeAction) {
           const action = afterTheme.themeAction;
           const proposalId = `theme-prop-${Date.now()}`;
@@ -1337,6 +1356,7 @@ export function EspaceProvider({
 
   const confirmArtefactProposal = useCallback((proposalId: string, decision: "add" | "dismiss") => {
     const id = currentIdRef.current;
+    let keptDocumentId: string | undefined;
     setEspaces((prev) => {
       const espace = prev[id];
       let targetMsg: ConversationMessage | undefined;
@@ -1350,12 +1370,28 @@ export function EspaceProvider({
         }
       }
       if (!targetMsg?.proposal) return prev;
+      if (targetMsg.proposalStatus && targetMsg.proposalStatus !== "pending") return prev;
 
       let artefacts = espace.artefacts;
+      let themeTabs = espace.themeTabs ?? [];
       let newArtefactId: string | undefined;
       if (decision === "add") {
         newArtefactId = `artef-${Date.now()}`;
-        artefacts = [artefactFromProposal(targetMsg.proposal, newArtefactId), ...espace.artefacts];
+        const newArtefact = artefactFromProposal(targetMsg.proposal, newArtefactId);
+        artefacts = [newArtefact, ...espace.artefacts];
+        if (newArtefact.document) keptDocumentId = newArtefact.id;
+        // Rangé tout seul dans un onglet de son type (Rapport, Checklist…).
+        // Si le même tour proposait aussi un THEME_TAB, on l'applique ici
+        // (sans carte de confirmation) et on y greffe le nouvel artefact.
+        if (targetMsg.themeProposal) {
+          const action = themeActionWithArtefact(targetMsg.themeProposal, newArtefactId);
+          themeTabs = applyThemeTabAction(themeTabs, action);
+          if (action.action !== "create") {
+            themeTabs = upsertArtefactThemeTab(themeTabs, newArtefact);
+          }
+        } else {
+          themeTabs = upsertArtefactThemeTab(themeTabs, newArtefact);
+        }
       }
 
       const conversations = espace.conversations.map((t) =>
@@ -1367,6 +1403,11 @@ export function EspaceProvider({
                   ? {
                       ...m,
                       proposalStatus: decision === "add" ? ("added" as const) : ("dismissed" as const),
+                      themeProposalStatus: m.themeProposal
+                        ? decision === "add"
+                          ? ("applied" as const)
+                          : ("dismissed" as const)
+                        : m.themeProposalStatus,
                       ref: newArtefactId,
                     }
                   : m
@@ -1375,8 +1416,10 @@ export function EspaceProvider({
           : t
       );
 
-      return { ...prev, [id]: { ...espace, artefacts, conversations } };
+      return { ...prev, [id]: { ...espace, artefacts, themeTabs, conversations } };
     });
+    setPendingArtefactVerdict((p) => (p?.proposalMessageId === proposalId ? null : p));
+    if (keptDocumentId) setViewerArtefactId(keptDocumentId);
   }, []);
 
   const generateProfileSummaryMedia = useCallback((artefactId: string, mediaId: string) => {
@@ -1683,6 +1726,7 @@ export function EspaceProvider({
         selectedDay,
         modalArtefactId,
         modalResvId,
+        pendingArtefactVerdict,
         viewerArtefactId,
         documentViewerOpen: !!viewerArtefactId,
         currentEspace,

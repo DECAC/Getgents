@@ -46,6 +46,15 @@
   background: var(--sage-tint);
 }
 
+.headActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  align-self: center;
+}
+
 .titleRow {
   display: flex;
   align-items: center;

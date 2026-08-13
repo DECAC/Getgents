@@ -273,6 +273,16 @@ export interface Artefact {
   document?: DocumentViewerSpec;
 }
 
+/**
+ * Popup de verdict : l'artefact est prévisualisé mais n'est pas encore dans
+ * l'espace. Garder l'ajoute (et le range dans un onglet thématique) ; Jeter
+ * l'abandonne.
+ */
+export interface PendingArtefactVerdict {
+  proposalMessageId: string;
+  preview: Artefact;
+}
+
 /** Une entrée de sommaire, cliquable, pointant vers une page du document. */
 export interface DocumentViewerSection {
   id: string;
@@ -435,6 +445,15 @@ export interface Espace {
    * ce document (voir DocumentViewerModal), ce n'est jamais l'un OU l'autre.
    */
   visionneuse?: VisionneuseConfig;
+  /**
+   * Téléchargement du document du gent (base de connaissance / visionneuse)
+   * côté lecteur. Copié depuis le brouillon à la Preview / publication.
+   */
+  fileDownloadEnabled?: boolean;
+  /** Si vrai, le téléchargement passe par un formulaire (nom, prénom, e-mail, captcha). */
+  fileDownloadFormEnabled?: boolean;
+  /** Documents proposés au téléchargement (texte déjà extrait, servi en PDF). */
+  downloadableDocuments?: DownloadableDocument[];
 }
 
 /**
@@ -556,3 +575,25 @@ export interface Routine {
 }
 
 export type EspacesMap = Record<string, Espace>;
+
+/** Fichier proposé au téléchargement côté lecteur (contenu déjà lu par le gent). */
+export interface DownloadableDocument {
+  id: string;
+  name: string;
+  text: string;
+}
+
+/**
+ * Personne qui a rempli le formulaire de téléchargement ET téléchargé le PDF.
+ * Conservé pour l'onglet Monitor « Marketing ».
+ */
+export interface DownloadLead {
+  id: string;
+  createdAt: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  gentId: string;
+  gentName: string;
+  fileName?: string;
+}

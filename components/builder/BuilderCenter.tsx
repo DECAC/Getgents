@@ -10,6 +10,7 @@ import { ApercuTab } from "./tabs/ApercuTab";
 import { ConnectorsTab } from "./tabs/ConnectorsTab";
 import { KnowledgeTab } from "./tabs/KnowledgeTab";
 import { DiffusionTab } from "./tabs/DiffusionTab";
+import { MarketingTab } from "./tabs/MarketingTab";
 import { AuditTab } from "./tabs/AuditTab";
 import styles from "./BuilderCenter.module.css";
 
@@ -24,6 +25,7 @@ export function BuilderCenter() {
     if (activeTab === "connectors") return <ConnectorsTab />;
     if (activeTab === "knowledge") return <KnowledgeTab />;
     if (activeTab === "diffusion") return <DiffusionTab />;
+    if (activeTab === "marketing") return <MarketingTab />;
     if (activeTab === "audit") return <AuditTab />;
     return <AccueilTab />;
   }

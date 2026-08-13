@@ -8,6 +8,7 @@ import { appAccessHeaders } from "@/lib/appAccess";
 import { MAX_CHARS as DOC_MAX_CHARS } from "@/lib/extractDocumentText";
 import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import { resolveImageModelId } from "@/lib/imageModels";
+import { downloadableDocumentsFromDraft } from "@/lib/fileDownload";
 
 // Persistance des gents publiés : la source de vérité est Supabase (via les
 // routes /api/gents), le localStorage n'est plus qu'un cache local pour un
@@ -595,5 +596,11 @@ export function draftToEspace(draft: GentDraft): Espace {
     visionneuse: draft.visionneuse,
     webSearch: draft.webSearch || undefined,
     appPreview: draft.appPreview?.modules.length ? draft.appPreview : undefined,
+    fileDownloadEnabled: draft.fileDownloadEnabled || undefined,
+    fileDownloadFormEnabled:
+      draft.fileDownloadEnabled && draft.fileDownloadFormEnabled ? true : undefined,
+    downloadableDocuments: draft.fileDownloadEnabled
+      ? downloadableDocumentsFromDraft(draft)
+      : undefined,
   };
 }

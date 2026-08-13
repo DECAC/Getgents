@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
+import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
 import styles from "./DocumentViewerModal.module.css";
 
 /**
@@ -25,6 +26,7 @@ export function DocumentViewerModal() {
     closeDocumentViewer,
     modalArtefactId,
     modalResvId,
+    pendingArtefactVerdict,
     assistantOpen,
     openAssistant,
     closeAssistant,
@@ -56,7 +58,7 @@ export function DocumentViewerModal() {
   // Une carte ouverte PAR-DESSUS la visionneuse (artefact ou réservation)
   // capte Échap et les flèches : sans ça, refermer un rapport généré pendant
   // la lecture refermait aussi le document en arrière-plan.
-  const covered = !!modalArtefactId || !!modalResvId;
+  const covered = !!modalArtefactId || !!modalResvId || !!pendingArtefactVerdict;
 
   useEffect(() => {
     if (!open || covered) return;
@@ -90,6 +92,7 @@ export function DocumentViewerModal() {
             </div>
           </div>
           <div className={styles.headActions}>
+            <FileDownloadControl variant="viewer" />
             <button
               type="button"
               className={[styles.navBtn, assistantOpen ? styles.navBtnOn : ""].filter(Boolean).join(" ")}

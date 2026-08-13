@@ -294,6 +294,8 @@ export function restoreDraftFromPublished(id: string, espace: Espace): GentDraft
     systemPrompt: espace.systemPrompt ?? "",
     status: "published",
     webSearch: espace.webSearch,
+    fileDownloadEnabled: espace.fileDownloadEnabled,
+    fileDownloadFormEnabled: espace.fileDownloadFormEnabled,
     jumpForm: espace.jumpForm,
     connectors,
     pinnedArtefact: pinned,

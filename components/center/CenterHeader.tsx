@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { readPublishedGents } from "@/lib/publishedGents";
+import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
 import styles from "./CenterHeader.module.css";
 
 const STATUS_CLASS: Record<string, string> = {
@@ -43,11 +44,14 @@ export function CenterHeader() {
             Propulsé par <b>{e.gent}</b> · version {e.version}
           </div>
         </div>
-        {isPublishedGent && (
-          <a className={styles.builderLink} href={`/builder/${currentId}`} title="Modifier ce gent dans le gent studio">
-            🛠️ Ouvrir dans le gent studio
-          </a>
-        )}
+        <div className={styles.headActions}>
+          <FileDownloadControl />
+          {isPublishedGent && (
+            <a className={styles.builderLink} href={`/builder/${currentId}`} title="Modifier ce gent dans le gent studio">
+              🛠️ Ouvrir dans le gent studio
+            </a>
+          )}
+        </div>
       </div>
     </header>
   );

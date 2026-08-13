@@ -57,7 +57,7 @@ export const ARTEFACT_PROMPT_INSTRUCTION =
   "dès que la réponse mentionne des lieux, un itinéraire, des adresses ou des zones géographiques — fournis des coordonnées WGS84 (lat/lon) précises pour chaque point, la carte est rendue sur fond IGN (cartes.gouv.fr). " +
   "Choisis le kind le plus utile : si plusieurs formats conviennent, privilégie checklist pour l'actionnable et report pour les textes longs — SAUF si la réponse contient un scoring, des indicateurs clés (KPI) ou plusieurs angles chiffrés à comparer, auquel cas privilégie TOUJOURS dashboard (voir instruction dédiée ci-dessous) plutôt qu'un report : un lecteur doit saisir les chiffres clés et leur comparaison en un coup d'œil, pas en lisant un paragraphe. " +
   "Dès que tu résumes le parcours d'une PERSONNE en particulier, privilégie profile-summary (voir instruction dédiée) plutôt qu'un report générique. " +
-  "Invite brièvement l'utilisateur à l'ajouter à son espace (bouton dans le chat) — ne dis jamais qu'il est déjà ajouté. " +
+  "Une popup s'ouvre pour que l'utilisateur garde ou jette l'artefact — ne dis jamais qu'il est déjà ajouté à l'espace. " +
   "Vise à proposer un artefact dans la majorité des réponses substantielles (guides, listes, modèles, budgets, profils). N'en ajoute jamais plus d'un par réponse.\n\n" +
   DASHBOARD_PROMPT_INSTRUCTION +
   "\n\n" +

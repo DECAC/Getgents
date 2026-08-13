@@ -73,6 +73,8 @@ export function draftContentSnapshot(draft: GentDraft): string {
     knowledgeSources: draft.knowledgeSources,
     connectors: draft.connectors,
     webSearch: draft.webSearch,
+    fileDownloadEnabled: draft.fileDownloadEnabled || undefined,
+    fileDownloadFormEnabled: draft.fileDownloadFormEnabled || undefined,
     jumpForm: draft.jumpForm,
     pinnedArtefact: pinnedSnapshot(draft.pinnedArtefact),
     visionneuse: visionneuseSnapshot(draft.visionneuse),

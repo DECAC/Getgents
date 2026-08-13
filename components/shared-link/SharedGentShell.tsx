@@ -5,6 +5,7 @@ import { WorkspaceCanvas } from "@/components/center/WorkspaceCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
 import { ArtefactModal } from "@/components/shared/ArtefactModal";
 import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
+import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
 import type { Espace } from "@/lib/types";
 import styles from "./SharedGentShell.module.css";
 
@@ -38,11 +39,14 @@ function SharedGentBody() {
           <h1 className={styles.title}>{currentEspace.gent}</h1>
           <div className={styles.sub}>{currentEspace.name}</div>
         </div>
-        {chatAvailable && !assistantOpen && (
-          <button type="button" className={styles.chatBtn} onClick={openAssistant}>
-            💬 Discuter
-          </button>
-        )}
+        <div className={styles.headActions}>
+          <FileDownloadControl variant="shared" />
+          {chatAvailable && !assistantOpen && (
+            <button type="button" className={styles.chatBtn} onClick={openAssistant}>
+              💬 Discuter
+            </button>
+          )}
+        </div>
       </header>
 
       <div className={[styles.body, chatOpen ? styles.bodyWithChat : ""].filter(Boolean).join(" ")}>

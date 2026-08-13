@@ -107,6 +107,10 @@ export interface GentDraft {
   builderConversation: ConversationMessage[];
   /** Autorise le gent publié à faire des recherches web (plugin OpenRouter). */
   webSearch?: boolean;
+  /** Affiche un bouton de téléchargement du document côté lecteur. */
+  fileDownloadEnabled?: boolean;
+  /** Exige le formulaire (nom, prénom, e-mail, captcha) avant le PDF. */
+  fileDownloadFormEnabled?: boolean;
   /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
   jumpForm?: JumpForm;
   /** Routine planifiée (mission exécutée automatiquement côté serveur). */

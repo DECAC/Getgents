@@ -1,0 +1,301 @@
+"use client";
+
+import { useEffect, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
+import { useEspace } from "@/lib/context/EspaceContext";
+import { addDownloadLead } from "@/lib/downloadLeads";
+import {
+  DOWNLOAD_LEAD_FORM_MESSAGE,
+  newDownloadLead,
+  pdfFileName,
+  validateDownloadLeadForm,
+  type DownloadLeadForm,
+} from "@/lib/fileDownload";
+import { downloadPdfBytes, textToPdfBytes } from "@/lib/textToPdf";
+import type { DownloadableDocument } from "@/lib/types";
+import modalStyles from "./Modal.module.css";
+import styles from "./FileDownloadControl.module.css";
+
+type DialogKind = "form" | "pick" | "empty" | null;
+
+const EMPTY_FORM: DownloadLeadForm = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  notARobot: false,
+  honeypot: "",
+};
+
+function triggerDownload(doc: DownloadableDocument): void {
+  const name = pdfFileName(doc.name);
+  downloadPdfBytes(textToPdfBytes(doc.name, doc.text), name);
+}
+
+/**
+ * Bouton de téléchargement du document du gent, visible seulement si le
+ * créateur a activé la capacité. Avec formulaire : on enregistre le contact
+ * uniquement après un PDF réellement téléchargé.
+ */
+export function FileDownloadControl({ variant = "header" }: { variant?: "header" | "viewer" | "shared" }) {
+  const { currentEspace, currentId } = useEspace();
+  const [dialog, setDialog] = useState<DialogKind>(null);
+  const [form, setForm] = useState<DownloadLeadForm>(EMPTY_FORM);
+  const [selectedId, setSelectedId] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  const enabled = !!currentEspace.fileDownloadEnabled;
+  const docs = currentEspace.downloadableDocuments ?? [];
+  const formOn = !!currentEspace.fileDownloadFormEnabled;
+
+  useEffect(() => {
+    if (!dialog) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setDialog(null);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [dialog]);
+
+  if (!enabled) return null;
+
+  function openFlow() {
+    setError(null);
+    setForm(EMPTY_FORM);
+    setSelectedId(docs[0]?.id ?? "");
+    if (docs.length === 0) {
+      setDialog("empty");
+      return;
+    }
+    if (formOn) {
+      setDialog("form");
+      return;
+    }
+    if (docs.length === 1) {
+      triggerDownload(docs[0]);
+      return;
+    }
+    setDialog("pick");
+  }
+
+  function selectedDoc(): DownloadableDocument | null {
+    return docs.find((d) => d.id === selectedId) ?? docs[0] ?? null;
+  }
+
+  function handleFormSubmit(e: FormEvent) {
+    e.preventDefault();
+    const issue = validateDownloadLeadForm(form);
+    if (issue === "honeypot") {
+      setDialog(null);
+      return;
+    }
+    if (issue) {
+      setError(DOWNLOAD_LEAD_FORM_MESSAGE[issue]);
+      return;
+    }
+    const doc = selectedDoc();
+    if (!doc) {
+      setError("Aucun document à télécharger.");
+      return;
+    }
+    const name = pdfFileName(doc.name);
+    triggerDownload(doc);
+    addDownloadLead(
+      newDownloadLead(form, {
+        gentId: currentId,
+        gentName: currentEspace.gent || currentEspace.name,
+        fileName: name,
+      })
+    );
+    setDialog(null);
+  }
+
+  function handlePick() {
+    const doc = selectedDoc();
+    if (!doc) return;
+    triggerDownload(doc);
+    setDialog(null);
+  }
+
+  const btnClass =
+    variant === "viewer" ? styles.btnViewer : variant === "shared" ? styles.btnShared : styles.btnHeader;
+
+  return (
+    <>
+      <button type="button" className={btnClass} onClick={openFlow} title="Télécharger le document en PDF">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M12 3v12M7 10l5 5 5-5" />
+          <path d="M5 21h14" />
+        </svg>
+        Télécharger
+      </button>
+
+      {dialog &&
+        createPortal(
+        <div className={modalStyles.overlay} role="presentation" onClick={() => setDialog(null)}>
+          <div
+            className={modalStyles.modal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="file-download-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={modalStyles.head}>
+              <span className={modalStyles.ti} aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 3v12M7 10l5 5 5-5" />
+                  <path d="M5 21h14" />
+                </svg>
+              </span>
+              <div>
+                <h2 id="file-download-title" className={modalStyles.title}>
+                  {dialog === "empty" ? "Aucun document" : "Télécharger le document"}
+                </h2>
+                <div className={modalStyles.meta}>
+                  {dialog === "form"
+                    ? "Renseignez vos coordonnées pour recevoir le PDF."
+                    : dialog === "pick"
+                      ? "Choisissez le fichier à télécharger."
+                      : "Ce gent n’a pas encore de document à proposer."}
+                </div>
+              </div>
+              <button type="button" className={modalStyles.closeBtn} onClick={() => setDialog(null)} aria-label="Fermer">
+                ✕
+              </button>
+            </div>
+
+            {dialog === "empty" ? (
+              <>
+                <div className={modalStyles.body}>
+                  <p className={styles.emptyCopy}>
+                    Aucun fichier n&apos;est attaché à ce gent. Le créateur doit ajouter un document
+                    dans Connaissances (ou une visionneuse) pour que le téléchargement soit possible.
+                  </p>
+                </div>
+                <div className={modalStyles.foot}>
+                  <button type="button" className={modalStyles.btnGhost} onClick={() => setDialog(null)}>
+                    Fermer
+                  </button>
+                </div>
+              </>
+            ) : dialog === "pick" ? (
+              <>
+                <div className={modalStyles.body}>
+                  <FileList docs={docs} selectedId={selectedId} onSelect={setSelectedId} />
+                </div>
+                <div className={modalStyles.foot}>
+                  <button type="button" className={modalStyles.btnGhost} onClick={() => setDialog(null)}>
+                    Annuler
+                  </button>
+                  <button type="button" className={modalStyles.btnPrim} onClick={handlePick} disabled={!selectedDoc()}>
+                    Télécharger le PDF
+                  </button>
+                </div>
+              </>
+            ) : (
+              <form className={styles.downloadForm} onSubmit={handleFormSubmit}>
+                <div className={modalStyles.body}>
+                  {docs.length > 1 && (
+                    <FileList docs={docs} selectedId={selectedId} onSelect={setSelectedId} />
+                  )}
+                  <div className={styles.fields}>
+                    <label className={styles.field}>
+                      <span className={styles.label}>
+                        Nom <span className={styles.req}>*</span>
+                      </span>
+                      <input
+                        className={styles.input}
+                        autoComplete="family-name"
+                        value={form.lastName}
+                        onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
+                        required
+                      />
+                    </label>
+                    <label className={styles.field}>
+                      <span className={styles.label}>
+                        Prénom <span className={styles.req}>*</span>
+                      </span>
+                      <input
+                        className={styles.input}
+                        autoComplete="given-name"
+                        value={form.firstName}
+                        onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
+                        required
+                      />
+                    </label>
+                    <label className={styles.field}>
+                      <span className={styles.label}>
+                        E-mail <span className={styles.req}>*</span>
+                      </span>
+                      <input
+                        className={styles.input}
+                        type="email"
+                        autoComplete="email"
+                        value={form.email}
+                        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                        required
+                      />
+                    </label>
+                    <label className={styles.honeypot} aria-hidden="true">
+                      Site web
+                      <input
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={form.honeypot}
+                        onChange={(e) => setForm((f) => ({ ...f, honeypot: e.target.value }))}
+                      />
+                    </label>
+                    <label className={styles.captcha}>
+                      <input
+                        type="checkbox"
+                        checked={form.notARobot}
+                        onChange={(e) => setForm((f) => ({ ...f, notARobot: e.target.checked }))}
+                      />
+                      <span>Vous n&apos;êtes pas un robot</span>
+                    </label>
+                  </div>
+                  {error && <p className={styles.error}>{error}</p>}
+                </div>
+                <div className={modalStyles.foot}>
+                  <button type="button" className={modalStyles.btnGhost} onClick={() => setDialog(null)}>
+                    Annuler
+                  </button>
+                  <button type="submit" className={modalStyles.btnPrim}>
+                    Télécharger le PDF
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+function FileList({
+  docs,
+  selectedId,
+  onSelect,
+}: {
+  docs: DownloadableDocument[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <fieldset className={styles.fileList}>
+      <legend className={styles.label}>Fichier</legend>
+      {docs.map((doc) => (
+        <label key={doc.id} className={styles.fileChoice}>
+          <input
+            type="radio"
+            name="download-file"
+            checked={selectedId === doc.id}
+            onChange={() => onSelect(doc.id)}
+          />
+          <span>{doc.name}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}

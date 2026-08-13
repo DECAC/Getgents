@@ -40,6 +40,7 @@ const VALID_TABS: BuilderTab[] = [
   "knowledge",
   "audit",
   "diffusion",
+  "marketing",
 ];
 
 export function BuilderShell({ initialId }: { initialId: string }) {

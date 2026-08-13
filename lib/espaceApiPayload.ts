@@ -107,6 +107,11 @@ export function espaceForPublicLink(espace: Espace): Espace {
     // créateur : ils sont donc transmis tels quels au destinataire, à qui ils
     // servent encore plus qu'à lui (il découvre le gent).
     starters: espace.starters,
+    fileDownloadEnabled: espace.fileDownloadEnabled,
+    fileDownloadFormEnabled: espace.fileDownloadFormEnabled,
+    downloadableDocuments: espace.fileDownloadEnabled
+      ? espace.downloadableDocuments
+      : undefined,
     // Application à blocs du studio : données simulées choisies par le
     // créateur, pas l'historique personnel — le destinataire voit la même app.
     appPreview: espace.appPreview,

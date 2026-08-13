@@ -106,6 +106,9 @@
   gap: 10px;
   align-items: center;
 }
+.footVerdict {
+  justify-content: flex-end;
+}
 .footLabel {
   font-size: 11px;
   color: var(--faint);
