@@ -376,6 +376,12 @@ export interface Espace {
   activeConversationId: string;
   files: UserFile[];
   artefacts: Artefact[];
+  /**
+   * Application à blocs générée dans le studio (onglet Aperçu) : c'est le
+   * rendu que Preview et l'espace publié doivent montrer à la place de
+   * l'ancien canevas d'artefacts, dès qu'il y a des modules.
+   */
+  appPreview?: import("@/lib/appPreview").AppPreviewSpec;
   /** Onglets thématiques regroupant des modules du canvas — optionnel, défaut [] à la lecture. */
   themeTabs?: ThemeTab[];
   systemPrompt?: string;

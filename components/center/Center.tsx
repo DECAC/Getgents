@@ -4,7 +4,7 @@ import { useRef, useCallback } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { canResizeAssist, setAssistWidthFromPointer } from "@/lib/assistResize";
 import { CenterHeader } from "./CenterHeader";
-import { ModuleCanvas } from "./ModuleCanvas";
+import { WorkspaceCanvas } from "./WorkspaceCanvas";
 import styles from "./Center.module.css";
 
 export function Center() {
@@ -80,7 +80,7 @@ export function Center() {
 
       <div className={styles.content} tabIndex={-1}>
         {/* key force la réinitialisation de l'agencement quand on change d'espace */}
-        <ModuleCanvas key={currentId} espace={currentEspace} />
+        <WorkspaceCanvas key={currentId} espace={currentEspace} />
       </div>
 
       {/* Mode mini-application : pas de conversation, donc pas d'onglet d'appel. */}

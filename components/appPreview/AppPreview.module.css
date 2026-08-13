@@ -13,6 +13,21 @@
   overflow: hidden;
 }
 
+/* Preview / espace publié : le cadre de maquette n'a plus lieu d'être. */
+.workspace {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  min-height: 100%;
+}
+.workspace .tabsBar {
+  padding: 0 2px;
+  background: transparent;
+}
+.workspace .canvas {
+  padding: 16px 2px 8px;
+}
+
 /* ---------- Barre d'onglets ---------- */
 
 .tabsBar {

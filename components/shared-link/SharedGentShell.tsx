@@ -1,7 +1,7 @@
 "use client";
 
 import { EspaceProvider, useEspace } from "@/lib/context/EspaceContext";
-import { ModuleCanvas } from "@/components/center/ModuleCanvas";
+import { WorkspaceCanvas } from "@/components/center/WorkspaceCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
 import { ArtefactModal } from "@/components/shared/ArtefactModal";
 import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
@@ -51,7 +51,7 @@ function SharedGentBody() {
                 fil de l'échange et retombe sur les déclencheurs tant qu'il n'y
                 en a aucun. Sans lui, un artefact accepté par le destinataire
                 était bien enregistré mais ne s'affichait nulle part. */}
-            <ModuleCanvas espace={currentEspace} />
+            <WorkspaceCanvas espace={currentEspace} />
           </div>
         </main>
       </div>

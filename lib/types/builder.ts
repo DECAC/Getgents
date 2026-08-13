@@ -118,11 +118,9 @@ export interface GentDraft {
   /** Type de gent « visionneuse » : document fixé par le créateur, lu en immersion. */
   visionneuse?: import("@/lib/types").VisionneuseConfig;
   /**
-   * Aperçu de l'application produit par l'assistant du builder (onglet
-   * « Aperçu ») : onglets thématiques et modules composés de blocs typés, avec
-   * des données simulées. C'est une maquette vivante destinée au créateur —
-   * elle ne part pas dans l'espace publié, d'où son absence du snapshot de
-   * publication (voir builderSnapshot.ts).
+   * Application à blocs produite dans l'onglet Aperçu : copiée dans l'espace
+   * à la Preview / publication, pour que l'utilisateur voie le nouveau rendu
+   * et non l'ancien canevas d'artefacts.
    */
   appPreview?: import("@/lib/appPreview").AppPreviewSpec;
   /** Modules ajoutés/remplacés au dernier tour d'assistant — badge « nouveau ». */

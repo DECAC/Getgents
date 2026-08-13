@@ -78,6 +78,13 @@ export function draftContentSnapshot(draft: GentDraft): string {
     visionneuse: visionneuseSnapshot(draft.visionneuse),
     routine: routineSnapshot(draft.routine),
     channel: channelSnapshot(draft.channel),
+    appPreview: draft.appPreview
+      ? {
+          appName: draft.appPreview.appName ?? null,
+          themes: draft.appPreview.themes,
+          moduleIds: draft.appPreview.modules.map((m) => m.id),
+        }
+      : null,
   });
 }
 

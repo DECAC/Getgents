@@ -411,12 +411,15 @@ export function AppPreview({
   spec,
   freshIds = [],
   building = false,
+  variant = "studio",
 }: {
   spec: AppPreviewSpec;
   /** Modules issus du dernier tour de l'assistant — signalés « nouveau ». */
   freshIds?: string[];
   /** Une génération est en cours : une tuile fantôme l'annonce. */
   building?: boolean;
+  /** Dans l'espace / Preview : sans cadre de maquette, pour remplir le canevas. */
+  variant?: "studio" | "workspace";
 }) {
   const [theme, setTheme] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
@@ -444,7 +447,7 @@ export function AppPreview({
   const visible = spec.modules.filter((m) => m.theme === activeTheme || themes.length === 1);
 
   return (
-    <div className={styles.app}>
+    <div className={`${styles.app} ${variant === "workspace" ? styles.workspace : ""}`}>
       <nav className={styles.tabsBar}>
         {themes.map((t) => {
           const count = spec.modules.filter((m) => m.theme === t).length;

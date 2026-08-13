@@ -297,6 +297,7 @@ export function restoreDraftFromPublished(id: string, espace: Espace): GentDraft
     jumpForm: espace.jumpForm,
     connectors,
     pinnedArtefact: pinned,
+    appPreview: espace.appPreview,
     routine: espace.routine
       ? {
           enabled: espace.routine.enabled,

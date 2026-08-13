@@ -594,5 +594,6 @@ export function draftToEspace(draft: GentDraft): Espace {
     pinnedArtefact: draft.pinnedArtefact,
     visionneuse: draft.visionneuse,
     webSearch: draft.webSearch || undefined,
+    appPreview: draft.appPreview?.modules.length ? draft.appPreview : undefined,
   };
 }

@@ -4,6 +4,10 @@ import {
   mergeAppPreview,
   type AppPreviewSpec,
 } from "@/lib/appPreview";
+import { draftToEspace } from "@/lib/publishedGents";
+import { draftContentSnapshot } from "@/lib/builderSnapshot";
+import { espaceForPublicLink } from "@/lib/espaceApiPayload";
+import type { GentDraft } from "@/lib/types/builder";
 
 function signal(json: unknown): string {
   return `Voici l'aperçu.\n<!--APERCU: ${JSON.stringify(json)}-->`;
@@ -176,5 +180,60 @@ describe("mergeAppPreview", () => {
       false
     );
     expect(merged.themes).toEqual(["A", "B"]);
+  });
+});
+
+describe("passage de l'aperçu à l'espace (Preview)", () => {
+  const spec: AppPreviewSpec = {
+    appName: "Radar candidatures",
+    themes: ["Mon profil"],
+    modules: [
+      {
+        id: "mini-cv",
+        title: "Mon mini CV",
+        theme: "Mon profil",
+        size: "large",
+        blocks: [{ kind: "text", text: "Camille, 6 ans." }],
+      },
+    ],
+  };
+
+  function draft(appPreview?: AppPreviewSpec): GentDraft {
+    return {
+      id: "g1",
+      name: "Radar",
+      icon: "🧭",
+      objective: "suivre des candidatures",
+      systemPrompt: "Tu aides à candidater.",
+      status: "draft",
+      updatedAt: "à l'instant",
+      modelAssignments: [],
+      knowledgeSources: [],
+      connectors: [],
+      builderConversation: [],
+      appPreview,
+    };
+  }
+
+  it("copie l'aperçu dans l'espace publié, pour que Preview l'affiche", () => {
+    const espace = draftToEspace(draft(spec));
+    expect(espace.appPreview?.appName).toBe("Radar candidatures");
+    expect(espace.appPreview?.modules.map((m) => m.id)).toEqual(["mini-cv"]);
+  });
+
+  it("n'invente pas d'aperçu si le brouillon n'en a pas", () => {
+    expect(draftToEspace(draft()).appPreview).toBeUndefined();
+  });
+
+  it("fait partie de l'empreinte de publication", () => {
+    const without = draftContentSnapshot(draft());
+    const withPreview = draftContentSnapshot(draft(spec));
+    expect(without).not.toEqual(withPreview);
+    expect(withPreview).toContain("mini-cv");
+  });
+
+  it("est transmis au destinataire d'un lien de partage", () => {
+    const pub = espaceForPublicLink(draftToEspace(draft(spec)));
+    expect(pub.appPreview?.appName).toBe("Radar candidatures");
   });
 });
