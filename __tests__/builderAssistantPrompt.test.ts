@@ -2,6 +2,7 @@ import {
   BUILDER_ROLE_CLOSING,
   BUILDER_ROLE_INSTRUCTION,
   buildBuilderSystemPrompt,
+  frameBuilderKnowledgeFileMessage,
   frameBuilderObjectiveMessage,
   isBuilderObjectiveSeedTurn,
 } from "@/lib/builderAssistantPrompt";
@@ -57,6 +58,26 @@ describe("buildBuilderSystemPrompt", () => {
     expect(prompt).toContain("Tu es un analyste DPE.");
   });
 
+  it("signale les fichiers de connaissance sans en recopier le contenu", () => {
+    const prompt = buildBuilderSystemPrompt(
+      draft({
+        knowledgeSources: [
+          {
+            id: "k1",
+            kind: "file",
+            label: "livre-blanc.pdf",
+            meta: "12 000 caractères",
+            text: "Chapitre secret que l'assistant du builder ne doit pas recracher.",
+          },
+        ],
+      })
+    );
+    expect(prompt).toContain("livre-blanc.pdf");
+    expect(prompt).toContain("contenu lu, disponible pour le gent publié");
+    expect(prompt).toMatch(/ne les recopie pas/i);
+    expect(prompt).not.toContain("Chapitre secret");
+  });
+
   it("liste les connecteurs déjà configurés", () => {
     const prompt = buildBuilderSystemPrompt(
       draft({
@@ -92,6 +113,23 @@ describe("isBuilderObjectiveSeedTurn", () => {
         })
       )
     ).toBe(false);
+  });
+});
+
+describe("frameBuilderKnowledgeFileMessage", () => {
+  it("annonce le fichier sans inclure son contenu", () => {
+    const msg = frameBuilderKnowledgeFileMessage("CV.pdf", 12340, false);
+    expect(msg).toContain("CV.pdf");
+    expect(msg).toContain("12");
+    expect(msg).toMatch(/connaissances du gent/i);
+    expect(msg).toMatch(/ne le recopie pas/i);
+    expect(msg).not.toContain("expérience professionnelle");
+  });
+
+  it("garde le commentaire du créateur, toujours sans le document", () => {
+    const msg = frameBuilderKnowledgeFileMessage("offre.pdf", 200, true, "sers-t'en pour le prompt");
+    expect(msg).toContain("extrait tronqué");
+    expect(msg).toContain("sers-t'en pour le prompt");
   });
 });
 

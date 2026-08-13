@@ -109,7 +109,10 @@ interface BuilderContextValue {
   /** Efface l'aperçu d'application pour repartir d'une page blanche. */
   clearAppPreview: () => void;
 
-  sendBuilderMessage: (text: string) => void;
+  sendBuilderMessage: (
+    text: string,
+    opts?: { knowledgeFile?: { name: string; text: string; truncated?: boolean } }
+  ) => void;
   /** Vide le fil courant pour démarrer un nouvel échange avec l'assistant. */
   startNewBuilderConversation: () => void;
   applyBuilderSuggestion: (suggestion: string) => void;
@@ -613,7 +616,10 @@ export function BuilderProvider({
     [currentId]
   );
 
-  const sendBuilderMessage = useCallback((text: string) => {
+  const sendBuilderMessage = useCallback((
+    text: string,
+    opts?: { knowledgeFile?: { name: string; text: string; truncated?: boolean } }
+  ) => {
     if (streamAbortRef.current) return; // une génération est déjà en cours
     const id = currentIdRef.current;
     const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" };
@@ -632,13 +638,34 @@ export function BuilderProvider({
 
     setDrafts((prev) => {
       const draft = prev[id];
-      existingConnectorUrls = draft.connectors.map((c) => c.detail ?? "").filter(Boolean);
-      const seedObjective = isBuilderObjectiveSeedTurn(draft);
-      systemPrompt = buildBuilderSystemPrompt(draft);
+      const knowledgeFile = opts?.knowledgeFile;
+      const nextDraft = knowledgeFile
+        ? {
+            ...draft,
+            knowledgeSources: [
+              ...draft.knowledgeSources,
+              {
+                id: `know-${Date.now()}`,
+                kind: "file" as const,
+                label: knowledgeFile.name,
+                meta: `${knowledgeFile.text.length.toLocaleString("fr-FR")} caractères · ajouté à l'instant${
+                  knowledgeFile.truncated ? " · tronqué" : ""
+                }`,
+                text: knowledgeFile.text,
+                truncated: knowledgeFile.truncated,
+              },
+            ],
+          }
+        : draft;
+      existingConnectorUrls = nextDraft.connectors.map((c) => c.detail ?? "").filter(Boolean);
+      // Un fichier de connaissance n'est pas un objectif : ne pas le cadrer
+      // comme « mission du gent » ni l'écrire dans le champ Objectif.
+      const seedObjective = !knowledgeFile && isBuilderObjectiveSeedTurn(nextDraft);
+      systemPrompt = buildBuilderSystemPrompt(nextDraft);
       if (seedObjective) {
         apiUserContent = frameBuilderObjectiveMessage(text);
       }
-      history = draft.builderConversation
+      history = nextDraft.builderConversation
         .filter((m) => m.role === "agent" || m.role === "user")
         .map((m) => ({
           role: m.role === "agent" ? "assistant" : "user",
@@ -646,12 +673,12 @@ export function BuilderProvider({
         }));
       chatModelId = BUILDER_ASSISTANT_MODEL_ID;
 
-      const builderConversation = [...draft.builderConversation, userMsg, agentPlaceholder];
+      const builderConversation = [...nextDraft.builderConversation, userMsg, agentPlaceholder];
       // Premier message = objectif : on le range aussi dans le champ Objectif du
       // brouillon (accueil studio le fait déjà ; saisie directe dans l'assistant non).
       const objective =
-        seedObjective && !(draft.objective ?? "").trim() ? text.trim().slice(0, 240) : draft.objective;
-      return { ...prev, [id]: { ...draft, objective, builderConversation } };
+        seedObjective && !(nextDraft.objective ?? "").trim() ? text.trim().slice(0, 240) : nextDraft.objective;
+      return { ...prev, [id]: { ...nextDraft, objective, builderConversation } };
     });
 
     setIsThinking(true);

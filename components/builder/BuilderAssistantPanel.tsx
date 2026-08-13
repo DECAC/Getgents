@@ -11,6 +11,7 @@ import { buildBuilderReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
 import { ThinkingIndicator } from "@/components/shared/ThinkingIndicator";
 import { extractDocumentText, type ExtractedDoc } from "@/lib/extractDocumentText";
+import { frameBuilderKnowledgeFileMessage } from "@/lib/builderAssistantPrompt";
 import styles from "./BuilderAssistantPanel.module.css";
 
 const CHAT_MODELS = MODEL_CATALOG.filter((m) => m.capability === "chat");
@@ -135,15 +136,14 @@ export function BuilderAssistantPanel() {
     if (isThinking) return;
     const txt = composerText.trim();
     if (!txt && !attachment) return;
-    const parts: string[] = [];
     if (attachment) {
-      parts.push(
-        `Document joint « ${attachment.name} » :\n"""\n${attachment.text}\n"""` +
-          (attachment.truncated ? "\n(document tronqué)" : "")
+      sendBuilderMessage(
+        frameBuilderKnowledgeFileMessage(attachment.name, attachment.text.length, attachment.truncated, txt),
+        { knowledgeFile: attachment }
       );
+    } else {
+      sendBuilderMessage(txt);
     }
-    if (txt) parts.push(txt);
-    sendBuilderMessage(parts.join("\n\n"));
     setComposerText("");
     setAttachment(null);
     setAttachError(null);
@@ -595,7 +595,7 @@ export function BuilderAssistantPanel() {
               <div className={styles.attachChipName}>{attachment.name}</div>
               <div className={styles.attachChipMeta}>
                 {attachment.text.length.toLocaleString("fr-FR")} caractères
-                {attachment.truncated ? " (tronqué)" : ""} · joint au prochain message
+                {attachment.truncated ? " (tronqué)" : ""} · ajouté aux connaissances au prochain envoi
               </div>
             </div>
             <button
@@ -619,8 +619,8 @@ export function BuilderAssistantPanel() {
           <button
             type="button"
             className={styles.attachBtn}
-            aria-label="Joindre un document (PDF, Word, texte)"
-            title="Joindre un document (PDF, Word, texte)"
+            aria-label="Ajouter un fichier aux connaissances du gent (PDF, Word, texte)"
+            title="Ajouter un fichier aux connaissances du gent (PDF, Word, texte)"
             disabled={attaching || isThinking}
             onClick={() => fileInputRef.current?.click()}
           >

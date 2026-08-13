@@ -73,9 +73,25 @@ export function isBuilderObjectiveSeedTurn(
   return priorUserTurns === 0;
 }
 
+/** Message visible (et envoyé à l'assistant) quand un fichier devient une connaissance. */
+export function frameBuilderKnowledgeFileMessage(
+  name: string,
+  chars: number,
+  truncated: boolean,
+  extra?: string
+): string {
+  const size = chars.toLocaleString("fr-FR");
+  const trunc = truncated ? ", extrait tronqué" : "";
+  const head =
+    `J'ai ajouté le fichier « ${name} » aux connaissances du gent (${size} caractères${trunc}). ` +
+    "Il servira de base de connaissance à l'usage — ne le recopie pas dans tes réponses.";
+  const note = extra?.trim();
+  return note ? `${head} ${note}` : `${head} Configure le gent pour s'en servir si besoin.`;
+}
+
 type BuilderPromptDraft = Pick<
   GentDraft,
-  "name" | "objective" | "systemPrompt" | "connectors" | "appPreview"
+  "name" | "objective" | "systemPrompt" | "connectors" | "appPreview" | "knowledgeSources"
 >;
 
 /**
@@ -83,6 +99,22 @@ type BuilderPromptDraft = Pick<
  * ré-inventerait des identifiants à chaque tour et empilerait des doublons au
  * lieu de faire évoluer les modules existants.
  */
+function knowledgeNote(draft: BuilderPromptDraft): string {
+  const sources = draft.knowledgeSources ?? [];
+  if (!sources.length) return "";
+  const list = sources
+    .map((s) => {
+      const read = s.text?.trim() ? "contenu lu, disponible pour le gent publié" : "nom seul";
+      return `« ${s.label} » (${s.kind}, ${read})`;
+    })
+    .join(" ; ");
+  return (
+    `\n\nBase de connaissance du gent : ${list}. ` +
+    "Ces fichiers appartiennent au gent publié — ne les recopie pas dans tes réponses. " +
+    "Tu peux seulement confirmer qu'ils sont en place et adapter le prompt système pour que le gent s'en serve."
+  );
+}
+
 function appPreviewNote(draft: BuilderPromptDraft): string {
   const preview = draft.appPreview;
   if (!preview?.modules.length) return "\n\nAucun aperçu d'application n'a encore été proposé au créateur.";
@@ -109,7 +141,7 @@ export function buildBuilderSystemPrompt(draft: BuilderPromptDraft): string {
 
   return [
     BUILDER_ROLE_INSTRUCTION,
-    draftContext + connectorsNote + appPreviewNote(draft),
+    draftContext + connectorsNote + knowledgeNote(draft) + appPreviewNote(draft),
     MODEL_RECOMMENDATION_INSTRUCTION,
     GENT_CONFIG_PROMPT_INSTRUCTION,
     APP_PREVIEW_PROMPT_INSTRUCTION,
