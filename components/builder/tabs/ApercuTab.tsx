@@ -75,6 +75,7 @@ export function ApercuTab() {
               spec={preview!}
               freshIds={currentDraft.appPreviewFreshIds ?? []}
               building={isThinking}
+              onAsk={(prompt) => sendBuilderMessage(prompt, { mode: "apercu" })}
             />
           </div>
         </div>

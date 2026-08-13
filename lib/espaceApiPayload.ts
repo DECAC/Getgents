@@ -175,6 +175,22 @@ export function espaceForStarters(espace: Espace): Espace {
     powens: espace.powens,
     routine: espace.routine,
     pinnedArtefact: espace.pinnedArtefact,
+    // Onglets et titres seulement : assez pour coller les amorces à l'aperçu,
+    // sans envoyer les données simulées de chaque bloc.
+    appPreview: espace.appPreview?.modules.length
+      ? {
+          appName: espace.appPreview.appName,
+          themes: espace.appPreview.themes,
+          modules: espace.appPreview.modules.map((m) => ({
+            id: m.id,
+            title: m.title,
+            theme: m.theme,
+            size: m.size,
+            source: m.source,
+            blocks: [{ kind: "heading" as const, text: m.title }],
+          })),
+        }
+      : undefined,
   };
 }
 

@@ -1,4 +1,13 @@
-import { parseStarters, shouldShowStarters, describeGentForStarters, STARTER_COUNT } from "@/lib/starterSignal";
+import {
+  parseStarters,
+  shouldShowStarters,
+  shouldShowConversationStarters,
+  activeConversationMessageCount,
+  describeGentForStarters,
+  fallbackStarters,
+  displayedStarters,
+  STARTER_COUNT,
+} from "@/lib/starterSignal";
 import type { Espace } from "@/lib/types";
 
 function espace(partial: Partial<Espace>): Espace {
@@ -90,6 +99,107 @@ describe("affichage des déclencheurs", () => {
     });
     expect(shouldShowStarters(miniApp, 0)).toBe(false);
   });
+
+  it("reste affiché sur l'ancien canevas même si un aperçu d'application existe", () => {
+    // shouldShowStarters ne regarde que les artefacts : c'est
+    // shouldShowConversationStarters qui gère le cas aperçu + conversation.
+    expect(
+      shouldShowStarters(
+        espace({
+          appPreview: { themes: ["Profil"], modules: [{ id: "cv", title: "CV", theme: "Profil", size: "large", blocks: [{ kind: "text", text: "x" }] }] },
+        }),
+        0
+      )
+    ).toBe(true);
+  });
+});
+
+describe("amorces à l'ouverture de la conversation (aperçu d'application)", () => {
+  const preview = {
+    themes: ["Mon profil", "Réseau"],
+    modules: [
+      { id: "cv", title: "Mini CV", theme: "Mon profil", size: "large" as const, blocks: [{ kind: "text" as const, text: "x" }] },
+    ],
+  };
+
+  it("s'affiche quand l'aperçu remplit le canevas et que le fil est vide", () => {
+    expect(shouldShowConversationStarters(espace({ appPreview: preview }), 0)).toBe(true);
+  });
+
+  it("disparaît dès le premier message", () => {
+    expect(shouldShowConversationStarters(espace({ appPreview: preview }), 1)).toBe(false);
+  });
+
+  it("ne s'affiche pas sans aperçu d'application (l'ancien canevas s'en charge)", () => {
+    expect(shouldShowConversationStarters(espace({}), 0)).toBe(false);
+  });
+
+  it("ne s'affiche pas en mini-application ni avec un formulaire jump", () => {
+    expect(
+      shouldShowConversationStarters(
+        espace({
+          appPreview: preview,
+          pinnedArtefact: { enabled: true, title: "T", mission: "M", inputs: [] },
+        }),
+        0
+      )
+    ).toBe(false);
+    expect(
+      shouldShowConversationStarters(
+        espace({
+          appPreview: preview,
+          jumpForm: { title: "Lancer", fields: [] },
+        }),
+        0
+      )
+    ).toBe(false);
+  });
+
+  it("compte les messages du fil actif", () => {
+    expect(
+      activeConversationMessageCount(
+        espace({
+          conversations: [
+            { id: "c1", startedAt: "hier", messages: [] },
+            { id: "c2", startedAt: "aujourd'hui", messages: [{ role: "user", text: "bonjour" }] },
+          ],
+          activeConversationId: "c2",
+        })
+      )
+    ).toBe(1);
+    expect(activeConversationMessageCount(espace({ conversations: [], activeConversationId: "x" }))).toBe(0);
+  });
+});
+
+describe("repli d'accueil tant que le gent n'a pas choisi ses déclencheurs", () => {
+  it("s'appuie sur les onglets et modules de l'aperçu", () => {
+    const out = fallbackStarters(
+      espace({
+        gent: "Radar emploi",
+        appPreview: {
+          themes: ["Mon profil", "Réseau"],
+          modules: [{ id: "cv", title: "Mini CV", theme: "Mon profil", size: "large", blocks: [{ kind: "text", text: "x" }] }],
+        },
+      })
+    );
+    expect(out.length).toBe(STARTER_COUNT);
+    expect(out[0]).toContain("Mon profil");
+    expect(out.some((q) => q.includes("Réseau"))).toBe(true);
+    expect(out.some((q) => q.includes("Mini CV"))).toBe(true);
+  });
+
+  it("reste utilisable sans aperçu, à partir du nom du gent", () => {
+    const out = fallbackStarters(espace({ gent: "Compagnon de voyage" }));
+    expect(out.length).toBeGreaterThan(0);
+    expect(out[0]).toContain("Compagnon de voyage");
+  });
+
+  it("préfère les déclencheurs persistés au repli", () => {
+    expect(displayedStarters(espace({ starters: ["Question A", "Question B"] }))).toEqual([
+      "Question A",
+      "Question B",
+    ]);
+  });
 });
 
 describe("description du gent transmise au modèle", () => {
@@ -112,6 +222,22 @@ describe("description du gent transmise au modèle", () => {
     const described = describeGentForStarters(espace({ gent: "Simple" }));
     expect(described).not.toContain("recherche web");
     expect(described).not.toContain("Powens");
+  });
+
+  it("mentionne les onglets de l'aperçu d'application", () => {
+    const described = describeGentForStarters(
+      espace({
+        gent: "Radar emploi",
+        appPreview: {
+          themes: ["Mon profil", "Réseau"],
+          modules: [
+            { id: "cv", title: "Mini CV", theme: "Mon profil", size: "large", blocks: [{ kind: "text", text: "x" }] },
+          ],
+        },
+      })
+    );
+    expect(described).toContain("Mon profil");
+    expect(described).toContain("Mini CV");
   });
 
   it("borne le prompt système, qui embarque la base de connaissance entière", () => {

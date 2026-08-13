@@ -5,8 +5,10 @@
 //
 // Relances conversationnelles (distinctes) :
 // <!--FOLLOWUPS: ["Question libre 1 ?","Question libre 2 ?"]-->
-const QUESTIONS_RE = /<!--QUESTIONS:\s*(\[[\s\S]*?\])\s*-->/;
+const QUESTIONS_MARKER_RE = /<!--\s*QUESTIONS\s*:/i;
 const FOLLOWUPS_RE = /<!--FOLLOWUPS:\s*(\[[\s\S]*?\])\s*-->/;
+const LIST_ITEM_RE = /^\s*(?:[-*•]|\d+[.)])\s+\S/;
+const OPTIONS_HEADING_RE = /^\s*(?:\*\*)?(?:options?|choix|propositions?)(?:\*\*)?\s*:?\s*$/i;
 
 export interface QuestionBlock {
   q: string;
@@ -24,6 +26,134 @@ export const SUGGESTIONS_PROMPT_INSTRUCTION =
   "Exemple : « Veux-tu que j'envoie cet e-mail ? » → <!--QUESTIONS: [{\"q\":\"Veux-tu que j'envoie cet e-mail ?\",\"options\":[\"Oui, envoie-le\",\"Non, prépare seulement un brouillon\"],\"multi\":false}]-->. " +
   "Si tu ne poses aucune question, n'émet pas de bloc QUESTIONS.";
 
+function withoutOther(options: string[]): string[] {
+  return options
+    .map((o) => o.trim())
+    .filter((o) => o.length > 0 && o.toLowerCase() !== QUICK_REPLY_OTHER_LABEL.toLowerCase());
+}
+
+function parseQuestionBlocks(parsed: unknown): QuestionBlock[] {
+  const items = Array.isArray(parsed) ? parsed : parsed && typeof parsed === "object" ? [parsed] : [];
+  return items
+    .filter(
+      (item): item is QuestionBlock =>
+        !!item &&
+        typeof item.q === "string" &&
+        Array.isArray(item.options) &&
+        item.options.every((o: unknown) => typeof o === "string")
+    )
+    .map((item) => ({
+      q: item.q.trim().slice(0, 240),
+      options: withoutOther(item.options).slice(0, 5),
+      multi: !!item.multi,
+    }))
+    .filter((item) => item.q.length > 0 && item.options.length >= 1)
+    .slice(0, 6);
+}
+
+/** JSON `[…]` / `{…}` équilibré, en ignorant les crochets qui sont dans une chaîne. */
+function sliceBalancedJson(raw: string, from: number): { json: string; end: number } | null {
+  let start = -1;
+  for (let i = from; i < raw.length; i++) {
+    const c = raw[i];
+    if (c === "[" || c === "{") {
+      start = i;
+      break;
+    }
+    if (!/\s/.test(c)) return null;
+  }
+  if (start < 0) return null;
+
+  const stack: string[] = [];
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < raw.length; i++) {
+    const c = raw[i];
+    if (inStr) {
+      if (esc) {
+        esc = false;
+        continue;
+      }
+      if (c === "\\") {
+        esc = true;
+        continue;
+      }
+      if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') {
+      inStr = true;
+      continue;
+    }
+    if (c === "[") stack.push("]");
+    else if (c === "{") stack.push("}");
+    else if (c === "]" || c === "}") {
+      if (stack.pop() !== c) return null;
+      if (stack.length === 0) return { json: raw.slice(start, i + 1), end: i + 1 };
+    }
+  }
+  return null;
+}
+
+/**
+ * Retire une liste à puces / numérotée en fin de message (et les lignes qui
+ * recopient déjà les options). L'interface affiche ces choix en boutons.
+ */
+export function stripVisibleChoiceList(text: string, options?: string[]): string {
+  let t = text.replace(/\r\n/g, "\n").trim();
+  if (options?.length) {
+    const optSet = new Set(options.map((o) => o.trim().toLowerCase()));
+    t = t
+      .split("\n")
+      .filter((line) => {
+        const cleaned = line.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, "").replace(/[*_]/g, "").trim().toLowerCase();
+        return !cleaned || !optSet.has(cleaned);
+      })
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  const lines = t.split("\n");
+  let i = lines.length - 1;
+  while (i >= 0 && !lines[i].trim()) i--;
+  if (i < 0 || !LIST_ITEM_RE.test(lines[i])) return t;
+  while (i >= 0 && (LIST_ITEM_RE.test(lines[i]) || !lines[i].trim())) i--;
+  if (i >= 0 && OPTIONS_HEADING_RE.test(lines[i])) i--;
+  return lines.slice(0, i + 1).join("\n").trim();
+}
+
+/**
+ * Repli : le modèle a listé les choix en markdown sans bloc QUESTIONS.
+ * On transforme la liste finale en boutons, et on ne garde que la question.
+ */
+export function recoverQuestionsFromChoiceList(text: string): { text: string; questions: QuestionBlock[] } {
+  const lines = text.replace(/\r\n/g, "\n").trim().split("\n");
+  let i = lines.length - 1;
+  while (i >= 0 && !lines[i].trim()) i--;
+  const items: string[] = [];
+  while (i >= 0) {
+    const line = lines[i];
+    if (!line.trim()) {
+      if (items.length) break;
+      i--;
+      continue;
+    }
+    const m = line.match(/^\s*(?:[-*•]|\d+[.)])\s+(.+)$/);
+    if (!m) break;
+    items.unshift(m[1].replace(/\s+/g, " ").trim());
+    i--;
+  }
+  if (items.length < 2 || items.length > 6) return { text, questions: [] };
+  if (i >= 0 && OPTIONS_HEADING_RE.test(lines[i])) i--;
+  const qText = lines.slice(0, i + 1).join("\n").trim();
+  if (!qText) return { text, questions: [] };
+  const options = withoutOther(items).slice(0, 5);
+  if (options.length < 2) return { text, questions: [] };
+  const q = (qText.split(/\n\n+/).pop() ?? qText).replace(/^#+\s*/, "").trim().slice(0, 240);
+  return { text: qText, questions: [{ q, options, multi: false }] };
+}
+
 /**
  * Relances pour poursuivre l'échange — régulièrement, pas à chaque message.
  * Affichées en puces : un clic envoie la question telle quelle.
@@ -39,37 +169,51 @@ export const FOLLOWUPS_PROMPT_INSTRUCTION =
   "(5) n'émets jamais plus d'un bloc FOLLOWUPS par réponse.";
 
 export function extractQuestions(raw: string): { text: string; questions: QuestionBlock[] } {
-  const match = raw.match(QUESTIONS_RE);
-  if (!match) {
-    const truncated = raw.match(/<!--QUESTIONS:[\s\S]*$/);
-    if (truncated) return { text: raw.slice(0, truncated.index).trim(), questions: [] };
-    return { text: raw, questions: [] };
-  }
-
-  let questions: QuestionBlock[] = [];
-  try {
-    const parsed = JSON.parse(match[1]);
-    if (Array.isArray(parsed)) {
-      questions = parsed
-        .filter(
-          (item): item is QuestionBlock =>
-            item &&
-            typeof item.q === "string" &&
-            Array.isArray(item.options) &&
-            item.options.every((o: unknown) => typeof o === "string")
-        )
-        .map((item) => ({ q: item.q, options: item.options.slice(0, 5), multi: !!item.multi }))
-        .slice(0, 6);
+  const marker = raw.match(QUESTIONS_MARKER_RE);
+  if (marker && marker.index !== undefined) {
+    const sliced = sliceBalancedJson(raw, marker.index + marker[0].length);
+    if (!sliced) {
+      return { text: raw.slice(0, marker.index).trim(), questions: [] };
     }
-  } catch {
-    // ignore malformed block
+    let questions: QuestionBlock[] = [];
+    try {
+      questions = parseQuestionBlocks(JSON.parse(sliced.json));
+    } catch {
+      // ignore malformed block
+    }
+    const after = raw.slice(sliced.end);
+    const closer = after.match(/^\s*-->/);
+    const end = sliced.end + (closer ? closer[0].length : 0);
+    const text = stripVisibleChoiceList(
+      (raw.slice(0, marker.index) + raw.slice(end)).trim(),
+      questions.flatMap((q) => q.options)
+    );
+    return { text, questions };
   }
 
-  // On retire uniquement le bloc repéré : le texte avant ET après est conservé
-  // (un bloc ARTEFACT peut suivre le bloc QUESTIONS dans la même réponse).
-  const start = match.index ?? 0;
-  const text = (raw.slice(0, start) + raw.slice(start + match[0].length)).trim();
-  return { text, questions };
+  const fence = raw.match(/```(?:json)?\s*/i);
+  if (fence && fence.index !== undefined) {
+    const sliced = sliceBalancedJson(raw, fence.index + fence[0].length);
+    if (sliced) {
+      try {
+        const questions = parseQuestionBlocks(JSON.parse(sliced.json));
+        if (questions.length) {
+          const after = raw.slice(sliced.end);
+          const closer = after.match(/^\s*```/);
+          const end = sliced.end + (closer ? closer[0].length : 0);
+          const text = stripVisibleChoiceList(
+            (raw.slice(0, fence.index) + raw.slice(end)).trim(),
+            questions.flatMap((q) => q.options)
+          );
+          return { text, questions };
+        }
+      } catch {
+        // pas un bloc de questions
+      }
+    }
+  }
+
+  return { text: raw, questions: [] };
 }
 
 export function extractFollowups(raw: string): { text: string; followups: string[] } {

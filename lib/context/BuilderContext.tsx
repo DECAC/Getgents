@@ -5,7 +5,7 @@ import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, Know
 import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine, NotificationChannel, Espace } from "@/lib/types";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, BUILDER_ASSISTANT_MODEL_ID } from "@/lib/mock-data/builder";
 import { supportsReasoningStream } from "@/lib/openRouterReasoning";
-import { extractQuestions } from "@/lib/suggestions";
+import { extractQuestions, recoverQuestionsFromChoiceList, stripVisibleChoiceList } from "@/lib/suggestions";
 import {
   extractConnectorSignal,
   extractConnectorSuggestions,
@@ -760,7 +760,8 @@ export function BuilderProvider({
         webSearch: !previewTurn && !askTurn,
       },
       (fullSoFar, reasoningSoFar) => {
-        const displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
+        let displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
+        if (askTurn) displayRaw = stripVisibleChoiceList(displayRaw);
         updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw), reasoning: reasoningSoFar || undefined }));
         if (previewTurn) applyLivePreview(fullSoFar);
       },
@@ -770,12 +771,21 @@ export function BuilderProvider({
       controller.signal
     )
       .then(({ text: fullRaw, truncated, reasoning }) => {
-        const afterConfig = extractGentConfigSignal(fullRaw);
+        const afterQuestions = extractQuestions(fullRaw);
+        let questions = afterQuestions.questions;
+        const afterConfig = extractGentConfigSignal(afterQuestions.text);
         const afterPreview = extractAppPreviewSignal(afterConfig.text);
         const afterSuggestions = extractConnectorSuggestions(afterPreview.text);
         const afterConnector = extractConnectorSignal(afterSuggestions.text);
         const afterJumpForm = extractJumpFormSignal(afterConnector.text);
-        const { text: reply, questions } = extractQuestions(afterJumpForm.text);
+        let reply = afterJumpForm.text;
+        if (askTurn && !questions.length) {
+          const recovered = recoverQuestionsFromChoiceList(reply);
+          reply = recovered.text;
+          questions = recovered.questions;
+        } else if (questions.length) {
+          reply = stripVisibleChoiceList(reply, questions.flatMap((q) => q.options));
+        }
         const truncationNote = truncated
           ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — demandez « continue » ou reformulez plus court ; une proposition de configuration incomplète ne doit pas être appliquée.</em></p>'
           : "";

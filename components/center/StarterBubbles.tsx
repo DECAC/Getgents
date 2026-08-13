@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
-import { STARTER_COUNT } from "@/lib/starterSignal";
+import { STARTER_COUNT, displayedStarters } from "@/lib/starterSignal";
 import type { Espace } from "@/lib/types";
 import styles from "./StarterBubbles.module.css";
 
@@ -10,15 +10,24 @@ import styles from "./StarterBubbles.module.css";
 const SKELETON_WIDTHS = ["46%", "32%", "40%", "28%", "36%"];
 
 /**
- * « Déclencheurs » — l'espace de travail d'un gent tout juste ouvert est vide,
- * et ne dit donc rien de ce qu'on peut lui demander. Ces cinq bulles, choisies
- * par le gent d'après sa propre configuration, remplacent la page blanche par
- * des exemples cliquables : un clic déploie la conversation et pose la
- * question, l'utilisateur découvre les usages en voyant le gent répondre.
+ * « Déclencheurs » — questions d'amorce cliquables, choisies par le gent.
+ *
+ * `canvas` : page blanche de l'ancien canevas (titre + squelettes le temps
+ * de la génération). `compact` : bandeau sous l'aperçu d'application, ou
+ * accueil du panneau conversation — on affiche tout de suite un repli
+ * (onglets / nom du gent) plutôt qu'une attente vide.
  */
-export function StarterBubbles({ espace }: { espace: Espace }) {
+export function StarterBubbles({
+  espace,
+  variant = "canvas",
+}: {
+  espace: Espace;
+  variant?: "canvas" | "compact";
+}) {
   const { runStarter, ensureStarters, isThinking, storageReady } = useEspace();
-  const starters = espace.starters ?? [];
+  const generated = espace.starters ?? [];
+  const questions = variant === "compact" ? displayedStarters(espace) : generated;
+  const loading = variant === "canvas" && generated.length === 0;
 
   useEffect(() => {
     // On attend la fin de l'hydratation : la synchronisation initiale remplace
@@ -29,21 +38,24 @@ export function StarterBubbles({ espace }: { espace: Espace }) {
     ensureStarters();
   }, [ensureStarters, storageReady]);
 
-  const loading = starters.length === 0;
-
   return (
-    <div className={styles.wrap}>
-      <div className={styles.icon}>{espace.icon}</div>
+    <div className={[styles.wrap, variant === "compact" ? styles.compact : ""].filter(Boolean).join(" ")}>
+      {variant === "canvas" && <div className={styles.icon}>{espace.icon}</div>}
 
       <div className={styles.intro}>
         <h2 className={styles.title}>Par quoi commencer&nbsp;?</h2>
-        <p className={styles.sub}>
-          {loading
-            ? "Votre gent prépare quelques exemples de ce que vous pouvez lui demander…"
-            : starters.length
-              ? "Choisissez une question pour lancer la conversation — ou ouvrez l’assistant et formulez la vôtre."
-              : "Ouvrez la conversation : les artefacts produits par votre assistant apparaîtront ici, librement organisables."}
-        </p>
+        {variant === "canvas" && (
+          <p className={styles.sub}>
+            {loading
+              ? "Votre gent prépare quelques exemples de ce que vous pouvez lui demander…"
+              : generated.length
+                ? "Choisissez une question pour lancer la conversation — ou ouvrez l’assistant et formulez la vôtre."
+                : "Ouvrez la conversation : les artefacts produits par votre assistant apparaîtront ici, librement organisables."}
+          </p>
+        )}
+        {variant === "compact" && (
+          <p className={styles.sub}>Choisissez une question — ou écrivez la vôtre dans la conversation.</p>
+        )}
       </div>
 
       {loading && (
@@ -54,9 +66,9 @@ export function StarterBubbles({ espace }: { espace: Espace }) {
         </div>
       )}
 
-      {starters.length > 0 && (
+      {questions.length > 0 && (
         <div className={styles.bubbles}>
-          {starters.map((question) => (
+          {questions.map((question) => (
             <button
               key={question}
               type="button"

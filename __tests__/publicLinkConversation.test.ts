@@ -1,4 +1,4 @@
-import { espaceForPublicLink } from "@/lib/espaceApiPayload";
+import { espaceForPublicLink, espaceForStarters } from "@/lib/espaceApiPayload";
 import type { Espace } from "@/lib/types";
 
 function espace(partial: Partial<Espace> = {}): Espace {
@@ -54,5 +54,30 @@ describe("projection publique d'un lien de partage", () => {
   it("transmet les déclencheurs, qui décrivent le gent et non son créateur", () => {
     const out = espaceForPublicLink(espace({ starters: ["Question A", "Question B"] }));
     expect(out.starters).toEqual(["Question A", "Question B"]);
+  });
+});
+
+describe("charge utile pour générer les déclencheurs", () => {
+  it("transmet les onglets de l'aperçu, pas les données simulées des blocs", () => {
+    const out = espaceForStarters(
+      espace({
+        appPreview: {
+          appName: "Radar",
+          themes: ["Mon profil"],
+          modules: [
+            {
+              id: "cv",
+              title: "Mini CV",
+              theme: "Mon profil",
+              size: "large",
+              blocks: [{ kind: "text", text: "Camille Léaud — données simulées" }],
+            },
+          ],
+        },
+      })
+    );
+    expect(out.appPreview?.themes).toEqual(["Mon profil"]);
+    expect(out.appPreview?.modules[0].title).toBe("Mini CV");
+    expect(JSON.stringify(out)).not.toContain("Camille Léaud");
   });
 });

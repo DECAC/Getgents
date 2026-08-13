@@ -102,6 +102,7 @@ export const APP_PREVIEW_PROMPT_INSTRUCTION =
   '- {"kind":"cards","filters":["Tous","Télétravail"],"items":[{"title":"Product Manager","subtitle":"Alma · Paris","score":92,"tags":["CDI","52–60 k€"],"note":"Pourquoi cette offre sort du lot."}]}\n' +
   '- {"kind":"actions","items":["Préparer ma candidature","Relancer ce contact"]}\n' +
   "Les données doivent être PLAUSIBLES et propres au sujet du gent — n'écris jamais « Lorem » ni des valeurs à zéro. " +
+  "Termine chaque module par un bloc actions (1 ou 2 boutons que l'utilisateur clique pour lancer l'assistant). " +
   "Une seule phrase visible après le bloc. Interdit dans ce tour : bloc GENT_CONFIG, connecteurs, dissertation métier, recherche d'informations réelles.";
 
 /* ------------------------------------------------------------- validation */

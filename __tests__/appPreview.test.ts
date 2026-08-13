@@ -134,6 +134,7 @@ describe("buildAppPreviewSystemPrompt", () => {
     expect(prompt).toContain("suivre des candidatures");
     expect(prompt).toContain("Adzuna");
     expect(prompt).toMatch(/Interdit : GENT_CONFIG/);
+    expect(prompt).toMatch(/bloc actions/i);
     expect(prompt).not.toMatch(/découvrir des connecteurs/i);
   });
 });
@@ -153,6 +154,7 @@ describe("évolution de l'aperçu par propositions", () => {
     expect(req).toMatch(/QUESTIONS/);
     expect(req).toMatch(/N'émet PAS de bloc APERCU/i);
     expect(req).toMatch(/Autre/);
+    expect(req).not.toMatch(/Émets le bloc APERCU en premier/);
   });
 
   it("interdit APERCU et Autre dans le prompt système du tour de choix", () => {
@@ -165,6 +167,9 @@ describe("évolution de l'aperçu par propositions", () => {
     expect(prompt).toContain("QUESTIONS");
     expect(prompt).toMatch(/N'inclus PAS « Autre »/);
     expect(prompt).toMatch(/Interdit : APERCU/);
+    expect(prompt).toMatch(/liste à puces/);
+    expect(prompt).not.toMatch(/émets d'abord le bloc <!--APERCU/);
+    expect(prompt).not.toContain("APP_PREVIEW");
   });
 });
 

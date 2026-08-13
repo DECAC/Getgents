@@ -67,6 +67,29 @@
   cursor: default;
 }
 
+/* Bandeau d'accueil à côté de l'aperçu, ou dans le panneau conversation. */
+.compact {
+  padding: 4px 0 2px;
+  gap: 8px;
+}
+.compact .intro {
+  max-width: none;
+}
+.compact .title {
+  font-size: 14px;
+  margin: 0 0 2px;
+}
+.compact .sub {
+  font-size: 12px;
+}
+.compact .bubbles {
+  max-width: none;
+}
+.compact .bubble {
+  padding: 8px 14px;
+  font-size: 12.5px;
+}
+
 /* Squelettes pendant la génération : des bulles de largeurs variées, pour que
    l'attente ressemble déjà à ce qui va s'afficher. */
 .skeleton {

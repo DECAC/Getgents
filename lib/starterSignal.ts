@@ -62,6 +62,13 @@ export function describeGentForStarters(espace: Espace): string {
     lines.push(`\nDocuments dans sa base de connaissance : ${docs.slice(0, 12).join(", ")}.`);
   }
 
+  const preview = espace.appPreview;
+  if (preview?.modules.length) {
+    const themes = preview.themes.length ? preview.themes.join(", ") : "non nommés";
+    const modules = preview.modules.map((m) => `« ${m.title} » (${m.theme})`).join(" ; ");
+    lines.push(`\nAperçu de l'application — onglets : ${themes}. Modules : ${modules}.`);
+  }
+
   return lines.join("\n");
 }
 
@@ -129,9 +136,73 @@ function normalizeStarterList(parsed: unknown): string[] {
  * Un gent en mode mini-application ne converse pas : lui proposer des amorces
  * de conversation n'aurait aucun sens. Un espace déjà peuplé n'en a pas besoin
  * non plus — les déclencheurs servent à franchir la page blanche.
+ *
+ * `moduleCount` compte les artefacts de l'ancien canevas. L'aperçu d'application
+ * (appPreview) n'en fait pas partie : il remplit le canevas sans pour autant
+ * remplacer les amorces de conversation.
  */
 export function shouldShowStarters(espace: Espace, moduleCount: number): boolean {
   if (espace.pinnedArtefact?.enabled) return false;
   if (moduleCount > 0) return false;
   return true;
+}
+
+/**
+ * Amorces à l'ouverture de la conversation, à côté d'un aperçu d'application :
+ * le canevas n'est plus vide, mais le fil l'est encore. Un formulaire jump
+ * tient déjà lieu de premier geste — on ne double pas.
+ */
+export function shouldShowConversationStarters(espace: Espace, messageCount: number): boolean {
+  if (espace.pinnedArtefact?.enabled) return false;
+  if (espace.jumpForm) return false;
+  if (!espace.appPreview?.modules.length) return false;
+  return messageCount === 0;
+}
+
+export function activeConversationMessageCount(espace: Espace): number {
+  const thread =
+    espace.conversations.find((c) => c.id === espace.activeConversationId) ?? espace.conversations[0];
+  return thread?.messages.length ?? 0;
+}
+
+/**
+ * Questions de repli tant que le gent n'a pas encore choisi ses déclencheurs :
+ * on s'appuie sur les onglets et modules de l'aperçu, puis sur le nom du gent,
+ * pour qu'un Preview tout neuf n'ouvre pas sur une page muette.
+ */
+export function fallbackStarters(espace: Espace): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  const push = (raw: string) => {
+    const clean = raw.replace(/\s+/g, " ").trim().slice(0, MAX_STARTER_CHARS);
+    if (!clean) return;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(clean);
+  };
+
+  for (const theme of espace.appPreview?.themes ?? []) {
+    push(`Peux-tu m'aider sur « ${theme} » ?`);
+    if (out.length >= STARTER_COUNT) return out;
+  }
+
+  for (const module of espace.appPreview?.modules ?? []) {
+    push(`Que me recommandes-tu à propos de « ${module.title} » ?`);
+    if (out.length >= STARTER_COUNT) return out;
+  }
+
+  const name = (espace.gent || espace.name || "").trim();
+  if (name) push(`Par où commencer avec ${name} ?`);
+  push("Que peux-tu faire pour moi ?");
+  push("Quelles sont tes recommandations en ce moment ?");
+  push("Peux-tu me faire un point de situation ?");
+
+  return out.slice(0, STARTER_COUNT);
+}
+
+/** Déclencheurs persistés s'ils existent, sinon le repli d'accueil. */
+export function displayedStarters(espace: Espace): string[] {
+  return espace.starters?.length ? espace.starters : fallbackStarters(espace);
 }

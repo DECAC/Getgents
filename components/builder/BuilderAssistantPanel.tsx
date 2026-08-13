@@ -179,6 +179,13 @@ export function BuilderAssistantPanel() {
     e.target.style.height = Math.min(e.target.scrollHeight, 90) + "px";
   }
 
+  const lastAgentIndex = (() => {
+    for (let i = currentDraft.builderConversation.length - 1; i >= 0; i--) {
+      if (currentDraft.builderConversation[i].role === "agent") return i;
+    }
+    return -1;
+  })();
+
   function renderMessage(m: ConversationMessage, i: number) {
     if (m.role === "config-proposal" && m.configProposal) {
       const cfg = m.configProposal;
@@ -417,8 +424,8 @@ export function BuilderAssistantPanel() {
     }
 
     const isUser = m.role === "user";
-    const isLastMessage = i === currentDraft.builderConversation.length - 1;
-    const live = isThinking && isLastMessage && !isUser && !m.text;
+    const isLastMessage = i === lastAgentIndex;
+    const live = isThinking && i === currentDraft.builderConversation.length - 1 && !isUser && !m.text;
     const open = isReasoningOpen(i, m);
     return (
       <div key={i} className={[styles.msg, isUser ? styles.msgUser : styles.msgAgent].join(" ")}>

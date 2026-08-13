@@ -15,7 +15,9 @@ import styles from "./SharedGentShell.module.css";
  * module conversationnel — rien d'autre.
  *
  * L'agencement reprend délibérément celui de l'espace : conversation à gauche,
- * espace de travail à droite, et les mêmes déclencheurs sur une page vierge.
+ * espace de travail à droite, et les mêmes déclencheurs d'amorce tant que
+ * la conversation n'a pas commencé (sur un canevas vierge, ou en bandeau
+ * sous l'aperçu d'application).
  * Une mise en page propre au partage désorientait — le destinataire découvrait
  * une interface que le créateur n'avait jamais vue en Preview.
  */
@@ -47,10 +49,10 @@ function SharedGentBody() {
         {chatOpen && <AssistantPanel />}
         <main className={styles.main}>
           <div className={styles.mainInner}>
-            {/* Même canvas que l'espace : il affiche les artefacts produits au
-                fil de l'échange et retombe sur les déclencheurs tant qu'il n'y
-                en a aucun. Sans lui, un artefact accepté par le destinataire
-                était bien enregistré mais ne s'affichait nulle part. */}
+            {/* Même canvas que l'espace : aperçu d'application (avec déclencheurs
+                d'amorce tant que la conversation n'a pas commencé) ou ancien
+                canevas d'artefacts. Sans lui, un artefact accepté par le
+                destinataire était bien enregistré mais ne s'affichait nulle part. */}
             <WorkspaceCanvas espace={currentEspace} />
           </div>
         </main>

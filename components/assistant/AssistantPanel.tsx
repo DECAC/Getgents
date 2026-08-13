@@ -23,6 +23,8 @@ import { threadPreview, threadLastActivity } from "@/lib/conversationUtils";
 import { buildEspaceReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
 import { ThinkingIndicator } from "@/components/shared/ThinkingIndicator";
+import { StarterBubbles } from "@/components/center/StarterBubbles";
+import { shouldShowConversationStarters } from "@/lib/starterSignal";
 import styles from "./AssistantPanel.module.css";
 
 const PROPOSAL_KIND_LABEL: Record<string, string> = {
@@ -1004,14 +1006,16 @@ export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}
           renderHist()
         ) : (
           <>
-            {activeConversation.messages.length
-              ? activeConversation.messages.map((m, i) => renderMessage(m, i))
-              : !currentEspace.jumpForm && (
-                  <div className={styles.empty}>
-                    Nouvel échange — écrivez votre premier message. Le contenu du gent (itinéraire, réservations…) reste
-                    inchangé.
-                  </div>
-                )}
+            {activeConversation.messages.length ? (
+              activeConversation.messages.map((m, i) => renderMessage(m, i))
+            ) : shouldShowConversationStarters(currentEspace, activeConversation.messages.length) ? (
+              <StarterBubbles espace={currentEspace} variant="compact" />
+            ) : !currentEspace.jumpForm ? (
+              <div className={styles.empty}>
+                Nouvel échange — écrivez votre premier message. Le contenu du gent (itinéraire, réservations…) reste
+                inchangé.
+              </div>
+            ) : null}
             {isThinking && cdView === "chat" && (
               <ThinkingIndicator label={thinkingStatus ?? "Réflexion en cours…"} />
             )}

@@ -41,6 +41,40 @@ function IconChevron({ open }: { open: boolean }) {
   );
 }
 
+function IconMail() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 6h16v12H4z" />
+      <path d="m4 7 8 6 8-6" />
+    </svg>
+  );
+}
+
+function IconRefresh() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12a9 9 0 1 1-2.2-5.8" />
+      <path d="M21 4v6h-6" />
+    </svg>
+  );
+}
+
+function IconWand() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m15 4 5 5M4 20l9.5-9.5M11 4h.01M7 7h.01M4 11h.01" />
+    </svg>
+  );
+}
+
+function IconExpand() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+    </svg>
+  );
+}
+
 function IconModule() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
@@ -98,6 +132,9 @@ interface InteractionState {
   setFilter: (key: string, value: string) => void;
   statuses: Record<string, AppContactStatus>;
   cycleStatus: (key: string, current: AppContactStatus) => void;
+  dismissed: Record<string, boolean>;
+  dismiss: (key: string) => void;
+  onAsk?: (prompt: string) => void;
 }
 
 function BlockView({ block, path, state }: BlockViewProps) {
@@ -271,6 +308,16 @@ function BlockView({ block, path, state }: BlockViewProps) {
                 >
                   {CONTACT_STATUS_LABEL[status]}
                 </button>
+                {state.onAsk ? (
+                  <button
+                    type="button"
+                    className={styles.contactAction}
+                    title={`Rédiger un message à ${c.name}`}
+                    onClick={() => state.onAsk?.(`Rédige un message à ${c.name}`)}
+                  >
+                    <IconMail />
+                  </button>
+                ) : null}
               </div>
             );
           })}
@@ -281,6 +328,7 @@ function BlockView({ block, path, state }: BlockViewProps) {
       const filterKey = path;
       const active = state.filters[filterKey] ?? block.filters?.[0] ?? "";
       const visible = block.items.filter((it) => {
+        if (state.dismissed[`${path}:${it.title}`]) return false;
         if (!block.filters || !active || active === block.filters[0]) return true;
         const hay = `${it.title} ${it.subtitle ?? ""} ${(it.tags ?? []).join(" ")}`.toLowerCase();
         return hay.includes(active.toLowerCase());
@@ -305,7 +353,7 @@ function BlockView({ block, path, state }: BlockViewProps) {
             {visible.map((it, i) => {
               const key = `${path}:${it.title}`;
               const open = !!state.open[key];
-              const hasDetail = !!(it.note || (it.tags && it.tags.length));
+              const hasDetail = !!(it.note || (it.tags && it.tags.length) || state.onAsk);
               return (
                 <div key={i} className={`${styles.item} ${open ? styles.itemOpen : ""}`}>
                   <button type="button" className={styles.itemHead} onClick={() => hasDetail && state.toggleOpen(key)}>
@@ -338,6 +386,26 @@ function BlockView({ block, path, state }: BlockViewProps) {
                         </div>
                       ) : null}
                       {it.note ? <p className={styles.note}>{it.note}</p> : null}
+                      {state.onAsk ? (
+                        <div className={styles.itemActions}>
+                          <button
+                            type="button"
+                            className={styles.itemBtn}
+                            onClick={() =>
+                              state.onAsk?.(
+                                it.score !== undefined
+                                  ? `Prépare ma candidature pour ${it.title}${it.subtitle ? ` — ${it.subtitle}` : ""}`
+                                  : `Aide-moi avec « ${it.title} »${it.subtitle ? ` (${it.subtitle})` : ""}`
+                              )
+                            }
+                          >
+                            {it.score !== undefined ? "Préparer ma candidature" : "Continuer avec l'assistant"}
+                          </button>
+                          <button type="button" className={styles.itemBtnGhost} onClick={() => state.dismiss(key)}>
+                            Pas pour moi
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
@@ -352,7 +420,13 @@ function BlockView({ block, path, state }: BlockViewProps) {
       return (
         <div className={styles.actionPills}>
           {block.items.map((a, i) => (
-            <button key={i} type="button" className={styles.actionPill}>
+            <button
+              key={i}
+              type="button"
+              className={styles.actionPill}
+              onClick={() => state.onAsk?.(a)}
+            >
+              <IconWand />
               {a}
             </button>
           ))}
@@ -374,6 +448,17 @@ const SIZE_CLASS = {
 };
 
 function ModuleCard({ module, fresh, state }: { module: AppModuleSpec; fresh: boolean; state: InteractionState }) {
+  const [refineOpen, setRefineOpen] = useState(false);
+  const [refineText, setRefineText] = useState("");
+
+  function submitRefine() {
+    const t = refineText.trim();
+    if (!t || !state.onAsk) return;
+    state.onAsk(`Affiner le module « ${module.title} » : ${t}`);
+    setRefineText("");
+    setRefineOpen(false);
+  }
+
   return (
     <article className={`${styles.card} ${SIZE_CLASS[module.size]} ${fresh ? styles.cardFresh : ""}`}>
       <header className={styles.head}>
@@ -391,6 +476,54 @@ function ModuleCard({ module, fresh, state }: { module: AppModuleSpec; fresh: bo
           <BlockView key={i} block={b} path={`${module.id}:${i}`} state={state} />
         ))}
       </div>
+      {state.onAsk ? (
+        refineOpen ? (
+          <div className={styles.refineBar}>
+            <input
+              className={styles.refineInput}
+              value={refineText}
+              onChange={(e) => setRefineText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitRefine();
+                if (e.key === "Escape") setRefineOpen(false);
+              }}
+              placeholder="Plus de détail, un autre angle, un filtre…"
+              aria-label="Affiner ce module"
+              autoFocus
+            />
+            <button type="button" className={styles.refineSend} onClick={submitRefine} disabled={!refineText.trim()}>
+              Affiner
+            </button>
+          </div>
+        ) : (
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.action}
+              onClick={() => state.onAsk?.(`Rafraîchis le module « ${module.title} » avec des données simulées à jour.`)}
+            >
+              <IconRefresh />
+              Rafraîchir
+            </button>
+            <button type="button" className={styles.action} onClick={() => setRefineOpen(true)}>
+              <IconWand />
+              Affiner
+            </button>
+            <button
+              type="button"
+              className={styles.action}
+              onClick={() =>
+                state.onAsk?.(
+                  `Ouvre le module « ${module.title} » en grand et enrichis-le (plus de blocs, plus de détail).`
+                )
+              }
+            >
+              <IconExpand />
+              Ouvrir
+            </button>
+          </div>
+        )
+      ) : null}
     </article>
   );
 }
@@ -412,6 +545,7 @@ export function AppPreview({
   freshIds = [],
   building = false,
   variant = "studio",
+  onAsk,
 }: {
   spec: AppPreviewSpec;
   /** Modules issus du dernier tour de l'assistant — signalés « nouveau ». */
@@ -420,12 +554,15 @@ export function AppPreview({
   building?: boolean;
   /** Dans l'espace / Preview : sans cadre de maquette, pour remplir le canevas. */
   variant?: "studio" | "workspace";
+  /** Envoie une consigne à l'assistant (pills, pied de module, candidature…). */
+  onAsk?: (prompt: string) => void;
 }) {
   const [theme, setTheme] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [statuses, setStatuses] = useState<Record<string, AppContactStatus>>({});
+  const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
 
   const themes = spec.themes.length ? spec.themes : ["Vue d'ensemble"];
   const activeTheme = theme && themes.includes(theme) ? theme : themes[0];
@@ -440,8 +577,11 @@ export function AppPreview({
       setFilter: (key, value) => setFilters((p) => ({ ...p, [key]: value })),
       statuses,
       cycleStatus: (key, current) => setStatuses((p) => ({ ...p, [key]: NEXT_STATUS[current] })),
+      dismissed,
+      dismiss: (key) => setDismissed((p) => ({ ...p, [key]: true })),
+      onAsk,
     }),
-    [checked, open, filters, statuses]
+    [checked, open, filters, statuses, dismissed, onAsk]
   );
 
   const visible = spec.modules.filter((m) => m.theme === activeTheme || themes.length === 1);

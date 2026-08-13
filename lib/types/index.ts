@@ -389,9 +389,10 @@ export interface Espace {
   /** Modèle de génération d'image assigné (capability "image"), ex. google/gemini-2.5-flash-image. */
   imageModelId?: string;
   /**
-   * « Déclencheurs » : questions d'amorce affichées dans l'espace de travail
-   * vierge, choisies par le gent lui-même d'après sa configuration (voir
-   * lib/starterSignal.ts). Générées une fois, puis persistées.
+   * « Déclencheurs » : questions d'amorce choisies par le gent d'après sa
+   * configuration (voir lib/starterSignal.ts). Affichées sur un canevas vierge,
+   * ou — si un aperçu d'application remplit déjà l'espace — au démarrage de
+   * la conversation. Générées une fois, puis persistées.
    */
   starters?: string[];
   startersGeneratedAt?: string;
