@@ -252,9 +252,9 @@ export function ConversationnelTab() {
             <div>
               <div className={styles.subOptionTitle}>Formulaire de téléchargement</div>
               <div className={styles.sub}>
-                Avant le PDF, demander le nom, le prénom et l&apos;e-mail (plus une case « Vous
-                n&apos;êtes pas un robot »). Seules les personnes qui valident ce formulaire et
-                téléchargent apparaissent dans Monitor → Marketing.
+                Avant le PDF, demander le nom, le prénom et l&apos;e-mail, plus un captcha
+                « Vous n&apos;êtes pas un robot ». Seules les personnes qui valident ce
+                formulaire et téléchargent apparaissent dans Monitor → Marketing.
               </div>
             </div>
             <button

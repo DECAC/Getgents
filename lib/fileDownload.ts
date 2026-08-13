@@ -41,7 +41,8 @@ export interface DownloadLeadForm {
   firstName: string;
   lastName: string;
   email: string;
-  notARobot: boolean;
+  /** Jeton Turnstile : vide tant que le captcha n'est pas validé. */
+  turnstileToken: string;
   /** Champ piège anti-robot : s'il est rempli, on refuse sans rien enregistrer. */
   honeypot: string;
 }
@@ -57,14 +58,14 @@ export function validateDownloadLeadForm(form: DownloadLeadForm): DownloadLeadFo
   if (form.honeypot.trim() !== "") return "honeypot";
   if (!form.lastName.trim() || !form.firstName.trim()) return "missing-name";
   if (!isValidDownloadEmail(form.email)) return "invalid-email";
-  if (!form.notARobot) return "captcha";
+  if (!form.turnstileToken.trim()) return "captcha";
   return null;
 }
 
 export const DOWNLOAD_LEAD_FORM_MESSAGE: Record<Exclude<DownloadLeadFormError, "honeypot">, string> = {
   "missing-name": "Indiquez votre nom et votre prénom.",
   "invalid-email": "Indiquez une adresse e-mail valide.",
-  captcha: "Cochez « Vous n’êtes pas un robot » pour continuer.",
+  captcha: "Validez le captcha « Vous n’êtes pas un robot » pour continuer.",
 };
 
 /** Nom de fichier PDF sûr, dérivé du document d'origine. */

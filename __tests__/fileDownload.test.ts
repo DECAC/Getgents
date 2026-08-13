@@ -108,7 +108,7 @@ describe("formulaire de téléchargement", () => {
     firstName: "Camille",
     lastName: "Dupont",
     email: "camille@exemple.fr",
-    notARobot: true,
+    turnstileToken: "ok",
     honeypot: "",
   };
 
@@ -121,8 +121,8 @@ describe("formulaire de téléchargement", () => {
     expect(validateDownloadLeadForm({ ...valid, email: "pas-un-mail" })).toBe("invalid-email");
   });
 
-  it("exige la case « Vous n’êtes pas un robot »", () => {
-    expect(validateDownloadLeadForm({ ...valid, notARobot: false })).toBe("captcha");
+  it("exige le jeton captcha", () => {
+    expect(validateDownloadLeadForm({ ...valid, turnstileToken: "" })).toBe("captcha");
   });
 
   it("détecte le champ piège sans le traiter comme une saisie honnête", () => {

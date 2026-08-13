@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
+import Script from "next/script";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { addDownloadLead } from "@/lib/downloadLeads";
 import {
@@ -12,9 +13,23 @@ import {
   type DownloadLeadForm,
 } from "@/lib/fileDownload";
 import { downloadPdfBytes, textToPdfBytes } from "@/lib/textToPdf";
+import { TURNSTILE_SITEKEY, TURNSTILE_VERIFY_URL } from "@/lib/turnstile";
 import type { DownloadableDocument } from "@/lib/types";
 import modalStyles from "./Modal.module.css";
 import styles from "./FileDownloadControl.module.css";
+
+declare global {
+  interface Window {
+    onTurnstileSuccess?: (token: string) => void;
+    onTurnstileExpire?: () => void;
+    onTurnstileError?: () => void;
+    turnstile?: {
+      render: (el: string | HTMLElement, opts: Record<string, unknown>) => string;
+      reset: (widgetId?: string) => void;
+      remove: (widgetId: string) => void;
+    };
+  }
+}
 
 type DialogKind = "form" | "pick" | "empty" | null;
 
@@ -22,7 +37,7 @@ const EMPTY_FORM: DownloadLeadForm = {
   firstName: "",
   lastName: "",
   email: "",
-  notARobot: false,
+  turnstileToken: "",
   honeypot: "",
 };
 
@@ -42,6 +57,8 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
   const [form, setForm] = useState<DownloadLeadForm>(EMPTY_FORM);
   const [selectedId, setSelectedId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   const enabled = !!currentEspace.fileDownloadEnabled;
   const docs = currentEspace.downloadableDocuments ?? [];
@@ -56,11 +73,58 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
     return () => document.removeEventListener("keydown", onKey);
   }, [dialog]);
 
+  useEffect(() => {
+    window.onTurnstileSuccess = (t: string) => setToken(t);
+    window.onTurnstileExpire = () => setToken("");
+    window.onTurnstileError = () => setToken("");
+    return () => {
+      delete window.onTurnstileSuccess;
+      delete window.onTurnstileExpire;
+      delete window.onTurnstileError;
+    };
+  }, []);
+
+  // Le script Turnstile se charge une fois ; le widget n'existe que quand
+  // le formulaire est ouvert — on le dessine à ce moment-là.
+  useEffect(() => {
+    if (dialog !== "form") return;
+    let cancelled = false;
+    let widgetId: string | undefined;
+    let timer: number | undefined;
+
+    function mount(): boolean {
+      const el = document.getElementById("download-turnstile");
+      if (!el || !window.turnstile || cancelled) return false;
+      widgetId = window.turnstile.render(el, {
+        sitekey: TURNSTILE_SITEKEY,
+        action: "turnstile-spin-v1",
+        callback: (t: string) => setToken(t),
+        "expired-callback": () => setToken(""),
+        "error-callback": () => setToken(""),
+      });
+      return true;
+    }
+
+    if (!mount()) {
+      timer = window.setInterval(() => {
+        if (mount() && timer) window.clearInterval(timer);
+      }, 200);
+    }
+
+    return () => {
+      cancelled = true;
+      if (timer) window.clearInterval(timer);
+      if (widgetId) window.turnstile?.remove(widgetId);
+      setToken("");
+    };
+  }, [dialog]);
+
   if (!enabled) return null;
 
   function openFlow() {
     setError(null);
     setForm(EMPTY_FORM);
+    setToken("");
     setSelectedId(docs[0]?.id ?? "");
     if (docs.length === 0) {
       setDialog("empty");
@@ -81,9 +145,9 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
     return docs.find((d) => d.id === selectedId) ?? docs[0] ?? null;
   }
 
-  function handleFormSubmit(e: FormEvent) {
+  async function handleFormSubmit(e: FormEvent) {
     e.preventDefault();
-    const issue = validateDownloadLeadForm(form);
+    const issue = validateDownloadLeadForm({ ...form, turnstileToken: token });
     if (issue === "honeypot") {
       setDialog(null);
       return;
@@ -91,6 +155,29 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
     if (issue) {
       setError(DOWNLOAD_LEAD_FORM_MESSAGE[issue]);
       return;
+    }
+    setVerifying(true);
+    setError(null);
+    try {
+      const res = await fetch(TURNSTILE_VERIFY_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const data = (await res.json()) as { success?: boolean };
+      if (!data.success) {
+        setError(DOWNLOAD_LEAD_FORM_MESSAGE.captcha);
+        setToken("");
+        window.turnstile?.reset();
+        return;
+      }
+    } catch {
+      setError("Le captcha n’a pas pu être vérifié. Réessayez.");
+      setToken("");
+      window.turnstile?.reset();
+      return;
+    } finally {
+      setVerifying(false);
     }
     const doc = selectedDoc();
     if (!doc) {
@@ -121,6 +208,7 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
 
   return (
     <>
+      <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />
       <button type="button" className={btnClass} onClick={openFlow} title="Télécharger le document en PDF">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
           <path d="M12 3v12M7 10l5 5 5-5" />
@@ -244,14 +332,9 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
                         onChange={(e) => setForm((f) => ({ ...f, honeypot: e.target.value }))}
                       />
                     </label>
-                    <label className={styles.captcha}>
-                      <input
-                        type="checkbox"
-                        checked={form.notARobot}
-                        onChange={(e) => setForm((f) => ({ ...f, notARobot: e.target.checked }))}
-                      />
-                      <span>Vous n&apos;êtes pas un robot</span>
-                    </label>
+                    <div className={styles.captcha}>
+                      <div id="download-turnstile" className="cf-turnstile" data-action="turnstile-spin-v1" />
+                    </div>
                   </div>
                   {error && <p className={styles.error}>{error}</p>}
                 </div>
@@ -259,8 +342,8 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
                   <button type="button" className={modalStyles.btnGhost} onClick={() => setDialog(null)}>
                     Annuler
                   </button>
-                  <button type="submit" className={modalStyles.btnPrim}>
-                    Télécharger le PDF
+                  <button type="submit" className={modalStyles.btnPrim} disabled={!token || verifying}>
+                    {verifying ? "Vérification…" : "Télécharger le PDF"}
                   </button>
                 </div>
               </form>
