@@ -1,3 +1,5 @@
+import { SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
+
 /**
  * Aperçu d'application : ce que l'espace du gent affichera à l'usage.
  *
@@ -527,16 +529,48 @@ export function buildAppPreviewSystemPrompt(draft: {
 }
 
 /** Demande envoyée à l'assistant quand le créateur clique « Générer l'aperçu ». */
-export function buildAppPreviewRequest(objective: string, hasPreview: boolean): string {
-  if (hasPreview) {
-    return (
-      "Fais évoluer l'aperçu : ajoute ou remplace au plus 2 modules manquants. " +
-      "Émets le bloc APERCU en premier, sans GENT_CONFIG ni recherche."
-    );
-  }
+export function buildAppPreviewRequest(objective: string): string {
   const clean = objective.trim();
   return (
     `Génère l'aperçu de l'application${clean ? ` (objectif : « ${clean} »)` : ""}. ` +
     "3 onglets, 4 modules, données simulées. Émets le bloc APERCU en premier, sans GENT_CONFIG ni recherche."
   );
+}
+
+/**
+ * Clic « Faire évoluer l'aperçu » : on ne régénère pas tout de suite.
+ * L'assistant propose des pistes cliquables ; « Autre » est ajouté par l'UI.
+ */
+export function buildAppPreviewEvolveRequest(preview: AppPreviewSpec): string {
+  const modules = preview.modules.map((m) => `« ${m.title} » (${m.theme})`).join(", ");
+  return (
+    `Propose comment faire évoluer l'aperçu actuel (${preview.themes.join(" · ")} — ${modules}). ` +
+    "Pose UNE question avec 3 ou 4 options concrètes et distinctes (nouvel onglet, enrichir un module nommé, changer un type de bloc, écarter un module…). " +
+    "N'émet PAS de bloc APERCU dans ce message. Émets le bloc QUESTIONS. N'inclus pas l'option « Autre »."
+  );
+}
+
+/** Prompt du tour « quelles évolutions ? » — questions seulement. */
+export function buildAppPreviewEvolveSystemPrompt(draft: {
+  name: string;
+  objective: string;
+  appPreview?: AppPreviewSpec;
+}): string {
+  const existing = draft.appPreview?.modules.length
+    ? `Aperçu affiché — onglets : ${draft.appPreview.themes.join(", ")}. Modules : ${draft.appPreview.modules
+        .map((m) => `« ${m.title} » (id="${m.id}", ${m.theme})`)
+        .join(" ; ")}.`
+    : "Aucun aperçu n'est encore affiché.";
+
+  return [
+    "Tu aides le créateur à FAIRE ÉVOLUER l'aperçu de son application. " +
+      "Dans CE message tu ne génères rien : tu proposes des pistes cliquables, contextualisées à l'aperçu déjà affiché. " +
+      "Pas de recherche web, pas de GENT_CONFIG, pas de bloc APERCU.",
+    `Gent « ${draft.name} ». Objectif : ${draft.objective || "non défini"}. ${existing}`,
+    SUGGESTIONS_PROMPT_INSTRUCTION,
+    "RAPPEL FINAL : une phrase qui pose la question, puis le bloc <!--QUESTIONS: […]-->. " +
+      "3 ou 4 options courtes, chacune une évolution précise de CET aperçu. " +
+      "N'inclus PAS « Autre » dans les options — l'interface l'ajoute automatiquement avec un champ libre. " +
+      "Interdit : APERCU, GENT_CONFIG, liste à puces des options dans le texte visible.",
+  ].join("\n\n");
 }

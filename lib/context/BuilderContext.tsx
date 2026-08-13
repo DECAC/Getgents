@@ -14,7 +14,12 @@ import {
 } from "@/lib/connectorSignal";
 import { extractGentConfigSignal, type GentConfigProposal } from "@/lib/gentConfigSignal";
 import { extractJumpFormSignal } from "@/lib/jumpFormSignal";
-import { extractAppPreviewSignal, mergeAppPreview, buildAppPreviewSystemPrompt } from "@/lib/appPreview";
+import {
+  extractAppPreviewSignal,
+  mergeAppPreview,
+  buildAppPreviewSystemPrompt,
+  buildAppPreviewEvolveSystemPrompt,
+} from "@/lib/appPreview";
 import {
   buildBuilderSystemPrompt,
   frameBuilderObjectiveMessage,
@@ -111,7 +116,7 @@ interface BuilderContextValue {
 
   sendBuilderMessage: (
     text: string,
-    opts?: { knowledgeFile?: { name: string; text: string; truncated?: boolean }; mode?: "apercu" }
+    opts?: { knowledgeFile?: { name: string; text: string; truncated?: boolean }; mode?: "apercu" | "apercu-ask" }
   ) => void;
   /** Vide le fil courant pour démarrer un nouvel échange avec l'assistant. */
   startNewBuilderConversation: () => void;
@@ -217,6 +222,8 @@ export function BuilderProvider({
   currentIdRef.current = currentId;
   const [storageReady, setStorageReady] = useState(false);
   const streamAbortRef = useRef<AbortController | null>(null);
+  /** Après « Faire évoluer », le prochain message (clic ou Autre) applique l'aperçu. */
+  const apercuAskPendingRef = useRef(false);
   const prevInitialIdRef = useRef(initialId);
 
   // Changement de gent via l'URL (/builder/[gentId]) : le Provider n'est pas
@@ -618,11 +625,14 @@ export function BuilderProvider({
 
   const sendBuilderMessage = useCallback((
     text: string,
-    opts?: { knowledgeFile?: { name: string; text: string; truncated?: boolean }; mode?: "apercu" }
+    opts?: { knowledgeFile?: { name: string; text: string; truncated?: boolean }; mode?: "apercu" | "apercu-ask" }
   ) => {
     if (streamAbortRef.current) return; // une génération est déjà en cours
     const id = currentIdRef.current;
-    const previewTurn = opts?.mode === "apercu";
+    const askTurn = opts?.mode === "apercu-ask";
+    const followApercu = !askTurn && !opts?.mode && apercuAskPendingRef.current;
+    const previewTurn = opts?.mode === "apercu" || followApercu;
+    apercuAskPendingRef.current = askTurn;
     const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" };
     const agentPlaceholder = { role: "agent" as const, text: "", t: "à l'instant" };
 
@@ -662,12 +672,18 @@ export function BuilderProvider({
       // Un fichier de connaissance n'est pas un objectif : ne pas le cadrer
       // comme « mission du gent » ni l'écrire dans le champ Objectif.
       // Idem pour le bouton Aperçu : ce n'est pas une mission à configurer.
-      const seedObjective = !knowledgeFile && !previewTurn && isBuilderObjectiveSeedTurn(nextDraft);
-      systemPrompt = previewTurn
-        ? buildAppPreviewSystemPrompt(nextDraft)
-        : buildBuilderSystemPrompt(nextDraft);
+      const seedObjective = !knowledgeFile && !previewTurn && !askTurn && isBuilderObjectiveSeedTurn(nextDraft);
+      systemPrompt = askTurn
+        ? buildAppPreviewEvolveSystemPrompt(nextDraft)
+        : previewTurn
+          ? buildAppPreviewSystemPrompt(nextDraft)
+          : buildBuilderSystemPrompt(nextDraft);
       if (seedObjective) {
         apiUserContent = frameBuilderObjectiveMessage(text);
+      } else if (followApercu) {
+        apiUserContent =
+          `Le créateur a choisi cette évolution de l'aperçu : « ${text} ». ` +
+          "Applique-la maintenant : émets le bloc APERCU en premier (un ou deux modules concernés), sans GENT_CONFIG ni recherche.";
       }
       history = nextDraft.builderConversation
         .filter((m) => m.role === "agent" || m.role === "user")
@@ -732,17 +748,21 @@ export function BuilderProvider({
         // + un bloc GENT_CONFIG : un plafond trop bas tronquait les propositions.
         // L'aperçu est un JSON court : un plafond plus bas évite que le modèle
         // parte dans une dissertation et n'atteigne jamais le bloc.
-        max_tokens: previewTurn ? CHAT_MAX_TOKENS.apercu : CHAT_MAX_TOKENS.builder,
-        ...(previewTurn || !supportsReasoningStream(chatModelId) ? {} : { reasoning: { enabled: true } }),
+        max_tokens: askTurn
+          ? CHAT_MAX_TOKENS.apercuAsk
+          : previewTurn
+            ? CHAT_MAX_TOKENS.apercu
+            : CHAT_MAX_TOKENS.builder,
+        ...(previewTurn || askTurn || !supportsReasoningStream(chatModelId) ? {} : { reasoning: { enabled: true } }),
         // Recherche web : utile pour découvrir des connecteurs. Pour l'aperçu
         // (données simulées), elle fait tourner le modèle à vide pendant
         // des minutes sans jamais émettre le bloc APERCU.
-        webSearch: !previewTurn,
+        webSearch: !previewTurn && !askTurn,
       },
       (fullSoFar, reasoningSoFar) => {
         const displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
         updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw), reasoning: reasoningSoFar || undefined }));
-        applyLivePreview(fullSoFar);
+        if (previewTurn) applyLivePreview(fullSoFar);
       },
       undefined,
       (status) => setThinkingStatus(status.label),
@@ -763,7 +783,7 @@ export function BuilderProvider({
 
         // Configuration complète proposée : carte « Appliquer la configuration ».
         // Un tour « aperçu » ne doit pas aussi reconfigurer le gent.
-        if (afterConfig.config && !previewTurn) {
+        if (afterConfig.config && !previewTurn && !askTurn) {
           const config = afterConfig.config;
           setDrafts((p) => {
             const d = p[id];
@@ -781,7 +801,7 @@ export function BuilderProvider({
         // Aperçu d'application : appliqué immédiatement (c'est une maquette à
         // données simulées, rien de destructif à valider) pour que l'onglet
         // Aperçu se dessine sous les yeux du créateur au fil de l'échange.
-        if (afterPreview.preview) {
+        if (afterPreview.preview && !askTurn) {
           const incoming = afterPreview.preview;
           const replace = afterPreview.replace;
           setDrafts((p) => {
@@ -798,7 +818,7 @@ export function BuilderProvider({
         }
 
         // Formulaire jump proposé : carte « Ajouter ce formulaire ».
-        if (afterJumpForm.form && !previewTurn) {
+        if (afterJumpForm.form && !previewTurn && !askTurn) {
           const form = afterJumpForm.form;
           setDrafts((p) => {
             const d = p[id];
@@ -817,7 +837,7 @@ export function BuilderProvider({
         // sélection à valider par le créateur. Ignorée si une configuration
         // complète a été proposée dans le même message (elle prime).
         const suggestions =
-          afterConfig.config || previewTurn
+          afterConfig.config || previewTurn || askTurn
             ? []
             : afterSuggestions.suggestions.filter((s) => !existingConnectorUrls.includes(s.url));
         if (suggestions.length) {
@@ -837,7 +857,7 @@ export function BuilderProvider({
         // Proposition de connecteur unique : signal du modèle, ou détection
         // déterministe de secours sur le message du créateur (URL de dataset).
         let proposal: ConnectorProposal | null = afterConnector.connector ?? detectConnectorInText(text);
-        if (afterConfig.config || previewTurn) proposal = null;
+        if (afterConfig.config || previewTurn || askTurn) proposal = null;
         if (proposal && existingConnectorUrls.includes(proposal.url)) proposal = null;
         if (proposal && suggestions.some((s) => s.url === proposal!.url)) proposal = null;
         if (proposal) {

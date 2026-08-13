@@ -1,4 +1,6 @@
 import {
+  buildAppPreviewEvolveRequest,
+  buildAppPreviewEvolveSystemPrompt,
   buildAppPreviewSystemPrompt,
   extractAppPreviewSignal,
   mergeAppPreview,
@@ -133,6 +135,36 @@ describe("buildAppPreviewSystemPrompt", () => {
     expect(prompt).toContain("Adzuna");
     expect(prompt).toMatch(/Interdit : GENT_CONFIG/);
     expect(prompt).not.toMatch(/découvrir des connecteurs/i);
+  });
+});
+
+describe("évolution de l'aperçu par propositions", () => {
+  const spec: AppPreviewSpec = {
+    appName: "Radar",
+    themes: ["Mon profil", "Postes"],
+    modules: [
+      { id: "mini-cv", title: "Mon mini CV", theme: "Mon profil", size: "large", blocks: [{ kind: "text", text: "x" }] },
+    ],
+  };
+
+  it("demande des options cliquables, pas une régénération immédiate", () => {
+    const req = buildAppPreviewEvolveRequest(spec);
+    expect(req).toContain("Mon mini CV");
+    expect(req).toMatch(/QUESTIONS/);
+    expect(req).toMatch(/N'émet PAS de bloc APERCU/i);
+    expect(req).toMatch(/Autre/);
+  });
+
+  it("interdit APERCU et Autre dans le prompt système du tour de choix", () => {
+    const prompt = buildAppPreviewEvolveSystemPrompt({
+      name: "Radar",
+      objective: "candidatures",
+      appPreview: spec,
+    });
+    expect(prompt).toMatch(/FAIRE ÉVOLUER/i);
+    expect(prompt).toContain("QUESTIONS");
+    expect(prompt).toMatch(/N'inclus PAS « Autre »/);
+    expect(prompt).toMatch(/Interdit : APERCU/);
   });
 });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useBuilder } from "@/lib/context/BuilderContext";
-import { buildAppPreviewRequest } from "@/lib/appPreview";
+import { buildAppPreviewEvolveRequest, buildAppPreviewRequest } from "@/lib/appPreview";
 import { AppPreview } from "@/components/appPreview/AppPreview";
 import styles from "./ApercuTab.module.css";
 
@@ -19,7 +19,11 @@ export function ApercuTab() {
   const hasPreview = !!preview?.modules.length;
 
   function requestPreview() {
-    sendBuilderMessage(buildAppPreviewRequest(currentDraft.objective ?? "", hasPreview), { mode: "apercu" });
+    if (hasPreview && preview) {
+      sendBuilderMessage(buildAppPreviewEvolveRequest(preview), { mode: "apercu-ask" });
+      return;
+    }
+    sendBuilderMessage(buildAppPreviewRequest(currentDraft.objective ?? ""), { mode: "apercu" });
   }
 
   return (
@@ -29,8 +33,8 @@ export function ApercuTab() {
           <h4 className={styles.title}>Aperçu de l&apos;application</h4>
           <div className={styles.sub}>
             Voici l&apos;application que votre gent produira à l&apos;usage, remplie de données
-            simulées. Demandez à l&apos;assistant du builder un onglet, un tableau, un graphique — il
-            l&apos;ajoute ici en direct, et vous jugez l&apos;effet avant même de diffuser.
+            simulées. « Faire évoluer l&apos;aperçu » propose des pistes cliquables dans la
+            conversation — y compris « Autre » pour préciser votre idée.
           </div>
         </div>
         <div className={styles.introActions}>

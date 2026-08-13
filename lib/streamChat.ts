@@ -23,6 +23,8 @@ export const CHAT_MAX_TOKENS = {
   builder: 16_000,
   /** Aperçu seul : 4 modules JSON, sans prompt système ni GENT_CONFIG. */
   apercu: 6_000,
+  /** Tour « quelles évolutions ? » : une question + bloc QUESTIONS. */
+  apercuAsk: 2_000,
 } as const;
 
 /** Phase affichée à l'utilisateur pendant le traitement d'une requête. */
