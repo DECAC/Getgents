@@ -148,7 +148,7 @@ describe("amorces à l'ouverture de la conversation (aperçu d'application)", ()
       shouldShowConversationStarters(
         espace({
           appPreview: preview,
-          jumpForm: { title: "Lancer", fields: [] },
+          jumpForm: { id: "jf-1", title: "Lancer", fields: [] },
         }),
         0
       )
