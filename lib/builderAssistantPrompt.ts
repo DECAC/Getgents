@@ -8,6 +8,7 @@ import {
 } from "@/lib/connectorSignal";
 import { JUMP_FORM_PROMPT_INSTRUCTION } from "@/lib/jumpFormSignal";
 import { SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
+import { APP_PREVIEW_PROMPT_INSTRUCTION } from "@/lib/appPreview";
 
 const MODEL_CAPABILITY_LABEL: Record<string, string> = {
   chat: "Conversation",
@@ -72,7 +73,27 @@ export function isBuilderObjectiveSeedTurn(
   return priorUserTurns === 0;
 }
 
-type BuilderPromptDraft = Pick<GentDraft, "name" | "objective" | "systemPrompt" | "connectors">;
+type BuilderPromptDraft = Pick<
+  GentDraft,
+  "name" | "objective" | "systemPrompt" | "connectors" | "appPreview"
+>;
+
+/**
+ * État de l'aperçu déjà affiché au créateur : sans ce rappel, l'assistant
+ * ré-inventerait des identifiants à chaque tour et empilerait des doublons au
+ * lieu de faire évoluer les modules existants.
+ */
+function appPreviewNote(draft: BuilderPromptDraft): string {
+  const preview = draft.appPreview;
+  if (!preview?.modules.length) return "\n\nAucun aperçu d'application n'a encore été proposé au créateur.";
+  const modules = preview.modules
+    .map((m) => `id="${m.id}" (onglet « ${m.theme} », ${m.size}) : ${m.title}`)
+    .join(" ; ");
+  return (
+    `\n\nAperçu d'application actuellement affiché — onglets : ${preview.themes.join(", ")}. ` +
+    `Modules : ${modules}. Reprends ces identifiants pour modifier un module existant.`
+  );
+}
 
 /** Assemble le message système envoyé à l'assistant du builder. */
 export function buildBuilderSystemPrompt(draft: BuilderPromptDraft): string {
@@ -88,9 +109,10 @@ export function buildBuilderSystemPrompt(draft: BuilderPromptDraft): string {
 
   return [
     BUILDER_ROLE_INSTRUCTION,
-    draftContext + connectorsNote,
+    draftContext + connectorsNote + appPreviewNote(draft),
     MODEL_RECOMMENDATION_INSTRUCTION,
     GENT_CONFIG_PROMPT_INSTRUCTION,
+    APP_PREVIEW_PROMPT_INSTRUCTION,
     CONNECTOR_PROMPT_INSTRUCTION,
     CONNECTOR_DISCOVERY_INSTRUCTION,
     REST_API_MANUAL_INSTRUCTION,

@@ -14,6 +14,7 @@ import {
 } from "@/lib/connectorSignal";
 import { extractGentConfigSignal, type GentConfigProposal } from "@/lib/gentConfigSignal";
 import { extractJumpFormSignal } from "@/lib/jumpFormSignal";
+import { extractAppPreviewSignal, mergeAppPreview } from "@/lib/appPreview";
 import {
   buildBuilderSystemPrompt,
   frameBuilderObjectiveMessage,
@@ -50,6 +51,7 @@ export type BuilderTab =
   | "conversationnel"
   | "miniapp"
   | "visionneuse"
+  | "apercu"
   | "connectors"
   | "knowledge"
   | "audit"
@@ -104,6 +106,8 @@ interface BuilderContextValue {
   updatePinnedArtefact: (patch: Partial<import("@/lib/types").PinnedArtefact>) => void;
   /** Modifie la configuration du gent « visionneuse » du brouillon (patch partiel). */
   updateVisionneuse: (patch: Partial<import("@/lib/types").VisionneuseConfig>) => void;
+  /** Efface l'aperçu d'application pour repartir d'une page blanche. */
+  clearAppPreview: () => void;
 
   sendBuilderMessage: (text: string) => void;
   /** Vide le fil courant pour démarrer un nouvel échange avec l'assistant. */
@@ -564,6 +568,13 @@ export function BuilderProvider({
     [currentId]
   );
 
+  const clearAppPreview = useCallback(() => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: { ...prev[currentId], appPreview: undefined, appPreviewFreshIds: undefined },
+    }));
+  }, [currentId]);
+
   // Canal de diffusion : patch partiel fusionné sur le canal du brouillon.
   const updateChannel = useCallback(
     (patch: Partial<NotificationChannel>) => {
@@ -683,7 +694,8 @@ export function BuilderProvider({
     )
       .then(({ text: fullRaw, truncated, reasoning }) => {
         const afterConfig = extractGentConfigSignal(fullRaw);
-        const afterSuggestions = extractConnectorSuggestions(afterConfig.text);
+        const afterPreview = extractAppPreviewSignal(afterConfig.text);
+        const afterSuggestions = extractConnectorSuggestions(afterPreview.text);
         const afterConnector = extractConnectorSignal(afterSuggestions.text);
         const afterJumpForm = extractJumpFormSignal(afterConnector.text);
         const { text: reply, questions } = extractQuestions(afterJumpForm.text);
@@ -705,6 +717,25 @@ export function BuilderProvider({
               t: "à l'instant",
             };
             return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+          });
+        }
+
+        // Aperçu d'application : appliqué immédiatement (c'est une maquette à
+        // données simulées, rien de destructif à valider) pour que l'onglet
+        // Aperçu se dessine sous les yeux du créateur au fil de l'échange.
+        if (afterPreview.preview) {
+          const incoming = afterPreview.preview;
+          const replace = afterPreview.replace;
+          setDrafts((p) => {
+            const d = p[id];
+            return {
+              ...p,
+              [id]: {
+                ...d,
+                appPreview: mergeAppPreview(d.appPreview, incoming, replace),
+                appPreviewFreshIds: incoming.modules.map((m) => m.id),
+              },
+            };
           });
         }
 
@@ -1029,6 +1060,7 @@ export function BuilderProvider({
         updateChannel,
         updatePinnedArtefact,
         updateVisionneuse,
+        clearAppPreview,
         sendBuilderMessage,
         startNewBuilderConversation,
         applyBuilderSuggestion,

@@ -1,0 +1,766 @@
+/* Rendu de l'aperçu d'application : barre d'onglets thématiques + tuiles de
+ * modules composées de blocs typés. Même vocabulaire visuel que l'espace du
+ * gent (tokens globaux), pour que ce qui est montré au créateur ressemble à
+ * ce que l'utilisateur final verra. */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* ---------- Barre d'onglets ---------- */
+
+.tabsBar {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 0 14px;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 13px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.tab:hover {
+  color: var(--ink);
+}
+.tabOn {
+  color: var(--ink);
+  border-bottom-color: var(--blue);
+}
+
+.tabCount {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--faint);
+  background: var(--bg);
+  border-radius: var(--r-pill);
+  padding: 1px 6px;
+  line-height: 15px;
+}
+.tabOn .tabCount {
+  background: var(--blue-tint);
+  color: var(--blue-700);
+}
+
+/* ---------- Canevas ---------- */
+
+.canvas {
+  padding: 16px 14px 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.sizeCompact {
+  grid-column: span 3;
+}
+.sizeStandard {
+  grid-column: span 4;
+}
+.sizeLarge {
+  grid-column: span 6;
+}
+.sizeFull {
+  grid-column: span 12;
+}
+
+@media (max-width: 1500px) {
+  .sizeCompact {
+    grid-column: span 4;
+  }
+  .sizeStandard {
+    grid-column: span 6;
+  }
+}
+@media (max-width: 1100px) {
+  .sizeCompact,
+  .sizeStandard,
+  .sizeLarge,
+  .sizeFull {
+    grid-column: span 12;
+  }
+}
+
+.emptyTheme {
+  padding: 40px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--faint);
+}
+
+/* ---------- Carte module ---------- */
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  animation: cardIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: border-color 0.14s ease;
+}
+.card:hover {
+  border-color: color-mix(in srgb, var(--line) 55%, var(--blue));
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Module ajouté ou remplacé par le dernier tour de l'assistant. */
+.cardFresh {
+  border-color: color-mix(in srgb, var(--line) 30%, var(--sage));
+  box-shadow: 0 0 0 3px var(--sage-tint);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px 10px;
+}
+
+.glyph {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--blue-tint);
+  color: var(--blue-700);
+}
+
+.headText {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Sur deux lignes plutôt qu'en points de suspension : dans une tuile étroite,
+ * « Tension du marché… » ne dit plus rien au créateur. */
+.title {
+  font-family: "Sora", sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.newTag {
+  flex: none;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--sage-700);
+  background: var(--sage-tint);
+  border-radius: var(--r-pill);
+  padding: 2px 7px;
+}
+
+.body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------- Blocs ---------- */
+
+.blockHeading {
+  font-family: "Sora", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 2px 0 -4px;
+}
+
+.blockText {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink);
+  margin: 0;
+}
+
+.stats {
+  display: flex;
+  gap: 8px;
+}
+.stat {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 11px;
+  border-radius: 11px;
+  background: var(--bg);
+  border: 1px solid var(--line-soft);
+}
+.statValue {
+  font-family: "Sora", sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.statLabel {
+  font-size: 10.5px;
+  color: var(--faint);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.statDelta {
+  font-size: 10.5px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+.deltaUp {
+  color: var(--plum);
+}
+.deltaDown {
+  color: var(--success);
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  height: 108px;
+  padding-top: 4px;
+}
+.chartCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+}
+.bar {
+  width: 100%;
+  border-radius: 5px 5px 3px 3px;
+  background: var(--blue);
+  animation: barIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: bottom;
+}
+.barMuted {
+  background: color-mix(in srgb, var(--blue) 32%, var(--line));
+}
+@keyframes barIn {
+  from {
+    transform: scaleY(0.02);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.barLabel {
+  font-size: 10px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.chartCaption {
+  font-size: 10.5px;
+  color: var(--faint);
+  margin-top: 6px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 0 8px 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.table td {
+  padding: 7px 8px 7px 0;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink);
+}
+.table tr:last-child td {
+  border-bottom: none;
+}
+.tdNum {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding-right: 0;
+}
+
+.callout {
+  display: flex;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.calloutInfo {
+  background: var(--blue-tint);
+  color: #2f4d80;
+}
+.calloutWarning {
+  background: var(--gold-tint);
+  color: #7a5410;
+}
+.calloutSuccess {
+  background: var(--success-tint);
+  color: #2c6330;
+}
+.calloutTitle {
+  font-weight: 700;
+  display: block;
+  margin-bottom: 1px;
+}
+.calloutIcon {
+  flex: none;
+  margin-top: 1px;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 6px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  text-align: left;
+  color: var(--ink);
+}
+.checkRow:hover {
+  background: var(--bg);
+}
+.box {
+  width: 17px;
+  height: 17px;
+  border-radius: 6px;
+  border: 1.5px solid var(--line);
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: transparent;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.boxOn {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+.checkDone {
+  color: var(--faint);
+  text-decoration: line-through;
+}
+
+/* ---------- Bloc profil ---------- */
+
+.profile {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--blue-tint);
+  color: var(--blue-700);
+  font-family: "Sora", sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.profileMain {
+  flex: 1;
+  min-width: 0;
+}
+.profileName {
+  font-family: "Sora", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.headline {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.facts {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+}
+.factValue {
+  font-family: "Sora", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.factLabel {
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.chip {
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.meterRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.meterLabel {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.meterValue {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-left: auto;
+}
+.meter {
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--line-soft);
+  overflow: hidden;
+}
+.meterFill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--blue);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- Bloc contacts ---------- */
+
+.contacts {
+  display: flex;
+  flex-direction: column;
+}
+.contactRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.contactRow:last-child {
+  border-bottom: none;
+}
+.contactRow:hover {
+  background: var(--bg);
+}
+.contactAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--sage-tint);
+  color: var(--sage-700);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+.contactMain {
+  flex: 1;
+  min-width: 0;
+}
+.contactName {
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.contactRole {
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.statusPill {
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: 10.5px;
+  font-weight: 700;
+  flex: none;
+  border: 1px solid transparent;
+}
+.stTodo {
+  background: var(--gold-tint);
+  color: #7a5410;
+}
+.stSent {
+  background: var(--blue-tint);
+  color: var(--blue-700);
+}
+.stReplied {
+  background: var(--success-tint);
+  color: #2c6330;
+}
+.statusPill:hover {
+  border-color: currentColor;
+}
+
+/* ---------- Bloc cartes (offres, biens, dossiers…) ---------- */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.filterChip {
+  padding: 4px 11px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.filterChip:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+.filterChipOn {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.item {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.12s ease;
+}
+.item:hover {
+  border-color: color-mix(in srgb, var(--line) 55%, var(--blue));
+}
+.itemOpen {
+  border-color: var(--blue);
+  background: var(--bg);
+}
+.itemHead {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+}
+.itemMain {
+  flex: 1;
+  min-width: 0;
+}
+.itemTitle {
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.itemMeta {
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.itemScore {
+  width: 74px;
+  flex: none;
+}
+.itemScoreValue {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+  margin-bottom: 3px;
+}
+.scoreBar {
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--line-soft);
+  overflow: hidden;
+}
+.scoreFill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--success);
+}
+.scoreFillMid {
+  background: var(--gold);
+}
+.itemBody {
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.tag {
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  background: var(--card);
+  border: 1px solid var(--line);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.note {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* ---------- Bloc actions ---------- */
+
+.actionPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.actionPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.actionPill:hover {
+  border-color: var(--sage);
+  background: var(--sage-tint);
+  color: var(--sage-700);
+}
+
+/* ---------- Squelette pendant la génération ---------- */
+
+.skeletonCard {
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  background: var(--card);
+}
+.shimmer {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--line-soft) 25%,
+    color-mix(in srgb, var(--line-soft) 45%, var(--card)) 50%,
+    var(--line-soft) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.25s linear infinite;
+}
+.shimmerBlock {
+  height: 74px;
+  border-radius: 11px;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
