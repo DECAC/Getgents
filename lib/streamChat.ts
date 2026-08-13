@@ -25,6 +25,12 @@ export const CHAT_MAX_TOKENS = {
   apercu: 6_000,
   /** Tour « quelles évolutions ? » : une question + bloc QUESTIONS. */
   apercuAsk: 2_000,
+  /**
+   * Tour de cadrage : l'assistant pose UNE question cliquable avant de
+   * produire quoi que ce soit. Une phrase et un bloc QUESTIONS — au-delà,
+   * c'est qu'il a commencé à générer, ce qu'on ne veut pas ici.
+   */
+  cadrage: 1_200,
 } as const;
 
 /** Phase affichée à l'utilisateur pendant le traitement d'une requête. */

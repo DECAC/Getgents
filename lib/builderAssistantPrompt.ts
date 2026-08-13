@@ -9,6 +9,7 @@ import {
 import { JUMP_FORM_PROMPT_INSTRUCTION } from "@/lib/jumpFormSignal";
 import { SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
 import { APP_PREVIEW_PROMPT_INSTRUCTION } from "@/lib/appPreview";
+import { buildPlanNote } from "@/lib/buildPlan";
 
 const MODEL_CAPABILITY_LABEL: Record<string, string> = {
   chat: "Conversation",
@@ -127,8 +128,81 @@ function appPreviewNote(draft: BuilderPromptDraft): string {
   );
 }
 
-/** Assemble le message système envoyé à l'assistant du builder. */
-export function buildBuilderSystemPrompt(draft: BuilderPromptDraft): string {
+/**
+ * Profil du tour en cours. Il détermine QUELS blocs d'instructions partent au
+ * modèle.
+ *
+ * Motif : l'assemblage complet pèse ~18 900 caractères (≈ 5 400 tokens
+ * d'entrée), payés à chaque tour — dont 10 500 pour les seules instructions
+ * d'aperçu, même quand le créateur parle de tout autre chose. Un tour qui n'a
+ * qu'une question à poser n'a aucune raison d'embarquer le format des artefacts,
+ * des connecteurs REST et des formulaires jump. Mesuré : le profil « cadrage »
+ * retombe à ~2 600 caractères, soit −86 %.
+ */
+export type BuilderTurnProfile = "conversation" | "cadrage" | "prompt" | "jump-form" | "connectors";
+
+type BuilderBlockId =
+  | "models"
+  | "gentConfig"
+  | "appPreview"
+  | "connectors"
+  | "connectorDiscovery"
+  | "restApi"
+  | "jumpForm"
+  | "suggestions";
+
+const BUILDER_BLOCK_TEXT: Record<BuilderBlockId, string> = {
+  models: MODEL_RECOMMENDATION_INSTRUCTION,
+  gentConfig: GENT_CONFIG_PROMPT_INSTRUCTION,
+  appPreview: APP_PREVIEW_PROMPT_INSTRUCTION,
+  connectors: CONNECTOR_PROMPT_INSTRUCTION,
+  connectorDiscovery: CONNECTOR_DISCOVERY_INSTRUCTION,
+  restApi: REST_API_MANUAL_INSTRUCTION,
+  jumpForm: JUMP_FORM_PROMPT_INSTRUCTION,
+  suggestions: SUGGESTIONS_PROMPT_INSTRUCTION,
+};
+
+/**
+ * « conversation » reproduit EXACTEMENT l'ordre historique : c'est le profil par
+ * défaut, et les six aller-retours de signaux existants en dépendent. On ne
+ * l'allège pas — notamment pas de `appPreview`, que le modèle émet
+ * spontanément en conversation libre.
+ */
+const BUILDER_PROMPT_BLOCKS: Record<BuilderTurnProfile, BuilderBlockId[]> = {
+  conversation: [
+    "models",
+    "gentConfig",
+    "appPreview",
+    "connectors",
+    "connectorDiscovery",
+    "restApi",
+    "jumpForm",
+    "suggestions",
+  ],
+  // Ce tour ne produit qu'une question cliquable : il lui faut le format des
+  // questions, rien d'autre.
+  cadrage: ["suggestions"],
+  prompt: ["models", "gentConfig", "suggestions"],
+  "jump-form": ["jumpForm", "suggestions"],
+  connectors: ["connectors", "connectorDiscovery", "restApi", "suggestions"],
+};
+
+/**
+ * Contexte du brouillon. Le profil « cadrage » n'a pas besoin du prompt système
+ * intégral — il doit seulement savoir de quel gent on parle pour poser une
+ * question pertinente.
+ */
+function draftContextFor(draft: BuilderPromptDraft, profile: BuilderTurnProfile): string {
+  const head = `Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}.`;
+  // Où en est la construction : ~250 caractères, largement amortis par
+  // l'allègement des profils, et c'est ce qui permet à l'assistant de proposer
+  // spontanément l'étape suivante au lieu de rester purement réactif.
+  const plan = "status" in draft ? buildPlanNote(draft as unknown as GentDraft) : "";
+
+  if (profile === "cadrage") {
+    return `${head} Tu prépares une question à lui poser avant de produire quoi que ce soit.${appPreviewNote(draft)}${plan}`;
+  }
+
   const connectorsNote = draft.connectors.length
     ? `\n\nConnecteurs déjà configurés : ${draft.connectors
         .map((c) => `${c.name}${c.detail ? ` (${c.detail})` : ""}`)
@@ -136,20 +210,30 @@ export function buildBuilderSystemPrompt(draft: BuilderPromptDraft): string {
     : "";
 
   const draftContext = draft.systemPrompt
-    ? `Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
-    : `Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace et à proposer la configuration complète (modèles, connecteurs…).`;
+    ? `${head} Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
+    : `${head} Aide le créateur à rédiger un prompt système efficace et à proposer la configuration complète (modèles, connecteurs…).`;
+
+  return draftContext + connectorsNote + knowledgeNote(draft) + appPreviewNote(draft) + plan;
+}
+
+/**
+ * Assemble le message système envoyé à l'assistant du builder.
+ *
+ * Le verrou de rôle (`BUILDER_ROLE_INSTRUCTION` en tête,
+ * `BUILDER_ROLE_CLOSING` en queue) est ajouté à TOUS les profils : c'est lui
+ * qui empêche le modèle de répondre en expert métier au lieu de configurer le
+ * gent. L'ôter d'un profil allégé rouvrirait exactement ce défaut.
+ */
+export function buildBuilderSystemPrompt(
+  draft: BuilderPromptDraft,
+  profile: BuilderTurnProfile = "conversation"
+): string {
+  const blocks = BUILDER_PROMPT_BLOCKS[profile] ?? BUILDER_PROMPT_BLOCKS.conversation;
 
   return [
     BUILDER_ROLE_INSTRUCTION,
-    draftContext + connectorsNote + knowledgeNote(draft) + appPreviewNote(draft),
-    MODEL_RECOMMENDATION_INSTRUCTION,
-    GENT_CONFIG_PROMPT_INSTRUCTION,
-    APP_PREVIEW_PROMPT_INSTRUCTION,
-    CONNECTOR_PROMPT_INSTRUCTION,
-    CONNECTOR_DISCOVERY_INSTRUCTION,
-    REST_API_MANUAL_INSTRUCTION,
-    JUMP_FORM_PROMPT_INSTRUCTION,
-    SUGGESTIONS_PROMPT_INSTRUCTION,
+    draftContextFor(draft, profile),
+    ...blocks.map((id) => BUILDER_BLOCK_TEXT[id]),
     BUILDER_ROLE_CLOSING,
   ].join("\n\n");
 }

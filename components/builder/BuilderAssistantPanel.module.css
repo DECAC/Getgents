@@ -585,3 +585,10 @@
   font-size: 15px;
   opacity: 0.6;
 }
+
+/* Mode « fais-moi confiance » actif : l'assistant ne consulte plus. */
+.autoPilotOn {
+  border-color: var(--blue);
+  background: var(--blue-tint);
+  color: var(--blue-700);
+}

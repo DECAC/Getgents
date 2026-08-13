@@ -19,6 +19,19 @@ export interface QuestionBlock {
 /** Ajoutée automatiquement par l'interface — ne pas demander au modèle de l'inclure. */
 export const QUICK_REPLY_OTHER_LABEL = "Autre";
 
+/**
+ * Porte de sortie des questions de cadrage : le créateur n'a pas d'avis et
+ * laisse l'assistant trancher. Comme « Autre », elle est ajoutée par
+ * l'interface — le modèle ne doit jamais l'émettre lui-même, sinon elle
+ * apparaîtrait en double.
+ */
+export const QUICK_REPLY_TRUST_LABEL = "Fais-moi confiance";
+
+/** Vrai si la réponse du créateur est un « fais-moi confiance ». */
+export function isTrustAnswer(answer: string): boolean {
+  return answer.toLowerCase().includes(QUICK_REPLY_TRUST_LABEL.toLowerCase());
+}
+
 export const SUGGESTIONS_PROMPT_INSTRUCTION =
   "Dès que tu poses une question à l'utilisateur (choix à faire, confirmation, préférence, suite à donner), tu DOIS terminer ta réponse (après le texte visible, sur sa propre ligne, jamais dans le corps du message) par un bloc : " +
   '<!--QUESTIONS: [{"q":"Intitulé exact de la question","options":["Option A","Option B","Option C"],"multi":false}]--> ' +
@@ -26,10 +39,16 @@ export const SUGGESTIONS_PROMPT_INSTRUCTION =
   "Exemple : « Veux-tu que j'envoie cet e-mail ? » → <!--QUESTIONS: [{\"q\":\"Veux-tu que j'envoie cet e-mail ?\",\"options\":[\"Oui, envoie-le\",\"Non, prépare seulement un brouillon\"],\"multi\":false}]-->. " +
   "Si tu ne poses aucune question, n'émet pas de bloc QUESTIONS.";
 
-function withoutOther(options: string[]): string[] {
+/**
+ * Retire les options que l'INTERFACE ajoute elle-même. Sans ce filtre, un
+ * modèle qui reprend « Autre » ou « Fais-moi confiance » dans son JSON les
+ * ferait apparaître en double dans la liste.
+ */
+function withoutUiOptions(options: string[]): string[] {
+  const reserved = [QUICK_REPLY_OTHER_LABEL.toLowerCase(), QUICK_REPLY_TRUST_LABEL.toLowerCase()];
   return options
     .map((o) => o.trim())
-    .filter((o) => o.length > 0 && o.toLowerCase() !== QUICK_REPLY_OTHER_LABEL.toLowerCase());
+    .filter((o) => o.length > 0 && !reserved.includes(o.toLowerCase()));
 }
 
 function parseQuestionBlocks(parsed: unknown): QuestionBlock[] {
@@ -44,7 +63,7 @@ function parseQuestionBlocks(parsed: unknown): QuestionBlock[] {
     )
     .map((item) => ({
       q: item.q.trim().slice(0, 240),
-      options: withoutOther(item.options).slice(0, 5),
+      options: withoutUiOptions(item.options).slice(0, 5),
       multi: !!item.multi,
     }))
     .filter((item) => item.q.length > 0 && item.options.length >= 1)
@@ -148,7 +167,7 @@ export function recoverQuestionsFromChoiceList(text: string): { text: string; qu
   if (i >= 0 && OPTIONS_HEADING_RE.test(lines[i])) i--;
   const qText = lines.slice(0, i + 1).join("\n").trim();
   if (!qText) return { text, questions: [] };
-  const options = withoutOther(items).slice(0, 5);
+  const options = withoutUiOptions(items).slice(0, 5);
   if (options.length < 2) return { text, questions: [] };
   const q = (qText.split(/\n\n+/).pop() ?? qText).replace(/^#+\s*/, "").trim().slice(0, 240);
   return { text: qText, questions: [{ q, options, multi: false }] };

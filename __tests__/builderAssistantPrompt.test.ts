@@ -142,3 +142,50 @@ describe("frameBuilderObjectiveMessage", () => {
     expect(framed).toMatch(/Ne réponds pas comme l'expert métier/i);
   });
 });
+
+describe("profils de tour (prompt système à la carte)", () => {
+  const d = draft({ objective: "veille immobilière", systemPrompt: "Tu es un expert." });
+
+  it("le profil par défaut reste l'assemblage historique complet", () => {
+    // Non-régression : les six aller-retours de signaux existants dépendent de
+    // cet assemblage. Un bloc qui disparaîtrait ici casserait silencieusement
+    // la production d'artefacts, de connecteurs ou de formulaires jump.
+    const prompt = buildBuilderSystemPrompt(d);
+    for (const marker of ["GENT_CONFIG", "APERCU", "CONNECTOR", "JUMP_FORM", "QUESTIONS"]) {
+      expect(prompt).toContain(marker);
+    }
+    expect(buildBuilderSystemPrompt(d, "conversation")).toBe(prompt);
+  });
+
+  it("garde le verrou de rôle en tête et en queue sur TOUS les profils", () => {
+    for (const p of ["conversation", "cadrage", "prompt", "jump-form", "connectors"] as const) {
+      const prompt = buildBuilderSystemPrompt(d, p);
+      expect(prompt.startsWith(BUILDER_ROLE_INSTRUCTION)).toBe(true);
+      expect(prompt.endsWith(BUILDER_ROLE_CLOSING)).toBe(true);
+    }
+  });
+
+  it("le profil cadrage n'embarque pas les instructions d'aperçu", () => {
+    const cadrage = buildBuilderSystemPrompt(d, "cadrage");
+    // Le format des modules d'aperçu pèse ~10 500 caractères : hors sujet pour
+    // un tour qui ne fait que poser une question.
+    expect(cadrage).not.toContain("<!--APERCU:");
+    expect(cadrage).not.toContain("<!--JUMP_FORM:");
+    // …mais il lui faut le format des questions cliquables.
+    expect(cadrage).toContain("QUESTIONS");
+  });
+
+  it("allège réellement : le cadrage pèse une fraction de la conversation", () => {
+    const full = buildBuilderSystemPrompt(d, "conversation").length;
+    const cadrage = buildBuilderSystemPrompt(d, "cadrage").length;
+    expect(cadrage).toBeLessThan(full / 2);
+  });
+
+  it("chaque profil spécialisé porte son propre format et pas ceux des autres", () => {
+    expect(buildBuilderSystemPrompt(d, "jump-form")).toContain("JUMP_FORM");
+    expect(buildBuilderSystemPrompt(d, "jump-form")).not.toContain("<!--APERCU:");
+    expect(buildBuilderSystemPrompt(d, "connectors")).toContain("CONNECTOR");
+    expect(buildBuilderSystemPrompt(d, "connectors")).not.toContain("<!--JUMP_FORM:");
+    expect(buildBuilderSystemPrompt(d, "prompt")).toContain("GENT_CONFIG");
+  });
+});

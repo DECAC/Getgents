@@ -1,4 +1,5 @@
 import {
+  isTrustAnswer,
   extractQuestions,
   recoverQuestionsFromChoiceList,
   stripVisibleChoiceList,
@@ -86,5 +87,22 @@ describe("SUGGESTIONS_PROMPT_INSTRUCTION", () => {
 
   it("définit le libellé Autre pour l'UI", () => {
     expect(QUICK_REPLY_OTHER_LABEL).toBe("Autre");
+  });
+});
+
+describe("pseudo-options ajoutées par l'interface", () => {
+  it("les filtre du JSON du modèle pour éviter les doublons", () => {
+    // « Autre » et « Fais-moi confiance » sont ajoutées par QuickReplyQuestions.
+    // Si le modèle les reprend, elles apparaîtraient deux fois dans la liste.
+    const raw =
+      'Quels onglets ?\n<!--QUESTIONS: [{"q":"Quels onglets ?","options":["Suivi","Autre","Fais-moi confiance","Analyse"],"multi":false}]-->';
+    const { questions } = extractQuestions(raw);
+    expect(questions[0].options).toEqual(["Suivi", "Analyse"]);
+  });
+
+  it("reconnaît une réponse « fais-moi confiance » quelle que soit la casse", () => {
+    expect(isTrustAnswer("1. Quels onglets ? → Fais-moi confiance")).toBe(true);
+    expect(isTrustAnswer("Quels onglets ? → FAIS-MOI CONFIANCE")).toBe(true);
+    expect(isTrustAnswer("Quels onglets ? → Suivi, Analyse")).toBe(false);
   });
 });

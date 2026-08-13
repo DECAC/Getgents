@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
 import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine, NotificationChannel, Espace } from "@/lib/types";
-import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, BUILDER_ASSISTANT_MODEL_ID } from "@/lib/mock-data/builder";
+import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, BUILDER_ASSISTANT_MODEL_ID, BUILDER_FAST_MODEL_ID } from "@/lib/mock-data/builder";
 import { supportsReasoningStream } from "@/lib/openRouterReasoning";
 import { extractQuestions, recoverQuestionsFromChoiceList, stripVisibleChoiceList } from "@/lib/suggestions";
 import {
@@ -25,6 +25,12 @@ import {
   frameBuilderObjectiveMessage,
   isBuilderObjectiveSeedTurn,
 } from "@/lib/builderAssistantPrompt";
+import {
+  buildCadrageFollowUpMessage,
+  buildCadrageSystemPrompt,
+  type CadrageAction,
+  type CadragePending,
+} from "@/lib/cadrage";
 import {
   writePublishedGent,
   draftToEspace,
@@ -119,8 +125,16 @@ interface BuilderContextValue {
 
   sendBuilderMessage: (
     text: string,
-    opts?: { knowledgeFile?: { name: string; text: string; truncated?: boolean }; mode?: "apercu" | "apercu-ask" }
+    opts?: {
+      knowledgeFile?: { name: string; text: string; truncated?: boolean };
+      mode?: "apercu" | "apercu-ask" | "cadrage";
+      cadrageAction?: CadrageAction;
+    }
   ) => void;
+  /** Bascule le mode « fais-moi confiance » persistant du gent courant. */
+  toggleAutoPilot: () => void;
+  /** Vrai quand une question de cadrage attend la réponse du créateur. */
+  cadragePending: boolean;
   /** Vide le fil courant pour démarrer un nouvel échange avec l'assistant. */
   startNewBuilderConversation: () => void;
   applyBuilderSuggestion: (suggestion: string) => void;
@@ -225,8 +239,15 @@ export function BuilderProvider({
   currentIdRef.current = currentId;
   const [storageReady, setStorageReady] = useState(false);
   const streamAbortRef = useRef<AbortController | null>(null);
-  /** Après « Faire évoluer », le prochain message (clic ou Autre) applique l'aperçu. */
-  const apercuAskPendingRef = useRef(false);
+  /**
+   * Génération mise en attente pendant que le créateur répond à la question de
+   * cadrage. Généralise l'ancien drapeau booléen dédié à l'aperçu : le prochain
+   * message libre rejoue la génération correspondante, quelle qu'elle soit.
+   */
+  const cadragePendingRef = useRef<CadragePending | null>(null);
+  // Miroir réactif du ref : l'interface s'en sert pour n'afficher l'option
+  // « Fais-moi confiance » que sur une vraie question de cadrage.
+  const [cadragePending, setCadragePending] = useState(false);
   const prevInitialIdRef = useRef(initialId);
 
   // Changement de gent via l'URL (/builder/[gentId]) : le Provider n'est pas
@@ -569,6 +590,18 @@ export function BuilderProvider({
     [currentId]
   );
 
+  /**
+   * Mode « fais-moi confiance » persistant. Volontairement absent de
+   * draftContentSnapshot : c'est une préférence d'atelier, pas du contenu — la
+   * compter comme une modification rallumerait le bouton Diffuser à tort.
+   */
+  const toggleAutoPilot = useCallback(() => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: { ...prev[currentId], autoPilot: !prev[currentId].autoPilot },
+    }));
+  }, [currentId]);
+
   // Artefact figé « mini-app » : patch partiel fusionné sur la config du brouillon.
   const updatePinnedArtefact = useCallback(
     (patch: Partial<import("@/lib/types").PinnedArtefact>) => {
@@ -649,81 +682,121 @@ export function BuilderProvider({
 
   const sendBuilderMessage = useCallback((
     text: string,
-    opts?: { knowledgeFile?: { name: string; text: string; truncated?: boolean }; mode?: "apercu" | "apercu-ask" }
+    opts?: {
+      knowledgeFile?: { name: string; text: string; truncated?: boolean };
+      mode?: "apercu" | "apercu-ask" | "cadrage";
+      cadrageAction?: CadrageAction;
+    }
   ) => {
     if (streamAbortRef.current) return; // une génération est déjà en cours
     const id = currentIdRef.current;
-    const askTurn = opts?.mode === "apercu-ask";
-    const followApercu = !askTurn && !opts?.mode && apercuAskPendingRef.current;
-    const previewTurn = opts?.mode === "apercu" || followApercu;
-    apercuAskPendingRef.current = askTurn;
+
+    // « apercu-ask » est conservé comme alias de l'ancien mécanisme : il devient
+    // simplement le cadrage de l'action « faire évoluer l'aperçu ».
+    const cadrageTurn = opts?.mode === "cadrage" || opts?.mode === "apercu-ask";
+    const cadrageAction: CadrageAction | undefined = cadrageTurn
+      ? opts?.cadrageAction ?? "apercu-evolve"
+      : undefined;
+
+    // Message libre alors qu'un cadrage attend sa réponse : on rejoue la
+    // génération mise en attente, enrichie du choix du créateur.
+    const pending = cadragePendingRef.current;
+    const followCadrage = !cadrageTurn && !opts?.mode && !!pending;
+    const followedAction = followCadrage ? pending!.action : undefined;
+
+    const previewTurn =
+      opts?.mode === "apercu" || followedAction === "apercu" || followedAction === "apercu-evolve";
+    // Ancien nom conservé là où la logique est identique (garde-fous, affichage).
+    const askTurn = cadrageTurn;
+    cadragePendingRef.current = cadrageTurn && cadrageAction ? { action: cadrageAction, request: text } : null;
     const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" };
     const agentPlaceholder = { role: "agent" as const, text: "", t: "à l'instant" };
 
-    // L'updater doit rester pur (pas d'effet de bord dedans, sinon React peut
-    // l'appeler deux fois en StrictMode/dev) : on capture juste ce qu'il faut
-    // pour l'appel API dans ces variables, le streaming se fait après, en dehors.
-    let history: { role: string; content: string }[] = [];
-    let systemPrompt = "";
-    let chatModelId = BUILDER_ASSISTANT_MODEL_ID;
-    let existingConnectorUrls: string[] = [];
-    // Texte envoyé au modèle : sur le 1er tour d'objectif, on cadre explicitement
-    // (sinon une phrase comme « analyse DPE… » est traitée comme une question métier).
-    let apiUserContent = text;
+    // Tout ce qui part à l'API est calculé ICI, avant toute mise à jour d'état.
+    //
+    // Ces valeurs étaient auparavant capturées DEPUIS l'updater de setDrafts,
+    // puis relues juste après. Or React n'évalue l'updater immédiatement que
+    // tant qu'aucune autre mise à jour n'est en attente sur le composant :
+    // dès qu'il y en avait une (un simple changement d'onglet suffit), la
+    // requête partait avec un prompt système VIDE. On lit donc draftsRef, qui
+    // reflète l'état courant, et setDrafts ne sert plus qu'à valider.
+    const draft = draftsRef.current[id];
+    if (!draft) return;
 
-    setDrafts((prev) => {
-      const draft = prev[id];
-      const knowledgeFile = opts?.knowledgeFile;
-      const nextDraft = knowledgeFile
-        ? {
-            ...draft,
-            knowledgeSources: [
-              ...draft.knowledgeSources,
-              {
-                id: `know-${Date.now()}`,
-                kind: "file" as const,
-                label: knowledgeFile.name,
-                meta: `${knowledgeFile.text.length.toLocaleString("fr-FR")} caractères · ajouté à l'instant${
-                  knowledgeFile.truncated ? " · tronqué" : ""
-                }`,
-                text: knowledgeFile.text,
-                truncated: knowledgeFile.truncated,
-              },
-            ],
-          }
-        : draft;
-      existingConnectorUrls = nextDraft.connectors.map((c) => c.detail ?? "").filter(Boolean);
-      // Un fichier de connaissance n'est pas un objectif : ne pas le cadrer
-      // comme « mission du gent » ni l'écrire dans le champ Objectif.
-      // Idem pour le bouton Aperçu : ce n'est pas une mission à configurer.
-      const seedObjective = !knowledgeFile && !previewTurn && !askTurn && isBuilderObjectiveSeedTurn(nextDraft);
-      systemPrompt = askTurn
-        ? buildAppPreviewEvolveSystemPrompt(nextDraft)
+    const knowledgeFile = opts?.knowledgeFile;
+    const knowledgeSource = knowledgeFile
+      ? {
+          id: `know-${Date.now()}`,
+          kind: "file" as const,
+          label: knowledgeFile.name,
+          meta: `${knowledgeFile.text.length.toLocaleString("fr-FR")} caractères · ajouté à l'instant${
+            knowledgeFile.truncated ? " · tronqué" : ""
+          }`,
+          text: knowledgeFile.text,
+          truncated: knowledgeFile.truncated,
+        }
+      : null;
+    const nextDraft = knowledgeSource
+      ? { ...draft, knowledgeSources: [...draft.knowledgeSources, knowledgeSource] }
+      : draft;
+
+    const existingConnectorUrls = nextDraft.connectors.map((c) => c.detail ?? "").filter(Boolean);
+    // Un fichier de connaissance n'est pas un objectif : ne pas le cadrer
+    // comme « mission du gent » ni l'écrire dans le champ Objectif.
+    // Idem pour le bouton Aperçu : ce n'est pas une mission à configurer.
+    const seedObjective = !knowledgeFile && !previewTurn && !askTurn && isBuilderObjectiveSeedTurn(nextDraft);
+
+    const systemPrompt =
+      cadrageTurn && cadrageAction
+        ? buildCadrageSystemPrompt(nextDraft, cadrageAction)
         : previewTurn
           ? buildAppPreviewSystemPrompt(nextDraft)
           : buildBuilderSystemPrompt(nextDraft);
-      if (seedObjective) {
-        apiUserContent = frameBuilderObjectiveMessage(text);
-      } else if (followApercu) {
-        apiUserContent =
-          `Le créateur a choisi cette évolution de l'aperçu : « ${text} ». ` +
-          "Applique-la maintenant : émets le bloc APERCU en premier (un ou deux modules concernés), sans GENT_CONFIG ni recherche.";
-      }
-      history = nextDraft.builderConversation
-        .filter((m) => m.role === "agent" || m.role === "user")
-        .map((m) => ({
-          role: m.role === "agent" ? "assistant" : "user",
-          content: (m.text ?? "").replace(/<[^>]+>/g, ""),
-        }));
-      chatModelId = BUILDER_ASSISTANT_MODEL_ID;
 
-      const builderConversation = [...nextDraft.builderConversation, userMsg, agentPlaceholder];
-      // Premier message = objectif : on le range aussi dans le champ Objectif du
-      // brouillon (accueil studio le fait déjà ; saisie directe dans l'assistant non).
+    // Texte envoyé au modèle : sur le 1er tour d'objectif, on cadre explicitement
+    // (sinon une phrase comme « analyse DPE… » est traitée comme une question métier).
+    let apiUserContent = text;
+    if (seedObjective) {
+      apiUserContent = frameBuilderObjectiveMessage(text);
+    } else if (followCadrage && pending) {
+      // La requête d'origine est rejouée telle quelle, augmentée du choix du
+      // créateur (ou d'un blanc-seing s'il a répondu « Fais-moi confiance »).
+      apiUserContent = buildCadrageFollowUpMessage(pending, text);
+    }
+
+    const history = nextDraft.builderConversation
+      .filter((m) => m.role === "agent" || m.role === "user")
+      .map((m) => ({
+        role: m.role === "agent" ? "assistant" : "user",
+        content: (m.text ?? "").replace(/<[^>]+>/g, ""),
+      }));
+
+    // Poser une question est une tâche courte au format contraint : un modèle
+    // rapide et bon marché suffit, et c'est ce qui garde l'atelier réactif.
+    // La génération, elle, reste sur le modèle de l'assistant.
+    const chatModelId = cadrageTurn ? BUILDER_FAST_MODEL_ID : BUILDER_ASSISTANT_MODEL_ID;
+
+    setDrafts((prev) => {
+      const d = prev[id];
+      if (!d) return prev;
+      const withKnowledge = knowledgeSource
+        ? { ...d, knowledgeSources: [...d.knowledgeSources, knowledgeSource] }
+        : d;
       const objective =
-        seedObjective && !(nextDraft.objective ?? "").trim() ? text.trim().slice(0, 240) : nextDraft.objective;
-      return { ...prev, [id]: { ...nextDraft, objective, builderConversation } };
+        seedObjective && !(withKnowledge.objective ?? "").trim()
+          ? text.trim().slice(0, 240)
+          : withKnowledge.objective;
+      return {
+        ...prev,
+        [id]: {
+          ...withKnowledge,
+          objective,
+          builderConversation: [...withKnowledge.builderConversation, userMsg, agentPlaceholder],
+        },
+      };
     });
+
+    setCadragePending(!!cadragePendingRef.current);
 
     setIsThinking(true);
     setThinkingStatus(defaultStatusLabel("preparing"));
@@ -772,8 +845,8 @@ export function BuilderProvider({
         // + un bloc GENT_CONFIG : un plafond trop bas tronquait les propositions.
         // L'aperçu est un JSON court : un plafond plus bas évite que le modèle
         // parte dans une dissertation et n'atteigne jamais le bloc.
-        max_tokens: askTurn
-          ? CHAT_MAX_TOKENS.apercuAsk
+        max_tokens: cadrageTurn
+          ? CHAT_MAX_TOKENS.cadrage
           : previewTurn
             ? CHAT_MAX_TOKENS.apercu
             : CHAT_MAX_TOKENS.builder,
@@ -1176,6 +1249,8 @@ export function BuilderProvider({
         updateVisionneuse,
         clearAppPreview,
         sendBuilderMessage,
+        toggleAutoPilot,
+        cadragePending,
         startNewBuilderConversation,
         applyBuilderSuggestion,
         confirmConnectorProposal,

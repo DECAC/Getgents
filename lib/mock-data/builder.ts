@@ -13,6 +13,17 @@ import type {
 /** Modèle OpenRouter utilisé par l'assistant du builder (panneau de droite). */
 export const BUILDER_ASSISTANT_MODEL_ID = "moonshotai/kimi-k3";
 
+/**
+ * Modèle des tours légers de l'assistant du builder : poser une question de
+ * cadrage, classer une intention. La tâche est courte et le format contraint
+ * (une phrase + un bloc JSON), donc un modèle rapide et bon marché suffit — et
+ * c'est ce qui garde l'atelier réactif. La GÉNÉRATION (prompt système, aperçu,
+ * découverte de connecteurs) reste sur BUILDER_ASSISTANT_MODEL_ID.
+ *
+ * Même motif que SUPER_GENT_ROUTER_MODEL et DEFAULT_VISION_MODEL_ID.
+ */
+export const BUILDER_FAST_MODEL_ID = "google/gemini-2.5-flash";
+
 export const MODEL_CATALOG: OpenRouterModel[] = [
   {
     id: "moonshotai/kimi-k3",

@@ -1,21 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { QUICK_REPLY_OTHER_LABEL, type QuestionBlock } from "@/lib/suggestions";
+import { QUICK_REPLY_OTHER_LABEL, QUICK_REPLY_TRUST_LABEL, type QuestionBlock } from "@/lib/suggestions";
 import styles from "./QuickReplyQuestions.module.css";
 
 interface Props {
   questions: QuestionBlock[];
   onSubmit: (text: string) => void;
+  /**
+   * Ajoute « Fais-moi confiance » aux options. Réservé aux questions de
+   * cadrage de l'assistant du builder : sur une question ordinaire, laisser
+   * l'assistant trancher n'a pas de sens, et le composant est partagé avec
+   * l'espace utilisateur.
+   */
+  showTrust?: boolean;
 }
 
-function optionsWithOther(options: string[]): string[] {
+function optionsWithUiOptions(options: string[], showTrust: boolean): string[] {
   const trimmed = options.map((o) => o.trim()).filter(Boolean);
-  if (trimmed.some((o) => o.toLowerCase() === QUICK_REPLY_OTHER_LABEL.toLowerCase())) return trimmed;
-  return [...trimmed, QUICK_REPLY_OTHER_LABEL];
+  const out = trimmed.some((o) => o.toLowerCase() === QUICK_REPLY_OTHER_LABEL.toLowerCase())
+    ? [...trimmed]
+    : [...trimmed, QUICK_REPLY_OTHER_LABEL];
+  if (showTrust && !out.some((o) => o.toLowerCase() === QUICK_REPLY_TRUST_LABEL.toLowerCase())) {
+    out.push(QUICK_REPLY_TRUST_LABEL);
+  }
+  return out;
 }
 
-export function QuickReplyQuestions({ questions, onSubmit }: Props) {
+export function QuickReplyQuestions({ questions, onSubmit, showTrust = false }: Props) {
   const [selections, setSelections] = useState<Record<number, string[]>>({});
   const [otherTexts, setOtherTexts] = useState<Record<number, string>>({});
 
@@ -23,6 +35,10 @@ export function QuickReplyQuestions({ questions, onSubmit }: Props) {
 
   function isOtherOption(option: string): boolean {
     return option.toLowerCase() === QUICK_REPLY_OTHER_LABEL.toLowerCase();
+  }
+
+  function isTrustOption(option: string): boolean {
+    return option.toLowerCase() === QUICK_REPLY_TRUST_LABEL.toLowerCase();
   }
 
   function submitAnswer(qIdx: number, selected: string[]) {
@@ -35,6 +51,12 @@ export function QuickReplyQuestions({ questions, onSubmit }: Props) {
   }
 
   function selectOption(qIdx: number, option: string, multi: boolean) {
+    // « Fais-moi confiance » est une réponse en soi : on l'envoie tout de suite,
+    // sans demander de confirmation supplémentaire — c'est tout l'intérêt.
+    if (isTrustOption(option)) {
+      submitAnswer(qIdx, [option]);
+      return;
+    }
     if (isOtherOption(option)) {
       setSelections((prev) => ({ ...prev, [qIdx]: [option] }));
       return;
@@ -93,7 +115,7 @@ export function QuickReplyQuestions({ questions, onSubmit }: Props) {
   return (
     <div className={styles.wrap} role="group" aria-label="Réponses proposées">
       {questions.map((q, i) => {
-        const displayOptions = optionsWithOther(q.options);
+        const displayOptions = optionsWithUiOptions(q.options, showTrust);
         const selected = selections[i] ?? [];
         const otherActive = selected.some(isOtherOption);
 

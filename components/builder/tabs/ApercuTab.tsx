@@ -2,6 +2,7 @@
 
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { buildAppPreviewEvolveRequest, buildAppPreviewRequest } from "@/lib/appPreview";
+import { shouldSkipCadrage } from "@/lib/cadrage";
 import { AppPreview } from "@/components/appPreview/AppPreview";
 import styles from "./ApercuTab.module.css";
 
@@ -20,10 +21,21 @@ export function ApercuTab() {
 
   function requestPreview() {
     if (hasPreview && preview) {
-      sendBuilderMessage(buildAppPreviewEvolveRequest(preview), { mode: "apercu-ask" });
+      sendBuilderMessage(buildAppPreviewEvolveRequest(preview), {
+        mode: "cadrage",
+        cadrageAction: "apercu-evolve",
+      });
       return;
     }
-    sendBuilderMessage(buildAppPreviewRequest(currentDraft.objective ?? ""), { mode: "apercu" });
+    // Première génération : on consulte le créateur sur les onglets avant de
+    // dessiner l'application. Auparavant l'assistant les choisissait seul —
+    // sauf si le créateur a activé le mode « fais-moi confiance ».
+    const request = buildAppPreviewRequest(currentDraft.objective ?? "");
+    if (shouldSkipCadrage(currentDraft)) {
+      sendBuilderMessage(request, { mode: "apercu" });
+      return;
+    }
+    sendBuilderMessage(request, { mode: "cadrage", cadrageAction: "apercu" });
   }
 
   return (

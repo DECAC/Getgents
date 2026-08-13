@@ -10,6 +10,7 @@ import { setBuilderAssistWidthFromPointer, canResizeAssist } from "@/lib/assistR
 import { buildBuilderReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
 import { ThinkingIndicator } from "@/components/shared/ThinkingIndicator";
+import { BuildPlanChecklist } from "./BuildPlanChecklist";
 import { extractDocumentText, type ExtractedDoc } from "@/lib/extractDocumentText";
 import { frameBuilderKnowledgeFileMessage } from "@/lib/builderAssistantPrompt";
 import styles from "./BuilderAssistantPanel.module.css";
@@ -24,6 +25,8 @@ export function BuilderAssistantPanel() {
   const {
     currentDraft,
     sendBuilderMessage,
+    cadragePending,
+    toggleAutoPilot,
     startNewBuilderConversation,
     applyBuilderSuggestion,
     assignModel,
@@ -469,7 +472,11 @@ export function BuilderAssistantPanel() {
             </button>
           )}
           {!isUser && isLastMessage && !!m.questions?.length && (
-            <QuickReplyQuestions questions={m.questions} onSubmit={sendBuilderMessage} />
+            <QuickReplyQuestions
+              questions={m.questions}
+              onSubmit={sendBuilderMessage}
+              showTrust={cadragePending}
+            />
           )}
         </div>
       </div>
@@ -528,6 +535,23 @@ export function BuilderAssistantPanel() {
           </svg>
           Nouvelle discussion
         </button>
+        {/* Mode « fais-moi confiance » persistant : l'assistant cesse de
+            consulter avant chaque génération, pour ce gent uniquement. */}
+        <button
+          type="button"
+          className={[styles.reportBtn, currentDraft.autoPilot ? styles.autoPilotOn : ""]
+            .filter(Boolean)
+            .join(" ")}
+          onClick={toggleAutoPilot}
+          aria-pressed={!!currentDraft.autoPilot}
+          title={
+            currentDraft.autoPilot
+              ? "L'assistant décide seul. Cliquez pour qu'il vous consulte à nouveau avant chaque génération."
+              : "L'assistant vous consulte avant chaque génération. Cliquez pour le laisser décider seul."
+          }
+        >
+          {currentDraft.autoPilot ? "🚀 Confiance" : "💬 Consulter"}
+        </button>
         <ReportMenu getMarkdown={() => buildBuilderReport(currentDraft)} baseName={currentDraft.name} />
         <button
           type="button"
@@ -576,6 +600,8 @@ export function BuilderAssistantPanel() {
         </svg>
         <span>Spécifique à Getgents — vous aide à rédiger le prompt, choisir les modèles et connecteurs.</span>
       </div>
+
+      <BuildPlanChecklist />
 
       <div className={styles.body} ref={bodyRef}>
         {currentDraft.builderConversation.length ? (

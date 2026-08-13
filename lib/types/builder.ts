@@ -132,6 +132,15 @@ export interface GentDraft {
   /** Empreinte du contenu au moment de la dernière publication (voir builderSnapshot.ts). */
   publishedSnapshot?: string;
   /**
+   * Mode « fais-moi confiance » persistant : l'assistant ne consulte plus le
+   * créateur avant de générer (voir lib/cadrage.ts).
+   *
+   * Préférence d'ATELIER, pas de contenu : volontairement absente de
+   * draftContentSnapshot, sinon un simple basculement marquerait le gent
+   * « modifié depuis la publication » et rallumerait le bouton Diffuser.
+   */
+  autoPilot?: boolean;
+  /**
    * Rôle décrit par le créateur sur l'accueil du studio, en attente d'être
    * rejoué dans l'assistant à l'ouverture du gent. Consommé une seule fois
    * (voir BuilderProvider), puis effacé — c'est ce qui permet de poursuivre
