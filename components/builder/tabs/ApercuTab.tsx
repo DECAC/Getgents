@@ -19,7 +19,7 @@ export function ApercuTab() {
   const hasPreview = !!preview?.modules.length;
 
   function requestPreview() {
-    sendBuilderMessage(buildAppPreviewRequest(currentDraft.objective ?? "", hasPreview));
+    sendBuilderMessage(buildAppPreviewRequest(currentDraft.objective ?? "", hasPreview), { mode: "apercu" });
   }
 
   return (

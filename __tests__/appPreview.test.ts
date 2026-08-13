@@ -1,4 +1,9 @@
-import { extractAppPreviewSignal, mergeAppPreview, type AppPreviewSpec } from "@/lib/appPreview";
+import {
+  buildAppPreviewSystemPrompt,
+  extractAppPreviewSignal,
+  mergeAppPreview,
+  type AppPreviewSpec,
+} from "@/lib/appPreview";
 
 function signal(json: unknown): string {
   return `Voici l'aperçu.\n<!--APERCU: ${JSON.stringify(json)}-->`;
@@ -90,6 +95,40 @@ describe("extractAppPreviewSignal", () => {
     );
     expect(preview?.modules[0].size).toBe("standard");
     expect(preview?.modules[0].id).toBe("depenses-a-surveiller");
+  });
+
+  it("accepte un commentaire avec espaces et sans --> final", () => {
+    const { preview, text } = extractAppPreviewSignal(
+      `Phrase.\n<!-- APERCU: ${JSON.stringify(MINIMAL)}`
+    );
+    expect(preview?.appName).toBe("Radar emploi");
+    expect(text).toBe("Phrase.");
+  });
+
+  it("attend la fin du JSON pendant un flux tronqué", () => {
+    const { preview, text } = extractAppPreviewSignal('Voici.\n<!--APERCU: {"appName":"X","themes":["A"],"modules":[');
+    expect(preview).toBeNull();
+    expect(text).toBe("Voici.");
+  });
+
+  it("accepte un objet JSON dans une clôture markdown", () => {
+    const { preview } = extractAppPreviewSignal("Voici.\n```json\n" + JSON.stringify(MINIMAL) + "\n```");
+    expect(preview?.appName).toBe("Radar emploi");
+  });
+});
+
+describe("buildAppPreviewSystemPrompt", () => {
+  it("reste centré sur l'aperçu, sans envoyer configurer le gent", () => {
+    const prompt = buildAppPreviewSystemPrompt({
+      name: "Radar",
+      objective: "suivre des candidatures",
+      connectors: [{ name: "Adzuna" }],
+    });
+    expect(prompt).toMatch(/UNIQUEMENT l'aperçu/i);
+    expect(prompt).toContain("suivre des candidatures");
+    expect(prompt).toContain("Adzuna");
+    expect(prompt).toMatch(/Interdit : GENT_CONFIG/);
+    expect(prompt).not.toMatch(/découvrir des connecteurs/i);
   });
 });
 

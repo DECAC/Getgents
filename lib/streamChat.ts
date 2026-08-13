@@ -21,6 +21,8 @@ export interface StreamChatResult {
 export const CHAT_MAX_TOKENS = {
   espace: 12_288,
   builder: 16_000,
+  /** Aperçu seul : 4 modules JSON, sans prompt système ni GENT_CONFIG. */
+  apercu: 6_000,
 } as const;
 
 /** Phase affichée à l'utilisateur pendant le traitement d'une requête. */

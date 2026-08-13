@@ -80,15 +80,13 @@ export interface AppPreviewSpec {
   generatedAt?: string;
 }
 
-const APERCU_RE = /<!--APERCU:\s*(\{[\s\S]*?\})\s*-->/;
-
 export const APP_PREVIEW_PROMPT_INSTRUCTION =
   "APERÇU DE L'APPLICATION — le créateur dispose d'un onglet « Aperçu » qui montre, avec des DONNÉES SIMULÉES, l'application que son gent produira à l'usage : une barre d'onglets thématiques et des tuiles de contenu. " +
-  "Dès que l'objectif du gent est connu, propose cet aperçu spontanément ; ensuite, fais-le évoluer à chaque fois que le créateur affine son idée, ajoute un connecteur ou demande un changement. " +
-  "Pour cela, termine ta réponse (sur sa propre ligne) par exactement un bloc :\n" +
+  "Quand on te le demande (bouton « Générer l'aperçu » ou une phrase du créateur), émets le bloc EN PREMIER — avant toute phrase — pour que l'écran se remplisse tout de suite. " +
+  "Format, sur sa propre ligne :\n" +
   '<!--APERCU: {"appName":"Nom de l\'app","themes":["Onglet 1","Onglet 2"],"modules":[{"id":"identifiant-stable","title":"Titre du module","theme":"Onglet 1","size":"large","source":"Powens","blocks":[…]}]}-->\n' +
-  "Règles : `themes` = 2 à 5 onglets qui découpent le sujet du gent (jamais « Onglet 1 » littéralement) ; `size` vaut compact, standard, large ou full (compte 12 colonnes : compact=3, standard=4, large=6, full=12) ; chaque module a un `id` stable en minuscules-tirets. " +
-  "Ré-émettre un module avec le MÊME id le remplace ; un id nouveau l'ajoute. Ajoute \"replace\":true seulement pour repartir de zéro. Maximum 12 modules. " +
+  "Règles : `themes` = 2 à 3 onglets concrets (jamais « Onglet 1 » littéralement) ; `size` vaut compact, standard, large ou full (compte 12 colonnes : compact=3, standard=4, large=6, full=12) ; chaque module a un `id` stable en minuscules-tirets. " +
+  "Première génération : 3 onglets, 4 modules, 2 blocs par module — pas plus. Ensuite, un module ré-émis avec le MÊME id le remplace ; un id nouveau l'ajoute. Maximum 8 modules. " +
   "Blocs disponibles (n'en invente aucun autre) :\n" +
   '- {"kind":"heading","text":"Titre de section"}\n' +
   '- {"kind":"text","text":"Un paragraphe court."}\n' +
@@ -101,8 +99,8 @@ export const APP_PREVIEW_PROMPT_INSTRUCTION =
   '- {"kind":"contacts","items":[{"name":"Inès Moreau","role":"Head of Product · Alma","last":"échange il y a 3 semaines","status":"todo"}]}\n' +
   '- {"kind":"cards","filters":["Tous","Télétravail"],"items":[{"title":"Product Manager","subtitle":"Alma · Paris","score":92,"tags":["CDI","52–60 k€"],"note":"Pourquoi cette offre sort du lot."}]}\n' +
   '- {"kind":"actions","items":["Préparer ma candidature","Relancer ce contact"]}\n' +
-  "Les données doivent être PLAUSIBLES et propres au sujet du gent (noms, montants, dates réalistes) — c'est une démonstration, pas un formulaire vide : n'écris jamais « Lorem », « exemple 1 » ou des valeurs à zéro. " +
-  "N'annonce pas l'aperçu sans émettre le bloc dans le même message, et ne recopie pas son contenu dans le texte visible : résume en une phrase ce que l'application montrera.";
+  "Les données doivent être PLAUSIBLES et propres au sujet du gent — n'écris jamais « Lorem » ni des valeurs à zéro. " +
+  "Une seule phrase visible après le bloc. Interdit dans ce tour : bloc GENT_CONFIG, connecteurs, dissertation métier, recherche d'informations réelles.";
 
 /* ------------------------------------------------------------- validation */
 
@@ -367,28 +365,66 @@ export function mergeAppPreview(
   return {
     appName: incoming.appName ?? current.appName,
     themes: finalThemes,
-    modules: modules.slice(0, 12),
+    modules: modules.slice(0, 8),
     generatedAt: incoming.generatedAt,
   };
 }
 
-export function extractAppPreviewSignal(raw: string): {
-  text: string;
-  preview: AppPreviewSpec | null;
-  replace: boolean;
-} {
-  const match = raw.match(APERCU_RE);
-  if (!match) return { text: raw, preview: null, replace: false };
+/**
+ * Extrait un objet JSON par comptage d'accolades, en ignorant celles
+ * qui sont dans une chaîne. Sans ça, un `{…}` imbriqué (chaque module,
+ * chaque bloc) faisait échouer une regex non-gourmande — ou un bloc
+ * tronqué (pas de `-->`) était simplement ignoré.
+ */
+function sliceBalancedObject(raw: string, from: number): { json: string; end: number } | null {
+  const start = raw.indexOf("{", from);
+  if (start < 0) return null;
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < raw.length; i++) {
+    const c = raw[i];
+    if (inStr) {
+      if (esc) {
+        esc = false;
+        continue;
+      }
+      if (c === "\\") {
+        esc = true;
+        continue;
+      }
+      if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') {
+      inStr = true;
+      continue;
+    }
+    if (c === "{") depth++;
+    else if (c === "}") {
+      depth--;
+      if (depth === 0) return { json: raw.slice(start, i + 1), end: i + 1 };
+    }
+  }
+  return null;
+}
 
+function stripCodeFence(json: string): string {
+  return json
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+}
+
+function parsePreviewPayload(rawJson: string): { preview: AppPreviewSpec | null; replace: boolean } {
   let preview: AppPreviewSpec | null = null;
   let replace = false;
-
   try {
-    const p = JSON.parse(match[1]) as Record<string, unknown>;
+    const p = JSON.parse(stripCodeFence(rawJson)) as Record<string, unknown>;
     const modules = arr(p.modules)
       .map((m, i) => validateModule(m, i))
       .filter((m): m is AppModuleSpec => m !== null)
-      .slice(0, 12);
+      .slice(0, 8);
 
     if (modules.length) {
       const themes = arr(p.themes)
@@ -396,9 +432,6 @@ export function extractAppPreviewSignal(raw: string): {
         .filter((t): t is string => !!t)
         .slice(0, 5);
 
-      // Un module rangé dans un onglet non déclaré serait inatteignable : on
-      // crée l'onglet manquant, ou on rabat le module sur le premier onglet
-      // quand la barre est déjà pleine.
       for (const m of modules) {
         if (m.theme && !themes.includes(m.theme)) {
           if (themes.length < 5) themes.push(m.theme);
@@ -419,29 +452,91 @@ export function extractAppPreviewSignal(raw: string): {
       };
     }
   } catch {
-    // bloc malformé — ignoré, la conversation reste utilisable
+    // JSON incomplet ou malformé — on attend la suite du flux
+  }
+  return { preview, replace };
+}
+
+export function extractAppPreviewSignal(raw: string): {
+  text: string;
+  preview: AppPreviewSpec | null;
+  replace: boolean;
+} {
+  const tag = raw.search(/<!--\s*APERCU\s*:/i);
+  if (tag >= 0) {
+    const sliced = sliceBalancedObject(raw, tag);
+    if (sliced) {
+      const { preview, replace } = parsePreviewPayload(sliced.json);
+      const afterObj = raw.slice(sliced.end);
+      const closer = afterObj.match(/^\s*-->/);
+      const end = sliced.end + (closer ? closer[0].length : 0);
+      return {
+        text: (raw.slice(0, tag) + raw.slice(end)).trim(),
+        preview,
+        replace,
+      };
+    }
+    // Commentaire ouvert mais JSON pas encore refermé (flux en cours).
+    return { text: raw.slice(0, tag).trim(), preview: null, replace: false };
   }
 
-  const start = match.index ?? 0;
-  return {
-    text: (raw.slice(0, start) + raw.slice(start + match[0].length)).trim(),
-    preview,
-    replace,
-  };
+  // Repli : le modèle a parfois collé un objet JSON dans une clôture markdown
+  // sans le commentaire HTML. On ne l'accepte que s'il a bien `modules`.
+  const fence = raw.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/i);
+  if (fence) {
+    const { preview, replace } = parsePreviewPayload(fence[1]);
+    if (preview) {
+      return {
+        text: raw.replace(fence[0], "").trim(),
+        preview,
+        replace,
+      };
+    }
+  }
+
+  return { text: raw, preview: null, replace: false };
+}
+
+/** Prompt système réduit : uniquement l'aperçu, sans config ni recherche. */
+export function buildAppPreviewSystemPrompt(draft: {
+  name: string;
+  objective: string;
+  connectors: { name: string; detail?: string }[];
+  appPreview?: AppPreviewSpec;
+}): string {
+  const connectorsNote = draft.connectors.length
+    ? `Connecteurs déjà prévus (à mentionner en source des modules, sans les reconfigurer) : ${draft.connectors
+        .map((c) => c.name)
+        .join(", ")}.`
+    : "Aucun connecteur configuré — invente des sources plausibles (ex. « données simulées »).";
+
+  const existing = draft.appPreview?.modules.length
+    ? `Aperçu déjà affiché — onglets : ${draft.appPreview.themes.join(", ")}. Modules : ${draft.appPreview.modules
+        .map((m) => `id="${m.id}" (« ${m.title} », ${m.theme})`)
+        .join(" ; ")}. Reprends ces identifiants pour modifier.`
+    : "Aucun aperçu n'est encore affiché : première génération.";
+
+  return [
+    "Tu génères UNIQUEMENT l'aperçu d'application du gent, avec des données simulées. " +
+      "Tu n'es pas en train de configurer le gent, ni de chercher sur le web, ni de répondre en expert métier.",
+    `Gent « ${draft.name} ». Objectif : ${draft.objective || "non défini"}. ${connectorsNote} ${existing}`,
+    APP_PREVIEW_PROMPT_INSTRUCTION,
+    "RAPPEL FINAL : émets d'abord le bloc <!--APERCU: {…}-->, puis une seule phrase. " +
+      "Interdit : GENT_CONFIG, connecteurs, dissertation, checklist destinée à l'utilisateur final.",
+  ].join("\n\n");
 }
 
 /** Demande envoyée à l'assistant quand le créateur clique « Générer l'aperçu ». */
 export function buildAppPreviewRequest(objective: string, hasPreview: boolean): string {
   if (hasPreview) {
     return (
-      "Fais évoluer l'aperçu de l'application : ajoute ou remplace les modules qui manquent au regard de " +
-      "la configuration actuelle du gent, et émets le bloc APERCU correspondant."
+      "Fais évoluer l'aperçu : ajoute ou remplace au plus 2 modules manquants. " +
+      "Émets le bloc APERCU en premier, sans GENT_CONFIG ni recherche."
     );
   }
   const clean = objective.trim();
   return (
-    `Génère l'aperçu de l'application pour ce gent${clean ? ` (objectif : « ${clean} »)` : ""} : ` +
-    "propose les onglets thématiques et les premiers modules avec des données simulées plausibles, " +
-    "puis émets le bloc APERCU."
+    `Génère l'aperçu de l'application${clean ? ` (objectif : « ${clean} »)` : ""}. ` +
+    "3 onglets, 4 modules, données simulées. Émets le bloc APERCU en premier, sans GENT_CONFIG ni recherche."
   );
 }
