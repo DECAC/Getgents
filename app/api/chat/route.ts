@@ -15,6 +15,15 @@ import type { RestApiConnector } from "@/lib/types";
 import type { StatusEvent, ThinkingPhase } from "@/lib/streamChat";
 import { defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 import { formatOpenRouterError, supportsReasoningStream } from "@/lib/openRouterReasoning";
+import {
+  applyToolCallDelta,
+  flattenToolRoundForRetry,
+  isOrphanToolCallOutputError,
+  shouldAttachWebPlugin,
+  toOpenAIToolCalls,
+  userFacingToolLoopError,
+  type StreamedToolCall,
+} from "@/lib/openRouterToolLoop";
 
 // Un tour de conversation avec recherche web, boucle d'outils ou un prompt
 // système volumineux (base de connaissance) peut dépasser la limite par
@@ -643,6 +652,10 @@ function toolLoopResponse(
         // court-circuite les appels suivants au lieu de laisser le modèle
         // réessayer en boucle.
         const toolFailures = new Map<string, number>();
+        // Filet Azure : si le tour suivant refuse les résultats d'outils
+        // (call_id orphelin), on les réinjecte en message utilisateur.
+        let flattenRetries = 0;
+        let pendingToolFlatten: { beforeLen: number; userContent: string } | null = null;
 
         // 2. Boucle d'appels : le modèle décide quand utiliser les outils.
         // Au dernier tour, les outils sont retirés pour forcer une réponse.
@@ -667,7 +680,7 @@ function toolLoopResponse(
               max_tokens: body.max_tokens ?? 12_288,
               stream: true,
               ...(withTools ? { tools: openaiTools } : {}),
-              ...(body.webSearch ? { plugins: [{ id: "web" }] } : {}),
+              ...(shouldAttachWebPlugin(body.webSearch, messages) ? { plugins: [{ id: "web" }] } : {}),
               ...(body.reasoning?.enabled && supportsReasoningStream(body.model)
                 ? { reasoning: body.reasoning }
                 : {}),
@@ -677,7 +690,26 @@ function toolLoopResponse(
           if (!res.ok || !res.body) {
             const data = await res.json().catch(() => ({}));
             const errText = formatOpenRouterError(data);
-            sendContent(`Erreur API : ${errText}`);
+            if (
+              pendingToolFlatten &&
+              flattenRetries < 1 &&
+              isOrphanToolCallOutputError(errText)
+            ) {
+              console.warn(
+                JSON.stringify({
+                  tag: "getgents:chat",
+                  event: "orphan_tool_call_retry",
+                  model: body.model,
+                })
+              );
+              messages.splice(pendingToolFlatten.beforeLen);
+              messages.push({ role: "user", content: pendingToolFlatten.userContent });
+              pendingToolFlatten = null;
+              flattenRetries += 1;
+              round -= 1;
+              continue;
+            }
+            sendContent(userFacingToolLoopError(errText));
             sentContent = true;
             break;
           }
@@ -685,7 +717,7 @@ function toolLoopResponse(
           let content = "";
           let reasoningStarted = false;
           let finishReason: string | undefined;
-          const toolCallsAcc: { id?: string; function: { name?: string; arguments: string } }[] = [];
+          const toolCallsAcc: StreamedToolCall[] = [];
 
           const reader = res.body.getReader();
           const decoder = new TextDecoder();
@@ -732,22 +764,15 @@ function toolLoopResponse(
               }
 
               const deltaToolCalls = delta.tool_calls as
-                | { index: number; id?: string; function?: { name?: string; arguments?: string } }[]
+                | { index?: number; id?: string; type?: string; function?: { name?: string; arguments?: string } }[]
                 | undefined;
               if (Array.isArray(deltaToolCalls)) {
-                for (const tc of deltaToolCalls) {
-                  const slot = (toolCallsAcc[tc.index] ??= { function: { arguments: "" } });
-                  if (tc.id) slot.id = tc.id;
-                  if (tc.function?.name) slot.function.name = (slot.function.name ?? "") + tc.function.name;
-                  if (tc.function?.arguments) slot.function.arguments += tc.function.arguments;
-                }
+                applyToolCallDelta(toolCallsAcc, deltaToolCalls);
               }
             }
           }
 
-          const toolCalls = toolCallsAcc.filter(
-            (tc): tc is { id: string; function: { name: string; arguments: string } } => !!tc.id && !!tc.function.name
-          );
+          const toolCalls = toOpenAIToolCalls(toolCallsAcc);
 
           if (!toolCalls.length) {
             if (finishReason === "length") {
@@ -756,7 +781,9 @@ function toolLoopResponse(
             break;
           }
 
+          const beforeToolRound = messages.length;
           messages.push({ role: "assistant", content: content || null, tool_calls: toolCalls });
+          const resultTexts: string[] = [];
 
           for (const tc of toolCalls) {
             const entry = registry.get(tc.function.name);
@@ -797,8 +824,19 @@ function toolLoopResponse(
               // Diagnostic visible côté client uniquement en cas d'échec.
               ...(ok ? {} : { detail: resultText.slice(0, 600) }),
             });
-            messages.push({ role: "tool", tool_call_id: tc.id, content: resultText });
+            resultTexts.push(resultText);
+            messages.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              name: tc.function.name,
+              content: resultText,
+            });
           }
+
+          pendingToolFlatten = {
+            beforeLen: beforeToolRound,
+            userContent: flattenToolRoundForRetry(toolCalls, resultTexts),
+          };
         }
 
         if (!sentContent) {
