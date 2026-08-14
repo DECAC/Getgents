@@ -14,7 +14,9 @@ import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { ChecklistView } from "@/components/shared/ChecklistView";
 import { MapArtefact } from "@/components/shared/MapArtefact";
 import { DashboardArtefact } from "@/components/shared/dashboard/DashboardArtefact";
+import { ReportArtefact } from "@/components/shared/ReportArtefact";
 import { ArtefactWorkspaceActions } from "@/components/shared/ArtefactWorkspaceActions";
+import { hasReportBody } from "@/lib/reportArtefact";
 import { PinnedArtefactPanel } from "./PinnedArtefactPanel";
 import { StarterBubbles } from "./StarterBubbles";
 import { computeImageModuleHeight } from "@/lib/moduleImageLayout";
@@ -284,7 +286,11 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
           {a.checklistItems && (
             <ChecklistView items={a.checklistItems} onToggle={(i) => toggleChecklistItem(a.id, i)} />
           )}
-          {a.body && !a.imageUrl && !a.profileSummary && <SafeHTMLDoc html={a.body} />}
+          {hasReportBody(a) ? (
+            <ReportArtefact artefact={a} />
+          ) : (
+            a.body && !a.imageUrl && !a.profileSummary && <SafeHTMLDoc html={a.body} />
+          )}
           {a.document && (
             // Vignette cliquable dans son ENTIER : l'invite « cliquer pour
             // ouvrir » ne valait auparavant que pour le bouton « ouvrir en

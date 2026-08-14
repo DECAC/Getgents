@@ -52,6 +52,7 @@ describe("withKeptArtefacts", () => {
       theme: "Rapport",
     });
     expect(next.modules[0].id).toBe("mini-cv");
+    expect(next.modules[1].blocks.some((b) => b.kind === "text" && "text" in b && b.text.includes("Hello"))).toBe(true);
   });
 
   it("réutilise un onglet studio si le type porte le même nom", () => {
@@ -94,6 +95,22 @@ describe("parseEmailRecipients", () => {
 });
 
 describe("artefactSharePayload", () => {
+  it("envoie un rapport avec le HTML du nouveau design", () => {
+    const payload = artefactSharePayload(
+      artef({
+        id: "a1",
+        title: "Itinéraire",
+        type: "Rapport",
+        kind: "report",
+        body: `<h4>Aperçu</h4><div class="row"><span>Parcours</span><b>Lyon → Nice</b></div>`,
+      })
+    );
+    expect(payload.htmlBody).toContain("Parcours");
+    expect(payload.htmlBody).toContain("Lyon → Nice");
+    expect(payload.htmlBody).not.toContain('class="row"');
+    expect(payload.body).toContain("Lyon");
+  });
+
   it("n'envoie que le contenu de l'artefact", () => {
     const payload = artefactSharePayload(
       artef({

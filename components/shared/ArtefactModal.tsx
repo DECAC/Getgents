@@ -7,9 +7,11 @@ import { MiniBarChart } from "./MiniBarChart";
 import { ChecklistView } from "./ChecklistView";
 import { MapArtefact } from "./MapArtefact";
 import { DashboardArtefact } from "./dashboard/DashboardArtefact";
+import { ReportArtefact } from "./ReportArtefact";
 import { ImageArtefact } from "./ImageArtefact";
 import { ProfileSummaryArtefact } from "./ProfileSummaryArtefact";
 import { ArtefactWorkspaceActions } from "./ArtefactWorkspaceActions";
+import { hasReportBody } from "@/lib/reportArtefact";
 import styles from "./Modal.module.css";
 
 function VisualGrid() {
@@ -95,6 +97,7 @@ export function ArtefactModal() {
   if (!artefact) return null;
 
   const isDashboard = !!artefact.dashboard;
+  const isReport = hasReportBody(artefact);
 
   return (
     <div
@@ -104,7 +107,7 @@ export function ArtefactModal() {
       aria-labelledby="modal-title"
       onClick={(e) => { if (e.target === e.currentTarget) dismissOrClose(); }}
     >
-      <div className={[styles.modal, isDashboard ? styles.modalWide : ""].filter(Boolean).join(" ")}>
+      <div className={[styles.modal, isDashboard || isReport ? styles.modalWide : ""].filter(Boolean).join(" ")}>
         <div className={styles.head}>
           <div
             className={styles.ti}
@@ -157,8 +160,12 @@ export function ArtefactModal() {
               onToggle={isVerdict ? () => undefined : (i) => toggleChecklistItem(artefact.id, i)}
             />
           )}
-          {artefact.body && !artefact.imageUrl && !artefact.profileSummary && (
-            <SafeHTMLDoc html={artefact.body} />
+          {isReport ? (
+            <ReportArtefact artefact={artefact} />
+          ) : (
+            artefact.body && !artefact.imageUrl && !artefact.profileSummary && (
+              <SafeHTMLDoc html={artefact.body} />
+            )
           )}
         </div>
 

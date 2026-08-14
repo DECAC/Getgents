@@ -10,7 +10,9 @@ import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { ChecklistView } from "@/components/shared/ChecklistView";
 import { MapArtefact } from "@/components/shared/MapArtefact";
 import { DashboardArtefact } from "@/components/shared/dashboard/DashboardArtefact";
+import { ReportArtefact } from "@/components/shared/ReportArtefact";
 import { ArtefactWorkspaceActions } from "@/components/shared/ArtefactWorkspaceActions";
+import { hasReportBody } from "@/lib/reportArtefact";
 import previewStyles from "@/components/appPreview/AppPreview.module.css";
 import styles from "./WorkspaceArtefactCard.module.css";
 
@@ -77,7 +79,11 @@ export function WorkspaceArtefactCard({
         {artefact.checklistItems && (
           <ChecklistView items={artefact.checklistItems} onToggle={(i) => toggleChecklistItem(artefact.id, i)} />
         )}
-        {artefact.body && !artefact.imageUrl && !artefact.profileSummary && <SafeHTMLDoc html={artefact.body} />}
+        {hasReportBody(artefact) ? (
+          <ReportArtefact artefact={artefact} />
+        ) : (
+          artefact.body && !artefact.imageUrl && !artefact.profileSummary && <SafeHTMLDoc html={artefact.body} />
+        )}
       </div>
     </article>
   );

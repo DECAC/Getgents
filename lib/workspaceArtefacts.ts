@@ -1,6 +1,7 @@
 import type { AppBlock, AppModuleSpec, AppPreviewSpec } from "@/lib/appPreview";
 import type { Artefact } from "@/lib/types";
 import { inferArtefactKind } from "@/lib/artefactKind";
+import { hasReportBody, reportSpecFromArtefact, reportSpecToAppBlocks, reportSpecToEmailHtml } from "@/lib/reportArtefact";
 
 /** Id de module dans l'aperçu d'espace — distinct des modules studio. */
 export function keptArtefactModuleId(artefactId: string): string {
@@ -32,7 +33,10 @@ function stripHtml(html: string): string {
 
 function artefactToBlocks(artefact: Artefact): AppBlock[] {
   const blocks: AppBlock[] = [];
-  if (artefact.body) {
+  const reportSpec = hasReportBody(artefact) ? reportSpecFromArtefact(artefact) : null;
+  if (reportSpec) {
+    blocks.push(...reportSpecToAppBlocks(reportSpec));
+  } else if (artefact.body) {
     const text = stripHtml(artefact.body);
     if (text) blocks.push({ kind: "text", text: text.slice(0, 800) });
   }
@@ -203,10 +207,11 @@ export function artefactSharePayload(artefact: Artefact): ArtefactSharePayload {
   }
   if (artefact.imageCaption) lines.push(artefact.imageCaption, "");
   const body = lines.join("\n").trim() || artefact.title;
+  const reportSpec = hasReportBody(artefact) ? reportSpecFromArtefact(artefact) : null;
   return {
     subject: artefact.title,
     body,
-    htmlBody: artefact.body || undefined,
+    htmlBody: reportSpec ? reportSpecToEmailHtml(reportSpec, artefact.title) : artefact.body || undefined,
     imageUrl: artefact.imageUrl || undefined,
   };
 }
