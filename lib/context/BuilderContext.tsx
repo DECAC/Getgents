@@ -41,7 +41,8 @@ import {
 } from "@/lib/publishedGents";
 import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
-import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel } from "@/lib/streamChat";
+import { streamChatCompletion, defaultStatusLabel } from "@/lib/streamChat";
+import { builderTurnBudget, BUILDER_FIRST_TOKEN_DEADLINE_MS } from "@/lib/builderLatency";
 import {
   DRAFTS_STORAGE_KEY,
   clearStoredPendingBuilderMessage,
@@ -774,7 +775,7 @@ export function BuilderProvider({
     // Poser une question est une tâche courte au format contraint : un modèle
     // rapide et bon marché suffit, et c'est ce qui garde l'atelier réactif.
     // La génération, elle, reste sur le modèle de l'assistant.
-    const chatModelId = cadrageTurn ? BUILDER_FAST_MODEL_ID : BUILDER_ASSISTANT_MODEL_ID;
+    const turnKind = cadrageTurn ? "cadrage" : previewTurn ? "apercu" : "conversation";
 
     setDrafts((prev) => {
       const d = prev[id];
@@ -800,9 +801,6 @@ export function BuilderProvider({
 
     setIsThinking(true);
     setThinkingStatus(defaultStatusLabel("preparing"));
-
-    const controller = new AbortController();
-    streamAbortRef.current = controller;
 
     function updateLastMessage(updater: (m: ConversationMessage) => ConversationMessage) {
       setDrafts((p) => {
@@ -837,170 +835,206 @@ export function BuilderProvider({
       });
     }
 
-    streamChatCompletion(
-      {
-        model: chatModelId,
-        messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: apiUserContent }],
-        // Les réponses du builder embarquent souvent un prompt système complet
-        // + un bloc GENT_CONFIG : un plafond trop bas tronquait les propositions.
-        // L'aperçu est un JSON court : un plafond plus bas évite que le modèle
-        // parte dans une dissertation et n'atteigne jamais le bloc.
-        max_tokens: cadrageTurn
-          ? CHAT_MAX_TOKENS.cadrage
-          : previewTurn
-            ? CHAT_MAX_TOKENS.apercu
-            : CHAT_MAX_TOKENS.builder,
-        ...(previewTurn || askTurn || !supportsReasoningStream(chatModelId) ? {} : { reasoning: { enabled: true } }),
-        // Recherche web : utile pour découvrir des connecteurs. Pour l'aperçu
-        // (données simulées), elle fait tourner le modèle à vide pendant
-        // des minutes sans jamais émettre le bloc APERCU.
-        webSearch: !previewTurn && !askTurn,
-      },
-      (fullSoFar, reasoningSoFar) => {
-        let displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
-        if (askTurn) displayRaw = stripVisibleChoiceList(displayRaw);
-        updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw), reasoning: reasoningSoFar || undefined }));
-        if (previewTurn) applyLivePreview(fullSoFar);
-      },
-      undefined,
-      (status) => setThinkingStatus(status.label),
-      "/api/chat",
-      controller.signal
-    )
-      .then(({ text: fullRaw, truncated, reasoning }) => {
-        const afterQuestions = extractQuestions(fullRaw);
-        let questions = afterQuestions.questions;
-        const afterConfig = extractGentConfigSignal(afterQuestions.text);
-        const afterPreview = extractAppPreviewSignal(afterConfig.text);
-        const afterSuggestions = extractConnectorSuggestions(afterPreview.text);
-        const afterConnector = extractConnectorSignal(afterSuggestions.text);
-        const afterJumpForm = extractJumpFormSignal(afterConnector.text);
-        let reply = afterJumpForm.text;
-        if (askTurn && !questions.length) {
-          const recovered = recoverQuestionsFromChoiceList(reply);
-          reply = recovered.text;
-          questions = recovered.questions;
-        } else if (questions.length) {
-          reply = stripVisibleChoiceList(reply, questions.flatMap((q) => q.options));
-        }
-        const truncationNote = truncated
-          ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — demandez « continue » ou reformulez plus court ; une proposition de configuration incomplète ne doit pas être appliquée.</em></p>'
-          : "";
-        updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply) + truncationNote, questions, reasoning: reasoning || undefined }));
+    /**
+     * Un tour, avec sa promesse de délai : si RIEN de visible n'est arrivé au
+     * bout de `BUILDER_FIRST_TOKEN_DEADLINE_MS`, on abandonne et on rejoue
+     * une fois en mode dégradé (modèle rapide, sans réflexion ni recherche).
+     * Le créateur voit ainsi toujours une première proposition, plutôt qu'un
+     * indicateur qui tourne indéfiniment.
+     */
+    function launch(degraded: boolean) {
+      const budget = builderTurnBudget(turnKind, { userText: apiUserContent, seedObjective, degraded });
+      // Le modèle rapide sert au cadrage — et au rejeu, où le délai prime.
+      const chatModelId = cadrageTurn || degraded ? BUILDER_FAST_MODEL_ID : BUILDER_ASSISTANT_MODEL_ID;
 
-        // Configuration complète proposée : carte « Appliquer la configuration ».
-        // Un tour « aperçu » ne doit pas aussi reconfigurer le gent.
-        if (afterConfig.config && !previewTurn && !askTurn) {
-          const config = afterConfig.config;
-          setDrafts((p) => {
-            const d = p[id];
-            const msg = {
-              id: `config-${Date.now()}`,
-              role: "config-proposal" as const,
-              configProposal: config,
-              configProposalStatus: "pending" as const,
-              t: "à l'instant",
-            };
-            return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
-          });
-        }
+      const controller = new AbortController();
+      streamAbortRef.current = controller;
 
-        // Aperçu d'application : appliqué immédiatement (c'est une maquette à
-        // données simulées, rien de destructif à valider) pour que l'onglet
-        // Aperçu se dessine sous les yeux du créateur au fil de l'échange.
-        if (afterPreview.preview && !askTurn) {
-          const incoming = afterPreview.preview;
-          const replace = afterPreview.replace;
-          setDrafts((p) => {
-            const d = p[id];
-            return {
-              ...p,
-              [id]: {
-                ...d,
-                appPreview: mergeAppPreview(d.appPreview, incoming, replace),
-                appPreviewFreshIds: incoming.modules.map((m) => m.id),
-              },
-            };
-          });
-        }
+      let sawContent = false;
+      let retrying = false;
+      let deadline: ReturnType<typeof setTimeout> | undefined;
 
-        // Formulaire jump proposé : carte « Ajouter ce formulaire ».
-        if (afterJumpForm.form && !previewTurn && !askTurn) {
-          const form = afterJumpForm.form;
-          setDrafts((p) => {
-            const d = p[id];
-            const msg = {
-              id: `jumpform-${Date.now()}`,
-              role: "jump-form-proposal" as const,
-              jumpFormProposal: form,
-              jumpFormProposalStatus: "pending" as const,
-              t: "à l'instant",
-            };
-            return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
-          });
-        }
+      streamChatCompletion(
+        {
+          model: chatModelId,
+          messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: apiUserContent }],
+          // Les réponses du builder embarquent souvent un prompt système complet
+          // + un bloc GENT_CONFIG : un plafond trop bas tronquait les propositions.
+          // L'aperçu est un JSON court : un plafond plus bas évite que le modèle
+          // parte dans une dissertation et n'atteigne jamais le bloc.
+          max_tokens: budget.maxTokens,
+          ...(budget.reasoning && supportsReasoningStream(chatModelId) ? { reasoning: { enabled: true } } : {}),
+          // Recherche web : utile pour découvrir des connecteurs, inutile
+          // partout ailleurs — et elle s'exécute AVANT la génération, donc
+          // chaque tour la payait en attente pure.
+          webSearch: budget.webSearch,
+        },
+        (fullSoFar, reasoningSoFar) => {
+          if (!sawContent && fullSoFar.trim()) {
+            sawContent = true;
+            clearTimeout(deadline);
+          }
+          let displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
+          if (askTurn) displayRaw = stripVisibleChoiceList(displayRaw);
+          updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw), reasoning: reasoningSoFar || undefined }));
+          if (previewTurn) applyLivePreview(fullSoFar);
+        },
+        undefined,
+        (status) => setThinkingStatus(status.label),
+        "/api/chat",
+        controller.signal
+      )
+        .then(({ text: fullRaw, truncated, reasoning }) => {
+          const afterQuestions = extractQuestions(fullRaw);
+          let questions = afterQuestions.questions;
+          const afterConfig = extractGentConfigSignal(afterQuestions.text);
+          const afterPreview = extractAppPreviewSignal(afterConfig.text);
+          const afterSuggestions = extractConnectorSuggestions(afterPreview.text);
+          const afterConnector = extractConnectorSignal(afterSuggestions.text);
+          const afterJumpForm = extractJumpFormSignal(afterConnector.text);
+          let reply = afterJumpForm.text;
+          if (askTurn && !questions.length) {
+            const recovered = recoverQuestionsFromChoiceList(reply);
+            reply = recovered.text;
+            questions = recovered.questions;
+          } else if (questions.length) {
+            reply = stripVisibleChoiceList(reply, questions.flatMap((q) => q.options));
+          }
+          const truncationNote = truncated
+            ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — demandez « continue » ou reformulez plus court ; une proposition de configuration incomplète ne doit pas être appliquée.</em></p>'
+            : "";
+          updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply) + truncationNote, questions, reasoning: reasoning || undefined }));
 
-        // Connecteurs candidats découverts par recherche web : liste de
-        // sélection à valider par le créateur. Ignorée si une configuration
-        // complète a été proposée dans le même message (elle prime).
-        const suggestions =
-          afterConfig.config || previewTurn || askTurn
-            ? []
-            : afterSuggestions.suggestions.filter((s) => !existingConnectorUrls.includes(s.url));
-        if (suggestions.length) {
-          setDrafts((p) => {
-            const d = p[id];
-            const msg = {
-              id: `connlist-${Date.now()}`,
-              role: "connector-proposal" as const,
-              connectorSuggestions: suggestions,
-              connectorSuggestionsStatus: "pending" as const,
-              t: "à l'instant",
-            };
-            return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
-          });
-        }
+          // Configuration complète proposée : carte « Appliquer la configuration ».
+          // Un tour « aperçu » ne doit pas aussi reconfigurer le gent.
+          if (afterConfig.config && !previewTurn && !askTurn) {
+            const config = afterConfig.config;
+            setDrafts((p) => {
+              const d = p[id];
+              const msg = {
+                id: `config-${Date.now()}`,
+                role: "config-proposal" as const,
+                configProposal: config,
+                configProposalStatus: "pending" as const,
+                t: "à l'instant",
+              };
+              return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+            });
+          }
 
-        // Proposition de connecteur unique : signal du modèle, ou détection
-        // déterministe de secours sur le message du créateur (URL de dataset).
-        let proposal: ConnectorProposal | null = afterConnector.connector ?? detectConnectorInText(text);
-        if (afterConfig.config || previewTurn || askTurn) proposal = null;
-        if (proposal && existingConnectorUrls.includes(proposal.url)) proposal = null;
-        if (proposal && suggestions.some((s) => s.url === proposal!.url)) proposal = null;
-        if (proposal) {
-          const finalProposal = proposal;
-          setDrafts((p) => {
-            const d = p[id];
-            const msg = {
-              id: `conn-${Date.now()}`,
-              role: "connector-proposal" as const,
-              connectorProposal: finalProposal,
-              connectorProposalStatus: "pending" as const,
-              t: "à l'instant",
-            };
-            return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
-          });
-        }
-      })
-      .catch((err: Error) => {
-        if (err?.name === "AbortError") {
-          updateLastMessage((m) => ({
-            ...m,
-            text: (m.text?.trim() ? m.text : "") + "<p><em>Génération interrompue.</em></p>",
+          // Aperçu d'application : appliqué immédiatement (c'est une maquette à
+          // données simulées, rien de destructif à valider) pour que l'onglet
+          // Aperçu se dessine sous les yeux du créateur au fil de l'échange.
+          if (afterPreview.preview && !askTurn) {
+            const incoming = afterPreview.preview;
+            const replace = afterPreview.replace;
+            setDrafts((p) => {
+              const d = p[id];
+              return {
+                ...p,
+                [id]: {
+                  ...d,
+                  appPreview: mergeAppPreview(d.appPreview, incoming, replace),
+                  appPreviewFreshIds: incoming.modules.map((m) => m.id),
+                },
+              };
+            });
+          }
+
+          // Formulaire jump proposé : carte « Ajouter ce formulaire ».
+          if (afterJumpForm.form && !previewTurn && !askTurn) {
+            const form = afterJumpForm.form;
+            setDrafts((p) => {
+              const d = p[id];
+              const msg = {
+                id: `jumpform-${Date.now()}`,
+                role: "jump-form-proposal" as const,
+                jumpFormProposal: form,
+                jumpFormProposalStatus: "pending" as const,
+                t: "à l'instant",
+              };
+              return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+            });
+          }
+
+          // Connecteurs candidats découverts par recherche web : liste de
+          // sélection à valider par le créateur. Ignorée si une configuration
+          // complète a été proposée dans le même message (elle prime).
+          const suggestions =
+            afterConfig.config || previewTurn || askTurn
+              ? []
+              : afterSuggestions.suggestions.filter((s) => !existingConnectorUrls.includes(s.url));
+          if (suggestions.length) {
+            setDrafts((p) => {
+              const d = p[id];
+              const msg = {
+                id: `connlist-${Date.now()}`,
+                role: "connector-proposal" as const,
+                connectorSuggestions: suggestions,
+                connectorSuggestionsStatus: "pending" as const,
+                t: "à l'instant",
+              };
+              return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+            });
+          }
+
+          // Proposition de connecteur unique : signal du modèle, ou détection
+          // déterministe de secours sur le message du créateur (URL de dataset).
+          let proposal: ConnectorProposal | null = afterConnector.connector ?? detectConnectorInText(text);
+          if (afterConfig.config || previewTurn || askTurn) proposal = null;
+          if (proposal && existingConnectorUrls.includes(proposal.url)) proposal = null;
+          if (proposal && suggestions.some((s) => s.url === proposal!.url)) proposal = null;
+          if (proposal) {
+            const finalProposal = proposal;
+            setDrafts((p) => {
+              const d = p[id];
+              const msg = {
+                id: `conn-${Date.now()}`,
+                role: "connector-proposal" as const,
+                connectorProposal: finalProposal,
+                connectorProposalStatus: "pending" as const,
+                t: "à l'instant",
+              };
+              return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+            });
+          }
+        })
+        .catch((err: Error) => {
+          // Abandon provoqué par le délai : le rejeu prend le relais, on ne
+          // signale surtout pas une « génération interrompue » au créateur.
+          if (retrying) return;
+          if (err?.name === "AbortError") {
+            updateLastMessage((m) => ({
+              ...m,
+              text: (m.text?.trim() ? m.text : "") + "<p><em>Génération interrompue.</em></p>",
+            }));
+            return;
+          }
+          updateLastMessage(() => ({
+            role: "agent" as const,
+            text: `<p>Erreur de connexion au service IA${err?.message ? ` : ${err.message}` : ""}.</p>`,
+            t: "à l'instant",
           }));
-          return;
-        }
-        updateLastMessage(() => ({
-          role: "agent" as const,
-          text: `<p>Erreur de connexion au service IA${err?.message ? ` : ${err.message}` : ""}.</p>`,
-          t: "à l'instant",
-        }));
-      })
-      .finally(() => {
-        if (streamAbortRef.current === controller) streamAbortRef.current = null;
-        setIsThinking(false);
-        setThinkingStatus(null);
-      });
+        })
+        .finally(() => {
+          clearTimeout(deadline);
+          if (retrying) return;
+          if (streamAbortRef.current === controller) streamAbortRef.current = null;
+          setIsThinking(false);
+          setThinkingStatus(null);
+        });
+
+      if (!degraded) {
+        deadline = setTimeout(() => {
+          if (sawContent) return;
+          retrying = true;
+          controller.abort();
+          launch(true);
+        }, BUILDER_FIRST_TOKEN_DEADLINE_MS);
+      }
+    }
+
+    launch(false);
   }, []);
 
   // Le créateur a décrit le rôle de son gent sur l'accueil du studio : cette
