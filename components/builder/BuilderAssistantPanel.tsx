@@ -550,7 +550,7 @@ export function BuilderAssistantPanel() {
               : "L'assistant vous consulte avant chaque génération. Cliquez pour le laisser décider seul."
           }
         >
-          {currentDraft.autoPilot ? "🚀 Confiance" : "💬 Consulter"}
+          {currentDraft.autoPilot ? "🚀" : "💬"}
         </button>
         <ReportMenu getMarkdown={() => buildBuilderReport(currentDraft)} baseName={currentDraft.name} />
         <button

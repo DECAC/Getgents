@@ -274,3 +274,66 @@ describe("passage de l'aperçu à l'espace (Preview)", () => {
     expect(pub.appPreview?.appName).toBe("Radar candidatures");
   });
 });
+
+/**
+ * Régression signalée en test : un onglet « Citations » apparaissait, mais
+ * vide. Le modèle avait émis des blocs `{"kind":"quote"}` — hors catalogue,
+ * donc silencieusement jetés, ne laissant que le titre et les boutons. Pire :
+ * un module ré-émis dont TOUS les blocs échouaient était rejeté en entier,
+ * l'ancien restait à l'écran, et l'assistant annonçait quand même la
+ * modification. On rattrape désormais les synonymes et les formes voisines.
+ */
+describe("rattrapage des blocs hors catalogue", () => {
+  function blocks(raw: unknown[]) {
+    const { preview } = extractAppPreviewSignal(
+      `<!--APERCU: ${JSON.stringify({
+        themes: ["Citations"],
+        modules: [{ id: "m", title: "T", theme: "Citations", size: "large", blocks: raw }],
+      })}-->`
+    );
+    return preview?.modules[0].blocks ?? [];
+  }
+
+  it("traduit un synonyme de kind plutôt que de jeter le bloc", () => {
+    expect(blocks([{ kind: "quote", text: "« Le premier extrait. »" }])).toEqual([
+      { kind: "text", text: "« Le premier extrait. »" },
+    ]);
+    expect(blocks([{ kind: "kpi", items: [{ value: "12", label: "Extraits" }] }])[0].kind).toBe("stats");
+  });
+
+  it("accepte les noms de champ voisins", () => {
+    expect(blocks([{ kind: "text", content: "Un paragraphe." }])).toEqual([
+      { kind: "text", text: "Un paragraphe." },
+    ]);
+    expect(blocks([{ kind: "actions", items: [{ label: "Ouvrir" }] }])).toEqual([
+      { kind: "actions", items: ["Ouvrir"] },
+    ]);
+  });
+
+  it("devine le type d'après la forme quand le kind est inconnu", () => {
+    expect(blocks([{ kind: "citations", items: [{ title: "Page 12", note: "…" }] }])[0].kind).toBe("cards");
+    expect(blocks([{ kind: "n-importe-quoi", columns: ["A"], rows: [["1"]] }])[0].kind).toBe("table");
+  });
+
+  it("rejette encore ce qui ne porte aucune donnée exploitable", () => {
+    expect(blocks([{ kind: "quote" }, { kind: "mystere", foo: 1 }])).toEqual([]);
+  });
+
+  it("laisse passer une modification qui n'utilise que des synonymes", () => {
+    // Le cas signalé : sans rattrapage, ce module était rejeté en entier.
+    const { preview } = extractAppPreviewSignal(
+      `<!--APERCU: ${JSON.stringify({
+        themes: ["Citations"],
+        modules: [
+          {
+            id: "citations",
+            title: "Citations clés",
+            theme: "Citations",
+            blocks: [{ kind: "quotes", items: ["Extrait A", "Extrait B", "Extrait C"] }],
+          },
+        ],
+      })}-->`
+    );
+    expect(preview?.modules[0].blocks).toHaveLength(1);
+  });
+});

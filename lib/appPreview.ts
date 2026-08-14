@@ -101,6 +101,7 @@ export const APP_PREVIEW_PROMPT_INSTRUCTION =
   '- {"kind":"contacts","items":[{"name":"Inès Moreau","role":"Head of Product · Alma","last":"échange il y a 3 semaines","status":"todo"}]}\n' +
   '- {"kind":"cards","filters":["Tous","Télétravail"],"items":[{"title":"Product Manager","subtitle":"Alma · Paris","score":92,"tags":["CDI","52–60 k€"],"note":"Pourquoi cette offre sort du lot."}]}\n' +
   '- {"kind":"actions","items":["Préparer ma candidature","Relancer ce contact"]}\n' +
+  "N'invente jamais un `kind` : une citation, un extrait ou un verbatim se rend avec `text` (un seul) ou `cards` (plusieurs, le texte allant dans `note`). " +
   "Les données doivent être PLAUSIBLES et propres au sujet du gent — n'écris jamais « Lorem » ni des valeurs à zéro. " +
   "Termine chaque module par un bloc actions (1 ou 2 boutons que l'utilisateur clique pour lancer l'assistant). " +
   "Une seule phrase visible après le bloc. Interdit dans ce tour : bloc GENT_CONFIG, connecteurs, dissertation métier, recherche d'informations réelles.";
@@ -119,18 +120,151 @@ function arr(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
 
+/**
+ * Le modèle ne respecte pas toujours le catalogue à la lettre : il écrit
+ * « quote », « kpi », « list » là où le catalogue dit text, stats, cards.
+ * Un bloc rejeté disparaissait SANS TRACE — et comme un module sans bloc
+ * valide est lui aussi rejeté, une modification demandée par le créateur
+ * pouvait ne rien changer à l'écran pendant que l'assistant annonçait
+ * l'avoir faite. On rattrape donc les synonymes courants plutôt que de
+ * jeter la donnée.
+ */
+const BLOCK_KIND_ALIASES: Record<string, AppBlockKind> = {
+  title: "heading",
+  header: "heading",
+  subheading: "heading",
+  section: "heading",
+  paragraph: "text",
+  quote: "text",
+  quotes: "text",
+  citation: "text",
+  citations: "text",
+  excerpt: "text",
+  excerpts: "text",
+  verbatim: "text",
+  markdown: "text",
+  body: "text",
+  note: "text",
+  stat: "stats",
+  kpi: "stats",
+  kpis: "stats",
+  metric: "stats",
+  metrics: "stats",
+  figures: "stats",
+  graph: "chart",
+  barchart: "chart",
+  "bar-chart": "chart",
+  linechart: "chart",
+  "line-chart": "chart",
+  grid: "table",
+  datatable: "table",
+  info: "callout",
+  warning: "callout",
+  alert: "callout",
+  tip: "callout",
+  highlight: "callout",
+  todo: "checklist",
+  todos: "checklist",
+  tasks: "checklist",
+  person: "profile",
+  people: "contacts",
+  contact: "contacts",
+  card: "cards",
+  list: "cards",
+  items: "cards",
+  action: "actions",
+  buttons: "actions",
+  cta: "actions",
+};
+
+const VALID_KINDS = new Set<string>([
+  "heading",
+  "text",
+  "stats",
+  "chart",
+  "table",
+  "callout",
+  "checklist",
+  "profile",
+  "contacts",
+  "cards",
+  "actions",
+]);
+
+/** Première chaîne non vide parmi plusieurs noms de champ possibles. */
+function pickStr(b: Record<string, unknown>, keys: string[], max: number): string | undefined {
+  for (const k of keys) {
+    const v = str(b[k], max);
+    if (v) return v;
+  }
+  return undefined;
+}
+
+/**
+ * Dernier recours quand le `kind` est absent ou inconnu : on devine d'après
+ * la FORME de l'objet. Mieux vaut un bloc approchant que rien du tout.
+ */
+function inferKind(b: Record<string, unknown>): AppBlockKind | null {
+  if (Array.isArray(b.series)) return "chart";
+  if (Array.isArray(b.columns) && Array.isArray(b.rows)) return "table";
+  if (Array.isArray(b.facts) || Array.isArray(b.chips)) return "profile";
+
+  const items = b.items;
+  if (Array.isArray(items) && items.length) {
+    const first = items[0];
+    // Un bloc de boutons déclare toujours `kind:"actions"`, essayé en premier :
+    // une liste de chaînes hors catalogue est donc du contenu, pas des actions.
+    if (typeof first === "string") return "cards";
+    if (first && typeof first === "object") {
+      const o = first as Record<string, unknown>;
+      if ("done" in o || "checked" in o) return "checklist";
+      if ("status" in o || ("name" in o && "role" in o)) return "contacts";
+      if ("value" in o && "label" in o) return "stats";
+      if ("title" in o) return "cards";
+    }
+  }
+
+  if (typeof b.tone === "string") return "callout";
+  if (pickStr(b, ["text", "content", "body", "quote", "excerpt", "value"], 1200)) return "text";
+  return null;
+}
+
+/**
+ * Types à essayer, du plus explicite au plus déduit. On ESSAIE plutôt qu'on
+ * ne tranche : « citations » ressemble à un synonyme de `text`, mais s'il
+ * porte une liste d'objets, c'est en réalité un `cards`. Le premier candidat
+ * qui produit un bloc exploitable gagne.
+ */
+function kindCandidates(b: Record<string, unknown>): AppBlockKind[] {
+  const raw = typeof b.kind === "string" ? b.kind.trim().toLowerCase() : "";
+  const out: AppBlockKind[] = [];
+  if (VALID_KINDS.has(raw)) out.push(raw as AppBlockKind);
+  else if (BLOCK_KIND_ALIASES[raw]) out.push(BLOCK_KIND_ALIASES[raw]);
+  const inferred = inferKind(b);
+  if (inferred && !out.includes(inferred)) out.push(inferred);
+  return out;
+}
+
 function validateBlock(raw: unknown): AppBlock | null {
   if (!raw || typeof raw !== "object") return null;
   const b = raw as Record<string, unknown>;
 
-  switch (b.kind) {
+  for (const kind of kindCandidates(b)) {
+    const block = blockOfKind(kind, b);
+    if (block) return block;
+  }
+  return null;
+}
+
+function blockOfKind(kind: AppBlockKind, b: Record<string, unknown>): AppBlock | null {
+  switch (kind) {
     case "heading": {
-      const text = str(b.text, 120);
+      const text = pickStr(b, ["text", "title", "label"], 120);
       return text ? { kind: "heading", text } : null;
     }
 
     case "text": {
-      const text = str(b.text, 1200);
+      const text = pickStr(b, ["text", "content", "body", "quote", "excerpt", "value"], 1200);
       return text ? { kind: "text", text } : null;
     }
 
@@ -138,8 +272,8 @@ function validateBlock(raw: unknown): AppBlock | null {
       const items = arr(b.items)
         .map((i) => {
           const o = (i ?? {}) as Record<string, unknown>;
-          const value = str(o.value, 40);
-          const label = str(o.label, 60);
+          const value = str(o.value, 40) ?? (num(o.value) !== undefined ? String(o.value) : undefined);
+          const label = pickStr(o, ["label", "title", "name"], 60);
           if (!value || !label) return null;
           return {
             value,
@@ -154,7 +288,7 @@ function validateBlock(raw: unknown): AppBlock | null {
     }
 
     case "chart": {
-      const series = arr(b.series)
+      const series = (Array.isArray(b.series) ? arr(b.series) : arr(b.items))
         .map((s) => {
           const o = (s ?? {}) as Record<string, unknown>;
           const label = str(o.label, 24);
@@ -189,7 +323,7 @@ function validateBlock(raw: unknown): AppBlock | null {
     }
 
     case "callout": {
-      const text = str(b.text, 600);
+      const text = pickStr(b, ["text", "content", "body"], 600);
       if (!text) return null;
       const tone: AppCalloutTone =
         b.tone === "warning" ? "warning" : b.tone === "success" ? "success" : "info";
@@ -199,9 +333,13 @@ function validateBlock(raw: unknown): AppBlock | null {
     case "checklist": {
       const items = arr(b.items)
         .map((i) => {
+          if (typeof i === "string") {
+            const label = str(i, 160);
+            return label ? { label, done: false } : null;
+          }
           const o = (i ?? {}) as Record<string, unknown>;
-          const label = str(o.label, 160);
-          return label ? { label, done: !!o.done } : null;
+          const label = pickStr(o, ["label", "text", "title"], 160);
+          return label ? { label, done: !!(o.done ?? o.checked) } : null;
         })
         .filter((i): i is { label: string; done: boolean } => i !== null)
         .slice(0, 20);
@@ -249,11 +387,16 @@ function validateBlock(raw: unknown): AppBlock | null {
       const items = arr(b.items)
         .map((i) => {
           const o = (i ?? {}) as Record<string, unknown>;
-          const name = str(o.name, 80);
+          const name = pickStr(o, ["name", "title", "label"], 80);
           if (!name) return null;
           const status: AppContactStatus =
             o.status === "sent" ? "sent" : o.status === "replied" ? "replied" : "todo";
-          return { name, role: str(o.role, 120) ?? "", last: str(o.last, 120), status };
+          return {
+            name,
+            role: pickStr(o, ["role", "subtitle", "headline"], 120) ?? "",
+            last: pickStr(o, ["last", "note"], 120),
+            status,
+          };
         })
         .filter((i): i is NonNullable<typeof i> => i !== null)
         .slice(0, 12);
@@ -263,19 +406,23 @@ function validateBlock(raw: unknown): AppBlock | null {
     case "cards": {
       const items = arr(b.items)
         .map((i): AppCardItem | null => {
+          if (typeof i === "string") {
+            const title = str(i, 140);
+            return title ? { title, tags: [] } : null;
+          }
           const o = (i ?? {}) as Record<string, unknown>;
-          const title = str(o.title, 140);
+          const title = pickStr(o, ["title", "name", "label", "heading"], 140);
           if (!title) return null;
           const score = num(o.score);
           return {
             title,
-            subtitle: str(o.subtitle, 160),
+            subtitle: pickStr(o, ["subtitle", "source", "role"], 160),
             score: score === undefined ? undefined : Math.max(0, Math.min(100, Math.round(score))),
             tags: arr(o.tags)
               .map((t) => str(t, 40))
               .filter((t): t is string => !!t)
               .slice(0, 6),
-            note: str(o.note, 600),
+            note: pickStr(o, ["note", "text", "quote", "excerpt", "content"], 600),
           };
         })
         .filter((i): i is AppCardItem => i !== null)
@@ -290,7 +437,11 @@ function validateBlock(raw: unknown): AppBlock | null {
 
     case "actions": {
       const items = arr(b.items)
-        .map((i) => str(i, 80))
+        .map((i) =>
+          typeof i === "string"
+            ? str(i, 80)
+            : pickStr((i ?? {}) as Record<string, unknown>, ["label", "title", "text"], 80)
+        )
         .filter((i): i is string => !!i)
         .slice(0, 5);
       return items.length ? { kind: "actions", items } : null;

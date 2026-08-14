@@ -59,6 +59,12 @@
   display: flex;
   align-items: center;
   gap: 11px;
+  /* Le panneau est étroit et redimensionnable : sans retour à la ligne, tout
+     bouton ajouté pousse les suivants HORS de la fenêtre. C'est ce qui rendait
+     « Rapport » et le plein écran inatteignables. Ils passent désormais à la
+     ligne plutôt que de disparaître. */
+  flex-wrap: wrap;
+  row-gap: 8px;
   flex: none;
 }
 .newConvBtn {
