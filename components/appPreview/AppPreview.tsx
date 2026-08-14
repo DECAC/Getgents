@@ -1,7 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppBlock, AppContactStatus, AppModuleSpec, AppPreviewSpec } from "@/lib/appPreview";
+import type { Artefact } from "@/lib/types";
+import { artefactIdFromModuleId } from "@/lib/workspaceArtefacts";
+import { WorkspaceArtefactCard } from "@/components/center/WorkspaceArtefactCard";
 import styles from "./AppPreview.module.css";
 
 /* ------------------------------------------------------------------ icônes */
@@ -546,6 +549,9 @@ export function AppPreview({
   building = false,
   variant = "studio",
   onAsk,
+  artefacts = [],
+  focusTheme,
+  highlightModuleId,
 }: {
   spec: AppPreviewSpec;
   /** Modules issus du dernier tour de l'assistant — signalés « nouveau ». */
@@ -556,6 +562,11 @@ export function AppPreview({
   variant?: "studio" | "workspace";
   /** Envoie une consigne à l'assistant (pills, pied de module, candidature…). */
   onAsk?: (prompt: string) => void;
+  /** Artefacts gardés à afficher dans l'espace (tuiles live, pas la maquette studio). */
+  artefacts?: Artefact[];
+  /** Après un « Garder », ouvrir l'onglet du type d'artefact. */
+  focusTheme?: string;
+  highlightModuleId?: string;
 }) {
   const [theme, setTheme] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
@@ -563,9 +574,20 @@ export function AppPreview({
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [statuses, setStatuses] = useState<Record<string, AppContactStatus>>({});
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
+  const skipFocus = useRef(true);
 
   const themes = spec.themes.length ? spec.themes : ["Vue d'ensemble"];
   const activeTheme = theme && themes.includes(theme) ? theme : themes[0];
+
+  useEffect(() => {
+    if (skipFocus.current) {
+      skipFocus.current = false;
+      return;
+    }
+    if (focusTheme && spec.themes.includes(focusTheme)) setTheme(focusTheme);
+    // Uniquement quand un nouvel artefact est gardé — pas à chaque rendu de l'aperçu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightModuleId]);
 
   const state: InteractionState = useMemo(
     () => ({
@@ -608,9 +630,20 @@ export function AppPreview({
       <div className={styles.canvas}>
         {visible.length || building ? (
           <div className={styles.grid}>
-            {visible.map((m) => (
-              <ModuleCard key={m.id} module={m} fresh={freshIds.includes(m.id)} state={state} />
-            ))}
+            {visible.map((m) => {
+              const artefId = artefactIdFromModuleId(m.id);
+              const live = artefId ? artefacts.find((a) => a.id === artefId) : undefined;
+              if (live) {
+                return (
+                  <WorkspaceArtefactCard
+                    key={m.id}
+                    artefact={live}
+                    sizeClass={SIZE_CLASS[m.size]}
+                  />
+                );
+              }
+              return <ModuleCard key={m.id} module={m} fresh={freshIds.includes(m.id)} state={state} />;
+            })}
             {building ? <SkeletonCard /> : null}
           </div>
         ) : (

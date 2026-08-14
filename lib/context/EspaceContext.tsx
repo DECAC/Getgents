@@ -24,6 +24,7 @@ import {
 } from "@/lib/conversationUtils";
 import { extractQuestions, extractFollowups } from "@/lib/suggestions";
 import { extractArtefactSignal } from "@/lib/artefactSignal";
+import { ARTEFACT_KIND_META, applyArtefactKind, type WorkspaceArtefactKind } from "@/lib/artefactKind";
 import {
   extractThemeTabSignal,
   themeActionWithArtefact,
@@ -46,17 +47,6 @@ import { supportsReasoningStream } from "@/lib/openRouterReasoning";
 import { buildJumpFormPrompt } from "@/lib/jumpFormSignal";
 import { buildGentSystemPrompt } from "@/lib/gentRuntimePrompt";
 
-const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
-  report: { type: "Rapport", icon: "📄" },
-  checklist: { type: "Checklist", icon: "✅" },
-  chart: { type: "Graphique", icon: "📊" },
-  visual: { type: "Aperçu visuel", icon: "🖼️" },
-  map: { type: "Carte", icon: "🗺️" },
-  dashboard: { type: "Tableau de bord", icon: "📈" },
-  image: { type: "Image", icon: "🖼️" },
-  "profile-summary": { type: "Résumé de profil", icon: "👤" },
-};
-
 function artefactFromProposal(sig: ArtefactProposal, id: string): Artefact {
   const meta = ARTEFACT_KIND_META[sig.kind] ?? { type: "Artefact", icon: "📄" };
   const profileSummary = sig.profileSummary
@@ -67,6 +57,7 @@ function artefactFromProposal(sig: ArtefactProposal, id: string): Artefact {
     title: sig.title,
     type: meta.type,
     icon: meta.icon,
+    kind: sig.kind,
     date: "à l'instant",
     body: sig.body ? renderMarkdown(sig.body) : undefined,
     chartData: sig.chartData,
@@ -208,6 +199,8 @@ interface EspaceContextValue {
   /** Réponse de l'utilisateur à une demande de position émise par le gent dans le fil. */
   confirmGeoRequest: (messageId: string, decision: "share" | "deny") => void;
   removeArtefact: (artefactId: string) => void;
+  /** Change le type d'un artefact gardé et le range dans l'onglet thématique correspondant. */
+  changeArtefactKind: (artefactId: string, kind: WorkspaceArtefactKind) => void;
   /** Ouvre l'artefact pointé par un message ; s'il a été retiré de l'espace entre-temps, le recrée depuis la proposition d'origine (toujours conservée dans le message) avant de l'ouvrir. */
   viewArtefact: (messageId: string) => void;
   /** Artefact figé « mini-app » : rafraîchit ses données côté serveur. */
@@ -1168,6 +1161,7 @@ export function EspaceProvider({
       icon: meta.icon,
       date: "à l'instant",
       imageUrl,
+      kind: "image",
       imageCaption: proposal.caption,
       imageSource: source,
       body: proposal.caption ? `<p>${proposal.caption.replace(/</g, "&lt;")}</p>` : undefined,
@@ -1420,6 +1414,20 @@ export function EspaceProvider({
     });
     setPendingArtefactVerdict((p) => (p?.proposalMessageId === proposalId ? null : p));
     if (keptDocumentId) setViewerArtefactId(keptDocumentId);
+  }, []);
+
+  const changeArtefactKind = useCallback((artefactId: string, kind: WorkspaceArtefactKind) => {
+    const id = currentIdRef.current;
+    setEspaces((prev) => {
+      const espace = prev[id];
+      if (!espace) return prev;
+      const current = espace.artefacts.find((a) => a.id === artefactId);
+      if (!current) return prev;
+      const updated = applyArtefactKind(current, kind);
+      const artefacts = espace.artefacts.map((a) => (a.id === artefactId ? updated : a));
+      const themeTabs = upsertArtefactThemeTab(espace.themeTabs ?? [], updated);
+      return { ...prev, [id]: { ...espace, artefacts, themeTabs } };
+    });
   }, []);
 
   const generateProfileSummaryMedia = useCallback((artefactId: string, mediaId: string) => {
@@ -1756,6 +1764,7 @@ export function EspaceProvider({
         requestGeolocation,
         confirmGeoRequest,
         removeArtefact,
+        changeArtefactKind,
         viewArtefact,
         refreshPinnedArtefact,
         resetPinnedArtefact,

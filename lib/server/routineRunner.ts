@@ -5,8 +5,8 @@
 // (artefact + messages de conversation) directement dans l'espace en base.
 import type { Espace, Routine, Artefact, ConversationMessage } from "@/lib/types";
 export { isRoutineDue } from "@/lib/routineSchedule";
-import { extractArtefactSignal } from "@/lib/artefactSignal";
-import { ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
+import { extractArtefactSignal, ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
+import { ARTEFACT_KIND_META } from "@/lib/artefactKind";
 import { profileContextNote } from "@/lib/profileSignal";
 import { materializeProfileMedia } from "@/lib/profileSummaryArtefact";
 import { renderMarkdown } from "@/lib/markdown";
@@ -14,16 +14,6 @@ import { sendWhatsAppText, sendWhatsAppTemplate } from "@/lib/server/whatsapp";
 import { sendBrevoEmail } from "@/lib/server/brevo";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
-
-const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
-  report: { type: "Rapport", icon: "📄" },
-  checklist: { type: "Checklist", icon: "✅" },
-  chart: { type: "Graphique", icon: "📊" },
-  visual: { type: "Aperçu visuel", icon: "🖼️" },
-  map: { type: "Carte", icon: "🗺️" },
-  dashboard: { type: "Tableau de bord", icon: "📈" },
-  "profile-summary": { type: "Résumé de profil", icon: "👤" },
-};
 
 function nowTimeParis(): string {
   return new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });

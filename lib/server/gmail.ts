@@ -335,6 +335,31 @@ async function resolveImageBytes(
   return { bytes, mimeType };
 }
 
+function encodeHtmlEmail(to: string, subject: string, htmlBody: string, textBody: string): string {
+  const boundary = `getgents_alt_${Date.now()}`;
+  const lines = [
+    `To: ${to}`,
+    `Subject: ${encodeSubject(subject)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    "",
+    textBody || stripTags(htmlBody),
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    "",
+    htmlBody,
+    `--${boundary}--`,
+  ].join("\r\n");
+  return Buffer.from(lines, "utf8").toString("base64url");
+}
+
+function stripTags(html: string): string {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
 function encodePlainEmail(to: string, subject: string, body: string): string {
   const lines = [
     `To: ${to}`,
@@ -411,6 +436,8 @@ export async function sendMessage(
         ? `<html><body><p>${escapeHtml(body.trim())}</p></body></html>`
         : "<html><body></body></html>");
     raw = encodeHtmlEmailWithInlineImage(to.trim(), subject.trim(), html, image.bytes, image.mimeType);
+  } else if (options?.htmlBody?.trim()) {
+    raw = encodeHtmlEmail(to.trim(), subject.trim(), options.htmlBody.trim(), body ?? "");
   } else {
     raw = encodePlainEmail(to.trim(), subject.trim(), body ?? "");
   }

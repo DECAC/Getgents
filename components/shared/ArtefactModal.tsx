@@ -9,6 +9,7 @@ import { MapArtefact } from "./MapArtefact";
 import { DashboardArtefact } from "./dashboard/DashboardArtefact";
 import { ImageArtefact } from "./ImageArtefact";
 import { ProfileSummaryArtefact } from "./ProfileSummaryArtefact";
+import { ArtefactWorkspaceActions } from "./ArtefactWorkspaceActions";
 import styles from "./Modal.module.css";
 
 function VisualGrid() {
@@ -189,6 +190,7 @@ export function ArtefactModal() {
             <button className={styles.btnGhost} onClick={() => removeArtefact(artefact.id)}>
               Retirer de l&apos;espace
             </button>
+            <ArtefactWorkspaceActions artefact={artefact} showEnlarge={false} labeled />
             <button className={styles.btnGhost} onClick={() => alert("Export PDF — non implémenté dans ce commit.")}>
               Exporter en PDF
             </button>

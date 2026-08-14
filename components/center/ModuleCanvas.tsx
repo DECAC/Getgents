@@ -14,6 +14,7 @@ import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { ChecklistView } from "@/components/shared/ChecklistView";
 import { MapArtefact } from "@/components/shared/MapArtefact";
 import { DashboardArtefact } from "@/components/shared/dashboard/DashboardArtefact";
+import { ArtefactWorkspaceActions } from "@/components/shared/ArtefactWorkspaceActions";
 import { PinnedArtefactPanel } from "./PinnedArtefactPanel";
 import { StarterBubbles } from "./StarterBubbles";
 import { computeImageModuleHeight } from "@/lib/moduleImageLayout";
@@ -48,6 +49,7 @@ interface ModuleDef {
   preferredLayout?: ModuleLayout;
   /** Corps sans scroll interne (ex. image entière visible). */
   contentFit?: boolean;
+  artefact?: Artefact;
 }
 
 /** Un onglet affiché dans la vue par thème : soit un thème dynamique (plusieurs modules), soit un module isolé. */
@@ -237,6 +239,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       kind: "artefact",
       preferredLayout: artefactLayout(a),
       contentFit: !!a.imageUrl,
+      artefact: a,
       openModal: () => openArtefactModal(a.id),
       onRemove: () => removeArtefact(a.id),
       render: () => (
@@ -454,6 +457,11 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                   gridColumn: `span ${layout.cols}`,
                   height: `${layout.height}px`,
                 }}
+                onClick={(e) => {
+                  const t = e.target as HTMLElement;
+                  if (t.closest("button, a, input, select, textarea, label")) return;
+                  m.openModal?.();
+                }}
                 onDragOver={(e) => {
                   e.preventDefault();
                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -492,20 +500,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                     {m.sub && <span className={styles.cardSub}>{m.sub}</span>}
                   </span>
                   <span className={styles.cardActions}>
-                    {m.openModal && (
-                      <button
-                        type="button"
-                        className={styles.actionBtn}
-                        onClick={m.openModal}
-                        title="Ouvrir en grand"
-                        aria-label="Ouvrir en grand"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                          <path d="M15 3h6v6M10 14 21 3" />
-                        </svg>
-                      </button>
-                    )}
+                    {m.artefact && <ArtefactWorkspaceActions artefact={m.artefact} />}
                     {m.onRemove && (
                       <button
                         type="button"
@@ -532,6 +527,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                 )}
                 <span
                   className={styles.resizeHandle}
+                  onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => beginResize(e, m.id)}
                   onPointerMove={onResizeMove}
                   onPointerUp={endResize}

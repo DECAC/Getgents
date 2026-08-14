@@ -255,6 +255,8 @@ export interface Artefact {
   type: string;
   icon: string;
   date: string;
+  /** Kind produit (rapport, checklist…) — absent sur les artefacts mockés anciens. */
+  kind?: import("@/lib/artefactKind").WorkspaceArtefactKind;
   visual?: boolean;
   body?: string;
   chartData?: { label: string; value: number }[];
