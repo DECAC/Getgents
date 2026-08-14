@@ -31,7 +31,51 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+/**
+ * Blocs de la tuile, dictés par le TYPE de l'artefact — pas par la simple
+ * présence de tel ou tel champ.
+ *
+ * L'ancienne version empilait tout ce qu'elle trouvait : après un
+ * changement de type, l'ancienne structure restait affichée sous la
+ * nouvelle. Le type commande désormais le rendu, et l'empilement ne sert
+ * plus que de repli quand la charge attendue manque.
+ */
 function artefactToBlocks(artefact: Artefact): AppBlock[] {
+  const kind = inferArtefactKind(artefact);
+
+  if (kind === "report") {
+    const spec = reportSpecFromArtefact(artefact);
+    if (spec) return reportSpecToAppBlocks(spec);
+  }
+  if (kind === "dashboard" && artefact.dashboard?.blocks?.length) {
+    // Même adaptateur que les rapports : un tableau de bord ne perd plus ses
+    // grilles, ses tableaux ni ses graphiques en passant en tuile.
+    const blocks = reportSpecToAppBlocks(artefact.dashboard);
+    if (blocks.length) return blocks;
+  }
+  if (kind === "checklist" && artefact.checklistItems?.length) {
+    return [
+      {
+        kind: "checklist",
+        items: artefact.checklistItems.slice(0, 20).map((i) => ({ label: i.label, done: i.checked })),
+      },
+    ];
+  }
+  if (kind === "chart" && artefact.chartData?.length) {
+    return [
+      {
+        kind: "chart",
+        caption: artefact.title,
+        series: artefact.chartData.slice(0, 12).map((d) => ({ label: d.label, value: d.value })),
+      },
+    ];
+  }
+
+  return artefactToStackedBlocks(artefact);
+}
+
+/** Repli : tout ce que porte l'artefact, quel que soit son type déclaré. */
+function artefactToStackedBlocks(artefact: Artefact): AppBlock[] {
   const blocks: AppBlock[] = [];
   const reportSpec = hasReportBody(artefact) ? reportSpecFromArtefact(artefact) : null;
   if (reportSpec) {
@@ -76,20 +120,7 @@ function artefactToBlocks(artefact: Artefact): AppBlock[] {
     });
   }
   if (artefact.dashboard?.blocks?.length) {
-    const heading = artefact.dashboard.blocks.find((b) => b.type === "heading");
-    if (heading && heading.type === "heading") blocks.push({ kind: "heading", text: heading.text });
-    const stats = artefact.dashboard.blocks.find((b) => b.type === "stats");
-    if (stats && stats.type === "stats") {
-      blocks.push({
-        kind: "stats",
-        items: stats.items.slice(0, 4).map((i) => ({
-          value: i.value,
-          label: i.label,
-          delta: i.delta,
-          dir: i.trend === "up" || i.trend === "down" ? i.trend : undefined,
-        })),
-      });
-    }
+    blocks.push(...reportSpecToAppBlocks(artefact.dashboard));
   }
   if (!blocks.length) {
     blocks.push({ kind: "text", text: artefact.title });

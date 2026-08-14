@@ -24,7 +24,8 @@ import {
 } from "@/lib/conversationUtils";
 import { extractQuestions, extractFollowups } from "@/lib/suggestions";
 import { extractArtefactSignal } from "@/lib/artefactSignal";
-import { ARTEFACT_KIND_META, applyArtefactKind, type WorkspaceArtefactKind } from "@/lib/artefactKind";
+import { ARTEFACT_KIND_META, type WorkspaceArtefactKind } from "@/lib/artefactKind";
+import { convertArtefactToKind } from "@/lib/artefactConversion";
 import {
   extractThemeTabSignal,
   themeActionWithArtefact,
@@ -1423,7 +1424,7 @@ export function EspaceProvider({
       if (!espace) return prev;
       const current = espace.artefacts.find((a) => a.id === artefactId);
       if (!current) return prev;
-      const updated = applyArtefactKind(current, kind);
+      const updated = convertArtefactToKind(current, kind);
       const artefacts = espace.artefacts.map((a) => (a.id === artefactId ? updated : a));
       const themeTabs = upsertArtefactThemeTab(espace.themeTabs ?? [], updated);
       return { ...prev, [id]: { ...espace, artefacts, themeTabs } };

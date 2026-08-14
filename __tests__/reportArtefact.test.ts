@@ -1,4 +1,4 @@
-import { bodyToReportSpec, hasReportBody, reportSpecFromArtefact, reportSpecToEmailHtml } from "@/lib/reportArtefact";
+import { bodyToReportSpec, hasReportBody, reportSpecFromArtefact, reportSpecToAppBlocks, reportSpecToEmailHtml } from "@/lib/reportArtefact";
 import type { Artefact } from "@/lib/types";
 
 const ITINERAIRE = `<h4>Aperçu du séjour</h4>
@@ -103,5 +103,60 @@ describe("reportSpecToEmailHtml", () => {
     expect(html).toContain("Lyon → Nice (boucle)");
     expect(html).toContain("Aperçu du séjour");
     expect(html).not.toContain("class=\"row\"");
+  });
+});
+
+/**
+ * Retour de test : « la mise à jour des rapports vers le nouveau design n'est
+ * que partielle, je n'obtiens pas tout à fait le même rendu que les autres
+ * tuiles ». Trois pertes à la conversion en blocs de tuile : le markdown
+ * s'affichait littéralement, les grilles étiquette/valeur portaient un bandeau
+ * d'en-tête vide, et les graphiques disparaissaient purement et simplement.
+ */
+describe("rapport rendu en tuile", () => {
+  it("ne laisse pas passer le markdown en clair", () => {
+    const spec = bodyToReportSpec("## Le **bilan**\n\nUn [lien](https://x.fr) et du *relief*.")!;
+    const blocks = reportSpecToAppBlocks(spec);
+    const texte = JSON.stringify(blocks);
+    expect(texte).not.toContain("**");
+    expect(texte).not.toContain("](");
+    expect(blocks[0]).toEqual({ kind: "heading", text: "Le bilan" });
+  });
+
+  it("garde le graphique d'un tableau de bord", () => {
+    const blocks = reportSpecToAppBlocks({
+      blocks: [
+        {
+          type: "chart",
+          variant: "bar",
+          title: "Prix au m²",
+          xKey: "name",
+          data: [
+            { name: "Bien", prix: 6800 },
+            { name: "Marché", prix: 7100 },
+          ],
+          series: [{ key: "prix", label: "Prix" }],
+        },
+      ],
+    });
+    expect(blocks).toEqual([
+      {
+        kind: "chart",
+        caption: "Prix au m²",
+        series: [
+          { label: "Bien", value: 6800 },
+          { label: "Marché", value: 7100 },
+        ],
+      },
+    ]);
+  });
+
+  it("rend une grille étiquette/valeur sans en-tête", () => {
+    const blocks = reportSpecToAppBlocks({
+      blocks: [{ type: "kv", title: "Détail", items: [{ label: "Surface", value: "72 m²" }] }],
+    });
+    expect(blocks[0]).toEqual({ kind: "heading", text: "Détail" });
+    // Colonnes vides : la tuile n'affiche alors aucun bandeau de titres.
+    expect(blocks[1]).toMatchObject({ kind: "table", columns: ["", ""] });
   });
 });

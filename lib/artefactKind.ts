@@ -54,8 +54,7 @@ export function inferArtefactKind(artefact: Artefact): WorkspaceArtefactKind {
   return "report";
 }
 
-/** Applique un kind : libellé, icône, et champ `kind` — le contenu reste intact. */
-export function applyArtefactKind(artefact: Artefact, kind: WorkspaceArtefactKind): Artefact {
-  const meta = ARTEFACT_KIND_META[kind];
-  return { ...artefact, kind, type: meta.type, icon: meta.icon };
-}
+// La conversion d'un artefact vers un autre type vit dans
+// `lib/artefactConversion.ts` : elle transforme la charge utile, pas
+// seulement le libellé, et ne peut donc pas rester ici sans créer un cycle
+// d'imports avec l'adaptateur de rapports.

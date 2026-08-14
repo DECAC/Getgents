@@ -189,15 +189,20 @@ function BlockView({ block, path, state }: BlockViewProps) {
     case "table":
       return (
         <table className={styles.table}>
-          <thead>
-            <tr>
-              {block.columns.map((c, i) => (
-                <th key={i} className={block.numeric?.includes(i) ? styles.tdNum : undefined}>
-                  {c}
-                </th>
-              ))}
-            </tr>
-          </thead>
+          {/* Une grille étiquette/valeur (bloc « kv » d'un rapport) n'a pas
+              d'en-tête : afficher un bandeau de titres vides laissait une
+              bande blanche que n'ont pas les autres tuiles. */}
+          {block.columns.some((c) => c.trim()) ? (
+            <thead>
+              <tr>
+                {block.columns.map((c, i) => (
+                  <th key={i} className={block.numeric?.includes(i) ? styles.tdNum : undefined}>
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+          ) : null}
           <tbody>
             {block.rows.map((row, ri) => (
               <tr key={ri}>

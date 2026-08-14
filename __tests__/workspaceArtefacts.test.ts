@@ -1,5 +1,4 @@
 import {
-  applyArtefactKind,
   inferArtefactKind,
   kindFromTypeLabel,
 } from "@/lib/artefactKind";
@@ -10,6 +9,7 @@ import {
   parseEmailRecipients,
   withKeptArtefacts,
 } from "@/lib/workspaceArtefacts";
+import { convertArtefactToKind } from "@/lib/artefactConversion";
 import type { AppPreviewSpec } from "@/lib/appPreview";
 import { upsertArtefactThemeTab } from "@/lib/themeTabSignal";
 
@@ -63,10 +63,10 @@ describe("withKeptArtefacts", () => {
   });
 });
 
-describe("applyArtefactKind", () => {
+describe("changement de type", () => {
   it("met à jour le libellé et range l'artefact dans l'onglet du nouveau type", () => {
-    const a = artef({ id: "a1", title: "Note", type: "Rapport", kind: "report" });
-    const next = applyArtefactKind(a, "checklist");
+    const a = artef({ id: "a1", title: "Note", type: "Rapport", kind: "report", body: "- Relire\n- Signer" });
+    const next = convertArtefactToKind(a, "checklist");
     expect(next.type).toBe("Checklist");
     expect(next.kind).toBe("checklist");
     expect(next.icon).toBe("✅");

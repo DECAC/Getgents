@@ -3,12 +3,8 @@
 import { useState } from "react";
 import type { Artefact } from "@/lib/types";
 import { useEspace } from "@/lib/context/EspaceContext";
-import {
-  ARTEFACT_KIND_META,
-  WORKSPACE_ARTEFACT_KINDS,
-  inferArtefactKind,
-  type WorkspaceArtefactKind,
-} from "@/lib/artefactKind";
+import { ARTEFACT_KIND_META, inferArtefactKind, type WorkspaceArtefactKind } from "@/lib/artefactKind";
+import { convertibleKinds } from "@/lib/artefactConversion";
 import { ShareArtefactDialog } from "./ShareArtefactDialog";
 import styles from "./ArtefactWorkspaceActions.module.css";
 
@@ -25,6 +21,10 @@ export function ArtefactWorkspaceActions({
   const { openArtefactModal, changeArtefactKind } = useEspace();
   const [shareOpen, setShareOpen] = useState(false);
   const kind = inferArtefactKind(artefact);
+  // Seuls les types réellement atteignables depuis ce contenu : proposer
+  // « Carte » à un rapport sans coordonnées ne pouvait mener qu'à un
+  // changement d'étiquette sans effet.
+  const kinds = Array.from(new Set([kind, ...convertibleKinds(artefact)]));
 
   return (
     <>
@@ -49,7 +49,7 @@ export function ArtefactWorkspaceActions({
             aria-label="Modifier le type d'artefact"
             onChange={(e) => changeArtefactKind(artefact.id, e.target.value as WorkspaceArtefactKind)}
           >
-            {WORKSPACE_ARTEFACT_KINDS.map((k) => (
+            {kinds.map((k) => (
               <option key={k} value={k}>
                 {ARTEFACT_KIND_META[k].type}
               </option>

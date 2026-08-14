@@ -46,6 +46,24 @@ function htmlToMarkdown(html: string): string {
   return decodeEntities(converted.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/[ \t]{2,}/g, " ").trim());
 }
 
+/**
+ * Les étiquettes, titres et cellules sont rendus en TEXTE BRUT — dans la
+ * tuile d'aperçu, aucun bloc ne passe par le rendu markdown. Sans ce
+ * nettoyage, un rapport écrit en markdown affichait ses `**` et ses `[…](…)`
+ * littéralement, là où les autres tuiles montrent du texte propre.
+ */
+export function stripInlineMarkdown(raw: string): string {
+  return raw
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*([\s\S]+?)\*\*/g, "$1")
+    .replace(/__([\s\S]+?)__/g, "$1")
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1$2")
+    .replace(/(^|[^_])_([^_\n]+)_/g, "$1$2")
+    .trim();
+}
+
 function looksLikeHtml(raw: string): boolean {
   return /<\/?[a-z][\s\S]*>/i.test(raw);
 }
@@ -180,11 +198,11 @@ function listToBlock(inner: string): DashboardBlock | null {
 }
 
 function parseTable(inner: string): DashboardBlock | null {
-  const headerCells = [...inner.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/gi)].map((m) => stripTags(m[1] ?? ""));
-  const rowHtml = [...inner.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)].map((m) => m[1] ?? "");
+  const headerCells = Array.from(inner.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/gi)).map((m) => stripTags(m[1] ?? ""));
+  const rowHtml = Array.from(inner.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)).map((m) => m[1] ?? "");
   const rows: string[][] = [];
   for (const row of rowHtml) {
-    const cells = [...row.matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)].map((m) => stripTags(m[1] ?? ""));
+    const cells = Array.from(row.matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)).map((m) => stripTags(m[1] ?? ""));
     if (!cells.length) continue;
     if (headerCells.length && cells.join() === headerCells.join()) continue;
     rows.push(cells);
@@ -307,7 +325,7 @@ function markdownToBlocks(md: string): DashboardBlock[] {
     }
     const heading = line.match(/^(#{1,4})\s+(.+)$/);
     if (heading) {
-      blocks.push({ type: "heading", width: FULL, text: heading[2]!.trim().slice(0, 120) });
+      blocks.push({ type: "heading", width: FULL, text: stripInlineMarkdown(heading[2]!).slice(0, 120) });
       i++;
       continue;
     }
@@ -327,7 +345,9 @@ function markdownToBlocks(md: string): DashboardBlock[] {
         items.push((lines[i] ?? "").replace(/^\s*(?:[-*+]|\d+\.)\s+/, "").trim());
         i++;
       }
-      const kv = items.map(splitLead);
+      const kv = items.map(splitLead).map((x) =>
+        x ? { label: stripInlineMarkdown(x.label), value: stripInlineMarkdown(x.value) } : null
+      );
       if (kv.every((x): x is KvItem => x !== null) && kv.length >= 2) {
         blocks.push({ type: "kv", width: FULL, items: kv });
       } else {
@@ -406,20 +426,24 @@ export function reportSpecToAppBlocks(spec: DashboardSpec): AppBlock[] {
   for (const b of spec.blocks) {
     switch (b.type) {
       case "heading":
-        blocks.push({ kind: "heading", text: b.text });
+        blocks.push({ kind: "heading", text: stripInlineMarkdown(b.text) });
         break;
       case "text":
-        blocks.push({ kind: "text", text: b.body.slice(0, 1200) });
+        blocks.push({ kind: "text", text: stripInlineMarkdown(b.body).slice(0, 1200) });
         break;
       case "callout":
         blocks.push({
           kind: "callout",
           tone: b.tone === "warning" ? "warning" : b.tone === "success" ? "success" : "info",
           title: b.title,
-          text: b.body.slice(0, 600),
+          text: stripInlineMarkdown(b.body).slice(0, 600),
         });
         break;
       case "kv":
+        // Un couple étiquette/valeur n'a pas d'en-tête : la tuile rend donc
+        // ce tableau sans bandeau de titres (colonnes vides), comme la
+        // grille du tableau de bord.
+        if (b.title) blocks.push({ kind: "heading", text: b.title });
         blocks.push({
           kind: "table",
           columns: ["", ""],
@@ -427,6 +451,7 @@ export function reportSpecToAppBlocks(spec: DashboardSpec): AppBlock[] {
         });
         break;
       case "table":
+        if (b.title) blocks.push({ kind: "heading", text: b.title });
         blocks.push({ kind: "table", columns: b.columns, rows: b.rows });
         break;
       case "stats":
@@ -440,6 +465,21 @@ export function reportSpecToAppBlocks(spec: DashboardSpec): AppBlock[] {
           })),
         });
         break;
+      case "chart": {
+        // Le graphique était purement et simplement perdu à la conversion :
+        // la tuile d'un rapport chiffré n'affichait plus que son texte.
+        const key = b.series[0]?.key;
+        const series = key
+          ? b.data
+              .map((row) => ({ label: String(row[b.xKey ?? "name"] ?? ""), value: Number(row[key]) }))
+              .filter((p) => p.label && Number.isFinite(p.value))
+              .slice(0, 12)
+          : [];
+        if (series.length) {
+          blocks.push({ kind: "chart", caption: b.title ?? b.series[0]?.label ?? "", series });
+        }
+        break;
+      }
       default:
         break;
     }
