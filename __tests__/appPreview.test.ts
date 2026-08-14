@@ -121,6 +121,49 @@ describe("extractAppPreviewSignal", () => {
     const { preview } = extractAppPreviewSignal("Voici.\n```json\n" + JSON.stringify(MINIMAL) + "\n```");
     expect(preview?.appName).toBe("Radar emploi");
   });
+
+  it("rattrape un JSON nu au schéma app_overview / tabs / simulated_data", () => {
+    const loose = {
+      app_overview: {
+        title: "Assistant Email",
+        tabs: [
+          {
+            id: "inbox",
+            label: "Boîte de réception",
+            modules: [
+              {
+                id: "priorites",
+                title: "Priorisation des emails",
+                type: "list",
+                description: "Vos emails importants.",
+                simulated_data: [
+                  {
+                    subject: "URGENT: Demande client",
+                    sender: "Sophie Dupont",
+                    priority: "Haute",
+                    summary: "Budget à rendre ce soir.",
+                  },
+                ],
+              },
+              {
+                id: "actions",
+                title: "Actions rapides",
+                type: "actions",
+                simulated_data: [{ action: "Répondre au client" }, { action: "Archiver les newsletters" }],
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const { preview, text } = extractAppPreviewSignal(JSON.stringify(loose));
+    expect(preview?.appName).toBe("Assistant Email");
+    expect(preview?.themes).toEqual(["Boîte de réception"]);
+    expect(preview?.modules).toHaveLength(2);
+    expect(preview?.modules[0].blocks.some((b) => b.kind === "cards")).toBe(true);
+    expect(preview?.modules[1].blocks.some((b) => b.kind === "actions")).toBe(true);
+    expect(text).toBe("");
+  });
 });
 
 describe("buildAppPreviewSystemPrompt", () => {

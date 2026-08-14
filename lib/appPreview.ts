@@ -104,7 +104,8 @@ export const APP_PREVIEW_PROMPT_INSTRUCTION =
   "N'invente jamais un `kind` : une citation, un extrait ou un verbatim se rend avec `text` (un seul) ou `cards` (plusieurs, le texte allant dans `note`). " +
   "Les données doivent être PLAUSIBLES et propres au sujet du gent — n'écris jamais « Lorem » ni des valeurs à zéro. " +
   "Termine chaque module par un bloc actions (1 ou 2 boutons que l'utilisateur clique pour lancer l'assistant). " +
-  "Une seule phrase visible après le bloc. Interdit dans ce tour : bloc GENT_CONFIG, connecteurs, dissertation métier, recherche d'informations réelles.";
+  "Une seule phrase visible après le bloc. Interdit dans ce tour : bloc GENT_CONFIG, connecteurs, dissertation métier, recherche d'informations réelles. " +
+  "N'invente PAS un autre JSON (pas de `app_overview`, pas de `tabs`, pas de `type`, pas de `simulated_data`) : uniquement le commentaire <!--APERCU: {appName, themes, modules avec blocks}-->.";
 
 /* ------------------------------------------------------------- validation */
 
@@ -570,11 +571,108 @@ function stripCodeFence(json: string): string {
     .trim();
 }
 
+function cardFromLooseItem(raw: unknown): AppCardItem | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const title =
+    pickStr(o, ["title", "subject", "label", "action", "name"], 120) ??
+    (typeof o.id === "string" ? str(o.id, 80) : undefined);
+  if (!title) return null;
+  const subtitle = pickStr(o, ["subtitle", "sender", "participants", "from"], 120);
+  const note = pickStr(o, ["note", "summary", "description", "text"], 400);
+  const tags = [str(o.priority, 40), str(o.last_update, 40), str(o.last, 40)].filter((t): t is string => !!t);
+  return { title, subtitle, note, tags: tags.length ? tags : undefined };
+}
+
+function blocksFromLooseModule(m: Record<string, unknown>): unknown[] {
+  const existing = arr(m.blocks);
+  if (existing.length) return existing;
+  const blocks: unknown[] = [];
+  const heading = str(m.title, 120);
+  if (heading) blocks.push({ kind: "heading", text: heading });
+  const desc = str(m.description, 400);
+  if (desc) blocks.push({ kind: "text", text: desc });
+  const data = arr(m.simulated_data).length ? arr(m.simulated_data) : arr(m.data);
+  const type = typeof m.type === "string" ? m.type.toLowerCase() : "";
+  const looksLikeActions =
+    type === "actions" ||
+    type === "action" ||
+    data.some((item) => !!item && typeof item === "object" && "action" in (item as object));
+  if (looksLikeActions && data.length) {
+    const items = data
+      .map((item) =>
+        typeof item === "string"
+          ? str(item, 80)
+          : pickStr((item ?? {}) as Record<string, unknown>, ["action", "label", "title"], 80)
+      )
+      .filter((i): i is string => !!i)
+      .slice(0, 5);
+    if (items.length) blocks.push({ kind: "actions", items });
+  } else if (data.length) {
+    const items = data.map(cardFromLooseItem).filter((c): c is AppCardItem => !!c).slice(0, 8);
+    if (items.length) blocks.push({ kind: "cards", items });
+  }
+  if (blocks.length <= 2 && heading) {
+    const hasActions = blocks.some((b) => !!b && typeof b === "object" && (b as { kind?: string }).kind === "actions");
+    if (!hasActions) blocks.push({ kind: "actions", items: ["Ouvrir"] });
+  }
+  return blocks;
+}
+
+function coercePreviewShape(p: Record<string, unknown>): Record<string, unknown> {
+  const nested =
+    p.app_overview && typeof p.app_overview === "object"
+      ? (p.app_overview as Record<string, unknown>)
+      : p.appOverview && typeof p.appOverview === "object"
+        ? (p.appOverview as Record<string, unknown>)
+        : null;
+  const root = nested ?? p;
+  const appName = str(root.title, 80) ?? str(root.appName, 80) ?? str(p.appName, 80);
+  const tabs = arr(root.tabs ?? p.tabs);
+  const rootModules = arr(root.modules ?? p.modules);
+
+  if (tabs.length && !rootModules.length) {
+    const themes: string[] = [];
+    const modules: unknown[] = [];
+    for (const tab of tabs) {
+      if (!tab || typeof tab !== "object") continue;
+      const t = tab as Record<string, unknown>;
+      const label = str(t.label, 60) ?? str(t.title, 60) ?? str(t.name, 60);
+      if (label && !themes.includes(label)) themes.push(label);
+      const theme = label ?? themes[0] ?? "Vue d'ensemble";
+      for (const rawMod of arr(t.modules)) {
+        if (!rawMod || typeof rawMod !== "object") continue;
+        const m = rawMod as Record<string, unknown>;
+        modules.push({
+          ...m,
+          theme: str(m.theme, 60) ?? theme,
+          blocks: blocksFromLooseModule(m),
+        });
+      }
+    }
+    return { appName, themes, modules, replace: p.replace };
+  }
+
+  if (rootModules.length) {
+    return {
+      ...root,
+      appName: appName ?? str(root.appName, 80),
+      modules: rootModules.map((raw) => {
+        if (!raw || typeof raw !== "object") return raw;
+        const m = raw as Record<string, unknown>;
+        return { ...m, blocks: blocksFromLooseModule(m) };
+      }),
+    };
+  }
+
+  return nested ? { ...root, appName } : p;
+}
+
 function parsePreviewPayload(rawJson: string): { preview: AppPreviewSpec | null; replace: boolean } {
   let preview: AppPreviewSpec | null = null;
   let replace = false;
   try {
-    const p = JSON.parse(stripCodeFence(rawJson)) as Record<string, unknown>;
+    const p = coercePreviewShape(JSON.parse(stripCodeFence(rawJson)) as Record<string, unknown>);
     const modules = arr(p.modules)
       .map((m, i) => validateModule(m, i))
       .filter((m): m is AppModuleSpec => m !== null)
@@ -648,6 +746,24 @@ export function extractAppPreviewSignal(raw: string): {
     }
   }
 
+  // Repli 2 : JSON nu (souvent collé en premier, hors commentaire APERCU).
+  if (/\b(app_overview|appName|"themes"|"modules")\b/.test(raw)) {
+    const brace = raw.indexOf("{");
+    if (brace >= 0) {
+      const sliced = sliceBalancedObject(raw, brace);
+      if (sliced) {
+        const { preview, replace } = parsePreviewPayload(sliced.json);
+        if (preview) {
+          return {
+            text: (raw.slice(0, brace) + raw.slice(sliced.end)).trim(),
+            preview,
+            replace,
+          };
+        }
+      }
+    }
+  }
+
   return { text: raw, preview: null, replace: false };
 }
 
@@ -676,7 +792,7 @@ export function buildAppPreviewSystemPrompt(draft: {
     `Gent « ${draft.name} ». Objectif : ${draft.objective || "non défini"}. ${connectorsNote} ${existing}`,
     APP_PREVIEW_PROMPT_INSTRUCTION,
     "RAPPEL FINAL : émets d'abord le bloc <!--APERCU: {…}-->, puis une seule phrase. " +
-      "Interdit : GENT_CONFIG, connecteurs, dissertation, checklist destinée à l'utilisateur final.",
+      "Interdit : GENT_CONFIG, connecteurs, dissertation, checklist destinée à l'utilisateur final, JSON `app_overview` / `tabs` / `simulated_data`.",
   ].join("\n\n");
 }
 

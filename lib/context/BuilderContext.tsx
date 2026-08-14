@@ -765,12 +765,14 @@ export function BuilderProvider({
       apiUserContent = buildCadrageFollowUpMessage(pending, text);
     }
 
-    const history = nextDraft.builderConversation
-      .filter((m) => m.role === "agent" || m.role === "user")
-      .map((m) => ({
-        role: m.role === "agent" ? "assistant" : "user",
-        content: (m.text ?? "").replace(/<[^>]+>/g, ""),
-      }));
+    const history = previewTurn || askTurn
+      ? []
+      : nextDraft.builderConversation
+          .filter((m) => m.role === "agent" || m.role === "user")
+          .map((m) => ({
+            role: m.role === "agent" ? "assistant" : "user",
+            content: (m.text ?? "").replace(/<[^>]+>/g, ""),
+          }));
 
     // Poser une question est une tâche courte au format contraint : un modèle
     // rapide et bon marché suffit, et c'est ce qui garde l'atelier réactif.
@@ -900,9 +902,15 @@ export function BuilderProvider({
           } else if (questions.length) {
             reply = stripVisibleChoiceList(reply, questions.flatMap((q) => q.options));
           }
-          const truncationNote = truncated
-            ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — demandez « continue » ou reformulez plus court ; une proposition de configuration incomplète ne doit pas être appliquée.</em></p>'
-            : "";
+          const previewApplied = !!afterPreview.preview && !askTurn;
+          if (previewApplied && (reply.startsWith("{") || reply.startsWith("```") || !reply.trim())) {
+            const p = afterPreview.preview!;
+            reply = `Aperçu généré : ${p.themes.join(" · ")} (${p.modules.length} module${p.modules.length > 1 ? "s" : ""}).`;
+          }
+          const truncationNote =
+            truncated && !previewApplied
+              ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — cliquez à nouveau sur « Générer l’aperçu » ou demandez une version plus courte.</em></p>'
+              : "";
           updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply) + truncationNote, questions, reasoning: reasoning || undefined }));
 
           // Configuration complète proposée : carte « Appliquer la configuration ».

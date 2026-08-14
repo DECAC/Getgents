@@ -46,7 +46,7 @@ describe("budget d'un tour", () => {
 
   it("garde les plafonds de sortie propres à chaque tour", () => {
     expect(builderTurnBudget("cadrage", ctx).maxTokens).toBe(1_200);
-    expect(builderTurnBudget("apercu", ctx).maxTokens).toBe(6_000);
+    expect(builderTurnBudget("apercu", ctx).maxTokens).toBe(10_000);
     expect(builderTurnBudget("conversation", ctx).maxTokens).toBe(16_000);
   });
 

@@ -22,7 +22,7 @@ export const CHAT_MAX_TOKENS = {
   espace: 12_288,
   builder: 16_000,
   /** Aperçu seul : 4 modules JSON, sans prompt système ni GENT_CONFIG. */
-  apercu: 6_000,
+  apercu: 10_000,
   /** Tour « quelles évolutions ? » : une question + bloc QUESTIONS. */
   apercuAsk: 2_000,
   /**

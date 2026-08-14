@@ -75,7 +75,7 @@ export function builderTurnBudget(
     case "cadrage":
       return { reasoning: false, webSearch: false, maxTokens: 1_200 };
     case "apercu":
-      return { reasoning: false, webSearch: false, maxTokens: 6_000 };
+      return { reasoning: false, webSearch: false, maxTokens: 10_000 };
     case "conversation":
       return {
         // La réflexion visible était payée sur TOUS les tours. Elle retardait
