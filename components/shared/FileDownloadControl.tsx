@@ -7,6 +7,7 @@ import { useEspace } from "@/lib/context/EspaceContext";
 import { addDownloadLead } from "@/lib/downloadLeads";
 import {
   DOWNLOAD_LEAD_FORM_MESSAGE,
+  downloadableDocumentsForReader,
   newDownloadLead,
   pdfFileName,
   validateDownloadLeadForm,
@@ -61,7 +62,7 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
   const [verifying, setVerifying] = useState(false);
 
   const enabled = !!currentEspace.fileDownloadEnabled;
-  const docs = currentEspace.downloadableDocuments ?? [];
+  const docs = downloadableDocumentsForReader(currentEspace);
   const formOn = !!currentEspace.fileDownloadFormEnabled;
 
   useEffect(() => {
@@ -98,6 +99,9 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
       widgetId = window.turnstile.render(el, {
         sitekey: TURNSTILE_SITEKEY,
         action: "turnstile-spin-v1",
+        appearance: "always",
+        retry: "auto",
+        theme: "light",
         callback: (t: string) => setToken(t),
         "expired-callback": () => setToken(""),
         "error-callback": () => setToken(""),
@@ -208,7 +212,7 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
 
   return (
     <>
-      <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />
+      <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" />
       <button type="button" className={btnClass} onClick={openFlow} title="Télécharger le document en PDF">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
           <path d="M12 3v12M7 10l5 5 5-5" />
@@ -221,7 +225,7 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
         createPortal(
         <div className={modalStyles.overlay} role="presentation" onClick={() => setDialog(null)}>
           <div
-            className={modalStyles.modal}
+            className={`${modalStyles.modal} ${styles.modalOpen}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="file-download-title"

@@ -8,7 +8,7 @@ import {
   syncDraftsFromRemote,
 } from "@/lib/builderDraftStorage";
 import { readPublishedGents, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
-import { deleteGentEverywhere } from "@/lib/deleteGent";
+import { confirmDeleteGentsMessage, deleteGentEverywhere } from "@/lib/deleteGent";
 import type { GentDraft } from "@/lib/types/builder";
 import type { Espace } from "@/lib/types";
 
@@ -32,6 +32,7 @@ export function useGentsList() {
   const [syncing, setSyncing] = useState(true);
   const [needsAccessKey, setNeedsAccessKey] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingCount, setDeletingCount] = useState<{ done: number; total: number } | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
@@ -87,25 +88,40 @@ export function useGentsList() {
     router.push(`/builder/${id}`);
   }
 
-  async function handleDelete(id: string, name: string) {
-    if (
-      !window.confirm(
-        `Supprimer définitivement « ${name} » ? Cette action est irréversible : le brouillon, le gent publié et ses liens de partage seront effacés.`
-      )
-    ) {
-      return;
-    }
+  async function handleDeleteMany(items: { id: string; name: string }[]) {
+    const unique = items.filter((item, i, all) => all.findIndex((x) => x.id === item.id) === i);
+    if (unique.length === 0) return "cancelled";
+    if (!window.confirm(confirmDeleteGentsMessage(unique.map((i) => i.name)))) return "cancelled";
     setDeleteError(null);
-    setDeletingId(id);
+    const failed: string[] = [];
+    setDeletingCount({ done: 0, total: unique.length });
     try {
-      const result = await deleteGentEverywhere(id);
-      if (!result.ok) {
-        setDeleteError(`Suppression incomplète pour « ${name} » : ${result.error ?? "erreur inconnue"}`);
+      for (let i = 0; i < unique.length; i++) {
+        const item = unique[i];
+        setDeletingId(item.id);
+        setDeletingCount({ done: i, total: unique.length });
+        const result = await deleteGentEverywhere(item.id);
+        if (!result.ok) {
+          failed.push(`« ${item.name || "ce gent"} » (${result.error ?? "erreur inconnue"})`);
+        }
+      }
+      if (failed.length) {
+        setDeleteError(
+          failed.length === unique.length
+            ? `Aucun gent n'a pu être supprimé : ${failed.join(" · ")}`
+            : `Certains gents n'ont pas été supprimés : ${failed.join(" · ")}`
+        );
       }
       refreshLists();
     } finally {
       setDeletingId(null);
+      setDeletingCount(null);
     }
+    return failed.length === 0 ? "ok" : "partial";
+  }
+
+  async function handleDelete(id: string, name: string) {
+    await handleDeleteMany([{ id, name }]);
   }
 
   return {
@@ -118,10 +134,12 @@ export function useGentsList() {
     syncing,
     needsAccessKey,
     deletingId,
+    deletingCount,
     deleteError,
     hydrateFromRemote,
     refreshLists,
     handleRestore,
     handleDelete,
+    handleDeleteMany,
   };
 }

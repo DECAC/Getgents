@@ -97,6 +97,10 @@
   overflow: hidden;
 }
 
+.modalOpen {
+  overflow: visible;
+}
+
 .captcha {
   min-height: 65px;
 }

@@ -232,7 +232,9 @@ export function ConversationnelTab() {
               <h4 className={styles.title}>Permettre le téléchargement de fichiers</h4>
               <div className={styles.sub}>
                 Le lecteur peut télécharger le document du gent (connaissances ou visionneuse) au
-                format PDF. Sans cette option, aucun bouton n&apos;apparaît dans l&apos;espace.
+                format PDF. Sans cette option, aucun bouton n&apos;apparaît. Pour un lien de
+                diffusion, cliquez ensuite sur <b>Diffuser les modifications</b> — Preview ne
+                suffit pas.
               </div>
             </div>
           </div>
@@ -271,33 +273,6 @@ export function ConversationnelTab() {
             </button>
           </div>
         )}
-      </div>
-
-      <div className={styles.card}>
-        <h4 className={styles.title}>Bonnes pratiques</h4>
-        <div className={styles.tips}>
-          <div className={styles.tip}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 11l2 2 4-4" />
-              <circle cx="12" cy="12" r="9" />
-            </svg>
-            Formulez l&apos;objectif premier en une phrase claire avant les règles de détail.
-          </div>
-          <div className={styles.tip}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 11l2 2 4-4" />
-              <circle cx="12" cy="12" r="9" />
-            </svg>
-            Explicitez les invariants non négociables (ex. « jamais de paiement autonome »).
-          </div>
-          <div className={styles.tip}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 11l2 2 4-4" />
-              <circle cx="12" cy="12" r="9" />
-            </svg>
-            Précisez quand mettre à jour la mémoire et quels artefacts générer.
-          </div>
-        </div>
       </div>
 
       <div className={styles.sectionHead}>

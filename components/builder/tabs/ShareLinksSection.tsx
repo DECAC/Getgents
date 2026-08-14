@@ -183,6 +183,14 @@ export function ShareLinksSection() {
         </div>
       )}
 
+      {published && currentDraft.fileDownloadEnabled && (
+        <div className={styles.warn}>
+          Le bouton <b>Télécharger</b> n&apos;apparaît sur ces liens qu&apos;après{" "}
+          <b>Diffuser les modifications</b>. Preview le montre tout de suite ; le lien public
+          garde l&apos;ancienne version tant que vous n&apos;avez pas rediffusé.
+        </div>
+      )}
+
       {published && !loading && !needsAccessKey && !gentPublished && (
         <div className={styles.warn}>
           ⚠ Ce gent est marqué publié ici, mais <b>absent de la base serveur</b> — les liens

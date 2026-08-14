@@ -1,5 +1,6 @@
 import type { Espace } from "@/lib/types";
 import { formatConversationStartedAt } from "@/lib/conversationUtils";
+import { downloadableDocumentsForReader } from "@/lib/fileDownload";
 
 /**
  * Espace minimal pour les appels serveur (preview artefact, run routine) :
@@ -110,7 +111,7 @@ export function espaceForPublicLink(espace: Espace): Espace {
     fileDownloadEnabled: espace.fileDownloadEnabled,
     fileDownloadFormEnabled: espace.fileDownloadFormEnabled,
     downloadableDocuments: espace.fileDownloadEnabled
-      ? espace.downloadableDocuments
+      ? downloadableDocumentsForReader(espace)
       : undefined,
     // Application à blocs du studio : données simulées choisies par le
     // créateur, pas l'historique personnel — le destinataire voit la même app.

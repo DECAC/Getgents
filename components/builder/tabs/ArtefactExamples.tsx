@@ -42,24 +42,47 @@ const ARTEFACT_ILLUSTRATION: Record<ArtefactKind, JSX.Element> = {
       <path d="M40 46l12-10 26 19" fill="var(--sage-700)" opacity="0.5" />
     </svg>
   ),
-  timeline: (
-    <svg width="88" height="56" viewBox="0 0 88 56" fill="none">
-      <line x1="24" y1="10" x2="24" y2="46" stroke="var(--line)" strokeWidth="2" />
-      <circle cx="24" cy="10" r="5.5" fill="var(--sage)" />
-      <rect x="36" y="6.5" width="34" height="7" rx="3.5" fill="var(--line)" />
-      <circle cx="24" cy="28" r="5.5" fill="var(--sage)" />
-      <rect x="36" y="24.5" width="26" height="7" rx="3.5" fill="var(--line)" />
-      <circle cx="24" cy="46" r="5.5" fill="none" stroke="var(--faint)" strokeWidth="2" />
-      <rect x="36" y="42.5" width="30" height="7" rx="3.5" fill="var(--line-soft)" />
-    </svg>
-  ),
-  budget: (
+  chart: (
     <svg width="88" height="56" viewBox="0 0 88 56" fill="none">
       <line x1="12" y1="48" x2="76" y2="48" stroke="var(--line)" strokeWidth="1.5" />
       <rect x="20" y="26" width="12" height="22" rx="2.5" fill="var(--sage)" />
       <rect x="38" y="14" width="12" height="34" rx="2.5" fill="var(--gold)" />
       <rect x="56" y="32" width="12" height="16" rx="2.5" fill="var(--plum)" />
-      <path d="M18 22l16-10 16 8 16-12" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" strokeDasharray="3 3" />
+    </svg>
+  ),
+  dashboard: (
+    <svg width="88" height="56" viewBox="0 0 88 56" fill="none">
+      <rect x="8" y="6" width="32" height="18" rx="3" fill="var(--card)" stroke="var(--line)" strokeWidth="1.5" />
+      <rect x="14" y="11" width="14" height="4" rx="2" fill="var(--sage)" />
+      <rect x="14" y="17" width="20" height="3" rx="1.5" fill="var(--line)" />
+      <rect x="44" y="6" width="36" height="18" rx="3" fill="var(--card)" stroke="var(--line)" strokeWidth="1.5" />
+      <rect x="50" y="11" width="18" height="4" rx="2" fill="var(--gold)" />
+      <rect x="50" y="17" width="24" height="3" rx="1.5" fill="var(--line)" />
+      <rect x="8" y="28" width="72" height="22" rx="3" fill="var(--card)" stroke="var(--line)" strokeWidth="1.5" />
+      <rect x="16" y="40" width="8" height="6" rx="1.5" fill="var(--sage)" />
+      <rect x="28" y="36" width="8" height="10" rx="1.5" fill="var(--gold)" />
+      <rect x="40" y="38" width="8" height="8" rx="1.5" fill="var(--plum)" />
+      <rect x="52" y="34" width="8" height="12" rx="1.5" fill="var(--sage)" />
+    </svg>
+  ),
+  "profile-summary": (
+    <svg width="88" height="56" viewBox="0 0 88 56" fill="none">
+      <rect x="10" y="6" width="68" height="44" rx="5" fill="var(--card)" stroke="var(--line)" strokeWidth="1.5" />
+      <circle cx="28" cy="24" r="8" fill="var(--sage-tint)" stroke="var(--sage)" strokeWidth="1.5" />
+      <circle cx="28" cy="21" r="3" fill="var(--sage)" />
+      <path d="M21 30c1.5-3 12.5-3 14 0" stroke="var(--sage)" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="42" y="16" width="28" height="4" rx="2" fill="var(--plum)" />
+      <rect x="42" y="24" width="24" height="3" rx="1.5" fill="var(--line)" />
+      <rect x="42" y="31" width="20" height="3" rx="1.5" fill="var(--line)" />
+      <rect x="18" y="40" width="16" height="4" rx="2" fill="var(--gold)" />
+      <rect x="38" y="40" width="16" height="4" rx="2" fill="var(--line-soft)" />
+    </svg>
+  ),
+  image: (
+    <svg width="88" height="56" viewBox="0 0 88 56" fill="none">
+      <rect x="16" y="6" width="56" height="44" rx="5" fill="var(--card)" stroke="var(--line)" strokeWidth="1.5" />
+      <circle cx="32" cy="20" r="5" fill="var(--gold)" />
+      <path d="M16 42l14-12 10 8 8-7 24 15v4H20a4 4 0 0 1-4-4z" fill="var(--plum)" opacity="0.7" />
     </svg>
   ),
   map: (
@@ -112,8 +135,8 @@ export function ArtefactExamples() {
         <span>
           Le gent décide seul, au fil de la conversation, quel format produire s&apos;il détecte un
           contenu structurable (liste, chiffres, procédure, lieux…). L&apos;utilisateur final voit
-          toujours une proposition qu&apos;il peut <b>ajouter</b> ou <b>ignorer</b> avant qu&apos;elle
-          ne rejoigne son espace de travail — rien n&apos;est jamais ajouté sans son accord.
+          toujours une popup pour <b>garder</b> ou <b>jeter</b> l&apos;artefact avant qu&apos;il
+          ne rejoigne son espace — rien n&apos;est jamais ajouté sans son accord.
         </span>
       </div>
     </div>

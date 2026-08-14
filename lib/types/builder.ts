@@ -76,7 +76,15 @@ export interface KnowledgeSource {
   truncated?: boolean;
 }
 
-export type ArtefactKind = "report" | "checklist" | "visual" | "timeline" | "budget" | "map";
+export type ArtefactKind =
+  | "report"
+  | "checklist"
+  | "chart"
+  | "visual"
+  | "map"
+  | "dashboard"
+  | "profile-summary"
+  | "image";
 
 /**
  * Exemple illustratif d'un type d'artefact que le gent peut générer.

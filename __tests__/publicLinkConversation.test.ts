@@ -55,6 +55,34 @@ describe("projection publique d'un lien de partage", () => {
     const out = espaceForPublicLink(espace({ starters: ["Question A", "Question B"] }));
     expect(out.starters).toEqual(["Question A", "Question B"]);
   });
+
+  it("reconstruit le PDF à télécharger depuis la visionneuse si la liste est vide", () => {
+    const out = espaceForPublicLink(
+      espace({
+        fileDownloadEnabled: true,
+        fileDownloadFormEnabled: true,
+        artefacts: [
+          {
+            id: "visionneuse-doc",
+            title: "Livre blanc",
+            type: "Visionneuse de document",
+            icon: "📖",
+            date: "Document du gent",
+            document: {
+              sourceName: "livre-blanc.pdf",
+              sourceKind: "pdf",
+              pageCount: 1,
+              pages: ["Contenu public"],
+              toc: [],
+              truncated: false,
+            },
+          },
+        ],
+      })
+    );
+    expect(out.fileDownloadEnabled).toBe(true);
+    expect(out.downloadableDocuments?.[0].text).toContain("Contenu public");
+  });
 });
 
 describe("charge utile pour générer les déclencheurs", () => {

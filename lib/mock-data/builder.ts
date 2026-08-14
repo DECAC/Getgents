@@ -224,39 +224,51 @@ export const CONNECTOR_TOOL_TYPES: ConnectorToolType[] = [
 export const ARTEFACT_EXAMPLES: ArtefactExample[] = [
   {
     id: "tpl-report",
-    label: "Rapport de synthèse",
+    label: "Rapport",
     kind: "report",
-    description: "Document texte structuré (titres, listes) généré à la demande.",
+    description: "Synthèse, modèle de document ou procédure en texte structuré.",
   },
   {
     id: "tpl-checklist",
     label: "Checklist",
     kind: "checklist",
-    description: "Liste de tâches à cocher, utile pour un suivi de préparatifs.",
+    description: "Étapes, pièces ou tâches à cocher au fil de l'échange.",
+  },
+  {
+    id: "tpl-chart",
+    label: "Graphique",
+    kind: "chart",
+    description: "Comparaison chiffrée (montants, pourcentages, catégories).",
+  },
+  {
+    id: "tpl-dashboard",
+    label: "Tableau de bord",
+    kind: "dashboard",
+    description: "Indicateurs clés et scores à lire d'un coup d'œil.",
+  },
+  {
+    id: "tpl-map",
+    label: "Carte",
+    kind: "map",
+    description: "Lieux, itinéraire ou adresses sur fond cartographique.",
+  },
+  {
+    id: "tpl-profile",
+    label: "Résumé de profil",
+    kind: "profile-summary",
+    description: "Parcours d'une personne (expérience, compétences, médias).",
   },
   {
     id: "tpl-visual",
     label: "Aperçu visuel",
     kind: "visual",
-    description: "Illustration stylisée générée par un modèle image (ex. Nanobanana).",
+    description: "Schéma ou visuel généré pour clarifier une idée.",
   },
   {
-    id: "tpl-timeline",
-    label: "Frise chronologique",
-    kind: "timeline",
-    description: "Étapes datées avec statut — adapté aux plannings et parcours.",
-  },
-  {
-    id: "tpl-budget",
-    label: "Suivi budgétaire",
-    kind: "budget",
-    description: "Enveloppe, répartition par poste et historique de dépenses.",
-  },
-  {
-    id: "tpl-map",
-    label: "Carte schématique",
-    kind: "map",
-    description: "Représentation schématique d'un parcours ou de lieux clés.",
+    id: "tpl-image",
+    label: "Image",
+    kind: "image",
+    description: "Illustration ou photo proposée puis ajoutée à l'espace.",
   },
 ];
 

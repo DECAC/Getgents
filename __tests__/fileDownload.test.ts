@@ -1,5 +1,6 @@
 import { draftToEspace } from "@/lib/publishedGents";
 import {
+  downloadableDocumentsForReader,
   downloadableDocumentsFromDraft,
   isValidDownloadEmail,
   pdfFileName,
@@ -59,6 +60,35 @@ describe("downloadableDocumentsFromDraft", () => {
     expect(docs[0].name).toBe("rapport.docx");
     expect(docs[0].text).toContain("Page A");
     expect(docs[0].text).toContain("Page B");
+  });
+});
+
+describe("downloadableDocumentsForReader", () => {
+  it("retombe sur le document de visionneuse si la liste diffusée est vide", () => {
+    const docs = downloadableDocumentsForReader({
+      fileDownloadEnabled: true,
+      downloadableDocuments: [],
+      artefacts: [
+        {
+          id: "visionneuse-doc",
+          title: "Livre blanc",
+          type: "Visionneuse de document",
+          icon: "📖",
+          date: "Document du gent",
+          document: {
+            sourceName: "livre-blanc.pdf",
+            sourceKind: "pdf",
+            pageCount: 1,
+            pages: ["Chapitre IA"],
+            toc: [],
+            truncated: false,
+          },
+        },
+      ],
+    });
+    expect(docs).toHaveLength(1);
+    expect(docs[0].name).toBe("livre-blanc.pdf");
+    expect(docs[0].text).toContain("Chapitre IA");
   });
 });
 

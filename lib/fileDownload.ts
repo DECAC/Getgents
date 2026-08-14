@@ -1,4 +1,4 @@
-import type { DownloadableDocument, DownloadLead } from "@/lib/types";
+import type { DownloadableDocument, DownloadLead, Espace } from "@/lib/types";
 import type { GentDraft } from "@/lib/types/builder";
 
 /** Adresse e-mail minimale : un @, un domaine, une extension. */
@@ -31,6 +31,25 @@ export function downloadableDocumentsFromDraft(draft: GentDraft): DownloadableDo
   }
 
   return docs;
+}
+
+/**
+ * Documents proposés au lecteur (Preview ou lien de diffusion).
+ * Si la liste diffusée est vide, on retombe sur le document de la visionneuse
+ * déjà présent dans l'espace — c'est le cas typique d'un compagnon de livre.
+ */
+export function downloadableDocumentsForReader(
+  espace: Pick<Espace, "fileDownloadEnabled" | "downloadableDocuments" | "artefacts">
+): DownloadableDocument[] {
+  if (!espace.fileDownloadEnabled) return [];
+  const listed = (espace.downloadableDocuments ?? []).filter((d) => (d.text ?? "").trim());
+  if (listed.length) return listed;
+
+  const vis = espace.artefacts?.find((a) => a.document);
+  if (!vis?.document) return [];
+  const text = vis.document.pages.join("\n\n").trim();
+  if (!text) return [];
+  return [{ id: vis.id, name: vis.document.sourceName || vis.title, text }];
 }
 
 export function isValidDownloadEmail(email: string): boolean {

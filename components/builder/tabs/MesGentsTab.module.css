@@ -140,6 +140,7 @@
 }
 
 .card {
+  position: relative;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--r);
@@ -149,6 +150,10 @@
 .card:hover {
   border-color: var(--blue);
   box-shadow: 0 4px 14px rgba(21, 33, 43, 0.06);
+}
+.cardSelected {
+  border-color: var(--blue);
+  background: var(--blue-tint);
 }
 
 .cardLink {
@@ -162,6 +167,7 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 8px;
+  padding-right: 28px;
 }
 
 .ic {
@@ -230,6 +236,77 @@
 }
 .deleteBtn:disabled {
   color: var(--faint);
+  cursor: default;
+}
+
+.check {
+  display: grid;
+  place-items: center;
+  flex: none;
+  cursor: pointer;
+}
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blue);
+  cursor: pointer;
+}
+.check input:disabled {
+  cursor: default;
+}
+
+.checkAbs {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+}
+
+.bulkBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: var(--r);
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.bulkLabel {
+  font-size: 13px;
+  color: var(--muted);
+  flex: 1;
+  min-width: 140px;
+}
+
+.bulkClear {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: none;
+  border: none;
+  padding: 4px 6px;
+}
+.bulkClear:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.bulkDelete {
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: var(--r-pill);
+  padding: 6px 12px;
+  background: #b4462f;
+  border: none;
+  color: #fff;
+}
+.bulkDelete:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.bulkDelete:disabled,
+.bulkClear:disabled {
+  opacity: 0.55;
   cursor: default;
 }
 

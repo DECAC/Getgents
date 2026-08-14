@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { allocateNewDraft } from "@/lib/builderDraftStorage";
 import { useGentsList } from "@/lib/hooks/useGentsList";
@@ -21,6 +21,24 @@ const STATUS_CLASS: Record<string, string> = {
 
 type View = "tuile" | "liste";
 
+function SelectionCheck({
+  checked,
+  disabled,
+  label,
+  onToggle,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  onToggle: () => void;
+}) {
+  return (
+    <label className={styles.check} onClick={(e) => e.stopPropagation()}>
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={onToggle} aria-label={label} />
+    </label>
+  );
+}
+
 /**
  * Liste des gents au niveau studio (/builder/mesgents) : tuiles ou lignes,
  * sans bandeau ni assistant d'un gent ouvert. Accessible via « Mes gents »
@@ -39,11 +57,13 @@ export function MesGentsTab() {
     syncing,
     needsAccessKey,
     deletingId,
+    deletingCount,
     deleteError,
     hydrateFromRemote,
     refreshLists,
     handleRestore,
     handleDelete,
+    handleDeleteMany,
   } = useGentsList();
 
   function handleCreateNew() {
@@ -52,6 +72,46 @@ export function MesGentsTab() {
     router.push(`/builder/${id}`);
   }
   const [view, setView] = useState<View>("tuile");
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const busy = deletingCount !== null;
+
+  const visibleItems = useMemo(
+    () => [
+      ...filteredDrafts.map((d) => ({ id: d.id, name: d.name || "ce gent" })),
+      ...filteredOrphans.map(({ id, espace }) => ({ id, name: espace.gent || espace.name || "ce gent" })),
+    ],
+    [filteredDrafts, filteredOrphans]
+  );
+  const visibleIds = useMemo(() => visibleItems.map((i) => i.id), [visibleItems]);
+  const selectedCount = visibleIds.filter((id) => selected.has(id)).length;
+  const allVisibleSelected = visibleIds.length > 0 && selectedCount === visibleIds.length;
+
+  function toggleId(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllVisible() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        for (const id of visibleIds) next.delete(id);
+      } else {
+        for (const id of visibleIds) next.add(id);
+      }
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    const items = visibleItems.filter((i) => selected.has(i.id));
+    const outcome = await handleDeleteMany(items);
+    if (outcome !== "cancelled") setSelected(new Set());
+  }
 
   return (
     <div className={styles.wrap}>
@@ -135,6 +195,34 @@ export function MesGentsTab() {
         </button>
       </div>
 
+      {visibleIds.length > 0 && (
+        <div className={styles.bulkBar}>
+          <SelectionCheck
+            checked={allVisibleSelected}
+            disabled={busy}
+            label={allVisibleSelected ? "Tout désélectionner" : "Tout sélectionner"}
+            onToggle={toggleAllVisible}
+          />
+          <span className={styles.bulkLabel}>
+            {busy && deletingCount
+              ? `Suppression ${deletingCount.done + 1}/${deletingCount.total}…`
+              : selectedCount > 0
+                ? `${selectedCount} gent${selectedCount > 1 ? "s" : ""} sélectionné${selectedCount > 1 ? "s" : ""}`
+                : "Sélectionner pour supprimer plusieurs gents"}
+          </span>
+          {selectedCount > 0 && (
+            <>
+              <button type="button" className={styles.bulkClear} onClick={() => setSelected(new Set())} disabled={busy}>
+                Annuler la sélection
+              </button>
+              <button type="button" className={styles.bulkDelete} onClick={() => void handleBulkDelete()} disabled={busy}>
+                {busy ? "Suppression…" : `Supprimer${selectedCount > 1 ? ` (${selectedCount})` : ""}`}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {needsAccessKey && (
         <div className={styles.banner}>
           <strong>Accès serveur requis</strong> — sans la clé, seuls les gents de démo locaux
@@ -160,7 +248,18 @@ export function MesGentsTab() {
       {view === "tuile" ? (
         <div className={styles.grid}>
           {filteredDrafts.map((d) => (
-            <div key={d.id} className={styles.card}>
+            <div
+              key={d.id}
+              className={[styles.card, selected.has(d.id) ? styles.cardSelected : ""].filter(Boolean).join(" ")}
+            >
+              <div className={styles.checkAbs}>
+                <SelectionCheck
+                  checked={selected.has(d.id)}
+                  disabled={busy}
+                  label={`Sélectionner ${d.name || "ce gent"}`}
+                  onToggle={() => toggleId(d.id)}
+                />
+              </div>
               <a href={`/builder/${d.id}`} className={styles.cardLink}>
                 <div className={styles.cardTop}>
                   <div className={styles.ic}>{d.icon}</div>
@@ -179,7 +278,7 @@ export function MesGentsTab() {
                   type="button"
                   className={styles.deleteBtn}
                   onClick={() => handleDelete(d.id, d.name || "ce gent")}
-                  disabled={deletingId === d.id}
+                  disabled={busy || deletingId === d.id}
                 >
                   {deletingId === d.id ? "Suppression…" : "Supprimer"}
                 </button>
@@ -188,7 +287,20 @@ export function MesGentsTab() {
           ))}
 
           {filteredOrphans.map(({ id, espace }) => (
-            <div key={id} className={[styles.card, styles.recoveryCard].join(" ")}>
+            <div
+              key={id}
+              className={[styles.card, styles.recoveryCard, selected.has(id) ? styles.cardSelected : ""]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <div className={styles.checkAbs}>
+                <SelectionCheck
+                  checked={selected.has(id)}
+                  disabled={busy}
+                  label={`Sélectionner ${espace.gent || espace.name || "ce gent"}`}
+                  onToggle={() => toggleId(id)}
+                />
+              </div>
               <div className={styles.cardTop}>
                 <div className={styles.ic}>{espace.icon}</div>
                 <div>
@@ -201,14 +313,14 @@ export function MesGentsTab() {
                 <a href={`/espace/${id}`} className={styles.recoveryLink}>
                   Ouvrir l&apos;espace
                 </a>
-                <button type="button" className={styles.recoveryBtn} onClick={() => handleRestore(id, espace)}>
+                <button type="button" className={styles.recoveryBtn} onClick={() => handleRestore(id, espace)} disabled={busy}>
                   Restaurer
                 </button>
                 <button
                   type="button"
                   className={styles.deleteBtn}
                   onClick={() => handleDelete(id, espace.gent || espace.name)}
-                  disabled={deletingId === id}
+                  disabled={busy || deletingId === id}
                 >
                   {deletingId === id ? "Suppression…" : "Supprimer"}
                 </button>
@@ -226,7 +338,16 @@ export function MesGentsTab() {
       ) : (
         <div className={styles.list}>
           {filteredDrafts.map((d) => (
-            <div key={d.id} className={styles.row}>
+            <div
+              key={d.id}
+              className={[styles.row, selected.has(d.id) ? styles.cardSelected : ""].filter(Boolean).join(" ")}
+            >
+              <SelectionCheck
+                checked={selected.has(d.id)}
+                disabled={busy}
+                label={`Sélectionner ${d.name || "ce gent"}`}
+                onToggle={() => toggleId(d.id)}
+              />
               <a href={`/builder/${d.id}`} className={styles.rowLink}>
                 <div className={styles.ic}>{d.icon}</div>
                 <span className={styles.rowName}>{d.name}</span>
@@ -239,7 +360,7 @@ export function MesGentsTab() {
                 type="button"
                 className={styles.deleteBtn}
                 onClick={() => handleDelete(d.id, d.name || "ce gent")}
-                disabled={deletingId === d.id}
+                disabled={busy || deletingId === d.id}
               >
                 {deletingId === d.id ? "Suppression…" : "Supprimer"}
               </button>
@@ -247,20 +368,31 @@ export function MesGentsTab() {
           ))}
 
           {filteredOrphans.map(({ id, espace }) => (
-            <div key={id} className={[styles.row, styles.recoveryCard].join(" ")}>
+            <div
+              key={id}
+              className={[styles.row, styles.recoveryCard, selected.has(id) ? styles.cardSelected : ""]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <SelectionCheck
+                checked={selected.has(id)}
+                disabled={busy}
+                label={`Sélectionner ${espace.gent || espace.name || "ce gent"}`}
+                onToggle={() => toggleId(id)}
+              />
               <a href={`/espace/${id}`} className={styles.rowLink}>
                 <div className={styles.ic}>{espace.icon}</div>
                 <span className={styles.rowName}>{espace.gent || espace.name}</span>
                 <span className={[styles.statusBadge, styles.statusPublished].join(" ")}>Publié (espace seul)</span>
               </a>
-              <button type="button" className={styles.recoveryBtn} onClick={() => handleRestore(id, espace)}>
+              <button type="button" className={styles.recoveryBtn} onClick={() => handleRestore(id, espace)} disabled={busy}>
                 Restaurer
               </button>
               <button
                 type="button"
                 className={styles.deleteBtn}
                 onClick={() => handleDelete(id, espace.gent || espace.name)}
-                disabled={deletingId === id}
+                disabled={busy || deletingId === id}
               >
                 {deletingId === id ? "Suppression…" : "Supprimer"}
               </button>
