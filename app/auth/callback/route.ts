@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAuthClient } from "@/lib/server/supabaseAuth";
 import { destinationApresConnexion } from "@/lib/authMessages";
+import { claimOrphanGentsOnce } from "@/lib/server/claimOrphans";
 
 /**
  * Atterrissage des liens envoyés par e-mail (confirmation d'inscription,
@@ -12,8 +13,8 @@ import { destinationApresConnexion } from "@/lib/authMessages";
  * échouerait silencieusement, laissant l'utilisateur « connecté » d'un côté
  * et anonyme de l'autre.
  *
- * C'est aussi ici que viendront, au lot suivant, la reprise des gents
- * orphelins et le scellement des invitations reçues.
+ * C'est aussi ici qu'a lieu la reprise des gents d'avant les comptes. Le
+ * scellement des invitations reçues viendra avec le partage nominatif.
  */
 export async function GET(request: NextRequest) {
   const url = request.nextUrl;
@@ -39,11 +40,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/confirmation?erreur=1", url.origin));
   }
 
-  const { error } = await client.auth.exchangeCodeForSession(code);
+  const { data, error } = await client.auth.exchangeCodeForSession(code);
   if (error) {
     // Lien expiré ou déjà utilisé : l'écran de confirmation explique quoi faire.
     return NextResponse.redirect(new URL("/confirmation?erreur=1", url.origin));
   }
+
+  // Reprise des gents d'avant les comptes, au tout premier compte créé.
+  // Un échec ici ne doit jamais empêcher la connexion : il est journalisé
+  // par claimOrphanGentsOnce, et la prochaine connexion réessaiera.
+  if (data.user) await claimOrphanGentsOnce(data.user.id);
 
   return response;
 }

@@ -22,6 +22,13 @@ function Connexion() {
         if (!supabase) throw new Error("Authentification non configurée sur ce déploiement.");
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: motDePasse });
         if (error) throw new Error(messageErreurAuth(error.message));
+        // Reprise des gents d'avant les comptes, au premier compte créé.
+        // Idempotent : sans effet les fois suivantes. Un échec ne doit pas
+        // retenir quelqu'un à la porte, on ne bloque donc pas dessus.
+        await fetch("/api/auth/bootstrap", { method: "POST", credentials: "include" }).catch(
+          () => undefined
+        );
+
         // Navigation PLEINE PAGE, et non router.replace : les cookies de
         // session viennent d'être posés par le navigateur, et seul un
         // rechargement garantit que le middleware et les composants serveur
