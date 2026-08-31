@@ -1,0 +1,71 @@
+/* Accueil pour visiteur non connecté. Volontairement sobre : c'est une porte
+   d'entrée de prototype, pas une page de vente. */
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 40px 24px;
+  background: var(--bg);
+}
+
+.hero {
+  max-width: 560px;
+  text-align: center;
+}
+
+.mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--sage);
+  color: #fff;
+  display: inline-grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 21px;
+  margin-bottom: 22px;
+}
+
+.titre {
+  font-size: clamp(28px, 5vw, 40px);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  text-wrap: balance;
+  margin: 0 0 16px;
+}
+
+.lede {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 auto 30px;
+  max-width: 46ch;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.primaire,
+.secondaire {
+  padding: 11px 22px;
+  border-radius: var(--r-pill);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.primaire {
+  background: var(--sage);
+  color: #fff;
+}
+
+.secondaire {
+  border: 1px solid var(--line);
+  color: var(--ink);
+  background: var(--card);
+}

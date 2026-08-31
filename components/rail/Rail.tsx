@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
 import styles from "./Rail.module.css";
+import { MenuCompte } from "@/components/compte/MenuCompte";
 
 const STATUS_DOT_CLASS: Record<string, string> = {
   live: styles.dotLive,
@@ -84,13 +85,7 @@ export function Rail() {
         ))}
       </ul>
 
-      <div className={styles.acct} title="Camille Léaud">
-        <div className={styles.av}>CL</div>
-        <div className={styles.acctMeta}>
-          <div className={styles.who}>Camille Léaud</div>
-          <div className={styles.plan}>Forfait Gents · 3 actifs</div>
-        </div>
-      </div>
+      <MenuCompte />
     </nav>
   );
 }

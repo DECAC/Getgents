@@ -1,0 +1,60 @@
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.titre {
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  margin: 0 0 26px;
+}
+
+.bloc {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+
+.sousTitre {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+
+.liste {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 6px 16px;
+  font-size: 14px;
+}
+
+.liste dt {
+  color: var(--muted);
+}
+
+.liste dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.note,
+.retour {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.note {
+  margin: 16px 0 0;
+}
+
+.note a,
+.retour a {
+  color: var(--sage);
+}

@@ -14,9 +14,12 @@ const CSP_REPORT_ONLY = [
   "default-src 'self'",
   // 'unsafe-inline' est ce que la bascule en bloquant devra retirer, via nonce.
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  "style-src 'self' 'unsafe-inline'",
+  // Les polices de l'application viennent de Google Fonts (voir app/layout.tsx) :
+  // sans ces deux sources, le passage en mode bloquant casserait la typographie
+  // du site entier. Constaté au navigateur, la CSP en Report-Only les refusant.
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
+  "font-src 'self' data: https://fonts.gstatic.com",
   // Fond de carte IGN, tuiles, et flux SSE de l'application.
   "connect-src 'self' https:",
   "object-src 'none'",

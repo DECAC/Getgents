@@ -1,6 +1,10 @@
 import { Suspense } from "react";
-import { GENT_DRAFTS } from "@/lib/mock-data/builder";
 import { BuilderShell } from "@/components/builder/BuilderShell";
+
+// Page privée : elle dépend des cookies de session, donc ne peut plus être
+// pré-générée. Laisser un generateStaticParams ici servirait la même page à
+// tout le monde, ou ferait échouer le build.
+export const dynamic = "force-dynamic";
 
 interface Props {
   params: { gentId: string };
@@ -20,6 +24,3 @@ export default function BuilderGentPage({ params }: Props) {
   );
 }
 
-export function generateStaticParams() {
-  return Object.keys(GENT_DRAFTS).map((gentId) => ({ gentId }));
-}

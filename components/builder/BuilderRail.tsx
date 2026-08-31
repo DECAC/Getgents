@@ -7,6 +7,7 @@ import { listVisibleDrafts } from "@/lib/builderDraftStorage";
 import { hasCustomName, isDirtySincePublish } from "@/lib/builderSnapshot";
 import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
 import styles from "./BuilderRail.module.css";
+import { MenuCompte } from "@/components/compte/MenuCompte";
 
 interface NavEntry {
   id: BuilderTab;
@@ -314,6 +315,11 @@ function RailChrome({
           </div>
         ))}
       </div>
+
+      {/* Le studio est la destination par défaut après connexion : sans ce
+          bloc, on y arrivait sans savoir sous quel compte, ni comment en
+          sortir. */}
+      <MenuCompte />
     </nav>
   );
 }
