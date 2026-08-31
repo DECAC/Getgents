@@ -3,6 +3,8 @@
 // arrive soit en JSON simple, soit en flux SSE qu'on lit en entier.
 // Utilisable uniquement côté serveur (route API) — jamais dans le navigateur.
 
+import { checkPublicHttpUrl, connectorUrlPolicy } from "@/lib/server/urlGuard";
+
 const MCP_PROTOCOL_VERSION = "2025-03-26";
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -35,9 +37,16 @@ export class McpClient {
     };
     if (this.sessionId) headers["Mcp-Session-Id"] = this.sessionId;
 
-    const res = await fetch(this.url, {
+    // Garde anti-SSRF : l'URL du serveur MCP vient de la configuration du gent,
+    // donc du client. L'ancien filtre `/^https?:\/\//` laissait passer
+    // http://127.0.0.1:6379 et les métadonnées de l'instance cloud.
+    const checked = checkPublicHttpUrl(this.url, connectorUrlPolicy());
+    if (!checked.ok) throw new Error(`MCP ${this.name} : ${checked.reason}`);
+
+    const res = await fetch(checked.url.toString(), {
       method: "POST",
       headers,
+      redirect: "manual",
       body: JSON.stringify({ jsonrpc: "2.0", ...(id !== undefined ? { id } : {}), method, params }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });

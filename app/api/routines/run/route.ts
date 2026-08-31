@@ -3,6 +3,7 @@ import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { isRoutineDue, runRoutine } from "@/lib/server/routineRunner";
 import type { Espace } from "@/lib/types";
+import { checkAppAccess, APP_ACCESS_HINT } from "@/lib/server/appAccess";
 
 export const dynamic = "force-dynamic";
 // Un run de veille (recherche web + synthèse) peut être long.
@@ -74,9 +75,29 @@ async function runBatch(
   return { ran: results.length, results, persisted: !!supabase };
 }
 
+/**
+ * Cette route déclenche de vraies générations LLM et de vrais envois
+ * (WhatsApp, e-mail). Sans secret configuré, elle passait en mode ouvert — un
+ * oubli de variable sur l'hébergeur suffisait à l'offrir à Internet, sans
+ * aucune trace. En production on échoue donc FERMÉ, avec un journal qui nomme
+ * la variable manquante : une routine qui ne part plus est un incident
+ * diagnosticable, une route ouverte ne l'est pas.
+ */
 function checkCronSecret(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // pas de secret configuré → pas de protection (dev)
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      console.error(
+        JSON.stringify({
+          tag: "getgents:routines",
+          event: "cron_secret_missing",
+          detail: "CRON_SECRET n'est pas défini : exécution refusée en production.",
+        })
+      );
+      return false;
+    }
+    return true; // développement local
+  }
   const auth = req.headers.get("authorization");
   return auth === `Bearer ${secret}` || req.headers.get("x-cron-secret") === secret;
 }
@@ -109,8 +130,14 @@ export async function POST(req: Request) {
   }
   const forced = typeof body.gentId === "string" ? body.gentId : null;
   const fallbackEspace = body.espace && typeof body.espace === "object" ? body.espace : null;
-  if (!forced && !checkCronSecret(req)) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  // Fournir un `gentId` suffisait à contourner CRON_SECRET : n'importe qui
+  // pouvait faire tourner en boucle la routine d'un gent quelconque, avec les
+  // appels LLM et les envois réels que cela déclenche. L'exécution forcée
+  // (bouton « Exécuter maintenant » du studio) exige désormais l'accès
+  // application ; elle passera au contrôle de propriétaire quand les comptes
+  // seront en place.
+  if (!checkCronSecret(req) && !checkAppAccess(req)) {
+    return NextResponse.json({ error: "unauthorized", hint: APP_ACCESS_HINT }, { status: 401 });
   }
   try {
     return NextResponse.json(await runBatch(forced, fallbackEspace));

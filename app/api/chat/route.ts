@@ -15,6 +15,7 @@ import type { RestApiConnector } from "@/lib/types";
 import type { StatusEvent, ThinkingPhase } from "@/lib/streamChat";
 import { defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 import { formatOpenRouterError, supportsReasoningStream } from "@/lib/openRouterReasoning";
+import { resolveModelId } from "@/lib/allowedModels";
 import {
   applyToolCallDelta,
   flattenToolRoundForRetry,
@@ -102,6 +103,13 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+
+  // Le modèle — donc le prix au token — était choisi par l'appelant et relayé
+  // tel quel à OpenRouter. Sur une route sans authentification, cela revient à
+  // laisser un inconnu commander sur notre compte. On le normalise ICI, une
+  // seule fois, pour qu'aucun des chemins en aval (relais direct, boucle
+  // d'outils, journal) ne puisse le contourner.
+  body.model = resolveModelId(body.model);
 
   traceChatRequest(req.headers.get("x-getgents-source") ?? "espace", body);
 

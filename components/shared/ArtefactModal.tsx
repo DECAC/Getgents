@@ -11,6 +11,7 @@ import { ReportArtefact } from "./ReportArtefact";
 import { ImageArtefact } from "./ImageArtefact";
 import { ProfileSummaryArtefact } from "./ProfileSummaryArtefact";
 import { ArtefactWorkspaceActions } from "./ArtefactWorkspaceActions";
+import { ArtefactIcon } from "./ArtefactIcon";
 import { hasReportBody } from "@/lib/reportArtefact";
 import styles from "./Modal.module.css";
 
@@ -109,10 +110,7 @@ export function ArtefactModal() {
     >
       <div className={[styles.modal, isDashboard || isReport ? styles.modalWide : ""].filter(Boolean).join(" ")}>
         <div className={styles.head}>
-          <div
-            className={styles.ti}
-            dangerouslySetInnerHTML={{ __html: artefact.icon }}
-          />
+          <ArtefactIcon icon={artefact.icon} className={styles.ti} />
           <div>
             <h3 className={styles.title} id="modal-title">{artefact.title}</h3>
             <div className={styles.meta}>

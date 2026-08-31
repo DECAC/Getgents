@@ -12,6 +12,7 @@ import { MapArtefact } from "@/components/shared/MapArtefact";
 import { DashboardArtefact } from "@/components/shared/dashboard/DashboardArtefact";
 import { ReportArtefact } from "@/components/shared/ReportArtefact";
 import { ArtefactWorkspaceActions } from "@/components/shared/ArtefactWorkspaceActions";
+import { ArtefactIcon } from "@/components/shared/ArtefactIcon";
 import { hasReportBody } from "@/lib/reportArtefact";
 import previewStyles from "@/components/appPreview/AppPreview.module.css";
 import styles from "./WorkspaceArtefactCard.module.css";
@@ -46,7 +47,7 @@ export function WorkspaceArtefactCard({
     >
       <header className={previewStyles.head}>
         <div className={previewStyles.glyph} aria-hidden="true">
-          {artefact.icon}
+          <ArtefactIcon icon={artefact.icon} />
         </div>
         <div className={previewStyles.headText}>
           <div className={previewStyles.title}>{artefact.title}</div>
