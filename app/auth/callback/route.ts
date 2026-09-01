@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAuthClient } from "@/lib/server/supabaseAuth";
 import { destinationApresConnexion } from "@/lib/authMessages";
-import { claimOrphanGentsOnce } from "@/lib/server/claimOrphans";
+import { claimOrphanGentsOnce, sealGrantsForUser } from "@/lib/server/claimOrphans";
 
 /**
  * Atterrissage des liens envoyés par e-mail (confirmation d'inscription,
@@ -49,7 +49,13 @@ export async function GET(request: NextRequest) {
   // Reprise des gents d'avant les comptes, au tout premier compte créé.
   // Un échec ici ne doit jamais empêcher la connexion : il est journalisé
   // par claimOrphanGentsOnce, et la prochaine connexion réessaiera.
-  if (data.user) await claimOrphanGentsOnce(data.user.id);
+  if (data.user) {
+    await claimOrphanGentsOnce(data.user.id);
+    const emailConfirme = data.user.email_confirmed_at
+      ? (data.user.email ?? "").toLowerCase() || null
+      : null;
+    await sealGrantsForUser(data.user.id, emailConfirme);
+  }
 
   return response;
 }

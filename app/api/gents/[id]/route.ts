@@ -3,6 +3,8 @@ import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { requireUser } from "@/lib/server/session";
 import { requireGentAccess } from "@/lib/server/gentGuard";
 import { deleteShareLinksForGent } from "@/lib/server/shareLinks";
+import { espaceForPublicLink } from "@/lib/espaceApiPayload";
+import type { Espace } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +22,13 @@ export async function GET(_req: Request, { params }: Params) {
   const acces = await requireGentAccess(params.id, "read");
   if (!acces.ok) return acces.response;
 
-  return NextResponse.json({ espace: acces.value.row.espace, role: acces.value.role });
+  // Même règle que la liste : un invité en lecture reçoit la projection
+  // publique, jamais le prompt système ni les données du créateur.
+  const espace = acces.value.row.espace as Espace;
+  return NextResponse.json({
+    espace: acces.value.role === "viewer" ? espaceForPublicLink(espace) : espace,
+    role: acces.value.role,
+  });
 }
 
 export async function PUT(req: Request, { params }: Params) {

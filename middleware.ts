@@ -22,7 +22,14 @@ import { isAuthConfigured } from "@/lib/authConfig";
  * garde la sienne.
  */
 
-/** Chemins qui exigent un compte. Le reste est public ou porte sa propre garde. */
+/**
+ * Chemins qui exigent un compte. Le reste est public ou porte sa propre garde.
+ *
+ * Les gents publics vivent à la RACINE (`/mon-gent`) : la liste est donc une
+ * liste de ce qui est FERMÉ, jamais l'inverse. Fermer par défaut renverrait
+ * chaque visiteur d'un gent public vers l'écran de connexion — et le moteur
+ * de recherche avec lui.
+ */
 const CHEMINS_PRIVES = [/^\/builder(\/|$)/, /^\/espace(\/|$)/, /^\/accueil$/, /^\/compte(\/|$)/];
 
 function estPrive(pathname: string): boolean {
@@ -84,6 +91,6 @@ export const config = {
      * leur propre authentification), les routes API (gardées une par une),
      * et les ressources statiques.
      */
-    "/((?!l/|api/|_next/static|_next/image|favicon.ico|pdfjs/).*)",
+    "/((?!l/|api/|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|pdfjs/).*)",
   ],
 };

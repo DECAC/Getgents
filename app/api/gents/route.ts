@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { requireUser } from "@/lib/server/session";
 import type { GentRole } from "@/lib/gentAccess";
+import { espaceForPublicLink } from "@/lib/espaceApiPayload";
+import type { Espace } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -57,9 +59,15 @@ export async function GET() {
       .select("id, espace")
       .in("id", partages.map((g) => g.gent_id));
     for (const row of recus ?? []) {
-      gents[row.id] = row.espace;
       const invitation = partages.find((g) => g.gent_id === row.id);
-      roles[row.id] = invitation?.role === "editor" ? "editor" : "viewer";
+      const role = invitation?.role === "editor" ? "editor" : "viewer";
+      roles[row.id] = role;
+      // Un invité en LECTURE utilise le gent ; il n'en voit pas la cuisine.
+      // Le prompt système est le travail du créateur, et la mémoire, les
+      // conversations et les documents sont ses données personnelles. Seul le
+      // co-éditeur, invité précisément pour construire avec lui, reçoit tout.
+      gents[row.id] =
+        role === "editor" ? row.espace : espaceForPublicLink(row.espace as Espace);
     }
   }
 

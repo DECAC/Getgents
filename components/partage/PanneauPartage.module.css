@@ -1,0 +1,191 @@
+.panneau {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bloc {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 20px 22px;
+}
+
+.titre {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+
+.aide,
+.note {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0 0 16px;
+}
+
+.note {
+  margin: 14px 0 0;
+}
+
+/* Le panneau vit dans un onglet étroit et redimensionnable : sans retour à la
+   ligne, le bouton finirait hors de la fenêtre. */
+.ligne,
+.adresseLigne,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.champ,
+.select,
+.zone {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13.5px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.champ {
+  flex: 1;
+  min-width: 180px;
+}
+
+.zone {
+  width: 100%;
+  resize: vertical;
+  margin-bottom: 14px;
+}
+
+.champ:focus-visible,
+.select:focus-visible,
+.zone:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 1px;
+}
+
+.bouton,
+.secondaire {
+  padding: 9px 18px;
+  border-radius: var(--r-pill);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.bouton {
+  background: var(--sage);
+  color: #fff;
+}
+
+.secondaire {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.bouton:disabled,
+.secondaire:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.liste {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 13.5px;
+}
+
+.adresse {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.role {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.retirer {
+  border: none;
+  background: none;
+  padding: 2px 4px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--plum);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.adresseLigne {
+  margin-bottom: 14px;
+  flex-wrap: nowrap;
+}
+
+.domaine {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.case {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+
+.case input {
+  margin-top: 2px;
+  flex: none;
+}
+
+.precision {
+  display: block;
+  font-style: normal;
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-top: 3px;
+}
+
+.erreur {
+  background: color-mix(in srgb, var(--plum) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--plum) 30%, transparent);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}

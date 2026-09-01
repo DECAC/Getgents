@@ -2,6 +2,7 @@
 
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { ShareLinksSection } from "./ShareLinksSection";
+import { PanneauPartage } from "@/components/partage/PanneauPartage";
 import styles from "./DiffusionTab.module.css";
 
 const E164 = /^\+[1-9]\d{6,14}$/;
@@ -151,6 +152,7 @@ export function DiffusionTab() {
         )}
       </div>
 
+      <PanneauPartage />
       <ShareLinksSection />
 
       <div className={styles.card}>

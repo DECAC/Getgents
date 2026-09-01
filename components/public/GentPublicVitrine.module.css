@@ -1,0 +1,81 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 40px 22px;
+  background: var(--bg);
+}
+
+.carte {
+  max-width: 560px;
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 34px 32px;
+}
+
+.icone {
+  font-size: 34px;
+  line-height: 1;
+  margin-bottom: 16px;
+}
+
+.titre {
+  font-size: clamp(24px, 4vw, 32px);
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  text-wrap: balance;
+  margin: 0 0 8px;
+}
+
+.sousTitre {
+  color: var(--muted);
+  font-size: 14.5px;
+  margin: 0 0 18px;
+}
+
+.resume {
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+.section {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-bottom: 22px;
+}
+
+.sectionTitre {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+.liste {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.note {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0 0 22px;
+}
+
+.cta {
+  display: inline-block;
+  padding: 10px 22px;
+  border-radius: var(--r-pill);
+  background: var(--sage);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
