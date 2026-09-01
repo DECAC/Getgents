@@ -58,3 +58,151 @@
 .retour a {
   color: var(--sage);
 }
+
+/* ——— Lot 8 : réglages du compte ——— */
+
+/* La page est étroite en mobile : sans retour à la ligne, le bouton d'un
+   champ finit hors de l'écran. Même précaution que le panneau de partage. */
+.ligne,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.actions {
+  margin-top: 14px;
+}
+
+.champ {
+  flex: 1;
+  min-width: 190px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13.5px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.champ:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 1px;
+}
+
+.bouton,
+.secondaire {
+  padding: 9px 18px;
+  border-radius: var(--r-pill);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.bouton {
+  background: var(--sage);
+  color: #fff;
+}
+
+.secondaire {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.bouton:disabled,
+.secondaire:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.retirer {
+  border: none;
+  background: none;
+  padding: 2px 4px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--plum);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.aide {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0 0 14px;
+}
+
+.message,
+.erreur {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+
+.message {
+  color: var(--success, var(--sage));
+}
+
+.erreur {
+  color: var(--plum);
+}
+
+.indice {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 13px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--bg);
+}
+
+/* Compteurs de consommation */
+.jauges {
+  display: grid;
+  gap: 12px;
+}
+
+.jauge {
+  display: grid;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.jaugeEntete {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.jaugeChiffre {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.jaugePiste {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.jaugeRemplie {
+  height: 100%;
+  background: var(--sage);
+}
+
+/* Zone dangereuse : la bordure prévient avant qu'on lise le titre. */
+.danger {
+  border-color: color-mix(in srgb, var(--plum) 40%, var(--line));
+}
+
+.danger .sousTitre {
+  color: var(--plum);
+}

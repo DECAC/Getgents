@@ -8,6 +8,9 @@ import { buildGentSystemPrompt } from "@/lib/gentRuntimePrompt";
 import { supportsReasoningStream } from "@/lib/openRouterReasoning";
 import type { Espace } from "@/lib/types";
 import { chatResponseFor } from "@/lib/server/chatEngine";
+import { contexteForGent } from "@/lib/server/openRouterKey";
+import { consommerPourVisiteur } from "@/lib/server/gentGuard";
+import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -90,10 +93,16 @@ export async function POST(req: Request, { params }: Params) {
   // économise un aller-retour réseau sur chaque tour.
   //
   // Le droit d'accès est déjà établi plus haut, par le jeton du lien.
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) {
-    return NextResponse.json({ error: "openrouter_key_missing" }, { status: 500 });
+  // C'est le PROPRIÉTAIRE du gent qui paie ce tour — sa clé personnelle si
+  // elle est enregistrée, la clé commune sinon — et c'est son quota qui est
+  // décompté dans ce second cas. Sans cela, un gent partagé largement viderait
+  // la clé de la plateforme au rythme de ses visiteurs.
+  const ctx = await contexteForGent(link.gentId);
+  if (!ctx.cle) {
+    return NextResponse.json({ error: MESSAGE_VISITEUR_INDISPONIBLE }, { status: 503 });
   }
+  const quota = await consommerPourVisiteur(ctx, "llm");
+  if (!quota.ok) return quota.response;
 
   const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
   const upstream = await chatResponseFor(
@@ -115,7 +124,7 @@ export async function POST(req: Request, { params }: Params) {
       restApis: espace.restApis,
       webSearch: espace.webSearch,
     },
-    key,
+    ctx,
     "share-link"
   );
 

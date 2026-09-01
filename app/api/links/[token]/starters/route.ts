@@ -4,6 +4,9 @@ import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { describeShareLinksFailure, getShareLink, TOKEN_RE } from "@/lib/server/shareLinks";
 import { canOpen } from "@/lib/shareLink";
 import { generateStarters } from "@/lib/server/starters";
+import { contexteForGent } from "@/lib/server/openRouterKey";
+import { consommerPourVisiteur } from "@/lib/server/gentGuard";
+import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -51,7 +54,11 @@ export async function POST(_req: Request, { params }: Params) {
   if (!espace || espace.pinnedArtefact?.enabled) return NextResponse.json({ starters: [] });
   if (espace.starters?.length) return NextResponse.json({ starters: espace.starters });
 
-  const starters = await generateStarters(espace);
+  const ctx = await contexteForGent(link.gentId);
+  const quota = await consommerPourVisiteur(ctx, "llm");
+  if (!quota.ok) return quota.response;
+
+  const starters = await generateStarters(espace, ctx);
   if (!starters.length) return NextResponse.json({ starters: [] });
 
   // Écrit dans la version diffusée : c'est celle que sert ce lien, et la seule

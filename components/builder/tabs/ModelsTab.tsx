@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
-import type { ModelCapability } from "@/lib/types/builder";
+import type { ModelCapability, OpenRouterModel } from "@/lib/types/builder";
+import { avecModeleConfigure } from "@/lib/openRouterCatalog";
 import styles from "./ModelsTab.module.css";
 
 const CAPABILITY_META: Record<ModelCapability, { title: string; required: boolean }> = {
@@ -50,13 +51,46 @@ export function ModelsTab() {
     return map;
   }, [currentDraft.modelAssignments]);
 
+  /**
+   * Catalogue affiché. `MODEL_CATALOG` reste la valeur INITIALE : si la route
+   * échoue, l'écran demeure utilisable avec la sélection plateforme, au lieu
+   * de se vider.
+   */
+  const [catalogue, setCatalogue] = useState<OpenRouterModel[]>(MODEL_CATALOG);
+
+  useEffect(() => {
+    let vivant = true;
+    fetch("/api/modeles")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (vivant && Array.isArray(d?.modeles) && d.modeles.length) setCatalogue(d.modeles);
+      })
+      .catch(() => undefined);
+    return () => {
+      vivant = false;
+    };
+  }, []);
+
+  /**
+   * Le modèle déjà configuré reste visible même s'il a disparu du catalogue —
+   * un catalogue temporairement amputé effacerait sinon la configuration de
+   * tous les gents du compte : la panne se transformerait en perte de données.
+   */
+  const catalogueComplet = useMemo(() => {
+    let liste = catalogue;
+    for (const a of currentDraft.modelAssignments) {
+      liste = avecModeleConfigure(liste, a.modelId);
+    }
+    return liste;
+  }, [catalogue, currentDraft.modelAssignments]);
+
   const normalizedQuery = query.trim().toLowerCase();
 
   const groups = useMemo(
     () =>
       ORDER.map((capability) => ({
         capability,
-        models: MODEL_CATALOG.filter(
+        models: catalogueComplet.filter(
           (m) =>
             m.capability === capability &&
             (normalizedQuery === "" ||
@@ -64,12 +98,12 @@ export function ModelsTab() {
               m.provider.toLowerCase().includes(normalizedQuery))
         ),
       })),
-    [normalizedQuery]
+    [normalizedQuery, catalogueComplet]
   );
 
   const selectedChips = ORDER.map((capability) => {
     const modelId = assignmentByCapability.get(capability) ?? null;
-    const model = modelId ? MODEL_CATALOG.find((m) => m.id === modelId) ?? null : null;
+    const model = modelId ? catalogueComplet.find((m) => m.id === modelId) ?? null : null;
     return { capability, model };
   }).filter((c) => c.model);
 

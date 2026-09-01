@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_espace" }, { status: 400 });
   }
 
-  const result = await refreshPinnedArtefact(espace);
+  const result = await refreshPinnedArtefact(espace, garde.value.ctx);
   return NextResponse.json({
     ok: result.ok,
     note: result.note,

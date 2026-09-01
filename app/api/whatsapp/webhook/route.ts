@@ -1,3 +1,6 @@
+import { contexteForUser } from "@/lib/server/openRouterKey";
+import { consommerPourVisiteur } from "@/lib/server/gentGuard";
+import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 import { NextResponse } from "next/server";
 import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
@@ -81,11 +84,12 @@ export async function POST(req: Request) {
   const sender = digits(msg.from);
   // Un correspondant WhatsApp parle au gent DIFFUSÉ, pas à la version de
   // travail en cours d'édition dans le studio.
-  const { data } = await supabase.from("published_gents").select(`id, ${DIFFUSED_COLUMNS}`);
+  const { data } = await supabase.from("published_gents").select(`id, owner_id, ${DIFFUSED_COLUMNS}`);
   const match = (data ?? [])
     .map((row) => {
       const espace = diffusedEspace(row as { espace?: unknown; diffused?: unknown });
-      return espace ? { id: (row as { id: string }).id, espace } : null;
+      const r = row as { id: string; owner_id?: string | null };
+      return espace ? { id: r.id, ownerId: r.owner_id ?? null, espace } : null;
     })
     .find((row) => {
       const ch = row?.espace.channel;
@@ -98,7 +102,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const result = await replyAsGent(match.espace, msg.text.body);
+  // Un message entrant est une génération facturée, déclenchée par un tiers :
+  // c'est le propriétaire du gent qui la paie, et son quota qui la borne.
+  const ctx = await contexteForUser(match.ownerId);
+  const quota = await consommerPourVisiteur(ctx, "llm");
+  if (!quota.ok) {
+    await sendWhatsAppText(msg.from, MESSAGE_VISITEUR_INDISPONIBLE);
+    return NextResponse.json({ ok: true });
+  }
+
+  const result = await replyAsGent(match.espace, msg.text.body, ctx);
   await sendWhatsAppText(msg.from, result.reply);
   await supabase.from("published_gents").update({ diffused: result.espace }).eq("id", match.id);
 

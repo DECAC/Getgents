@@ -1,5 +1,7 @@
 import { resolveVisionModelId } from "@/lib/visionModels";
 import { MAX_VIDEO_FRAMES } from "@/lib/extractVideoFrames";
+import { messageCleOpenRouter } from "@/lib/openRouterKey";
+import type { ContexteLlm } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
@@ -17,9 +19,12 @@ function isAllowedFrameUrl(url: string): boolean {
 }
 
 /** Analyse une série d'images (frames vidéo) via un modèle vision OpenRouter. */
-export async function analyzeVisionFrames(input: VisionAnalyzeInput): Promise<{ analysis: string } | { error: string }> {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) return { error: "Clé API OpenRouter absente." };
+export async function analyzeVisionFrames(
+  input: VisionAnalyzeInput,
+  ctx: ContexteLlm
+): Promise<{ analysis: string } | { error: string }> {
+  const key = ctx.cle;
+  if (!key) return { error: messageCleOpenRouter({ source: ctx.source, status: 0 }) };
 
   const frames = (input.frames ?? []).filter(isAllowedFrameUrl).slice(0, MAX_VIDEO_FRAMES);
   if (!frames.length) return { error: "Aucune image valide à analyser." };

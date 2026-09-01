@@ -83,3 +83,44 @@ export async function sealGrantsForUser(userId: string, confirmedEmail: string |
   }
   return (data ?? []).length;
 }
+
+/**
+ * Reporte sur la nouvelle adresse les invitations qui visaient l'ancienne.
+ *
+ * Un changement d'adresse casse les `gent_grants` en attente : celles déjà
+ * scellées (`grantee_id` rempli) survivent, les autres visent une adresse que
+ * plus personne ne relèvera. Une moitié des partages disparaîtrait sans
+ * explication — l'incohérence la plus incompréhensible qui soit pour celui
+ * qui la subit.
+ *
+ * Appelé APRÈS confirmation seulement (`app/auth/callback`) : tant que le
+ * lien n'est pas cliqué, rien ne prouve que la nouvelle adresse appartient au
+ * demandeur, et déplacer les invitations plus tôt les livrerait à un tiers.
+ */
+export async function reporterInvitations(
+  ancienne: string | null,
+  nouvelle: string | null
+): Promise<number> {
+  const avant = ancienne?.trim().toLowerCase();
+  const apres = nouvelle?.trim().toLowerCase();
+  if (!avant || !apres || avant === apres) return 0;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return 0;
+
+  const { data, error } = await supabase
+    .from("gent_grants")
+    .update({ invited_email: apres })
+    .eq("invited_email", avant)
+    .is("grantee_id", null)
+    .is("revoked_at", null)
+    .select("id");
+
+  if (error) {
+    console.error(
+      JSON.stringify({ tag: "getgents:auth", event: "report_invitations_failed", detail: error.message })
+    );
+    return 0;
+  }
+  return (data ?? []).length;
+}

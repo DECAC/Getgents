@@ -32,6 +32,8 @@ import type { StatusEvent, ThinkingPhase } from "@/lib/streamChat";
 import { defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 import { formatOpenRouterError, supportsReasoningStream } from "@/lib/openRouterReasoning";
 import { resolveModelId } from "@/lib/allowedModels";
+import { noterEchecCle, type ContexteLlm } from "@/lib/server/openRouterKey";
+import { messageCleOpenRouter } from "@/lib/openRouterKey";
 import {
   applyToolCallDelta,
   flattenToolRoundForRetry,
@@ -115,15 +117,21 @@ function traceChatRequest(source: string, body: ChatBody) {
  */
 export async function chatResponseFor(
   body: ChatBody,
-  key: string,
+  ctx: ContexteLlm,
   source: string
 ): Promise<Response> {
+  const key = ctx.cle;
   // Le modèle — donc le prix au token — était choisi par l'appelant et relayé
   // tel quel à OpenRouter. Sur une route sans authentification, cela revient à
   // laisser un inconnu commander sur notre compte. On le normalise ICI, une
   // seule fois, pour qu'aucun des chemins en aval (relais direct, boucle
   // d'outils, journal) ne puisse le contourner.
-  body.model = resolveModelId(body.model);
+  // Sur la clé de la plateforme, le modèle — donc le prix au token — était
+  // choisi par l'appelant : on le normalise ICI, une seule fois, pour qu'aucun
+  // chemin en aval ne puisse le contourner. Avec une clé personnelle, la
+  // question ne se pose plus : le builder paie ses appels, rien ne justifie de
+  // le restreindre à notre sélection.
+  if (ctx.source === "plateforme") body.model = resolveModelId(body.model);
 
   traceChatRequest(source, body);
 
@@ -159,7 +167,7 @@ export async function chatResponseFor(
       !!body.gmail,
       body.gentId,
       restApis,
-      key
+      ctx
     );
   }
 
@@ -179,6 +187,15 @@ export async function chatResponseFor(
 
   if (!upstream.ok) {
     const data = await upstream.json().catch(() => ({}));
+    // Trace le refus sans JAMAIS supprimer la clé : un 401 peut venir d'une
+    // panne côté OpenRouter, et effacer serait irréversible pour le builder.
+    if (upstream.status === 401 || upstream.status === 402 || upstream.status === 403) {
+      await noterEchecCle(ctx, upstream.status);
+      return NextResponse.json(
+        { error: messageCleOpenRouter({ source: ctx.source, status: upstream.status }) },
+        { status: upstream.status }
+      );
+    }
     return NextResponse.json(data, { status: upstream.status });
   }
 
@@ -244,8 +261,9 @@ function toolLoopResponse(
   gmail: boolean,
   gentId: string | undefined,
   restApis: RestApiConnector[],
-  key: string
+  ctx: ContexteLlm
 ) {
+  const key = ctx.cle;
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -546,6 +564,7 @@ function toolLoopResponse(
                 typeof args.to === "string" ? args.to : "",
                 typeof args.subject === "string" ? args.subject : "",
                 typeof args.body === "string" ? args.body : "",
+                ctx,
                 {
                   htmlBody: typeof args.htmlBody === "string" ? args.htmlBody : undefined,
                   imageUrl: typeof args.imageUrl === "string" ? args.imageUrl : undefined,

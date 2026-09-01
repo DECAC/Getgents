@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { generateImageFromPrompt } from "@/lib/server/generateImage";
+import type { ContexteLlm } from "@/lib/server/openRouterKey";
 // Les jetons sont stockés par gent dans Supabase (integration_credentials).
 // Secrets plateforme : GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
 
@@ -341,12 +342,13 @@ function escapeHtml(text: string): string {
 }
 
 async function resolveImageBytes(
+  ctx: ContexteLlm,
   imageUrl?: string,
   imagePrompt?: string
 ): Promise<{ bytes: Buffer; mimeType: string } | { error: string }> {
   let url = imageUrl?.trim();
   if (!url && imagePrompt?.trim()) {
-    const generated = await generateImageFromPrompt(imagePrompt.trim());
+    const generated = await generateImageFromPrompt(imagePrompt.trim(), ctx);
     if ("error" in generated) return generated;
     url = generated.imageUrl;
   }
@@ -448,11 +450,14 @@ export interface GmailSendOptions {
 }
 
 /** Envoi d'un e-mail via le compte Gmail connecté (texte, HTML et image inline optionnels). */
+// `ctx` dit QUI paie une éventuelle génération d'image jointe au message :
+// le propriétaire du gent, pas la plateforme.
 export async function sendMessage(
   gentId: string,
   to: string,
   subject: string,
   body: string,
+  ctx: ContexteLlm,
   options?: GmailSendOptions
 ): Promise<string> {
   if (!to?.trim() || !subject?.trim()) {
@@ -465,7 +470,7 @@ export async function sendMessage(
   let raw: string;
 
   if (hasImage) {
-    const image = await resolveImageBytes(options?.imageUrl, options?.imagePrompt);
+    const image = await resolveImageBytes(ctx, options?.imageUrl, options?.imagePrompt);
     if ("error" in image) return JSON.stringify({ error: image.error });
     const html =
       options?.htmlBody?.trim() ||

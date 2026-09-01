@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveRouting, routingPrompt, SUPER_GENT_ROUTER_MODEL, type GentDescriptor } from "@/lib/superGent";
 import { requireUserWithQuota } from "@/lib/server/gentGuard";
+import { messageCleOpenRouter } from "@/lib/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
@@ -20,8 +21,14 @@ export async function POST(req: Request) {
   const garde = await requireUserWithQuota("llm");
   if (!garde.ok) return garde.response;
 
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) return NextResponse.json({ error: "openrouter_not_configured" }, { status: 503 });
+  const { ctx } = garde.value;
+  const key = ctx.cle;
+  if (!key) {
+    return NextResponse.json(
+      { error: messageCleOpenRouter({ source: ctx.source, status: 0 }) },
+      { status: 503 }
+    );
+  }
 
   let body: {
     question?: string;

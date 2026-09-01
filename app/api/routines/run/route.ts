@@ -3,7 +3,8 @@ import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { isRoutineDue, runRoutine } from "@/lib/server/routineRunner";
 import type { Espace } from "@/lib/types";
-import { requireGentOrDraftAccess } from "@/lib/server/gentGuard";
+import { consommerPourVisiteur, requireGentOrDraftAccess } from "@/lib/server/gentGuard";
+import { contexteForUser } from "@/lib/server/openRouterKey";
 
 export const dynamic = "force-dynamic";
 // Un run de veille (recherche web + synthèse) peut être long.
@@ -18,24 +19,25 @@ async function runBatch(
 ): Promise<{ ran: number; results: RunResult[]; persisted: boolean }> {
   const supabase = getSupabaseAdmin();
 
-  type Row = { id: string; espace: Espace };
+  type Row = { id: string; ownerId: string | null; espace: Espace };
   let rows: Row[] = [];
 
   if (supabase) {
     // Une routine s'exécute pour de vrais destinataires : elle doit tourner
     // sur la version DIFFUSÉE, pas sur la version de travail que le créateur
     // remue en Preview.
-    const query = supabase.from("published_gents").select(`id, ${DIFFUSED_COLUMNS}`);
+    const query = supabase.from("published_gents").select(`id, owner_id, ${DIFFUSED_COLUMNS}`);
     const { data, error } = forced ? await query.eq("id", forced) : await query;
     if (error) throw new Error(error.message);
     rows = (data ?? [])
       .map((row) => {
         const espace = diffusedEspace(row as { espace?: unknown; diffused?: unknown });
-        return espace ? { id: (row as { id: string }).id, espace } : null;
+        const r = row as { id: string; owner_id?: string | null };
+        return espace ? { id: r.id, ownerId: r.owner_id ?? null, espace } : null;
       })
       .filter((r): r is Row => r !== null);
   } else if (forced && fallbackEspace) {
-    rows = [{ id: forced, espace: fallbackEspace }];
+    rows = [{ id: forced, ownerId: null, espace: fallbackEspace }];
   } else if (forced) {
     throw new Error("supabase_not_configured");
   } else {
@@ -56,7 +58,18 @@ async function runBatch(
       continue;
     }
 
-    const run = await runRoutine(espace, routine, row.id);
+    // Un contexte PAR GENT : le cron traite les routines de tous les comptes,
+    // et chacun paie les siennes. Un contexte global ferait payer la
+    // plateforme pour un builder qui a branché sa clé, ou pire, ferait passer
+    // les appels d'un compte sur la clé d'un autre.
+    const ctx = await contexteForUser(row.ownerId);
+    const quota = await consommerPourVisiteur(ctx, "llm");
+    if (!quota.ok) {
+      results.push({ id: row.id, status: "plafond horaire du propriétaire atteint" });
+      continue;
+    }
+
+    const run = await runRoutine(espace, routine, ctx, row.id);
     if (supabase) {
       // La note produite rejoint la version diffusée — écrire dans `espace`
       // écraserait la configuration en cours d'édition du créateur.

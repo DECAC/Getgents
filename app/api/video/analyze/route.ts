@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     videoName: typeof body.name === "string" ? body.name : undefined,
     question: typeof body.question === "string" ? body.question : undefined,
     modelId: typeof body.modelId === "string" ? body.modelId : undefined,
-  });
+  }, garde.value.ctx);
 
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 502 });

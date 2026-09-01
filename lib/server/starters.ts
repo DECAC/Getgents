@@ -5,6 +5,7 @@ import {
   parseStarters,
   STARTER_COUNT,
 } from "@/lib/starterSignal";
+import type { ContexteLlm } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "anthropic/claude-sonnet-5";
@@ -17,8 +18,8 @@ const DEFAULT_MODEL = "anthropic/claude-sonnet-5";
  * Renvoie une liste vide plutôt que de lever : l'appelant retombe alors sur un
  * espace sans déclencheurs, ce qui reste parfaitement utilisable.
  */
-export async function generateStarters(espace: Espace): Promise<string[]> {
-  const key = process.env.OPENROUTER_API_KEY;
+export async function generateStarters(espace: Espace, ctx: ContexteLlm): Promise<string[]> {
+  const key = ctx.cle;
   if (!key) return [];
   if (espace.pinnedArtefact?.enabled) return [];
 

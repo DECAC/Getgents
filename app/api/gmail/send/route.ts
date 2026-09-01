@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getConnectionStatus, sendMessage } from "@/lib/server/gmail";
 import { GMAIL_NOT_CONNECTED_MESSAGE, parseEmailRecipients } from "@/lib/workspaceArtefacts";
 import { requireGentOrDraftAccess } from "@/lib/server/gentGuard";
+import { contexteForUser } from "@/lib/server/openRouterKey";
 
 export async function POST(req: NextRequest) {
   let body: {
@@ -50,7 +51,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "L'objet du message est requis." }, { status: 400 });
   }
 
-  const result = await sendMessage(gentId, emails.join(", "), subject, text, {
+  // Le contexte ne sert qu'à une éventuelle image générée pour le message :
+  // c'est l'expéditeur qui la paie.
+  const ctx = await contexteForUser(acces.value.id);
+  const result = await sendMessage(gentId, emails.join(", "), subject, text, ctx, {
     htmlBody: body.htmlBody,
     imageUrl: body.imageUrl,
   });

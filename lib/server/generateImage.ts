@@ -1,4 +1,6 @@
 import { resolveImageModelId } from "@/lib/imageModels";
+import { messageCleOpenRouter } from "@/lib/openRouterKey";
+import type { ContexteLlm } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
@@ -25,10 +27,11 @@ function extractImageUrl(msg: Record<string, unknown>): string | null {
 /** Génère une image via OpenRouter (Nanobanana / Gemini Flash Image par défaut). */
 export async function generateImageFromPrompt(
   prompt: string,
+  ctx: ContexteLlm,
   modelId?: string
 ): Promise<{ imageUrl: string } | { error: string }> {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) return { error: "Clé API OpenRouter absente." };
+  const key = ctx.cle;
+  if (!key) return { error: messageCleOpenRouter({ source: ctx.source, status: 0 }) };
 
   const resolvedModel = resolveImageModelId(modelId);
   const upstream = await fetch(OPENROUTER_API, {

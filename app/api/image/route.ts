@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing_prompt" }, { status: 400 });
   }
 
-  const result = await generateImageFromPrompt(prompt, body.modelId);
+  const result = await generateImageFromPrompt(prompt, garde.value.ctx, body.modelId);
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 502 });
   }

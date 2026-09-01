@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { chatResponseFor, type ChatBody } from "@/lib/server/chatEngine";
 import { requireUserWithQuota } from "@/lib/server/gentGuard";
+import { messageCleOpenRouter } from "@/lib/openRouterKey";
 
 // Un tour avec boucle d'outils (MCP, datasets, API REST) peut être long.
 export const maxDuration = 300;
@@ -13,14 +14,15 @@ export async function POST(req: NextRequest) {
   const garde = await requireUserWithQuota("llm");
   if (!garde.ok) return garde.response;
 
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) {
+  // `ctx` dit qui paie ce tour : la clé personnelle du compte si elle est
+  // enregistrée, la clé commune sinon. L'ancien message parlait de `.env.local`
+  // et de `npm run dev` — il s'adressait au développeur, alors que la personne
+  // qui le lit sur une plateforme ouverte n'a ni fichier ni terminal.
+  const { ctx } = garde.value;
+  if (!ctx.cle) {
     return NextResponse.json(
-      {
-        error:
-          "Clé API OpenRouter absente. Créez un fichier .env.local à la racine du projet avec OPENROUTER_API_KEY=votre_clé, puis redémarrez le serveur (npm run dev).",
-      },
-      { status: 500 }
+      { error: messageCleOpenRouter({ source: ctx.source, status: 0 }) },
+      { status: 503 }
     );
   }
 
@@ -31,5 +33,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  return chatResponseFor(body, key, req.headers.get("x-getgents-source") ?? "espace");
+  return chatResponseFor(body, ctx, req.headers.get("x-getgents-source") ?? "espace");
 }

@@ -3,6 +3,8 @@ import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { requireUser, type SessionUser } from "@/lib/server/session";
 import { resolveAccess, canRead, canWrite, canAdminister, type GentRole, type GentGrant } from "@/lib/gentAccess";
 import { limitFor, quotaMessage, windowStart, type UsageKind } from "@/lib/rateLimit";
+import { contexteForUser, type ContexteLlm } from "@/lib/server/openRouterKey";
+import { quotaApplicable, MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 
 /**
  * Contrôle d'appartenance sur un gent, et plafonds d'usage.
@@ -184,15 +186,55 @@ export async function requireGentOrDraftAccess(
   return { ok: true, value: auth.user };
 }
 
-/** Raccourci : session + quota, le duo de toutes les routes de génération. */
+/**
+ * Consomme le quota UNIQUEMENT si la plateforme paie.
+ *
+ * L'ordre compte : on résout d'abord la source, on décompte ensuite. Faire
+ * l'inverse ferait monter le compteur d'un builder qui règle déjà ses propres
+ * appels — un plafond appliqué à une dépense qui n'est pas la nôtre.
+ */
+export async function consommerSiPlateforme(
+  ctx: ContexteLlm,
+  kind: UsageKind
+): Promise<GuardOutcome<number>> {
+  if (!quotaApplicable(ctx.source) || !ctx.ownerId) return { ok: true, value: 0 };
+  return consumeQuota(ctx.ownerId, kind);
+}
+
+/**
+ * Quota d'un chemin SANS session : lien de partage, gent public, WhatsApp,
+ * routine. C'est le quota du PROPRIÉTAIRE qui est décompté — la vraie
+ * protection contre « je publie un gent, dix mille visiteurs vident la clé
+ * commune ». Le refus s'adresse au visiteur, qui n'a rien à faire du plafond
+ * horaire de quelqu'un d'autre.
+ */
+export async function consommerPourVisiteur(
+  ctx: ContexteLlm,
+  kind: UsageKind
+): Promise<GuardOutcome<number>> {
+  const quota = await consommerSiPlateforme(ctx, kind);
+  if (quota.ok) return quota;
+  return refus(429, MESSAGE_VISITEUR_INDISPONIBLE);
+}
+
+export interface UserAvecContexte {
+  user: SessionUser;
+  /** Qui paie ce tour, et avec quelle clé. À passer aux modules de génération. */
+  ctx: ContexteLlm;
+}
+
+/** Raccourci : session + contexte de facturation + quota, le trio de toutes
+ *  les routes de génération. */
 export async function requireUserWithQuota(
   kind: UsageKind
-): Promise<GuardOutcome<SessionUser>> {
+): Promise<GuardOutcome<UserAvecContexte>> {
   const auth = await requireUser();
   if ("response" in auth) return { ok: false, response: auth.response };
 
-  const quota = await consumeQuota(auth.user.id, kind);
+  const ctx = await contexteForUser(auth.user.id);
+
+  const quota = await consommerSiPlateforme(ctx, kind);
   if (!quota.ok) return quota;
 
-  return { ok: true, value: auth.user };
+  return { ok: true, value: { user: auth.user, ctx } };
 }

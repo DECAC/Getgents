@@ -18,9 +18,6 @@ export async function POST(req: Request) {
   const garde = await requireUserWithQuota("llm");
   if (!garde.ok) return garde.response;
 
-  if (!process.env.OPENROUTER_API_KEY) {
-    return NextResponse.json({ error: "openrouter_not_configured" }, { status: 503 });
-  }
 
   let body: { espace?: Espace };
   try {
@@ -34,6 +31,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "missing_espace" }, { status: 400 });
   }
 
-  const starters = await generateStarters(espace);
+  const starters = await generateStarters(espace, garde.value.ctx);
   return NextResponse.json({ starters });
 }

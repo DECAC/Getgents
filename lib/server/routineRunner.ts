@@ -12,6 +12,7 @@ import { materializeProfileMedia } from "@/lib/profileSummaryArtefact";
 import { renderMarkdown } from "@/lib/markdown";
 import { sendWhatsAppText, sendWhatsAppTemplate } from "@/lib/server/whatsapp";
 import { sendBrevoEmail } from "@/lib/server/brevo";
+import type { ContexteLlm } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
@@ -69,14 +70,19 @@ export interface RoutineRunResult {
  * Exécute la mission de la routine pour un gent et renvoie l'espace mis à
  * jour (artefact + messages + trace de run) — l'appelant persiste.
  */
-export async function runRoutine(espace: Espace, routine: Routine, gentId = ""): Promise<RoutineRunResult> {
-  const key = process.env.OPENROUTER_API_KEY;
+export async function runRoutine(
+  espace: Espace,
+  routine: Routine,
+  ctx: ContexteLlm,
+  gentId = ""
+): Promise<RoutineRunResult> {
+  const key = ctx.cle;
   const stamp = new Date().toISOString();
   if (!key) {
     return {
       ok: false,
-      note: "OPENROUTER_API_KEY absente côté serveur",
-      espace: { ...espace, routine: { ...routine, lastRunAt: stamp, lastRunNote: "échec : clé API absente" } },
+      note: "aucune clé OpenRouter disponible pour ce gent",
+      espace: { ...espace, routine: { ...routine, lastRunAt: stamp, lastRunNote: "échec : aucune clé OpenRouter disponible" } },
     };
   }
 

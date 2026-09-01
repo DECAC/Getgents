@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { refreshPinnedArtefact } from "@/lib/server/pinnedArtefact";
 import type { Espace } from "@/lib/types";
-import { consumeQuota, requireGentAccess } from "@/lib/server/gentGuard";
+import { consommerSiPlateforme, requireGentAccess } from "@/lib/server/gentGuard";
+import { contexteForUser } from "@/lib/server/openRouterKey";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -32,7 +33,11 @@ export async function POST(req: Request) {
   const acces = await requireGentAccess(gentId, "write");
   if (!acces.ok) return acces.response;
 
-  const quota = await consumeQuota(acces.value.user.id, "llm");
+  // Celui qui déclenche la génération la paie : sa clé personnelle s'il en a
+  // enregistré une, la clé commune sinon — et le quota ne s'applique que dans
+  // ce second cas.
+  const ctx = await contexteForUser(acces.value.user.id);
+  const quota = await consommerSiPlateforme(ctx, "llm");
   if (!quota.ok) return quota.response;
 
   let espace: Espace | null = null;
@@ -63,7 +68,7 @@ export async function POST(req: Request) {
     espace = { ...espace, pinnedArtefact: { ...espace.pinnedArtefact, inputs } };
   }
 
-  const result = await refreshPinnedArtefact(espace);
+  const result = await refreshPinnedArtefact(espace, ctx);
   const updated: Espace = { ...espace, pinnedArtefact: result.pinned };
 
   if (supabase) {

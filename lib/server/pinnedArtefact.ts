@@ -3,6 +3,7 @@
 // fixe et des entrées de l'utilisateur (LinkedIn, CV…). Seules les données
 // changent d'une génération à l'autre ; la nature du rendu reste un dashboard.
 import type { Espace, PinnedArtefact, PinnedRun } from "@/lib/types";
+import type { ContexteLlm } from "@/lib/server/openRouterKey";
 import { parseDashboard, DASHBOARD_BLOCKS_SCHEMA, type DashboardSpec } from "@/lib/dashboardArtefact";
 import { profileContextNote } from "@/lib/profileSignal";
 import { sessionContextNote } from "@/lib/sessionContext";
@@ -51,6 +52,7 @@ function withRun(pinned: PinnedArtefact, run: PinnedRun): PinnedArtefact {
  */
 export async function refreshPinnedArtefact(
   espace: Espace,
+  ctx: ContexteLlm,
   source: PinnedRun["source"] = "espace"
 ): Promise<PinnedRefreshResult> {
   const pinned = espace.pinnedArtefact;
@@ -74,7 +76,7 @@ export async function refreshPinnedArtefact(
     return { ok, note, pinned: withRun(next ?? pinned, run), run };
   };
 
-  const key = process.env.OPENROUTER_API_KEY;
+  const key = ctx.cle;
   if (!key) return finish(false, "clé API absente", { attempts: 0 }, { ...pinned, generatedAt: stamp });
 
   const inputsBlock = pinned.inputs.length

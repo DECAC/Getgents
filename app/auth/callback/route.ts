@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAuthClient } from "@/lib/server/supabaseAuth";
 import { destinationApresConnexion } from "@/lib/authMessages";
-import { claimOrphanGentsOnce, sealGrantsForUser } from "@/lib/server/claimOrphans";
+import { claimOrphanGentsOnce, reporterInvitations, sealGrantsForUser } from "@/lib/server/claimOrphans";
 
 /**
  * Atterrissage des liens envoyés par e-mail (confirmation d'inscription,
@@ -54,6 +54,15 @@ export async function GET(request: NextRequest) {
     const emailConfirme = data.user.email_confirmed_at
       ? (data.user.email ?? "").toLowerCase() || null
       : null;
+    // Changement d'adresse confirmé : les invitations en attente suivent.
+    // L'ancienne adresse a été mémorisée dans les métadonnées au moment de la
+    // demande — c'est le seul endroit où on peut encore la retrouver.
+    const precedent = (data.user.user_metadata?.email_precedent as string | null) ?? null;
+    if (precedent && emailConfirme && precedent !== emailConfirme) {
+      await reporterInvitations(precedent, emailConfirme);
+      await client.auth.updateUser({ data: { email_precedent: null } });
+    }
+
     await sealGrantsForUser(data.user.id, emailConfirme);
   }
 
