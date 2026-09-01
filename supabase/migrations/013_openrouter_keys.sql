@@ -79,9 +79,6 @@ begin
   delete from public.share_links
     where owner_id = p_user or (owner_id is null and gent_id = any(ids));
 
-  -- Les partages recus comme les partages accordes disparaissent : garder une
-  -- invitation vers un gent supprime laisserait une entree morte dans la
-  -- liste de quelqu'un d'autre.
   -- Trois cas, et le troisieme est le moins evident : les partages RECUS, les
   -- partages ACCORDES, et les invitations en attente qui NOMMENT l'adresse
   -- supprimee. Cette derniere est une donnee personnelle de quelqu'un qui

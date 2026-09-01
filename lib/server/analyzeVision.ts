@@ -2,6 +2,7 @@ import { resolveVisionModelId } from "@/lib/visionModels";
 import { MAX_VIDEO_FRAMES } from "@/lib/extractVideoFrames";
 import { messageCleOpenRouter } from "@/lib/openRouterKey";
 import type { ContexteLlm } from "@/lib/server/openRouterKey";
+import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
@@ -53,12 +54,7 @@ export async function analyzeVisionFrames(
 
   const upstream = await fetch(OPENROUTER_API, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://getgents.app",
-      "X-Title": "Getgents",
-    },
+    headers: enTetesOpenRouter(key),
     body: JSON.stringify({
       model,
       messages: [{ role: "user", content }],

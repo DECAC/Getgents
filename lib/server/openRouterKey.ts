@@ -113,3 +113,23 @@ export async function noterEchecCle(ctx: ContexteLlm, status: number): Promise<v
     .update({ last_error: `Refus d'OpenRouter (${status}) le ${new Date().toISOString()}` })
     .eq("user_id", ctx.ownerId);
 }
+
+/**
+ * En-têtes d'un appel OpenRouter — un seul endroit, pour trois raisons.
+ *
+ * Les huit sites d'appel les composaient à la main, dans trois formes
+ * différentes : cinq envoyaient l'attribution, trois l'omettaient sans raison,
+ * et le domaine annoncé était resté `getgents.app`, qui n'a jamais été le
+ * nôtre. `HTTP-Referer` et `X-Title` sont ce qu'OpenRouter affiche dans son
+ * classement d'applications ; les laisser diverger revenait à se présenter
+ * sous trois identités selon la route empruntée.
+ */
+export function enTetesOpenRouter(cle: string): Record<string, string> {
+  const site = (process.env.NEXT_PUBLIC_APP_URL ?? "https://getgents.ai").replace(/\/+$/, "");
+  return {
+    Authorization: `Bearer ${cle}`,
+    "Content-Type": "application/json",
+    "HTTP-Referer": site,
+    "X-Title": "Getgents",
+  };
+}

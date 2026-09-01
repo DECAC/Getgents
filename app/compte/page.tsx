@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/server/session";
-import { isAuthConfigured } from "@/lib/authConfig";
+import { isAuthConfigured, missingAuthEnvVars, unconfiguredPolicy } from "@/lib/authConfig";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import CleOpenRouter, { type EtatCle } from "@/components/compte/CleOpenRouter";
 import Consommation from "@/components/compte/Consommation";
@@ -51,8 +51,66 @@ async function lireEtatCle(userId: string): Promise<EtatCle> {
   };
 }
 
+/**
+ * Écran affiché quand l'authentification n'est pas configurée.
+ *
+ * Cette page redirigeait vers `/builder/mesgents`. Depuis cette page-là, on
+ * partait et on revenait aussitôt : un aller-retour instantané, impossible à
+ * distinguer d'un lien mort. Le symptôme a coûté une recherche de bug là où il
+ * manquait une variable d'environnement.
+ *
+ * Une page qui ne peut pas faire son travail doit le DIRE. Et le dire à qui
+ * peut agir : en développement on nomme les variables manquantes, en
+ * production on reste générique — la personne qui verrait cet écran sur un
+ * site ouvert n'est pas forcément son exploitant, et lui réciter la
+ * configuration du serveur ne l'aiderait pas. Le détail part dans les
+ * journaux, où l'exploitant le trouvera.
+ */
+function ConfigurationManquante({ variables }: { variables: string[] }) {
+  return (
+    <main className={styles.page}>
+      <h1 className={styles.titre}>Mon compte</h1>
+      <section className={styles.bloc}>
+        <h2 className={styles.sousTitre}>Indisponible</h2>
+        <p className={styles.aide}>
+          Les comptes ne sont pas activés sur cette installation : cette page ne peut donc
+          rien afficher.
+        </p>
+        {variables.length > 0 && (
+          <p className={styles.aide}>
+            Variables d&apos;environnement manquantes :{" "}
+            {variables.map((v, i) => (
+              <span key={v}>
+                {i > 0 && ", "}
+                <code>{v}</code>
+              </span>
+            ))}
+            . Définissez-les puis redéployez.
+          </p>
+        )}
+        <p className={styles.retour}>
+          <Link href="/builder/mesgents">← Revenir à mes gents</Link>
+        </p>
+      </section>
+    </main>
+  );
+}
+
 export default async function ComptePage() {
-  if (!isAuthConfigured()) redirect("/builder/mesgents");
+  if (!isAuthConfigured()) {
+    const manquantes = missingAuthEnvVars();
+    console.error(
+      JSON.stringify({
+        tag: "getgents:auth",
+        event: "compte_non_configure",
+        missing: manquantes,
+      })
+    );
+    // En production, le détail reste dans le journal ci-dessus.
+    const enProduction = unconfiguredPolicy(process.env.NODE_ENV) === "bloquer";
+    return <ConfigurationManquante variables={enProduction ? [] : manquantes} />;
+  }
+
   const user = await getUser();
   if (!user) redirect("/connexion?next=/compte");
 

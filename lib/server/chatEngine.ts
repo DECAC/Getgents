@@ -32,7 +32,7 @@ import type { StatusEvent, ThinkingPhase } from "@/lib/streamChat";
 import { defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 import { formatOpenRouterError, supportsReasoningStream } from "@/lib/openRouterReasoning";
 import { resolveModelId } from "@/lib/allowedModels";
-import { noterEchecCle, type ContexteLlm } from "@/lib/server/openRouterKey";
+import { enTetesOpenRouter, noterEchecCle, type ContexteLlm } from "@/lib/server/openRouterKey";
 import { messageCleOpenRouter } from "@/lib/openRouterKey";
 import {
   applyToolCallDelta,
@@ -173,7 +173,7 @@ export async function chatResponseFor(
 
   const upstream = await fetch(OPENROUTER_API, {
     method: "POST",
-    headers: openrouterHeaders(key),
+    headers: enTetesOpenRouter(key),
     body: JSON.stringify({
       ...body,
       mcpServers: undefined,
@@ -207,15 +207,6 @@ export async function chatResponseFor(
 
   const data = await upstream.json();
   return NextResponse.json(data);
-}
-
-function openrouterHeaders(key: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${key}`,
-    "Content-Type": "application/json",
-    "HTTP-Referer": "https://getgents.app",
-    "X-Title": "Getgents",
-  };
 }
 
 function sseHeaders(): Record<string, string> {
@@ -714,7 +705,7 @@ function toolLoopResponse(
           sendStatus("thinking");
           const res = await fetch(OPENROUTER_API, {
             method: "POST",
-            headers: openrouterHeaders(key),
+            headers: enTetesOpenRouter(key),
             body: JSON.stringify({
               model: body.model,
               messages,

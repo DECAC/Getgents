@@ -9,6 +9,7 @@ import { profileContextNote } from "@/lib/profileSignal";
 import { sessionContextNote } from "@/lib/sessionContext";
 import { extractLlmMessageText } from "@/lib/server/llmMessageText";
 import { extractJsonFromHtmlMarker } from "@/lib/server/markerJson";
+import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 /** Modèle fiable pour la structure JSON du dashboard (indépendamment du modèle chat du gent). */
@@ -185,7 +186,7 @@ async function callPinnedModel(
   try {
     const res = await fetch(OPENROUTER_API, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: enTetesOpenRouter(key),
       body: JSON.stringify({
         model,
         messages: [

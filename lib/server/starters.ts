@@ -6,6 +6,7 @@ import {
   STARTER_COUNT,
 } from "@/lib/starterSignal";
 import type { ContexteLlm } from "@/lib/server/openRouterKey";
+import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "anthropic/claude-sonnet-5";
@@ -27,12 +28,7 @@ export async function generateStarters(espace: Espace, ctx: ContexteLlm): Promis
   try {
     upstream = await fetch(OPENROUTER_API, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://getgents.app",
-        "X-Title": "Getgents",
-      },
+      headers: enTetesOpenRouter(key),
       body: JSON.stringify({
         model: espace.chatModelId || DEFAULT_MODEL,
         messages: [

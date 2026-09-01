@@ -8,6 +8,7 @@ import { profileContextNote } from "@/lib/profileSignal";
 import { renderMarkdown } from "@/lib/markdown";
 import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 import type { ContexteLlm } from "@/lib/server/openRouterKey";
+import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
@@ -65,7 +66,7 @@ export async function replyAsGent(
   try {
     const res = await fetch(OPENROUTER_API, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: enTetesOpenRouter(key),
       body: JSON.stringify({
         model: espace.chatModelId ?? "anthropic/claude-sonnet-5",
         messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: userText }],

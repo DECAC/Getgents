@@ -13,6 +13,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import { sendWhatsAppText, sendWhatsAppTemplate } from "@/lib/server/whatsapp";
 import { sendBrevoEmail } from "@/lib/server/brevo";
 import type { ContexteLlm } from "@/lib/server/openRouterKey";
+import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
@@ -104,7 +105,7 @@ export async function runRoutine(
   try {
     const res = await fetch(OPENROUTER_API, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: enTetesOpenRouter(key),
       body: JSON.stringify({
         model: espace.chatModelId ?? "anthropic/claude-sonnet-5",
         messages: [

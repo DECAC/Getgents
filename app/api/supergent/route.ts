@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveRouting, routingPrompt, SUPER_GENT_ROUTER_MODEL, type GentDescriptor } from "@/lib/superGent";
 import { requireUserWithQuota } from "@/lib/server/gentGuard";
 import { messageCleOpenRouter } from "@/lib/openRouterKey";
+import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
@@ -58,12 +59,7 @@ export async function POST(req: Request) {
   try {
     upstream = await fetch(OPENROUTER_API, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://getgents.app",
-        "X-Title": "Getgents",
-      },
+      headers: enTetesOpenRouter(key),
       body: JSON.stringify({
         model: SUPER_GENT_ROUTER_MODEL,
         messages: [
