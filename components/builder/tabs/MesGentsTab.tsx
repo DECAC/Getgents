@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { allocateNewDraft } from "@/lib/builderDraftStorage";
 import { useGentsList } from "@/lib/hooks/useGentsList";
-import { AppAccessPrompt } from "@/components/shared/AppAccessPrompt";
+import { SessionExpiree } from "@/components/shared/SessionExpiree";
 import styles from "./MesGentsTab.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -55,7 +55,7 @@ export function MesGentsTab() {
     noResults,
     orphanedPublished,
     syncing,
-    needsAccessKey,
+    sessionExpiree,
     deletingId,
     deletingCount,
     deleteError,
@@ -223,17 +223,17 @@ export function MesGentsTab() {
         </div>
       )}
 
-      {needsAccessKey && (
+      {sessionExpiree && (
         <div className={styles.banner}>
           <strong>Accès serveur requis</strong> — sans la clé, seuls les gents de démo locaux
           s&apos;affichent.
           <div style={{ marginTop: 10 }}>
-            <AppAccessPrompt onSaved={() => void hydrateFromRemote()} />
+            <SessionExpiree next="/builder/mesgents" />
           </div>
         </div>
       )}
 
-      {syncing && !needsAccessKey && <div className={styles.banner}>Synchronisation de vos gents…</div>}
+      {syncing && !sessionExpiree && <div className={styles.banner}>Synchronisation de vos gents…</div>}
 
       {orphanedPublished.length > 0 && (
         <div className={styles.banner}>

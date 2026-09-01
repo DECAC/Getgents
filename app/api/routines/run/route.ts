@@ -3,7 +3,7 @@ import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { isRoutineDue, runRoutine } from "@/lib/server/routineRunner";
 import type { Espace } from "@/lib/types";
-import { checkAppAccess, APP_ACCESS_HINT } from "@/lib/server/appAccess";
+import { requireGentOrDraftAccess } from "@/lib/server/gentGuard";
 
 export const dynamic = "force-dynamic";
 // Un run de veille (recherche web + synthèse) peut être long.
@@ -132,12 +132,16 @@ export async function POST(req: Request) {
   const fallbackEspace = body.espace && typeof body.espace === "object" ? body.espace : null;
   // Fournir un `gentId` suffisait à contourner CRON_SECRET : n'importe qui
   // pouvait faire tourner en boucle la routine d'un gent quelconque, avec les
-  // appels LLM et les envois réels que cela déclenche. L'exécution forcée
-  // (bouton « Exécuter maintenant » du studio) exige désormais l'accès
-  // application ; elle passera au contrôle de propriétaire quand les comptes
-  // seront en place.
-  if (!checkCronSecret(req) && !checkAppAccess(req)) {
-    return NextResponse.json({ error: "unauthorized", hint: APP_ACCESS_HINT }, { status: 401 });
+  // appels LLM et les envois réels (WhatsApp, e-mail) que cela déclenche.
+  //
+  // Deux appelants légitimes, et deux seulement : le cron de l'hébergeur, qui
+  // porte le secret et balaie tous les gents ; et le créateur qui clique
+  // « Exécuter maintenant » sur SON gent, ce que le contrôle de propriétaire
+  // vérifie maintenant nommément.
+  if (!checkCronSecret(req)) {
+    if (!forced) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    const acces = await requireGentOrDraftAccess(forced, "write");
+    if (!acces.ok) return acces.response;
   }
   try {
     return NextResponse.json(await runBatch(forced, fallbackEspace));

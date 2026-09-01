@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Espace } from "@/lib/types";
 import { generateStarters } from "@/lib/server/starters";
+import { requireUserWithQuota } from "@/lib/server/gentGuard";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -13,6 +14,10 @@ export const maxDuration = 60;
  * /api/links/[token]/starters, qui écrit dans la version diffusée.
  */
 export async function POST(req: Request) {
+  // Génère cinq amorces via le modèle : facturé, donc réservé aux comptes.
+  const garde = await requireUserWithQuota("llm");
+  if (!garde.ok) return garde.response;
+
   if (!process.env.OPENROUTER_API_KEY) {
     return NextResponse.json({ error: "openrouter_not_configured" }, { status: 503 });
   }

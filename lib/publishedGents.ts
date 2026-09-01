@@ -4,7 +4,7 @@ import type { GentDraft, KnowledgeSource } from "@/lib/types/builder";
 import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { formatConversationStartedAt, newConversationId } from "@/lib/conversationUtils";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
-import { appAccessHeaders } from "@/lib/appAccess";
+import { apiFetchInit, signalerSessionExpiree } from "@/lib/apiFetch";
 import { MAX_CHARS as DOC_MAX_CHARS } from "@/lib/extractDocumentText";
 import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import { resolveImageModelId } from "@/lib/imageModels";
@@ -55,7 +55,6 @@ export async function fetchRemoteGents(): Promise<EspacesMap | null | "unauthori
     const res = await fetch("/api/gents", {
       cache: "no-store",
       credentials: "include",
-      headers: appAccessHeaders(),
     });
     if (res.status === 401) {
       remoteAvailable = false;
@@ -79,7 +78,7 @@ function sendRemoteGent(id: string, espace: Espace, diffuse = false): Promise<vo
   return fetch(`/api/gents/${encodeURIComponent(id)}`, {
     method: "PUT",
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...appAccessHeaders() },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ espace, ...(diffuse ? { diffuse: true } : {}) }),
     // Survit à une navigation immédiate (clic sur « Preview » juste après la
     // publication) : sans ça la requête est annulée par le déchargement.
@@ -221,7 +220,6 @@ export async function deletePublishedGent(id: string): Promise<{ ok: boolean; er
     const res = await fetch(`/api/gents/${encodeURIComponent(id)}`, {
       method: "DELETE",
       credentials: "include",
-      headers: appAccessHeaders(),
     });
     if (res.status === 503 || res.status === 401) {
       remoteAvailable = false;

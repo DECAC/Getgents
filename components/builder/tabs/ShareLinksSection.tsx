@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
-import { appAccessHeaders } from "@/lib/appAccess";
-import { AppAccessPrompt } from "@/components/shared/AppAccessPrompt";
 import {
   describeShareLink,
   shareLinkState,
@@ -13,6 +11,7 @@ import {
   type ShareLinkStats,
 } from "@/lib/shareLink";
 import styles from "./ShareLinksSection.module.css";
+import { SessionExpiree } from "@/components/shared/SessionExpiree";
 
 const EXPIRY_CHOICES = [
   { label: "7 jours", days: 7 },
@@ -33,7 +32,7 @@ export function ShareLinksSection() {
   const [stats, setStats] = useState<Record<string, ShareLinkStats>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [needsAccessKey, setNeedsAccessKey] = useState(false);
+  const [sessionExpiree, setSessionExpiree] = useState(false);
   const [gentPublished, setGentPublished] = useState(true);
   const [target, setTarget] = useState("");
   const [expiryDays, setExpiryDays] = useState(30);
@@ -47,12 +46,11 @@ export function ShareLinksSection() {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setNeedsAccessKey(false);
+    setSessionExpiree(false);
     try {
       const res = await fetch(`/api/links?gentId=${encodeURIComponent(gentId)}`, {
         cache: "no-store",
         credentials: "include",
-        headers: appAccessHeaders(),
       });
       const data = (await res.json()) as {
         links?: ShareLink[];
@@ -62,7 +60,7 @@ export function ShareLinksSection() {
         hint?: string;
       };
       if (!res.ok) {
-        if (res.status === 401) setNeedsAccessKey(true);
+        if (res.status === 401) setSessionExpiree(true);
         else setError(data.hint ?? `Erreur : ${data.error ?? res.status}`);
         setLinks([]);
         return;
@@ -92,12 +90,12 @@ export function ShareLinksSection() {
       const res = await fetch("/api/links", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json", ...appAccessHeaders() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gentId, targetLabel: label, expiresAt }),
       });
       const data = (await res.json()) as { link?: ShareLink; error?: string; hint?: string };
       if (!res.ok) {
-        if (res.status === 401) setNeedsAccessKey(true);
+        if (res.status === 401) setSessionExpiree(true);
         else setError(data.hint ?? `Erreur : ${data.error ?? res.status}`);
         return;
       }
@@ -116,11 +114,10 @@ export function ShareLinksSection() {
       const res = await fetch(`/api/links/${encodeURIComponent(token)}`, {
         method: "DELETE",
         credentials: "include",
-        headers: appAccessHeaders(),
       });
       if (!res.ok) {
         if (res.status === 401) {
-          setNeedsAccessKey(true);
+          setSessionExpiree(true);
           return;
         }
         const data = (await res.json()) as { error?: string };
@@ -191,7 +188,7 @@ export function ShareLinksSection() {
         </div>
       )}
 
-      {published && !loading && !needsAccessKey && !gentPublished && (
+      {published && !loading && !sessionExpiree && !gentPublished && (
         <div className={styles.warn}>
           ⚠ Ce gent est marqué publié ici, mais <b>absent de la base serveur</b> — les liens
           pointeront vers du vide (« Contenu indisponible » côté visiteur). Cause fréquente :
@@ -231,10 +228,10 @@ export function ShareLinksSection() {
         </button>
       </div>
 
-      {needsAccessKey && <AppAccessPrompt onSaved={() => void load()} />}
+      {sessionExpiree && <SessionExpiree />}
       {error && <div className={styles.error}>{error}</div>}
 
-      {needsAccessKey ? null : loading ? (
+      {sessionExpiree ? null : loading ? (
         <div className={styles.muted}>Chargement des liens…</div>
       ) : links.length === 0 ? (
         <div className={styles.muted}>Aucun lien pour ce gent.</div>

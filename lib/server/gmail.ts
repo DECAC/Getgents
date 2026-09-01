@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { generateImageFromPrompt } from "@/lib/server/generateImage";
 // Les jetons sont stockés par gent dans Supabase (integration_credentials).
 // Secrets plateforme : GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
@@ -43,24 +44,60 @@ export function redirectUri(origin: string): string {
 }
 
 /** État OAuth signé en base64url (gentId + expiration 10 min). */
-export function encodeOAuthState(gentId: string): string {
-  return Buffer.from(JSON.stringify({ gentId, exp: Date.now() + 600_000 }), "utf8").toString("base64url");
+/**
+ * Le `state` OAuth n'était que du base64 en clair : lisible, et surtout
+ * FORGEABLE. Il suffisait d'y écrire l'identifiant du gent de quelqu'un
+ * d'autre et de terminer le parcours Google pour rattacher un compte Gmail à
+ * un gent qui ne vous appartient pas — ou, sur un lien envoyé à la victime,
+ * pour capter le sien.
+ *
+ * Il est désormais signé, et porte l'identifiant du compte qui a lancé la
+ * connexion : le callback vérifie que c'est bien la même personne qui revient.
+ * La clé de signature est GOOGLE_CLIENT_SECRET, déjà nécessaire au connecteur
+ * — pas de variable d'environnement supplémentaire à configurer et à oublier.
+ */
+function stateKey(): string {
+  return process.env.GOOGLE_CLIENT_SECRET ?? "";
 }
 
-export function decodeOAuthState(state: string): { gentId: string } | null {
+function signState(payload: string): string {
+  return createHmac("sha256", stateKey()).update(payload).digest("base64url");
+}
+
+export function encodeOAuthState(gentId: string, userId: string): string {
+  const payload = Buffer.from(
+    JSON.stringify({ gentId, userId, exp: Date.now() + 600_000 }),
+    "utf8"
+  ).toString("base64url");
+  return `${payload}.${signState(payload)}`;
+}
+
+export function decodeOAuthState(state: string): { gentId: string; userId: string } | null {
   try {
-    const parsed = JSON.parse(Buffer.from(state, "base64url").toString("utf8")) as {
+    const [payload, signature] = state.split(".");
+    if (!payload || !signature) return null;
+
+    const attendue = signState(payload);
+    // Comparaison à temps constant : une comparaison naïve laisserait deviner
+    // la signature octet par octet en mesurant le temps de réponse.
+    const a = Buffer.from(signature);
+    const b = Buffer.from(attendue);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
       gentId?: string;
+      userId?: string;
       exp?: number;
     };
-    if (!parsed.gentId || typeof parsed.exp !== "number" || Date.now() > parsed.exp) return null;
-    return { gentId: parsed.gentId };
+    if (!parsed.gentId || !parsed.userId) return null;
+    if (typeof parsed.exp !== "number" || Date.now() > parsed.exp) return null;
+    return { gentId: parsed.gentId, userId: parsed.userId };
   } catch {
     return null;
   }
 }
 
-export function consentUrl(gentId: string, origin: string): { url: string } | { error: string } {
+export function consentUrl(gentId: string, origin: string, userId: string): { url: string } | { error: string } {
   const clientId = googleClientId();
   if (!clientId || !googleClientSecret()) return { error: MISSING_CONF };
   const params = new URLSearchParams({
@@ -70,7 +107,7 @@ export function consentUrl(gentId: string, origin: string): { url: string } | { 
     scope: GMAIL_SCOPES,
     access_type: "offline",
     prompt: "consent",
-    state: encodeOAuthState(gentId),
+    state: encodeOAuthState(gentId, userId),
   });
   return { url: `https://accounts.google.com/o/oauth2/v2/auth?${params}` };
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getConnectionStatus, sendMessage } from "@/lib/server/gmail";
 import { GMAIL_NOT_CONNECTED_MESSAGE, parseEmailRecipients } from "@/lib/workspaceArtefacts";
+import { requireGentOrDraftAccess } from "@/lib/server/gentGuard";
 
 export async function POST(req: NextRequest) {
   let body: {
@@ -21,6 +22,13 @@ export async function POST(req: NextRequest) {
   if (!gentId) {
     return NextResponse.json({ error: "gentId requis." }, { status: 400 });
   }
+
+  // Aucune garde jusqu'ici : avec un gentId, un tiers envoyait des e-mails
+  // arbitraires DEPUIS LA BOÎTE GMAIL du créateur — un relais de hameçonnage
+  // signé par un domaine légitime. Les jetons OAuth appartiennent au
+  // propriétaire du gent, l'envoi aussi.
+  const acces = await requireGentOrDraftAccess(gentId, "write");
+  if (!acces.ok) return acces.response;
 
   const status = await getConnectionStatus(gentId);
   if (!status.connected) {

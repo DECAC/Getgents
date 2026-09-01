@@ -1,7 +1,7 @@
 import type { GentDraft, GentDraftsMap } from "@/lib/types/builder";
 import type { Espace } from "@/lib/types";
 import { GENT_DRAFTS } from "@/lib/mock-data/builder";
-import { appAccessHeaders } from "@/lib/appAccess";
+import { apiFetchInit, signalerSessionExpiree } from "@/lib/apiFetch";
 import { suggestGentIcon } from "@/lib/gentIcons";
 
 export const DRAFTS_STORAGE_KEY = "getgents:gent-drafts";
@@ -81,7 +81,6 @@ export async function fetchRemoteDrafts(): Promise<GentDraftsMap | null | "unaut
     const res = await fetch("/api/drafts", {
       cache: "no-store",
       credentials: "include",
-      headers: appAccessHeaders(),
     });
     if (res.status === 401) {
       remoteAvailable = false;
@@ -114,7 +113,7 @@ export function pushRemoteDraft(id: string, draft: GentDraft): void {
       fetch(`/api/drafts/${encodeURIComponent(id)}`, {
         method: "PUT",
         credentials: "include",
-        headers: { "Content-Type": "application/json", ...appAccessHeaders() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ draft }),
       })
         .then((res) => {
@@ -170,7 +169,6 @@ export async function deleteRemoteDraft(id: string): Promise<{ ok: boolean; erro
     const res = await fetch(`/api/drafts/${encodeURIComponent(id)}`, {
       method: "DELETE",
       credentials: "include",
-      headers: appAccessHeaders(),
     });
     if (res.status === 401) {
       remoteAvailable = false;

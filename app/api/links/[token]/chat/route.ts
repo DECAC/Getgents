@@ -7,6 +7,7 @@ import { CHAT_MAX_TOKENS } from "@/lib/streamChat";
 import { buildGentSystemPrompt } from "@/lib/gentRuntimePrompt";
 import { supportsReasoningStream } from "@/lib/openRouterReasoning";
 import type { Espace } from "@/lib/types";
+import { chatResponseFor } from "@/lib/server/chatEngine";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -79,13 +80,24 @@ export async function POST(req: Request, { params }: Params) {
 
   await recordShareEvent(token, "chat", link.targetLabel);
 
-  // Relais serveur-à-serveur vers /api/chat : même origine, flux SSE retransmis.
-  const origin = new URL(req.url).origin;
+  // Appel DIRECT du moteur de conversation, sans repasser par HTTP.
+  //
+  // C'était auparavant un `fetch` vers `/api/chat` sur la même origine. Une
+  // requête serveur-à-serveur ne porte aucun cookie, donc aucune session :
+  // depuis que `/api/chat` exige un compte, ce relais aurait été refusé. Le
+  // faire passer aurait demandé un secret interne — une variable de plus, un
+  // secret de plus à faire fuir. L'appel direct règle le problème et
+  // économise un aller-retour réseau sur chaque tour.
+  //
+  // Le droit d'accès est déjà établi plus haut, par le jeton du lien.
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) {
+    return NextResponse.json({ error: "openrouter_key_missing" }, { status: 500 });
+  }
+
   const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
-  const upstream = await fetch(`${origin}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-getgents-source": "share-link" },
-    body: JSON.stringify({
+  const upstream = await chatResponseFor(
+    {
       model: chatModelId,
       messages: [{ role: "system", content: systemPrompt }, ...history],
       stream: true,
@@ -102,8 +114,10 @@ export async function POST(req: Request, { params }: Params) {
       gentId: link.gentId,
       restApis: espace.restApis,
       webSearch: espace.webSearch,
-    }),
-  });
+    },
+    key,
+    "share-link"
+  );
 
   if (!upstream.ok || !upstream.body) {
     const detail = await upstream.text().catch(() => "");

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decodeOAuthState, handleOAuthCallback } from "@/lib/server/gmail";
+import { requireUser } from "@/lib/server/session";
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
@@ -21,6 +22,20 @@ export async function GET(req: NextRequest) {
   const parsed = decodeOAuthState(state);
   if (!parsed) {
     return NextResponse.json({ error: "État OAuth invalide ou expiré — relancez la connexion." }, { status: 400 });
+  }
+
+  // Le `state` porte l'identifiant du compte qui a lancé la connexion, et il
+  // est signé : c'est ce qui empêche de terminer chez soi un parcours ouvert
+  // par quelqu'un d'autre, ou d'en forger un sur le gent d'autrui. Google
+  // renvoie ici dans le navigateur de l'utilisateur, la session est donc bien
+  // celle du demandeur.
+  const auth = await requireUser();
+  if ("response" in auth) return auth.response;
+  if (auth.user.id !== parsed.userId) {
+    return NextResponse.json(
+      { error: "Cette connexion a été ouverte depuis un autre compte — relancez-la." },
+      { status: 403 }
+    );
   }
 
   const result = await handleOAuthCallback(code, parsed.gentId, req.nextUrl.origin);

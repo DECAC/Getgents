@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { refreshPinnedArtefact } from "@/lib/server/pinnedArtefact";
 import type { Espace } from "@/lib/types";
+import { consumeQuota, requireGentAccess } from "@/lib/server/gentGuard";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -24,6 +25,15 @@ export async function POST(req: Request) {
   }
   const gentId = body.gentId;
   if (!gentId || !ID_RE.test(gentId)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
+
+  // Cette route ÉCRIT dans published_gents, et n'avait aucune garde : on
+  // pouvait remplacer le contenu du gent de n'importe qui, ce qui ouvrait
+  // aussi la voie au XSS stocké corrigé au lot 1.
+  const acces = await requireGentAccess(gentId, "write");
+  if (!acces.ok) return acces.response;
+
+  const quota = await consumeQuota(acces.value.user.id, "llm");
+  if (!quota.ok) return quota.response;
 
   let espace: Espace | null = null;
   if (supabase) {

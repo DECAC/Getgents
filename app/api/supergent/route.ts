@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolveRouting, routingPrompt, SUPER_GENT_ROUTER_MODEL, type GentDescriptor } from "@/lib/superGent";
+import { requireUserWithQuota } from "@/lib/server/gentGuard";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
@@ -15,6 +16,10 @@ export const maxDuration = 30;
  * (connecteurs, recherche web, base de connaissance).
  */
 export async function POST(req: Request) {
+  // Routeur de super-gent : un appel au modèle par question posée.
+  const garde = await requireUserWithQuota("llm");
+  if (!garde.ok) return garde.response;
+
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) return NextResponse.json({ error: "openrouter_not_configured" }, { status: 503 });
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { refreshPinnedArtefact } from "@/lib/server/pinnedArtefact";
 import type { Espace } from "@/lib/types";
+import { requireUserWithQuota } from "@/lib/server/gentGuard";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -12,6 +13,10 @@ export const maxDuration = 300;
  * à /api/artefact/refresh qui lit/écrit le gent publié dans Supabase.
  */
 export async function POST(req: Request) {
+  // Génère un tableau de bord complet : le tour le plus coûteux de l'app.
+  const garde = await requireUserWithQuota("llm");
+  if (!garde.ok) return garde.response;
+
   let body: { espace?: Espace };
   try {
     body = await req.json();

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeVisionFrames } from "@/lib/server/analyzeVision";
+import { requireUserWithQuota } from "@/lib/server/gentGuard";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -18,6 +19,11 @@ interface AnalyzeBody {
  * Le client envoie des data:image/jpeg — jamais le fichier vidéo brut.
  */
 export async function POST(req: NextRequest) {
+  // Analyse vision : le nombre d'images n'est pas borné, chacune multiplie le
+  // coût du tour. Route ouverte à tous jusqu'ici.
+  const garde = await requireUserWithQuota("video");
+  if (!garde.ok) return garde.response;
+
   let body: AnalyzeBody;
   try {
     body = await req.json();

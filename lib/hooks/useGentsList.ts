@@ -30,7 +30,9 @@ export function useGentsList() {
   const [drafts, setDrafts] = useState(() => listVisibleDrafts());
   const [orphanedPublished, setOrphanedPublished] = useState<{ id: string; espace: Espace }[]>([]);
   const [syncing, setSyncing] = useState(true);
-  const [needsAccessKey, setNeedsAccessKey] = useState(false);
+  // Un 401 ne veut plus dire « clé d'accès manquante » mais « session
+  // expirée » : il n'y a rien à saisir, seulement à se reconnecter.
+  const [sessionExpiree, setSessionExpiree] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingCount, setDeletingCount] = useState<{ done: number; total: number } | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -44,16 +46,16 @@ export function useGentsList() {
 
   const hydrateFromRemote = useCallback(async () => {
     setSyncing(true);
-    setNeedsAccessKey(false);
+    setSessionExpiree(false);
     try {
       const [remoteDrafts, remotePublished] = await Promise.all([
         syncDraftsFromRemote(),
         syncPublishedGentsFromRemote(),
       ]);
       if (remoteDrafts === "unauthorized" || remotePublished === "unauthorized") {
-        setNeedsAccessKey(true);
+        setSessionExpiree(true);
       } else if (remoteDrafts !== null || remotePublished !== null) {
-        setNeedsAccessKey(false);
+        setSessionExpiree(false);
       }
       refreshLists();
     } finally {
@@ -132,7 +134,7 @@ export function useGentsList() {
     noResults,
     orphanedPublished,
     syncing,
-    needsAccessKey,
+    sessionExpiree,
     deletingId,
     deletingCount,
     deleteError,

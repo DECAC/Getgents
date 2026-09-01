@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { consentUrl, isGmailConfigured, redirectUri } from "@/lib/server/gmail";
 import { isPersistableDraftId } from "@/lib/builderDraftStorage";
+import { requireGentOrDraftAccess } from "@/lib/server/gentGuard";
 
 export async function GET(req: NextRequest) {
   const origin = req.nextUrl.origin;
@@ -27,6 +28,11 @@ export async function GET(req: NextRequest) {
       { status: 400 }
     );
   }
+  // La connexion d'un compte Google engage le propriétaire du gent : c'est
+  // depuis SA boîte que les e-mails partiront ensuite.
+  const acces = await requireGentOrDraftAccess(gentId, "write");
+  if (!acces.ok) return acces.response;
+
   if (!isGmailConfigured()) {
     return NextResponse.json(
       {
@@ -38,7 +44,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const result = consentUrl(gentId, origin);
+  const result = consentUrl(gentId, origin, acces.value.id);
   if ("error" in result) {
     return NextResponse.json(JSON.parse(result.error), { status: 500 });
   }

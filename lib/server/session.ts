@@ -25,13 +25,29 @@ export async function getUser(): Promise<SessionUser | null> {
   const client = createAuthClient(readOnlyBridge(() => cookies().getAll()));
   if (!client) return null;
 
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) return null;
+  try {
+    const { data, error } = await client.auth.getUser();
+    if (error || !data.user) return null;
 
-  return {
-    id: data.user.id,
-    confirmedEmail: data.user.email_confirmed_at ? (data.user.email ?? "").toLowerCase() || null : null,
-  };
+    return {
+      id: data.user.id,
+      confirmedEmail: data.user.email_confirmed_at ? (data.user.email ?? "").toLowerCase() || null : null,
+    };
+  } catch (e) {
+    // Service d'authentification injoignable. Sans ce filet, l'exception
+    // remontait jusqu'à la route et sortait en 500 accompagnée de sa trace :
+    // une panne de Supabase devenait un message technique renvoyé à
+    // l'appelant. Pas d'identité vérifiée, donc pas d'accès — et la cause
+    // reste dans les journaux, où elle a sa place.
+    console.error(
+      JSON.stringify({
+        tag: "getgents:auth",
+        event: "getuser_failed",
+        detail: (e as Error).message,
+      })
+    );
+    return null;
+  }
 }
 
 /**

@@ -101,6 +101,8 @@ function toShareLink(row: ShareLinkRow): ShareLink {
 
 export interface CreateShareLinkInput {
   gentId: string;
+  /** Compte qui ouvre le lien — le propriétaire du gent, vérifié par la route. */
+  ownerId?: string;
   targetLabel: string;
   expiresAt?: string | null;
   allowChat?: boolean;
@@ -115,6 +117,7 @@ export async function createShareLink(input: CreateShareLinkInput): Promise<Shar
   const row = {
     token: generateToken(),
     gent_id: input.gentId,
+    owner_id: input.ownerId ?? null,
     target_label: input.targetLabel,
     expires_at: input.expiresAt ?? null,
     allow_chat: input.allowChat ?? true,

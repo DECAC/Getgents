@@ -1,0 +1,880 @@
+/**
+ * Moteur de conversation : tout ce qu'un tour de chat fait réellement, sans la
+ * garde d'accès.
+ *
+ * Vivait dans `app/api/chat/route.ts`. Extrait ici pour deux raisons. Next
+ * interdit d'exporter autre chose que des handlers depuis un fichier de route,
+ * et la route du lien de partage a besoin d'APPELER ce travail directement :
+ * elle refaisait jusqu'ici un `fetch` vers `/api/chat`, requête
+ * serveur-à-serveur qui ne porte aucun cookie, donc aucune session. Poser une
+ * garde sur `/api/chat` aurait cassé ce chemin, ou obligé à inventer un secret
+ * interne — une variable d'environnement de plus, et un secret de plus à faire
+ * fuir. L'appel direct supprime le problème, et un aller-retour réseau avec lui.
+ *
+ * Le contrôle du droit d'accès n'a pas disparu : il est fait par l'appelant,
+ * la session pour `/api/chat`, le jeton pour `/api/links/[token]/chat`.
+ */
+import { NextRequest, NextResponse } from "next/server";
+import { McpClient } from "@/lib/server/mcp";
+import {
+  buildDatasetRuntimeInstructions,
+  getDatasetMeta,
+  searchNearby,
+  searchRecords,
+} from "@/lib/server/opendatasoft";
+import { stopsNearby, nextDepartures } from "@/lib/server/prim";
+import { accounts as powensAccounts, transactions as powensTransactions } from "@/lib/server/powens";
+import { getMessage as gmailGetMessage, searchMessages as gmailSearch, sendMessage as gmailSend } from "@/lib/server/gmail";
+import { callRestApi } from "@/lib/server/restApi";
+import { parseDatasetUrl, type DatasetRef } from "@/lib/opendatasoft";
+import type { RestApiConnector } from "@/lib/types";
+import type { StatusEvent, ThinkingPhase } from "@/lib/streamChat";
+import { defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
+import { formatOpenRouterError, supportsReasoningStream } from "@/lib/openRouterReasoning";
+import { resolveModelId } from "@/lib/allowedModels";
+import {
+  applyToolCallDelta,
+  flattenToolRoundForRetry,
+  isOrphanToolCallOutputError,
+  shouldAttachWebPlugin,
+  toOpenAIToolCalls,
+  userFacingToolLoopError,
+  type StreamedToolCall,
+} from "@/lib/openRouterToolLoop";
+
+// Un tour de conversation avec recherche web, boucle d'outils ou un prompt
+// système volumineux (base de connaissance) peut dépasser la limite par
+// défaut de la plateforme — c'était la seule route appelant le LLM sans cette
+// déclaration, contrairement à /api/artefact/* et /api/links/*/*, d'où des
+// « Failed to fetch » en cours de streaming sur les échanges les plus longs.
+
+// Surchargeable en test/dev pour pointer vers un mock local.
+const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
+const MAX_TOOL_ROUNDS = 6;
+const TOOL_RESULT_MAX_CHARS = 12_000;
+
+export interface ChatBody {
+  model?: string;
+  messages?: { role: string; content: string }[];
+  max_tokens?: number;
+  stream?: boolean;
+  reasoning?: { enabled?: boolean };
+  mcpServers?: { name: string; url: string }[];
+  datasets?: { name: string; url: string }[];
+  prim?: boolean;
+  powens?: boolean;
+  gmail?: boolean;
+  /** Identifiant du gent — requis pour Gmail (jetons OAuth par gent). */
+  gentId?: string;
+  restApis?: RestApiConnector[];
+  webSearch?: boolean;
+}
+
+/**
+ * Trace de diagnostic : les deux chemins (espace du créateur et relais d'un
+ * lien de partage) aboutissent ici. Quand un même gent répond différemment
+ * selon le chemin alors que sa configuration en base est identique, seule la
+ * comparaison des messages RÉELLEMENT envoyés au modèle permet de trancher —
+ * en particulier la FIN du message système, position que le modèle lit comme
+ * faisant autorité. Volontairement borné : ni le prompt entier ni le contenu
+ * de la conversation ne sont écrits dans les journaux.
+ */
+function traceChatRequest(source: string, body: ChatBody) {
+  const messages = body.messages ?? [];
+  const system = messages.find((m) => m.role === "system")?.content ?? "";
+  console.log(
+    JSON.stringify({
+      tag: "getgents:chat",
+      source,
+      model: body.model,
+      maxTokens: body.max_tokens,
+      systemMessages: messages.filter((m) => m.role === "system").length,
+      systemChars: system.length,
+      systemHead: system.slice(0, 120),
+      // La queue est le point décisif : c'est là que doit se trouver le prompt
+      // du créateur, et non une consigne de plateforme.
+      systemTail: system.slice(-240),
+      webSearch: !!body.webSearch,
+      datasets: (body.datasets ?? []).length,
+    })
+  );
+}
+
+/**
+ * Tout le travail d'un tour de conversation, sans la garde d'accès.
+ *
+ * Exporté pour que la route du lien de partage l'appelle DIRECTEMENT, au lieu
+ * de refaire un `fetch` vers `/api/chat`. Ce relais HTTP posait un problème
+ * insoluble : la requête serveur-à-serveur ne porte aucun cookie, donc aucune
+ * session — il aurait fallu inventer un secret interne, avec la variable
+ * d'environnement et le risque de fuite qui vont avec. L'appel direct
+ * supprime le problème, et un aller-retour réseau avec lui.
+ *
+ * Le contrôle du droit d'accès reste entier : il est fait par l'appelant, la
+ * session pour `POST`, le jeton du lien pour le partage.
+ */
+export async function chatResponseFor(
+  body: ChatBody,
+  key: string,
+  source: string
+): Promise<Response> {
+  // Le modèle — donc le prix au token — était choisi par l'appelant et relayé
+  // tel quel à OpenRouter. Sur une route sans authentification, cela revient à
+  // laisser un inconnu commander sur notre compte. On le normalise ICI, une
+  // seule fois, pour qu'aucun des chemins en aval (relais direct, boucle
+  // d'outils, journal) ne puisse le contourner.
+  body.model = resolveModelId(body.model);
+
+  traceChatRequest(source, body);
+
+  const mcpServers = (body.mcpServers ?? []).filter(
+    (s) => typeof s?.url === "string" && /^https?:\/\//.test(s.url)
+  );
+  const datasets = (body.datasets ?? [])
+    .map((d) => {
+      const ref = typeof d?.url === "string" ? parseDatasetUrl(d.url) : null;
+      return ref ? { ...ref, label: d.name } : null;
+    })
+    .filter((d): d is DatasetRef & { label: string } => d !== null);
+
+  const restApis = (body.restApis ?? []).filter(
+    (r) => r && typeof r.name === "string" && r.config && typeof r.config.baseUrl === "string"
+  );
+
+  if (
+    (mcpServers.length > 0 ||
+      datasets.length > 0 ||
+      body.prim ||
+      body.powens ||
+      body.gmail ||
+      restApis.length > 0) &&
+    body.stream
+  ) {
+    return toolLoopResponse(
+      body,
+      mcpServers,
+      datasets,
+      !!body.prim,
+      !!body.powens,
+      !!body.gmail,
+      body.gentId,
+      restApis,
+      key
+    );
+  }
+
+  const upstream = await fetch(OPENROUTER_API, {
+    method: "POST",
+    headers: openrouterHeaders(key),
+    body: JSON.stringify({
+      ...body,
+      mcpServers: undefined,
+      datasets: undefined,
+      webSearch: undefined,
+      // Plugin de recherche web d'OpenRouter : le fournisseur annote la
+      // réponse avec des résultats web récents, quel que soit le modèle.
+      ...(body.webSearch ? { plugins: [{ id: "web" }] } : {}),
+    }),
+  });
+
+  if (!upstream.ok) {
+    const data = await upstream.json().catch(() => ({}));
+    return NextResponse.json(data, { status: upstream.status });
+  }
+
+  if (body.stream && upstream.body) {
+    // Repasse le flux SSE d'OpenRouter tel quel — le client lit les tokens
+    // au fur et à mesure pour un affichage progressif de la réponse.
+    return new NextResponse(upstream.body, { headers: sseHeaders() });
+  }
+
+  const data = await upstream.json();
+  return NextResponse.json(data);
+}
+
+function openrouterHeaders(key: string): Record<string, string> {
+  return {
+    Authorization: `Bearer ${key}`,
+    "Content-Type": "application/json",
+    "HTTP-Referer": "https://getgents.app",
+    "X-Title": "Getgents",
+  };
+}
+
+function sseHeaders(): Record<string, string> {
+  return {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  };
+}
+
+function extractReasoningText(msg: Record<string, unknown> | undefined): string {
+  if (!msg) return "";
+  const details = msg.reasoning_details as { text?: string }[] | undefined;
+  if (Array.isArray(details)) return details.map((d) => d.text ?? "").join("");
+  return typeof msg.reasoning === "string" ? msg.reasoning : "";
+}
+
+function sendReasoningChunks(send: (obj: unknown) => void, reasoning: string) {
+  if (!reasoning) return;
+  for (let i = 0; i < reasoning.length; i += 80) {
+    send({ choices: [{ delta: { reasoning: reasoning.slice(i, i + 80) } }] });
+  }
+}
+
+/** Un outil exécutable côté serveur, quel que soit son transport (MCP, dataset…). */
+interface ServerTool {
+  exec: (args: Record<string, unknown>) => Promise<{ text: string; ok: boolean }>;
+}
+
+/**
+ * Boucle d'agent avec outils serveur (MCP et datasets open data) : les tours
+ * intermédiaires (appels d'outils) sont exécutés côté serveur, chaque appel
+ * étant signalé au client par un événement SSE `tool_event` ; la réponse
+ * finale est renvoyée en deltas SSE au même format qu'OpenRouter, donc le
+ * lecteur streaming existant côté client fonctionne sans changement de contrat.
+ */
+function toolLoopResponse(
+  body: ChatBody,
+  servers: { name: string; url: string }[],
+  datasets: (DatasetRef & { label: string })[],
+  prim: boolean,
+  powens: boolean,
+  gmail: boolean,
+  gentId: string | undefined,
+  restApis: RestApiConnector[],
+  key: string
+) {
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (obj: unknown) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+      const sendContent = (content: string) => send({ choices: [{ delta: { content } }] });
+      const sendToolEvent = (ev: Record<string, unknown>) => send({ tool_event: ev });
+      const sendStatus = (phase: ThinkingPhase, label?: string, detail?: string) => {
+        const ev: StatusEvent = { phase, label: label ?? defaultStatusLabel(phase, detail) };
+        send({ status_event: ev });
+      };
+      // Ping SSE pendant les boucles d'outils longues — évite les coupures « network error ».
+      const keepAlive = setInterval(() => {
+        sendStatus("thinking", "Traitement en cours…");
+      }, 12_000);
+
+      try {
+        sendStatus("preparing");
+        // 1. Construction du registre d'outils : serveurs MCP (découverte) et
+        // datasets open data (proximité ou filtres selon métadonnées).
+        const registry = new Map<string, ServerTool>();
+        const openaiTools: unknown[] = [];
+
+        if (servers.length || datasets.length || prim || powens || gmail || restApis.length) {
+          sendStatus("connecting");
+        }
+
+        for (const srv of servers) {
+          const client = new McpClient(srv.name, srv.url);
+          try {
+            await client.connect();
+            const tools = await client.listTools();
+            for (const tool of tools) {
+              const fq = `${srv.name.replace(/[^a-zA-Z0-9_]/g, "_")}__${tool.name}`.slice(0, 64);
+              registry.set(fq, {
+                exec: async (args) => {
+                  const result = await client.callTool(tool.name, args);
+                  return { text: result.text, ok: !result.isError };
+                },
+              });
+              openaiTools.push({
+                type: "function",
+                function: {
+                  name: fq,
+                  description: tool.description ?? "",
+                  parameters: tool.inputSchema ?? { type: "object", properties: {} },
+                },
+              });
+            }
+            sendToolEvent({ status: "connected", server: srv.name, toolCount: tools.length });
+          } catch (err) {
+            sendToolEvent({ status: "connect_error", server: srv.name, message: (err as Error).message });
+          }
+        }
+
+        const datasetMetas = await Promise.all(datasets.map((ds) => getDatasetMeta(ds)));
+        for (let i = 0; i < datasets.length; i++) {
+          const ds = datasets[i];
+          const meta = datasetMetas[i];
+          const slug = ds.datasetId.replace(/[^a-zA-Z0-9_]/g, "_");
+
+          if (meta.geoField) {
+            const fq = `dataset_${slug}__nearby`.slice(0, 64);
+            registry.set(fq, {
+              exec: async (args) => {
+                const lat = Number(args.lat);
+                const lon = Number(args.lon);
+                if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                  return { text: "Paramètres lat/lon manquants ou invalides.", ok: false };
+                }
+                const text = await searchNearby(ds, {
+                  lat,
+                  lon,
+                  radiusM: typeof args.radius_m === "number" ? args.radius_m : undefined,
+                  limit: typeof args.limit === "number" ? args.limit : undefined,
+                });
+                return { text, ok: !text.includes('"error"') };
+              },
+            });
+            openaiTools.push({
+              type: "function",
+              function: {
+                name: fq,
+                description: `Recherche dans « ${ds.label} » (${ds.datasetId}) les enregistrements les plus proches d'une position GPS, triés par distance.`,
+                parameters: {
+                  type: "object",
+                  properties: {
+                    lat: { type: "number", description: "Latitude WGS84" },
+                    lon: { type: "number", description: "Longitude WGS84" },
+                    radius_m: { type: "number", description: "Rayon en mètres (défaut 1500)" },
+                    limit: { type: "number", description: "Nombre max de résultats (défaut 5)" },
+                  },
+                  required: ["lat", "lon"],
+                },
+              },
+            });
+          } else {
+            const fq = `dataset_${slug}__query`.slice(0, 64);
+            registry.set(fq, {
+              exec: async (args) => {
+                const text = await searchRecords(ds, {
+                  commune_insee: typeof args.commune_insee === "string" ? args.commune_insee : undefined,
+                  commune_name: typeof args.commune_name === "string" ? args.commune_name : undefined,
+                  dep_code: typeof args.dep_code === "string" ? args.dep_code : undefined,
+                  property_type:
+                    args.property_type === "maison" || args.property_type === "appartement"
+                      ? args.property_type
+                      : undefined,
+                  min_surface_m2: typeof args.min_surface_m2 === "number" ? args.min_surface_m2 : undefined,
+                  max_surface_m2: typeof args.max_surface_m2 === "number" ? args.max_surface_m2 : undefined,
+                  min_price: typeof args.min_price === "number" ? args.min_price : undefined,
+                  max_price: typeof args.max_price === "number" ? args.max_price : undefined,
+                  since_year: typeof args.since_year === "number" ? args.since_year : undefined,
+                  search_text: typeof args.search_text === "string" ? args.search_text : undefined,
+                  limit: typeof args.limit === "number" ? args.limit : undefined,
+                });
+                return { text, ok: !text.includes('"error"') };
+              },
+            });
+            openaiTools.push({
+              type: "function",
+              function: {
+                name: fq,
+                description:
+                  `Interroge le jeu de données tabulaire « ${ds.label} » (${ds.datasetId}, portail ${ds.domain}) par filtres. ` +
+                  "Pour DVF : transactions immobilières par commune (code INSEE à 5 chiffres, pas le code postal), type de bien, surface, prix. " +
+                  "Le résultat inclut un market_summary (prix/m² moyen, min, max) quand disponible. " +
+                  "OBLIGATOIRE : commune_insee (code INSEE 5 chiffres) ou commune_name + dep_code — ex. Matignon → commune_insee=22118, dep_code=22.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    commune_insee: {
+                      type: "string",
+                      description: "Code INSEE commune (5 chiffres, ex. 22118 pour Matignon — pas 22550)",
+                    },
+                    commune_name: {
+                      type: "string",
+                      description: "Nom de la commune si le code INSEE est inconnu (ex. Matignon)",
+                    },
+                    dep_code: { type: "string", description: "Code département (ex. 22)" },
+                    property_type: { type: "string", enum: ["maison", "appartement"] },
+                    min_surface_m2: { type: "number", description: "Surface bâtie minimum (m²)" },
+                    max_surface_m2: { type: "number", description: "Surface bâtie maximum (m²)" },
+                    min_price: { type: "number", description: "Prix minimum (€)" },
+                    max_price: { type: "number", description: "Prix maximum (€)" },
+                    since_year: { type: "number", description: "Année minimum de mutation (ex. 2019)" },
+                    search_text: { type: "string", description: "Recherche textuelle libre" },
+                    limit: { type: "number", description: "Nombre max de transactions (défaut 15, max 50)" },
+                  },
+                },
+              },
+            });
+          }
+          sendToolEvent({ status: "connected", server: ds.label, toolCount: 1 });
+        }
+
+        if (prim) {
+          registry.set("prim_stops_nearby", {
+            exec: async (args) => {
+              const lat = Number(args.lat);
+              const lon = Number(args.lon);
+              if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                return { text: "Paramètres lat/lon manquants ou invalides.", ok: false };
+              }
+              const text = await stopsNearby(lat, lon, typeof args.radius_m === "number" ? args.radius_m : undefined);
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          registry.set("prim_next_departures", {
+            exec: async (args) => {
+              const stopId = typeof args.stop_id === "string" ? args.stop_id : "";
+              const text = await nextDepartures(stopId);
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          openaiTools.push(
+            {
+              type: "function",
+              function: {
+                name: "prim_stops_nearby",
+                description:
+                  "Île-de-France Mobilités (PRIM) : arrêts de transport (bus, métro, tram, RER) les plus proches d'une position GPS, avec leur stop_id et leurs lignes.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    lat: { type: "number", description: "Latitude WGS84" },
+                    lon: { type: "number", description: "Longitude WGS84" },
+                    radius_m: { type: "number", description: "Rayon en mètres (défaut 500)" },
+                  },
+                  required: ["lat", "lon"],
+                },
+              },
+            },
+            {
+              type: "function",
+              function: {
+                name: "prim_next_departures",
+                description:
+                  "Île-de-France Mobilités (PRIM) : prochains passages (temps réel quand disponible) à un arrêt donné — utilise un stop_id renvoyé par prim_stops_nearby.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    stop_id: { type: "string", description: "Identifiant d'arrêt Navitia (stop_point:…)" },
+                  },
+                  required: ["stop_id"],
+                },
+              },
+            }
+          );
+          sendToolEvent({ status: "connected", server: "IDFM PRIM", toolCount: 2 });
+        }
+
+        if (powens) {
+          registry.set("powens_accounts", {
+            exec: async () => {
+              const text = await powensAccounts();
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          registry.set("powens_transactions", {
+            exec: async (args) => {
+              const text = await powensTransactions(
+                typeof args.min_date === "string" ? args.min_date : undefined,
+                typeof args.limit === "number" ? args.limit : undefined
+              );
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          openaiTools.push(
+            {
+              type: "function",
+              function: {
+                name: "powens_accounts",
+                description:
+                  "Powens (agrégation bancaire, MODE SANDBOX) : liste les comptes bancaires de test liés et leurs soldes.",
+                parameters: { type: "object", properties: {} },
+              },
+            },
+            {
+              type: "function",
+              function: {
+                name: "powens_transactions",
+                description:
+                  "Powens (MODE SANDBOX) : transactions bancaires de test, triées de la plus récente à la plus ancienne. Utilise min_date (AAAA-MM-JJ) pour borner la période.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    min_date: { type: "string", description: "Date minimum AAAA-MM-JJ (optionnel)" },
+                    limit: { type: "number", description: "Nombre maximum de transactions (défaut 100, max 500)" },
+                  },
+                },
+              },
+            }
+          );
+          sendToolEvent({ status: "connected", server: "Powens (sandbox)", toolCount: 2 });
+        }
+
+        if (gmail) {
+          const gid = gentId?.trim() ?? "";
+          registry.set("gmail_search", {
+            exec: async (args) => {
+              if (!gid) {
+                return {
+                  text: JSON.stringify({ error: "Identifiant du gent manquant pour Gmail." }),
+                  ok: false,
+                };
+              }
+              const text = await gmailSearch(
+                gid,
+                typeof args.query === "string" ? args.query : undefined,
+                typeof args.maxResults === "number" ? args.maxResults : undefined
+              );
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          registry.set("gmail_get_message", {
+            exec: async (args) => {
+              if (!gid) {
+                return {
+                  text: JSON.stringify({ error: "Identifiant du gent manquant pour Gmail." }),
+                  ok: false,
+                };
+              }
+              const text = await gmailGetMessage(gid, typeof args.messageId === "string" ? args.messageId : "");
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          registry.set("gmail_send", {
+            exec: async (args) => {
+              if (!gid) {
+                return {
+                  text: JSON.stringify({ error: "Identifiant du gent manquant pour Gmail." }),
+                  ok: false,
+                };
+              }
+              const text = await gmailSend(
+                gid,
+                typeof args.to === "string" ? args.to : "",
+                typeof args.subject === "string" ? args.subject : "",
+                typeof args.body === "string" ? args.body : "",
+                {
+                  htmlBody: typeof args.htmlBody === "string" ? args.htmlBody : undefined,
+                  imageUrl: typeof args.imageUrl === "string" ? args.imageUrl : undefined,
+                  imagePrompt: typeof args.imagePrompt === "string" ? args.imagePrompt : undefined,
+                }
+              );
+              return { text, ok: !text.includes('"error"') };
+            },
+          });
+          openaiTools.push(
+            {
+              type: "function",
+              function: {
+                name: "gmail_search",
+                description:
+                  "Gmail : recherche de messages dans la boîte mail connectée (syntaxe de recherche Gmail : from:, subject:, is:unread, newer_than:7d…).",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    query: { type: "string", description: "Requête de recherche Gmail (optionnel)" },
+                    maxResults: { type: "number", description: "Nombre max de résultats (défaut 10, max 25)" },
+                  },
+                },
+              },
+            },
+            {
+              type: "function",
+              function: {
+                name: "gmail_get_message",
+                description: "Gmail : lit le contenu d'un message (en-têtes + corps texte) à partir de son identifiant.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    messageId: { type: "string", description: "Identifiant du message Gmail" },
+                  },
+                  required: ["messageId"],
+                },
+              },
+            },
+            {
+              type: "function",
+              function: {
+                name: "gmail_send",
+                description:
+                  "Gmail : envoie un e-mail depuis le compte connecté. Demande confirmation explicite avant d'appeler. Pour une illustration inline, passe imagePrompt (description en anglais) ou imageUrl (https ou data:image). Le corps texte va dans body ; htmlBody est optionnel.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    to: { type: "string", description: "Adresse du destinataire" },
+                    subject: { type: "string", description: "Objet du message" },
+                    body: { type: "string", description: "Corps texte du message" },
+                    htmlBody: {
+                      type: "string",
+                      description: "Corps HTML optionnel (sinon généré à partir de body)",
+                    },
+                    imagePrompt: {
+                      type: "string",
+                      description:
+                        "Description en anglais d'une illustration à générer et intégrer inline dans l'e-mail",
+                    },
+                    imageUrl: {
+                      type: "string",
+                      description: "URL https ou data:image d'une image à intégrer inline",
+                    },
+                  },
+                  required: ["to", "subject", "body"],
+                },
+              },
+            }
+          );
+          sendToolEvent({ status: "connected", server: "Gmail", toolCount: 3 });
+        }
+
+        // Connecteurs API REST personnalisés
+        // outil dont le schéma est déduit des paramètres déclarés par le
+        // créateur ; l'appel HTTP réel est exécuté côté serveur.
+        const usedRestNames = new Set<string>();
+        for (const rest of restApis) {
+          let fq = `rest_${rest.name.replace(/[^a-zA-Z0-9_]/g, "_")}`.slice(0, 60).replace(/_+$/, "");
+          if (!fq || fq === "rest") fq = "rest_api";
+          let unique = fq;
+          let n = 2;
+          while (usedRestNames.has(unique)) unique = `${fq}_${n++}`.slice(0, 64);
+          usedRestNames.add(unique);
+
+          const properties: Record<string, unknown> = {};
+          const required: string[] = [];
+          for (const p of rest.config.modelParams ?? []) {
+            if (!p.name?.trim()) continue;
+            properties[p.name.trim()] = {
+              type: "string",
+              description: p.example ? `${p.description} (ex. ${p.example})` : p.description,
+            };
+            if (p.required) required.push(p.name.trim());
+          }
+
+          registry.set(unique, {
+            exec: async (args) => callRestApi(rest.config, args),
+          });
+          openaiTools.push({
+            type: "function",
+            function: {
+              name: unique,
+              description:
+                `API REST « ${rest.name} » configurée par le créateur. ${rest.config.description}` +
+                (rest.config.responseHint ? ` Exploitation de la réponse : ${rest.config.responseHint}` : ""),
+              parameters: { type: "object", properties, ...(required.length ? { required } : {}) },
+            },
+          });
+          sendToolEvent({ status: "connected", server: rest.name, toolCount: 1 });
+        }
+
+        const messages: Record<string, unknown>[] = [...(body.messages ?? [])];
+        const datasetHint = buildDatasetRuntimeInstructions(datasets, datasetMetas);
+        if (datasetHint) {
+          // Message système DISTINCT, placé AVANT celui du gent — et non
+          // concaténé à sa fin comme auparavant. Ce mode d'emploi technique
+          // se retrouvait sinon en dernière position, là où un modèle lit la
+          // consigne qui fait autorité : il primait sur le style du créateur
+          // (longueur, ton) alors qu'il ne parle que d'appels d'outils. Le
+          // prompt du gent doit rester le dernier mot.
+          messages.unshift({ role: "system", content: datasetHint.trim() });
+        }
+        let sentContent = false;
+        // Disjoncteur : au 3e échec d'un même outil dans la requête, on
+        // court-circuite les appels suivants au lieu de laisser le modèle
+        // réessayer en boucle.
+        const toolFailures = new Map<string, number>();
+        // Filet Azure : si le tour suivant refuse les résultats d'outils
+        // (call_id orphelin), on les réinjecte en message utilisateur.
+        let flattenRetries = 0;
+        let pendingToolFlatten: { beforeLen: number; userContent: string } | null = null;
+
+        // 2. Boucle d'appels : le modèle décide quand utiliser les outils.
+        // Au dernier tour, les outils sont retirés pour forcer une réponse.
+        //
+        // Chaque tour est lui-même streamé (SSE OpenRouter) : sans ça, un tour
+        // qui n'appelle finalement aucun outil (cas fréquent — le modèle
+        // répond directement) faisait attendre l'utilisateur devant
+        // « Réflexion en cours » pendant TOUTE la génération, avant qu'un
+        // simple découpage en morceaux de 60 caractères ne mime un streaming
+        // déjà terminé. Ici le contenu et le raisonnement partent au fil de
+        // l'eau ; seuls les tool_calls (nécessairement structurés) sont
+        // accumulés jusqu'à la fin du tour avant d'être exécutés.
+        for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+          const withTools = registry.size > 0 && round < MAX_TOOL_ROUNDS - 1;
+          sendStatus("thinking");
+          const res = await fetch(OPENROUTER_API, {
+            method: "POST",
+            headers: openrouterHeaders(key),
+            body: JSON.stringify({
+              model: body.model,
+              messages,
+              max_tokens: body.max_tokens ?? 12_288,
+              stream: true,
+              ...(withTools ? { tools: openaiTools } : {}),
+              ...(shouldAttachWebPlugin(body.webSearch, messages) ? { plugins: [{ id: "web" }] } : {}),
+              ...(body.reasoning?.enabled && supportsReasoningStream(body.model)
+                ? { reasoning: body.reasoning }
+                : {}),
+            }),
+          });
+
+          if (!res.ok || !res.body) {
+            const data = await res.json().catch(() => ({}));
+            const errText = formatOpenRouterError(data);
+            if (
+              pendingToolFlatten &&
+              flattenRetries < 1 &&
+              isOrphanToolCallOutputError(errText)
+            ) {
+              console.warn(
+                JSON.stringify({
+                  tag: "getgents:chat",
+                  event: "orphan_tool_call_retry",
+                  model: body.model,
+                })
+              );
+              messages.splice(pendingToolFlatten.beforeLen);
+              messages.push({ role: "user", content: pendingToolFlatten.userContent });
+              pendingToolFlatten = null;
+              flattenRetries += 1;
+              round -= 1;
+              continue;
+            }
+            sendContent(userFacingToolLoopError(errText));
+            sentContent = true;
+            break;
+          }
+
+          let content = "";
+          let reasoningStarted = false;
+          let finishReason: string | undefined;
+          const toolCallsAcc: StreamedToolCall[] = [];
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = "";
+          streamLoop: while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            let nl: number;
+            while ((nl = buf.indexOf("\n\n")) !== -1) {
+              const chunk = buf.slice(0, nl);
+              buf = buf.slice(nl + 2);
+              const line = chunk.split("\n").find((l) => l.startsWith("data: "));
+              if (!line) continue;
+              const payload = line.slice(6).trim();
+              if (payload === "[DONE]") break streamLoop;
+              let evt: Record<string, unknown>;
+              try {
+                evt = JSON.parse(payload);
+              } catch {
+                continue;
+              }
+              const choice = (evt?.choices as Record<string, unknown>[] | undefined)?.[0];
+              const delta = choice?.delta as Record<string, unknown> | undefined;
+              const fr = choice?.finish_reason as string | undefined;
+              if (fr) finishReason = fr;
+              if (!delta) continue;
+
+              const reasoningPiece = extractReasoningText(delta);
+              if (reasoningPiece) {
+                if (!reasoningStarted) {
+                  sendStatus("thinking");
+                  reasoningStarted = true;
+                }
+                sendReasoningChunks(send, reasoningPiece);
+              }
+
+              const deltaContent = delta.content;
+              if (typeof deltaContent === "string" && deltaContent) {
+                if (!content) sendStatus("writing");
+                content += deltaContent;
+                sentContent = true;
+                sendContent(deltaContent);
+              }
+
+              const deltaToolCalls = delta.tool_calls as
+                | { index?: number; id?: string; type?: string; function?: { name?: string; arguments?: string } }[]
+                | undefined;
+              if (Array.isArray(deltaToolCalls)) {
+                applyToolCallDelta(toolCallsAcc, deltaToolCalls);
+              }
+            }
+          }
+
+          const toolCalls = toOpenAIToolCalls(toolCallsAcc);
+
+          if (!toolCalls.length) {
+            if (finishReason === "length") {
+              send({ choices: [{ finish_reason: "length" }] });
+            }
+            break;
+          }
+
+          const beforeToolRound = messages.length;
+          messages.push({ role: "assistant", content: content || null, tool_calls: toolCalls });
+          const resultTexts: string[] = [];
+
+          for (const tc of toolCalls) {
+            const entry = registry.get(tc.function.name);
+            let args: Record<string, unknown> = {};
+            try {
+              args = JSON.parse(tc.function.arguments || "{}");
+            } catch {
+              // arguments malformés — l'outil recevra un objet vide
+            }
+
+            sendStatus("tool_running", undefined, humanToolCallLabel(tc.function.name));
+            sendToolEvent({ status: "running", call: tc.function.name, args });
+
+            let resultText: string;
+            let ok = true;
+            if (!entry) {
+              resultText = `Outil inconnu : ${tc.function.name}`;
+              ok = false;
+            } else if ((toolFailures.get(tc.function.name) ?? 0) >= 3) {
+              resultText = `Outil ${tc.function.name} désactivé pour cette réponse après 3 échecs consécutifs. N'appelle plus cet outil : réponds à l'utilisateur avec les informations déjà obtenues, explique l'indisponibilité et propose une alternative.`;
+              ok = false;
+            } else {
+              try {
+                const result = await entry.exec(args);
+                resultText = result.text.slice(0, TOOL_RESULT_MAX_CHARS);
+                ok = result.ok;
+              } catch (err) {
+                resultText = `Erreur d'appel : ${(err as Error).message}`;
+                ok = false;
+              }
+            }
+
+            if (!ok) toolFailures.set(tc.function.name, (toolFailures.get(tc.function.name) ?? 0) + 1);
+            sendToolEvent({
+              status: "done",
+              call: tc.function.name,
+              ok,
+              // Diagnostic visible côté client uniquement en cas d'échec.
+              ...(ok ? {} : { detail: resultText.slice(0, 600) }),
+            });
+            resultTexts.push(resultText);
+            messages.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              name: tc.function.name,
+              content: resultText,
+            });
+          }
+
+          pendingToolFlatten = {
+            beforeLen: beforeToolRound,
+            userContent: flattenToolRoundForRetry(toolCalls, resultTexts),
+          };
+        }
+
+        if (!sentContent) {
+          sendContent(
+            "Je n'ai pas pu finaliser une réponse (réponse vide ou limite d'appels d'outils atteinte). Réessayez ou reformulez votre question."
+          );
+        }
+      } catch (err) {
+        send({ choices: [{ delta: { content: `Erreur de traitement : ${(err as Error).message}` } }] });
+      } finally {
+        clearInterval(keepAlive);
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      }
+    },
+  });
+
+  return new NextResponse(stream, { headers: sseHeaders() });
+}

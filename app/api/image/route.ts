@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateImageFromPrompt } from "@/lib/server/generateImage";
+import { requireUserWithQuota } from "@/lib/server/gentGuard";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -14,6 +15,11 @@ interface ImageBody {
  * (ex. google/gemini-2.5-flash-image = Nanobanana).
  */
 export async function POST(req: NextRequest) {
+  // Génération d'image : chaque appel est facturé, et le modèle était choisi
+  // par l'appelant sur une route ouverte à tous.
+  const garde = await requireUserWithQuota("image");
+  if (!garde.ok) return garde.response;
+
   let body: ImageBody;
   try {
     body = await req.json();

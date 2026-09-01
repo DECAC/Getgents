@@ -10,8 +10,8 @@ import { isAuthConfigured } from "@/lib/authConfig";
  * Ce que ce fichier faisait AVANT : il posait, sans aucune condition, un
  * cookie contenant la valeur littérale de APP_ACCESS_SECRET chez tout
  * visiteur de `/`, `/builder` ou `/espace`. Autrement dit il distribuait à
- * chaque passant la clé censée protéger les routes de données. Ce n'est plus
- * le cas : la clé n'est posée que pour une session vérifiée.
+ * chaque passant la clé censée protéger les routes de données. Ce secret
+ * partagé a disparu : chaque route vérifie maintenant le propriétaire.
  *
  * Deux tâches, désormais :
  *   1. rafraîchir le jeton Supabase — sans quoi la session expire au bout
@@ -65,25 +65,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(connexion);
   }
 
-  const secret = process.env.APP_ACCESS_SECRET?.trim();
-  if (secret && user) {
-    // Mesure de transition : les routes /api/gents* et /api/drafts* vérifient
-    // encore ce secret partagé. Il n'est plus donné qu'à une session vérifiée
-    // — la faille est fermée — mais il ne cloisonne toujours pas les comptes
-    // entre eux. Ce cookie disparaît avec `checkAppAccess`, remplacé par le
-    // contrôle de propriétaire.
-    if (request.cookies.get(APP_ACCESS_COOKIE)?.value !== secret) {
-      response.cookies.set(APP_ACCESS_COOKIE, secret, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 365,
-      });
-    }
-  } else if (!user && request.cookies.get(APP_ACCESS_COOKIE)) {
-    // Le cookie a été distribué à tout le monde pendant la vie du prototype :
-    // on l'efface activement chez les visiteurs qui le portent encore.
+  // Le secret d'instance n'existe plus : les routes de données contrôlent
+  // désormais le PROPRIÉTAIRE de chaque gent. Le cookie ayant été distribué à
+  // tous les visiteurs pendant la vie du prototype, on l'efface activement
+  // chez ceux qui le portent encore — il ne donne plus rien, mais il n'a
+  // aucune raison de traîner dans les navigateurs.
+  if (request.cookies.get(APP_ACCESS_COOKIE)) {
     response.cookies.set(APP_ACCESS_COOKIE, "", { path: "/", maxAge: 0 });
   }
 

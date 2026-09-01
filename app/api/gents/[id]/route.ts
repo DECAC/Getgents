@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
-import { checkAppAccess, APP_ACCESS_HINT } from "@/lib/server/appAccess";
+import { requireUser } from "@/lib/server/session";
+import { requireGentAccess } from "@/lib/server/gentGuard";
 import { deleteShareLinksForGent } from "@/lib/server/shareLinks";
 
 export const dynamic = "force-dynamic";
-
-// Une Response ne peut être consommée qu'une fois : on en construit une neuve
-// à chaque refus plutôt que de partager une instance de module.
-const unauthorized = () => NextResponse.json({ error: "unauthorized", hint: APP_ACCESS_HINT }, { status: 401 });
 
 // Un id de gent est un slug court généré par l'app (ex. "sanisettes-paris",
 // "gent-1721...") — on borne pour écarter les payloads exotiques.
@@ -17,27 +14,20 @@ interface Params {
   params: { id: string };
 }
 
-export async function GET(req: Request, { params }: Params) {
-  if (!checkAppAccess(req)) return unauthorized();
-  const supabase = getSupabaseAdmin();
-  if (!supabase) return NextResponse.json({ error: "supabase_not_configured" }, { status: 503 });
+export async function GET(_req: Request, { params }: Params) {
   if (!ID_RE.test(params.id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
 
-  const { data, error } = await supabase
-    .from("published_gents")
-    .select("espace")
-    .eq("id", params.id)
-    .maybeSingle();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ error: "not_found" }, { status: 404 });
-  return NextResponse.json({ espace: data.espace });
+  const acces = await requireGentAccess(params.id, "read");
+  if (!acces.ok) return acces.response;
+
+  return NextResponse.json({ espace: acces.value.row.espace, role: acces.value.role });
 }
 
 export async function PUT(req: Request, { params }: Params) {
-  if (!checkAppAccess(req)) return unauthorized();
+  if (!ID_RE.test(params.id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
+
   const supabase = getSupabaseAdmin();
   if (!supabase) return NextResponse.json({ error: "supabase_not_configured" }, { status: 503 });
-  if (!ID_RE.test(params.id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
 
   let body: { espace?: unknown; diffuse?: boolean };
   try {
@@ -49,11 +39,32 @@ export async function PUT(req: Request, { params }: Params) {
     return NextResponse.json({ error: "missing_espace" }, { status: 400 });
   }
 
+  // Le gent existe-t-il déjà ? S'il existe, il faut le droit d'écriture ;
+  // sinon c'est une création, et le créateur en devient le propriétaire.
+  const { data: existant } = await supabase
+    .from("published_gents")
+    .select("id")
+    .eq("id", params.id)
+    .maybeSingle();
+
+  let ownerId: string;
+  if (existant) {
+    const acces = await requireGentAccess(params.id, "write");
+    if (!acces.ok) return acces.response;
+    // Le propriétaire ne change JAMAIS par une écriture de contenu : un
+    // co-éditeur qui enregistre ne s'approprie pas le gent.
+    ownerId = (acces.value.row.owner_id as string | null) ?? acces.value.user.id;
+  } else {
+    const auth = await requireUser();
+    if ("response" in auth) return auth.response;
+    ownerId = auth.user.id;
+  }
+
   // `diffuse` distingue les deux gestes du créateur : enregistrer sa version
   // de travail (Preview, sauvegardes au fil de l'eau) ne doit RIEN changer
   // pour les utilisateurs — seul « Diffuser le gent » fige la version
   // qu'ils reçoivent (voir lib/server/gentVersions.ts).
-  const row: Record<string, unknown> = { id: params.id, espace: body.espace };
+  const row: Record<string, unknown> = { id: params.id, espace: body.espace, owner_id: ownerId };
   if (body.diffuse) {
     row.diffused = body.espace;
     row.diffused_at = new Date().toISOString();
@@ -64,11 +75,16 @@ export async function PUT(req: Request, { params }: Params) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(req: Request, { params }: Params) {
-  if (!checkAppAccess(req)) return unauthorized();
+export async function DELETE(_req: Request, { params }: Params) {
+  if (!ID_RE.test(params.id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
+
+  // Supprimer, c'est disposer du gent : réservé au propriétaire. Un
+  // co-éditeur travaille dessus, il ne peut pas l'effacer.
+  const acces = await requireGentAccess(params.id, "admin");
+  if (!acces.ok) return acces.response;
+
   const supabase = getSupabaseAdmin();
   if (!supabase) return NextResponse.json({ error: "supabase_not_configured" }, { status: 503 });
-  if (!ID_RE.test(params.id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
 
   // Nettoie les liens de partage AVANT de supprimer le gent : sinon, en cas
   // d'échec du nettoyage, on se retrouverait avec des liens orphelins
