@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { basculerCompte } from "@/lib/session/purgeLocalCache";
 import styles from "./MenuCompte.module.css";
 
 /**
@@ -14,6 +16,7 @@ import styles from "./MenuCompte.module.css";
  * suivant sur la même machine.
  */
 export function MenuCompte() {
+  const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [sortie, setSortie] = useState(false);
 
@@ -22,10 +25,18 @@ export function MenuCompte() {
     if (!supabase) return;
     let vivant = true;
     void supabase.auth.getUser().then(({ data }) => {
-      if (vivant) setEmail(data.user?.email ?? null);
+      if (!vivant) return;
+      setEmail(data.user?.email ?? null);
+      // Le cache local appartient à un compte : s'il a changé depuis la
+      // dernière visite (machine partagée), il est purgé et les données sont
+      // relues du serveur. Sans cela, le nouveau venu verrait les gents du
+      // précédent avant même le premier appel.
+      if (basculerCompte(data.user?.id ?? null)) router.refresh();
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (vivant) setEmail(session?.user?.email ?? null);
+      if (!vivant) return;
+      setEmail(session?.user?.email ?? null);
+      if (basculerCompte(session?.user?.id ?? null)) router.refresh();
     });
     return () => {
       vivant = false;
@@ -46,6 +57,9 @@ export function MenuCompte() {
     setSortie(true);
     const supabase = getSupabaseBrowser();
     await supabase?.auth.signOut();
+    // Purge AVANT la navigation : quitter la page sans vider le cache
+    // laisserait les gents sur le disque de la machine.
+    basculerCompte(null);
     // Rechargement complet : les cookies de session viennent d'être effacés,
     // et les composants serveur doivent repartir d'une page anonyme.
     window.location.assign("/connexion");

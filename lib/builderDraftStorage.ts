@@ -2,8 +2,12 @@ import type { GentDraft, GentDraftsMap } from "@/lib/types/builder";
 import type { Espace } from "@/lib/types";
 import { GENT_DRAFTS } from "@/lib/mock-data/builder";
 import { apiFetchInit, signalerSessionExpiree } from "@/lib/apiFetch";
+import { cacheKey } from "@/lib/session/currentUser";
 import { suggestGentIcon } from "@/lib/gentIcons";
 
+// Base de la clé : la clé RÉELLE porte l'identifiant du compte (voir
+// lib/storageScope.ts). Un brouillon contient le prompt système en cours
+// d'écriture et les documents de connaissance de son auteur.
 export const DRAFTS_STORAGE_KEY = "getgents:gent-drafts";
 export const NOUVEAU_GENT_TEMPLATE_ID = "nouveau-gent";
 
@@ -39,7 +43,7 @@ export function draftsForPersistence(drafts: GentDraftsMap): GentDraftsMap {
 export function readStoredDrafts(): GentDraftsMap {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(DRAFTS_STORAGE_KEY);
+    const raw = window.localStorage.getItem(cacheKey(DRAFTS_STORAGE_KEY));
     if (!raw) return {};
     const parsed = JSON.parse(raw) as GentDraftsMap;
     for (const reserved of RESERVED_DRAFT_IDS) delete parsed[reserved];
@@ -52,7 +56,7 @@ export function readStoredDrafts(): GentDraftsMap {
 export function writeStoredDrafts(drafts: GentDraftsMap): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(draftsForPersistence(drafts)));
+    window.localStorage.setItem(cacheKey(DRAFTS_STORAGE_KEY), JSON.stringify(draftsForPersistence(drafts)));
   } catch {
     // quota dépassé / navigation privée
   }
@@ -69,6 +73,17 @@ let remoteAvailable: boolean | null = null;
 const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const PUSH_DEBOUNCE_MS = 1500;
 
+/**
+ * Annule les envois différés en attente. Voir la note jumelle dans
+ * lib/publishedGents.ts : un push programmé juste avant une déconnexion
+ * partirait avec la session du compte SUIVANT.
+ */
+export function cancelPendingDraftPushes(): void {
+  pushTimers.forEach((timer) => clearTimeout(timer));
+  pushTimers.clear();
+}
+
+
 /** À appeler quand la clé APP_ACCESS_SECRET est (re)saisie — relance les syncs. */
 export function resetDraftsRemoteAvailability(): void {
   remoteAvailable = null;
@@ -83,7 +98,11 @@ export async function fetchRemoteDrafts(): Promise<GentDraftsMap | null | "unaut
       credentials: "include",
     });
     if (res.status === 401) {
+      // La session a expiré : plus rien à saisir, il faut se reconnecter.
+      // L'événement laisse l'interface décider — ce module ne connaît ni le
+      // routeur ni l'écran à afficher.
       remoteAvailable = false;
+      signalerSessionExpiree();
       return "unauthorized";
     }
     if (res.status === 503) {

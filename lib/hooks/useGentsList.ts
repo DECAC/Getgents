@@ -11,6 +11,8 @@ import { readPublishedGents, syncPublishedGentsFromRemote } from "@/lib/publishe
 import { confirmDeleteGentsMessage, deleteGentEverywhere } from "@/lib/deleteGent";
 import type { GentDraft } from "@/lib/types/builder";
 import type { Espace } from "@/lib/types";
+import { SESSION_EXPIREE } from "@/lib/apiFetch";
+import { basculerCompte } from "@/lib/session/purgeLocalCache";
 
 function computeOrphans(visible: GentDraft[]): { id: string; espace: Espace }[] {
   const draftIds = new Set(visible.map((d) => d.id));
@@ -67,6 +69,19 @@ export function useGentsList() {
     refreshLists();
     void hydrateFromRemote();
   }, [refreshLists, hydrateFromRemote]);
+
+  // Une session tombée en cours de route ne doit pas laisser l'écran afficher
+  // un cache périmé : on purge et on renvoie à la connexion, avec le chemin
+  // de retour pour ne pas perdre l'intention de l'utilisateur.
+  useEffect(() => {
+    function auRetourDeSession() {
+      setSessionExpiree(true);
+      basculerCompte(null);
+      refreshLists();
+    }
+    window.addEventListener(SESSION_EXPIREE, auRetourDeSession);
+    return () => window.removeEventListener(SESSION_EXPIREE, auRetourDeSession);
+  }, [refreshLists]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredDrafts = normalizedQuery

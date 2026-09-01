@@ -5,6 +5,7 @@ import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { formatConversationStartedAt, newConversationId } from "@/lib/conversationUtils";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
 import { apiFetchInit, signalerSessionExpiree } from "@/lib/apiFetch";
+import { cacheKey } from "@/lib/session/currentUser";
 import { MAX_CHARS as DOC_MAX_CHARS } from "@/lib/extractDocumentText";
 import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import { resolveImageModelId } from "@/lib/imageModels";
@@ -15,12 +16,15 @@ import { downloadableDocumentsFromDraft } from "@/lib/fileDownload";
 // affichage instantané et un mode dégradé. Si Supabase n'est pas configuré
 // (variables d'env absentes → l'API répond 503), on retombe silencieusement
 // sur le comportement maquette d'origine : localStorage seul.
-const STORAGE_KEY = "getgents:published-gents";
+// Base de la clé : la clé RÉELLE porte l'identifiant du compte (voir
+// lib/storageScope.ts). Sans cloisonnement, le compte suivant sur une machine
+// partagée lisait les gents du précédent avant même le premier appel serveur.
+const STORAGE_BASE = "getgents:published-gents";
 
 export function readPublishedGents(): EspacesMap {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(cacheKey(STORAGE_BASE));
     return raw ? (JSON.parse(raw) as EspacesMap) : {};
   } catch {
     return {};
@@ -29,7 +33,7 @@ export function readPublishedGents(): EspacesMap {
 
 function writeLocalCache(gents: EspacesMap): void {
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(gents));
+    window.localStorage.setItem(cacheKey(STORAGE_BASE), JSON.stringify(gents));
   } catch {
     // localStorage indisponible (navigation privée, quota dépassé…).
   }
@@ -42,6 +46,20 @@ function writeLocalCache(gents: EspacesMap): void {
 let remoteAvailable: boolean | null = null;
 const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const PUSH_DEBOUNCE_MS = 1500;
+
+/**
+ * Annule les envois différés en attente.
+ *
+ * Le push est débouncé de 1,5 s. À la déconnexion, un envoi programmé juste
+ * avant partirait APRÈS que les cookies ont changé — avec la session du compte
+ * suivant, et donc dans SES données. C'est le genre de fuite qui ne se voit
+ * qu'une fois arrivée.
+ */
+export function cancelPendingPushes(): void {
+  pushTimers.forEach((timer) => clearTimeout(timer));
+  pushTimers.clear();
+}
+
 
 /** À appeler quand la clé APP_ACCESS_SECRET est (re)saisie — relance les syncs. */
 export function resetPublishedRemoteAvailability(): void {
@@ -57,7 +75,11 @@ export async function fetchRemoteGents(): Promise<EspacesMap | null | "unauthori
       credentials: "include",
     });
     if (res.status === 401) {
+      // La session a expiré : plus rien à saisir, il faut se reconnecter.
+      // L'événement laisse l'interface décider — ce module ne connaît ni le
+      // routeur ni l'écran à afficher.
       remoteAvailable = false;
+      signalerSessionExpiree();
       return "unauthorized";
     }
     if (res.status === 503) {
