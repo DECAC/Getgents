@@ -86,13 +86,38 @@ export async function PUT(req: Request, { params }: Params) {
 export async function DELETE(_req: Request, { params }: Params) {
   if (!ID_RE.test(params.id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
 
-  // Supprimer, c'est disposer du gent : réservé au propriétaire. Un
-  // co-éditeur travaille dessus, il ne peut pas l'effacer.
-  const acces = await requireGentAccess(params.id, "admin");
-  if (!acces.ok) return acces.response;
+  const auth = await requireUser();
+  if ("response" in auth) return auth.response;
 
   const supabase = getSupabaseAdmin();
   if (!supabase) return NextResponse.json({ error: "supabase_not_configured" }, { status: 503 });
+
+  /*
+   * Un gent ABSENT de cette table n'est pas une erreur : c'est un no-op réussi.
+   *
+   * `lib/deleteGent.ts` appelle DELETE sur les deux tables — brouillon et gent
+   * publié — pour chaque gent, parce que l'utilisateur ne raisonne pas en
+   * « brouillon vs publié » : il supprime « ce gent ». Un brouillon jamais
+   * publié n'a donc pas de ligne ici, et c'est le cas NORMAL.
+   *
+   * La garde d'appartenance ajoutée au lot 5 renvoyait `404 not_found` avant
+   * d'en arriver là, et l'écran affichait « aucun gent n'a pu être supprimé »
+   * alors que la suppression avait parfaitement réussi côté brouillon. Le
+   * contrat était écrit dans le commentaire de deleteGentEverywhere ; la garde
+   * l'a rompu sans que rien ne le signale.
+   */
+  const { data: existant, error: erreurLecture } = await supabase
+    .from("published_gents")
+    .select("id")
+    .eq("id", params.id)
+    .maybeSingle();
+  if (erreurLecture) return NextResponse.json({ error: erreurLecture.message }, { status: 500 });
+  if (!existant) return NextResponse.json({ ok: true, absent: true });
+
+  // La ligne existe : supprimer, c'est disposer du gent, donc réservé au
+  // propriétaire. Un co-éditeur travaille dessus, il ne peut pas l'effacer.
+  const acces = await requireGentAccess(params.id, "admin");
+  if (!acces.ok) return acces.response;
 
   // Nettoie les liens de partage AVANT de supprimer le gent : sinon, en cas
   // d'échec du nettoyage, on se retrouverait avec des liens orphelins
