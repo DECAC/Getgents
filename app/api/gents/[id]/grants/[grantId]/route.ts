@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { requireGentAccess } from "@/lib/server/gentGuard";
+import { revoquerLiensPourDestinataire } from "@/lib/server/shareLinks";
 
 export const dynamic = "force-dynamic";
 
@@ -27,12 +28,45 @@ export async function DELETE(_req: Request, { params }: Params) {
   // qui a eu accès, et une ré-invitation réutilise la même ligne.
   // Le filtre sur `gent_id` est redondant avec la garde, et c'est voulu : la
   // requête refuserait d'elle-même de toucher l'invitation d'un autre gent.
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("gent_grants")
     .update({ revoked_at: new Date().toISOString() })
     .eq("id", params.grantId)
-    .eq("gent_id", params.id);
+    .eq("gent_id", params.id)
+    .select("invited_email")
+    .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true });
+  /*
+   * Couper aussi le lien invité, sans quoi la révocation ne révoque rien.
+   *
+   * Un lecteur reçoit un lien qui lui donne accès SANS compte : retirer son
+   * invitation en base tout en laissant ce lien vivant reviendrait à fermer
+   * une porte en laissant la fenêtre ouverte. C'est le genre d'écart qu'on ne
+   * remarque qu'en le cherchant — d'où le décompte journalisé.
+   */
+  const adresse = (data?.invited_email as string | undefined) ?? null;
+  let liensCoupes = 0;
+  if (adresse) {
+    try {
+      liensCoupes = await revoquerLiensPourDestinataire(params.id, adresse);
+    } catch (e) {
+      // L'invitation est révoquée ; le lien ne l'est pas. Il faut le savoir,
+      // parce que l'écran affichera « accès retiré » et que ce serait faux.
+      console.error(
+        JSON.stringify({
+          tag: "getgents:partage",
+          event: "revocation_lien_echouee",
+          gent: params.id,
+          detail: (e as Error).message,
+        })
+      );
+      return NextResponse.json(
+        { error: "L'accès a été retiré, mais le lien envoyé n'a pas pu être coupé. Réessayez." },
+        { status: 500 }
+      );
+    }
+  }
+
+  return NextResponse.json({ ok: true, liensCoupes });
 }

@@ -13,7 +13,9 @@ import { sendBrevoEmail } from "@/lib/server/brevo";
  * destinataire le trouvera à sa prochaine connexion même si l'e-mail se perd.
  */
 
-function appUrl(): string {
+/** Adresse publique du site. Exportée : la route de partage en a besoin pour
+ *  composer le lien invité, et deux définitions divergeraient. */
+export function appUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL ?? "https://getgents.ai").replace(/\/+$/, "");
 }
 
@@ -21,26 +23,56 @@ function echapper(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/**
+ * Deux populations, deux messages.
+ *
+ * Un INVITÉ en lecture n'a pas de compte à créer : il reçoit un lien qui
+ * l'amène droit au gent. C'est la conséquence directe de l'accès restreint —
+ * lui dire « créez un compte » le mènerait à un écran qui lui explique qu'il
+ * ne peut pas, et le partage tomberait dans le vide.
+ *
+ * Un ÉDITEUR, lui, travaille sur le gent dans le studio : cela suppose une
+ * session et des écritures attribuées à quelqu'un. Un lien ne peut pas le
+ * porter, et son message doit donc dire la vérité — l'accès arrive quand son
+ * compte existe.
+ */
 export async function envoyerInvitation(
   email: string,
   nomGent: string,
-  role: "viewer" | "editor"
+  role: "viewer" | "editor",
+  lienInvite?: string | null
 ): Promise<void> {
   const base = appUrl();
-  const quoi = role === "editor" ? "le modifier avec son créateur" : "le consulter";
-  const html = `
-<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;color:#2a1f19;line-height:1.55">
-  <h2 style="font-size:19px;letter-spacing:-0.02em;margin:0 0 14px">Un gent a été partagé avec vous</h2>
+  const invite = role === "viewer" && !!lienInvite;
+
+  const corps = invite
+    ? `
   <p style="margin:0 0 14px">
-    « ${echapper(nomGent)} » vous est accessible sur Getgents : vous pouvez ${quoi}.
+    « ${echapper(nomGent)} » vous est accessible : ouvrez-le et posez-lui vos questions.
+  </p>
+  <p style="margin:0 0 22px">
+    <a href="${lienInvite}" style="display:inline-block;padding:10px 22px;border-radius:999px;background:#e65d76;color:#fff;text-decoration:none;font-weight:600">Ouvrir le gent</a>
+  </p>
+  <p style="margin:0;font-size:13px;color:#73665f">
+    Aucun compte n'est nécessaire : ce lien vous est personnel, gardez-le.
+  </p>`
+    : `
+  <p style="margin:0 0 14px">
+    « ${echapper(nomGent)} » vous est accessible sur Getgents : vous pouvez le modifier
+    avec son créateur.
   </p>
   <p style="margin:0 0 22px">
     <a href="${base}/connexion" style="display:inline-block;padding:10px 22px;border-radius:999px;background:#e65d76;color:#fff;text-decoration:none;font-weight:600">Ouvrir Getgents</a>
   </p>
   <p style="margin:0;font-size:13px;color:#73665f">
-    Vous n'avez pas encore de compte ? Créez-en un avec cette adresse e-mail :
-    le gent apparaîtra dans votre espace dès votre première connexion.
-  </p>
+    Modifier un gent demande un compte. Si vous n'en avez pas encore, la personne qui
+    vous a partagé ce gent peut vous en ouvrir un — Getgents est en accès restreint
+    pour le moment.
+  </p>`;
+
+  const html = `
+<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;color:#2a1f19;line-height:1.55">
+  <h2 style="font-size:19px;letter-spacing:-0.02em;margin:0 0 14px">Un gent a été partagé avec vous</h2>${corps}
 </div>`.trim();
 
   try {
