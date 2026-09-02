@@ -1,7 +1,14 @@
+/* Même traitement que les autres écrans-documents : `globals.css` pose
+   `overflow: hidden` sur html et body, donc cet écran porte sa propre zone de
+   défilement. `min-height: 100vh` ne faisait que garantir le débordement, et
+   `place-items: center` poussait la moitié du contenu au-dessus de la zone —
+   là où rien ne peut aller la chercher. */
 .refus {
-  min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
   display: grid;
-  place-items: center;
+  justify-items: center;
+  align-content: safe center;
   padding: 24px;
   background: var(--bg);
 }
