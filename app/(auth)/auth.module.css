@@ -95,7 +95,16 @@
   outline-offset: 1px;
 }
 
+/* `.submit` habille aussi un lien : l'écran d'accès restreint remplace le
+   bouton d'envoi par un `mailto`, qui doit avoir le même poids visuel.
+   D'où `display: inline-flex` et le centrage — un <a> ne se comporte pas
+   comme un <button> sur ces deux points. */
 .submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
   width: 100%;
   margin-top: 6px;
   padding: 11px 16px;

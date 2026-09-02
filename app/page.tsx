@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getUser } from "@/lib/server/session";
 import { isAuthConfigured } from "@/lib/authConfig";
 import styles from "./accueil-public.module.css";
+import { libelleAppelAction } from "@/lib/inscriptions";
 
 /**
  * Racine du site.
@@ -33,8 +34,10 @@ export default async function Home() {
           Gardez-le pour vous, partagez-le à qui vous voulez, ou publiez-le.
         </p>
         <div className={styles.actions}>
+          {/* Le libellé suit l'ouverture des inscriptions : promettre « créer un
+              compte » quand la création est fermée fait perdre son temps. */}
           <Link href="/inscription" className={styles.primaire}>
-            Créer un compte
+            {libelleAppelAction()}
           </Link>
           <Link href="/connexion" className={styles.secondaire}>
             Se connecter

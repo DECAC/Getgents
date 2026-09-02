@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { AuthForm, Champ } from "../AuthForm";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 import { destinationApresConnexion, messageErreurAuth } from "@/lib/authMessages";
+import { libelleAppelAction } from "@/lib/inscriptions";
 
 function Connexion() {
   const params = useSearchParams();
@@ -39,7 +40,7 @@ function Connexion() {
       }}
       aside={
         <>
-          <Link href="/inscription">Créer un compte</Link>
+          <Link href="/inscription">{libelleAppelAction()}</Link>
           <Link href="/mot-de-passe-oublie">Mot de passe oublié ?</Link>
         </>
       }

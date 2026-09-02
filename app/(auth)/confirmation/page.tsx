@@ -1,5 +1,6 @@
 import Link from "next/link";
 import styles from "../auth.module.css";
+import { libelleAppelAction } from "@/lib/inscriptions";
 
 /**
  * Atterrissage d'un lien d'e-mail qui n'a pas abouti : lien déjà utilisé,
@@ -29,7 +30,7 @@ export default function ConfirmationPage({
       </p>
       <div className={styles.aside}>
         <Link href="/connexion">Aller à la connexion</Link>
-        {echec ? <Link href="/inscription">Créer un compte</Link> : null}
+        {echec ? <Link href="/inscription">{libelleAppelAction()}</Link> : null}
       </div>
     </>
   );

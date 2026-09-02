@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listerAnnuaire } from "@/lib/server/publicGent";
 import styles from "./annuaire.module.css";
+import { libelleAppelAction } from "@/lib/inscriptions";
 
 /**
  * Annuaire des gents publics.
@@ -34,7 +35,8 @@ export default async function AnnuairePage() {
 
         {gents.length === 0 ? (
           <p className={styles.vide}>
-            Aucun gent public pour l&apos;instant. <Link href="/inscription">Créez le premier.</Link>
+            Aucun gent public pour l&apos;instant.{" "}
+            <Link href="/inscription">{libelleAppelAction()}</Link> pour créer le vôtre.
           </p>
         ) : (
           <ul className={styles.grille}>

@@ -1,5 +1,6 @@
 import type { GentPublic } from "@/lib/server/publicGent";
 import styles from "./GentPublicVitrine.module.css";
+import { libelleAppelAction } from "@/lib/inscriptions";
 
 /**
  * Gent public dont la conversation n'est PAS ouverte aux visiteurs.
@@ -39,7 +40,7 @@ export function GentPublicVitrine({ gent }: { gent: GentPublic }) {
         </p>
 
         <a href="/inscription" className={styles.cta}>
-          Créer mon propre gent
+          {libelleAppelAction()}
         </a>
       </article>
     </main>
