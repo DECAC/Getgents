@@ -1,4 +1,14 @@
+/* Voir le commentaire des autres écrans-documents : la fenêtre ne défile pas,
+   c'est donc à cette page de le faire. Sans cela, l'annuaire se coupait dès
+   qu'il dépassait la hauteur de l'écran — soit à partir de quelques gents. */
 .page {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* La largeur de lecture vit DANS le conteneur qui défile : posée sur `.page`,
+   la barre de défilement se serait retrouvée au milieu de l'écran. */
+.contenu {
   max-width: 1000px;
   margin: 0 auto;
   padding: 52px 24px 72px;

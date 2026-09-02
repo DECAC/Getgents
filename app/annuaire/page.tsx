@@ -24,33 +24,35 @@ export default async function AnnuairePage() {
 
   return (
     <main className={styles.page}>
-      <header className={styles.entete}>
-        <h1 className={styles.titre}>Les gents publics</h1>
-        <p className={styles.lede}>
-          Des assistants créés sur Getgents et ouverts à tous. Chacun a sa propre adresse.
-        </p>
-      </header>
+      <div className={styles.contenu}>
+        <header className={styles.entete}>
+          <h1 className={styles.titre}>Les gents publics</h1>
+          <p className={styles.lede}>
+            Des assistants créés sur Getgents et ouverts à tous. Chacun a sa propre adresse.
+          </p>
+        </header>
 
-      {gents.length === 0 ? (
-        <p className={styles.vide}>
-          Aucun gent public pour l&apos;instant. <Link href="/inscription">Créez le premier.</Link>
-        </p>
-      ) : (
-        <ul className={styles.grille}>
-          {gents.map((g) => (
-            <li key={g.slug}>
-              <Link href={`/${g.slug}`} className={styles.carte}>
-                <span className={styles.icone} aria-hidden="true">
-                  {g.icone}
-                </span>
-                <span className={styles.nom}>{g.nom}</span>
-                {g.resume ? <span className={styles.resume}>{g.resume}</span> : null}
-                <span className={styles.adresse}>/{g.slug}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+        {gents.length === 0 ? (
+          <p className={styles.vide}>
+            Aucun gent public pour l&apos;instant. <Link href="/inscription">Créez le premier.</Link>
+          </p>
+        ) : (
+          <ul className={styles.grille}>
+            {gents.map((g) => (
+              <li key={g.slug}>
+                <Link href={`/${g.slug}`} className={styles.carte}>
+                  <span className={styles.icone} aria-hidden="true">
+                    {g.icone}
+                  </span>
+                  <span className={styles.nom}>{g.nom}</span>
+                  {g.resume ? <span className={styles.resume}>{g.resume}</span> : null}
+                  <span className={styles.adresse}>/{g.slug}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </main>
   );
 }

@@ -1,10 +1,20 @@
 /* Écrans d'authentification : une carte centrée, sur le fond de l'app.
    Mêmes variables que le reste du studio — aucune couleur en dur. */
 
+/* `globals.css` pose `overflow: hidden` sur html et body : l'app est un shell
+   plein écran dont chaque zone défile pour son compte. Un écran-document doit
+   donc porter SA propre zone de défilement, sinon ce qui dépasse la fenêtre
+   est inatteignable — `min-height: 100vh` ne faisait que garantir le
+   débordement. */
 .page {
-  min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
   display: grid;
-  place-items: center;
+  justify-items: center;
+  /* `safe` : dès que le contenu dépasse, on cale en haut au lieu de centrer.
+     Un centrage strict pousse la moitié du contenu au-dessus de la zone de
+     défilement, où rien ne peut aller la chercher. */
+  align-content: safe center;
   padding: 32px 20px;
   background: var(--bg);
 }
