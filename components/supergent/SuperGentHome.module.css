@@ -244,3 +244,14 @@
 .composerBottom:focus-within {
   border-color: var(--blue);
 }
+
+/* Le bouton d'envoi est rond et presque carré : à 38 px, c'est la cible la
+   plus facile à rater de l'écran, et c'est l'action principale. Les boutons
+   larges portant du texte pardonnent une imprécision horizontale ; un disque
+   de 38 px, non. */
+@media (pointer: coarse) {
+  .send {
+    width: 44px;
+    height: 44px;
+  }
+}

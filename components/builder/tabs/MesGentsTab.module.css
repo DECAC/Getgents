@@ -407,3 +407,24 @@
 .recoveryBtn:hover {
   filter: brightness(0.95);
 }
+
+/* ——— Cibles tactiles ———
+   Mesuré sur iPhone : les cases de sélection faisaient 16 × 16 px et les
+   bascules de vue 39 × 31. En dessous de 44 px, un doigt rate — et ces cases
+   commandent la suppression en masse. */
+@media (pointer: coarse) {
+  /* On agrandit la ZONE, pas la case : une case à cocher de 44 px paraîtrait
+     démesurée à côté du nom du gent. C'est le label qui porte la surface
+     sensible, la case garde sa taille dessinée. */
+  .check {
+    min-width: 44px;
+    min-height: 44px;
+    margin: -14px;
+    padding: 14px;
+  }
+
+  .viewBtn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

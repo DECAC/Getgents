@@ -276,3 +276,27 @@
   width: 14px;
   height: 14px;
 }
+
+/* ——— En-tête sur petit écran ———
+   Mesuré à 6 px de large : `.nameInput` est `flex: 1; min-width: 0`, il cède
+   donc tout l'espace au statut et à l'icône d'édition, qui n'en cèdent aucun.
+   Le bouton de navigation mobile, ajouté depuis, a acheve de le comprimer.
+
+   La ligne passe donc au retour à la ligne, et le champ réclame une largeur
+   minimale : il occupe une ligne entière, le statut se range en dessous. */
+@media (max-width: 860px) {
+  .top {
+    flex-wrap: wrap;
+  }
+
+  .nameWrap {
+    flex-wrap: wrap;
+  }
+
+  .nameInput {
+    /* Assez pour lire un nom de gent, pas assez pour déborder d'un écran de
+       320 px — la plus petite largeur qu'on doive encore servir. */
+    min-width: 12ch;
+    font-size: 17px;
+  }
+}

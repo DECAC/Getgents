@@ -165,6 +165,7 @@ export function MesGentsTab() {
             className={[styles.viewBtn, view === "tuile" ? styles.viewBtnOn : ""].filter(Boolean).join(" ")}
             onClick={() => setView("tuile")}
             title="Vue en tuiles"
+            aria-label="Afficher les gents en tuiles"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" />
@@ -180,6 +181,7 @@ export function MesGentsTab() {
             className={[styles.viewBtn, view === "liste" ? styles.viewBtnOn : ""].filter(Boolean).join(" ")}
             onClick={() => setView("liste")}
             title="Vue en liste"
+            aria-label="Afficher les gents en liste"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M4 6h16M4 12h16M4 18h16" />

@@ -168,3 +168,15 @@
   color: var(--muted);
   line-height: 1.5;
 }
+
+/* Les liens secondaires (« Demander un accès », « Mot de passe oublié »)
+   mesuraient 20 px de haut : ce sont des actions à part entière, posées seules
+   sous le formulaire, pas des liens au fil d'une phrase. */
+@media (pointer: coarse) {
+  .aside a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 4px;
+  }
+}
