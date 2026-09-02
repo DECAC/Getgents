@@ -69,29 +69,35 @@ async function lireEtatCle(userId: string): Promise<EtatCle> {
 function ConfigurationManquante({ variables }: { variables: string[] }) {
   return (
     <main className={styles.page}>
-      <h1 className={styles.titre}>Mon compte</h1>
-      <section className={styles.bloc}>
-        <h2 className={styles.sousTitre}>Indisponible</h2>
-        <p className={styles.aide}>
-          Les comptes ne sont pas activés sur cette installation : cette page ne peut donc
-          rien afficher.
-        </p>
-        {variables.length > 0 && (
+      <div className={styles.contenu}>
+        <Link href="/builder/mesgents" className={styles.retourHaut}>
+          <span className={styles.fleche} aria-hidden="true">
+            ←
+          </span>
+          Mes gents
+        </Link>
+
+        <h1 className={styles.titre}>Mon compte</h1>
+        <section className={styles.bloc}>
+          <h2 className={styles.sousTitre}>Indisponible</h2>
           <p className={styles.aide}>
-            Variables d&apos;environnement manquantes :{" "}
-            {variables.map((v, i) => (
-              <span key={v}>
-                {i > 0 && ", "}
-                <code>{v}</code>
-              </span>
-            ))}
-            . Définissez-les puis redéployez.
+            Les comptes ne sont pas activés sur cette installation : cette page ne peut donc
+            rien afficher.
           </p>
-        )}
-        <p className={styles.retour}>
-          <Link href="/builder/mesgents">← Revenir à mes gents</Link>
-        </p>
-      </section>
+          {variables.length > 0 && (
+            <p className={styles.aide}>
+              Variables d&apos;environnement manquantes :{" "}
+              {variables.map((v, i) => (
+                <span key={v}>
+                  {i > 0 && ", "}
+                  <code>{v}</code>
+                </span>
+              ))}
+              . Définissez-les puis redéployez.
+            </p>
+          )}
+        </section>
+      </div>
     </main>
   );
 }
@@ -118,25 +124,36 @@ export default async function ComptePage() {
 
   return (
     <main className={styles.page}>
-      <h1 className={styles.titre}>Mon compte</h1>
+      <div className={styles.contenu}>
+        <Link href="/builder/mesgents" className={styles.retourHaut}>
+          <span className={styles.fleche} aria-hidden="true">
+            ←
+          </span>
+          Mes gents
+        </Link>
 
-      <CleOpenRouter initial={etatCle} />
-      <Consommation />
-      <Identifiants email={user.confirmedEmail} />
+        <h1 className={styles.titre}>Mon compte</h1>
 
-      <section className={styles.bloc}>
-        <h2 className={styles.sousTitre}>Mes gents</h2>
-        <p className={styles.aide} style={{ marginBottom: 0 }}>
-          Vos gents et ceux qu'on a partagés avec vous sont réunis sur{" "}
-          <Link href="/builder/mesgents">la page Mes gents</Link>.
+        <CleOpenRouter initial={etatCle} />
+        <Consommation />
+        <Identifiants email={user.confirmedEmail} />
+
+        <section className={styles.bloc}>
+          <h2 className={styles.sousTitre}>Mes gents</h2>
+          <p className={styles.aide} style={{ marginBottom: 0 }}>
+            Vos gents et ceux qu'on a partagés avec vous sont réunis sur{" "}
+            <Link href="/builder/mesgents">la page Mes gents</Link>.
+          </p>
+        </section>
+
+        <ZoneSensible email={user.confirmedEmail} />
+
+        {/* Doublon assumé du lien du haut : la page est longue, et on arrive en
+            bas après avoir supprimé une clé ou renoncé à supprimer son compte. */}
+        <p className={styles.retour}>
+          <Link href="/builder/mesgents">← Revenir à mes gents</Link>
         </p>
-      </section>
-
-      <ZoneSensible email={user.confirmedEmail} />
-
-      <p className={styles.retour}>
-        <Link href="/builder/mesgents">← Revenir à mes gents</Link>
-      </p>
+      </div>
     </main>
   );
 }

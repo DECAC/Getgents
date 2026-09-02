@@ -1,7 +1,50 @@
+/* `globals.css` pose `overflow: hidden` sur html et body : l'app est un shell
+   plein écran dont chaque zone défile pour son compte. Cette page-ci est un
+   document, pas un shell — sans zone de défilement à elle, tout ce qui dépasse
+   la fenêtre devenait inatteignable, et la suppression de compte, dernière
+   section, était invisible sur un petit écran. */
 .page {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* La largeur de lecture vit à l'intérieur du conteneur qui défile : mise sur
+   `.page`, la barre de défilement se serait retrouvée au milieu de l'écran. */
+.contenu {
   max-width: 640px;
   margin: 0 auto;
-  padding: 48px 24px;
+  padding: 32px 24px 64px;
+}
+
+/* Retour en tête : le lien de bas de page ne se voit qu'après avoir tout
+   parcouru, et l'écran de compte se quitte souvent sans rien y changer. */
+.retourHaut {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 18px;
+  padding: 6px 12px 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.retourHaut:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.retourHaut:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+
+.fleche {
+  font-size: 15px;
+  line-height: 1;
 }
 
 .titre {
