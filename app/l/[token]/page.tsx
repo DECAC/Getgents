@@ -4,6 +4,7 @@ import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { canOpen } from "@/lib/shareLink";
 import { espaceForPublicLink } from "@/lib/espaceApiPayload";
 import { SharedGentShell } from "@/components/shared-link/SharedGentShell";
+import { CollabShell } from "@/components/collab/CollabShell";
 import styles from "./page.module.css";
 
 // Jamais mis en cache : la validité du lien (révocation, expiration) doit être
@@ -77,6 +78,12 @@ export default async function SharedLinkPage({ params }: { params: { token: stri
   const espace = espaceForPublicLink(diffused);
 
   await recordShareEvent(token, "open", link.targetLabel);
+
+  // Gent collaboratif : le même lien ouvre le salon orchestré (plusieurs
+  // participants) plutôt que l'usage simple — même validité, même révocation.
+  if (espace.collab?.enabled) {
+    return <CollabShell token={token} espace={espace} />;
+  }
 
   return <SharedGentShell token={token} espace={espace} />;
 }

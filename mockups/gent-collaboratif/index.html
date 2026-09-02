@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gent collaboratif — 3 propositions d'interface</title>
+<style>
+  :root {
+    --fond: #fbf3ed;
+    --carte: #fffdf9;
+    --ligne: #eadbd3;
+    --texte: #2c2420;
+    --texte-doux: #7a6c64;
+    --corail: #e8634a;
+    --corail-doux: #fdf0ec;
+    --bleu: #4f7cc9;
+    --bleu-doux: #eef3fb;
+    --vert: #3d9a6c;
+    --vert-doux: #ecf7f1;
+    --or: #c99424;
+    --or-doux: #fbf3e2;
+    --rayon: 18px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--fond);
+    color: var(--texte);
+    min-height: 100vh;
+    padding: 48px 24px 80px;
+  }
+  .conteneur { max-width: 1080px; margin: 0 auto; }
+  .badge {
+    display: inline-block;
+    background: var(--corail-doux);
+    color: var(--corail);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 999px;
+    letter-spacing: .3px;
+    margin-bottom: 18px;
+  }
+  h1 { font-size: 34px; line-height: 1.15; letter-spacing: -.5px; margin-bottom: 12px; }
+  .intro { color: var(--texte-doux); font-size: 16px; line-height: 1.6; max-width: 720px; margin-bottom: 8px; }
+  .intro strong { color: var(--texte); }
+  .contexte {
+    background: var(--carte);
+    border: 1px solid var(--ligne);
+    border-radius: var(--rayon);
+    padding: 18px 22px;
+    margin: 26px 0 40px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--texte-doux);
+  }
+  .contexte b { color: var(--texte); }
+  .grille { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  @media (max-width: 900px) { .grille { grid-template-columns: 1fr; } }
+  .prop {
+    background: var(--carte);
+    border: 1px solid var(--ligne);
+    border-radius: var(--rayon);
+    padding: 26px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    transition: transform .18s ease, box-shadow .18s ease;
+    position: relative;
+  }
+  .prop:hover { transform: translateY(-4px); box-shadow: 0 14px 34px rgba(44,36,32,.10); }
+  .num {
+    position: absolute; top: -13px; left: 20px;
+    background: var(--texte); color: #fff;
+    font-size: 12px; font-weight: 700;
+    padding: 4px 11px; border-radius: 999px;
+  }
+  .prop h2 { font-size: 20px; margin: 6px 0 4px; letter-spacing: -.3px; }
+  .accroche { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  .p1 .accroche { color: var(--bleu); }
+  .p2 .accroche { color: var(--vert); }
+  .p3 .accroche { color: var(--corail); }
+  .prop p { font-size: 13.5px; line-height: 1.6; color: var(--texte-doux); flex: 1; }
+  .points { list-style: none; margin: 14px 0 18px; }
+  .points li { font-size: 13px; color: var(--texte-doux); padding: 4px 0 4px 22px; position: relative; line-height: 1.45; }
+  .points li::before { content: "✓"; position: absolute; left: 0; font-weight: 700; }
+  .p1 .points li::before { color: var(--bleu); }
+  .p2 .points li::before { color: var(--vert); }
+  .p3 .points li::before { color: var(--corail); }
+  .ouvrir {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13.5px; font-weight: 600;
+    padding: 10px 18px; border-radius: 12px;
+  }
+  .p1 .ouvrir { background: var(--bleu-doux); color: var(--bleu); }
+  .p2 .ouvrir { background: var(--vert-doux); color: var(--vert); }
+  .p3 .ouvrir { background: var(--corail-doux); color: var(--corail); }
+  .aide {
+    margin-top: 44px; text-align: center;
+    font-size: 13px; color: var(--texte-doux); line-height: 1.7;
+  }
+  .aide code {
+    background: var(--carte); border: 1px solid var(--ligne);
+    border-radius: 6px; padding: 2px 7px; font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="conteneur">
+  <span class="badge">Maquettes — nouveau type de gent</span>
+  <h1>Le gent collaboratif orchestrateur</h1>
+  <p class="intro">
+    Un gent qui mène une mission avec <strong>plusieurs participants</strong> : il anime un salon commun,
+    interroge chacun en privé, vérifie la faisabilité sur le web, puis propose des options au groupe.
+  </p>
+  <div class="contexte">
+    <b>Scénario joué dans les trois maquettes :</b> organisation d'un team building — 8 participants,
+    budget 150 €/personne, à moins d'1 h de Paris, en octobre 2026. Le gent <b>« Gustave » 🧭</b> a déjà
+    collecté 5 réponses sur 8 et vérifié 3 options sur le web. Chaque proposition montre le même instant
+    de la mission, sous trois angles d'interface différents.
+  </div>
+
+  <div class="grille">
+    <a class="prop p1" href="proposition-1-salon.html">
+      <span class="num">Proposition 1</span>
+      <h2>Le Salon</h2>
+      <div class="accroche">La conversation est le héros</div>
+      <p>Façon messagerie de groupe : le fil commun au centre, les participants sur le côté, et le gent qui anime avec des cartes d'orchestration distinctes.</p>
+      <ul class="points">
+        <li>Salon commun + onglet privé avec le gent</li>
+        <li>Sondage de dates cliquable</li>
+        <li>Propositions avec prix vérifiés et vote</li>
+        <li>Pastilles « a répondu / en attente »</li>
+      </ul>
+      <span class="ouvrir">Ouvrir la maquette →</span>
+    </a>
+
+    <a class="prop p2" href="proposition-2-tableau-mission.html">
+      <span class="num">Proposition 2</span>
+      <h2>Le Tableau de mission</h2>
+      <div class="accroche">L'état d'avancement est le héros</div>
+      <p>Façon tableau de bord : on voit l'orchestration en un coup d'œil — qui a répondu quoi, les options comparées, et ce que le gent a fait.</p>
+      <ul class="points">
+        <li>Matrice de collecte participants × réponses</li>
+        <li>3 options comparées, vérifiées sur le web</li>
+        <li>Journal des actions de l'orchestrateur</li>
+        <li>Salon en panneau rétractable</li>
+      </ul>
+      <span class="ouvrir">Ouvrir la maquette →</span>
+    </a>
+
+    <a class="prop p3" href="proposition-3-fil-orchestre.html">
+      <span class="num">Proposition 3</span>
+      <h2>Le Fil d'orchestre</h2>
+      <div class="accroche">Le déroulement de la mission est le héros</div>
+      <p>Façon suivi de colis : la mission avance en 5 étapes visibles, du cadrage à la confirmation — le gent mène la barque étape par étape.</p>
+      <ul class="points">
+        <li>Stepper des 5 étapes, cliquable</li>
+        <li>Détail de l'étape : qui a répondu, quoi</li>
+        <li>L'étape suivante se prépare en transparence</li>
+        <li>Conversation contextuelle par étape</li>
+      </ul>
+      <span class="ouvrir">Ouvrir la maquette →</span>
+    </a>
+  </div>
+
+  <p class="aide">
+    Chaque maquette est un fichier HTML autonome : vous pouvez aussi les ouvrir directement par double-clic<br>
+    depuis le dossier <code>mockups/gent-collaboratif/</code>. Aucune donnée réelle n'est utilisée.
+  </p>
+</div>
+</body>
+</html>

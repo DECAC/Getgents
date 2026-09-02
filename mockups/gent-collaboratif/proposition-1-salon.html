@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Manager · Salon — Team Building octobre 2026</title>
+<style>
+  /* Tokens repris de styles/tokens.css (piste « Chaleureux grand public »).
+     Accent bleu = côté « Gent' space » (utilisateurs), corail réservé au studio. */
+  :root {
+    --ink: #2a1f19;
+    --muted: #73665f;
+    --faint: #a2958f;
+    --bg: #fbf3ed;
+    --card: #fffdf9;
+    --line: #eadbd3;
+    --line-soft: #f3e9e3;
+    --sage: #e65d76;
+    --sage-700: #c73758;
+    --sage-tint: #ffdee2;
+    --gold: #dca331;
+    --gold-tint: #fde4bb;
+    --success: #57a45b;
+    --success-tint: #d4f1d4;
+    --blue: #4f7cc9;
+    --blue-700: #3a5fa3;
+    --blue-tint: #dbe7fb;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13.5px;
+    line-height: 1.45;
+    display: flex;
+    flex-direction: column;
+  }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+  svg { display: block; }
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 6px; }
+
+  /* ── Bandeau mission ─────────────────────────────────────────────── */
+  .topbar {
+    height: 64px;
+    flex: none;
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 22px;
+  }
+  .gent-av {
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    background: var(--blue);
+    display: grid; place-items: center;
+    font-size: 20px;
+    flex: none;
+  }
+  .gent-meta { min-width: 0; }
+  .gent-name {
+    font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .badge-orch {
+    font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--blue-700); background: var(--blue-tint);
+    padding: 2px 8px; border-radius: 999px;
+  }
+  .gent-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  .mission-chips { display: flex; gap: 6px; margin-left: 18px; }
+  .mchip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 600; color: var(--muted);
+    background: var(--bg); border: 1px solid var(--line-soft);
+    padding: 5px 11px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .mchip svg { width: 12px; height: 12px; color: var(--blue-700); }
+
+  .top-right { margin-left: auto; display: flex; align-items: center; gap: 16px; flex: none; }
+  .progress { text-align: right; }
+  .progress-label { font-size: 10.5px; color: var(--faint); }
+  .progress-label b { color: var(--ink); font-size: 12px; }
+  .bar {
+    width: 132px; height: 6px; border-radius: 999px;
+    background: var(--line-soft); margin-top: 4px; overflow: hidden;
+  }
+  .bar i { display: block; height: 100%; border-radius: 999px; background: var(--blue); width: 62.5%; }
+  .share-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12px; font-weight: 600; color: var(--blue-700);
+    border: 1px solid var(--line); background: var(--card);
+    padding: 8px 13px; border-radius: 9px;
+    transition: border-color .12s, background .12s;
+  }
+  .share-btn:hover { border-color: var(--blue); background: var(--blue-tint); }
+  .share-btn svg { width: 13px; height: 13px; }
+
+  /* ── Agencement ──────────────────────────────────────────────────── */
+  .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 272px 1fr; }
+
+  /* ── Colonne participants ────────────────────────────────────────── */
+  .people {
+    background: var(--card);
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .people-head {
+    padding: 15px 16px 11px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .people-title { display: flex; align-items: center; gap: 8px; }
+  .people-head h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .people-hint {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10.5px; color: var(--faint); margin-top: 4px;
+  }
+  .people-hint svg { width: 9px; height: 9px; flex: none; }
+  .people-count {
+    font-size: 10.5px; font-weight: 700; color: var(--blue-700);
+    background: var(--blue-tint); border-radius: 999px; padding: 1px 8px;
+  }
+  .people-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 3px; }
+  .person {
+    display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 10px;
+    padding: 8px 9px; border-radius: 11px;
+    transition: background .12s, box-shadow .12s;
+  }
+  .person[data-peer] { cursor: pointer; }
+  .person[data-peer]:hover { background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
+  .person.me { background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
+  .pav {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 12px; font-weight: 700;
+    background: var(--pav-bg, var(--line-soft)); color: var(--pav-fg, var(--faint));
+  }
+  .pmeta { min-width: 0; }
+  .pname { font-size: 12.5px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pname .you { font-weight: 500; color: var(--faint); font-size: 11px; }
+  .pill {
+    font-size: 9.5px; font-weight: 700; letter-spacing: .01em;
+    padding: 3px 8px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 4px;
+    white-space: nowrap;
+  }
+  .pill svg { width: 9px; height: 9px; }
+  .pill.ok { background: var(--success-tint); color: #2f6b33; }
+  .pill.wait { background: var(--gold-tint); color: #8a6410; }
+  .people-foot {
+    padding: 11px 16px;
+    border-top: 1px solid var(--line-soft);
+    font-size: 10.5px; color: var(--faint); line-height: 1.5;
+    display: flex; gap: 6px; align-items: flex-start;
+  }
+  .people-foot svg { width: 11px; height: 11px; flex: none; margin-top: 2px; }
+
+  /* ── Scène centrale ──────────────────────────────────────────────── */
+  .stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--card); }
+  .tabs {
+    flex: none;
+    display: flex; align-items: stretch; gap: 2px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--line-soft);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: none;
+    padding: 12px 12px 10px;
+    font-size: 12.5px; font-weight: 500; color: var(--muted);
+    border-bottom: 2px solid transparent;
+    display: inline-flex; align-items: center; gap: 7px;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.on { color: var(--blue-700); font-weight: 600; border-bottom-color: var(--blue); }
+  .tab svg { width: 11px; height: 11px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sage); }
+  .tab-av {
+    width: 18px; height: 18px; border-radius: 50%;
+    display: grid; place-items: center; flex: none;
+    font-size: 8.5px; font-weight: 700;
+    background: var(--pav-bg, var(--line-soft)); color: var(--pav-fg, var(--faint));
+  }
+  .tab-x {
+    display: inline-grid; place-items: center;
+    width: 16px; height: 16px; border-radius: 50%;
+    font-size: 12px; line-height: 1; color: var(--faint);
+  }
+  .tab-x:hover { background: var(--line); color: var(--ink); }
+
+  .feed { flex: 1; overflow-y: auto; min-height: 0; padding: 14px 22px 18px; }
+  .feed.off { display: none; }
+  .feed-inner { max-width: 940px; margin: 0 auto; }
+
+  .day {
+    display: flex; align-items: center; gap: 12px;
+    margin: 4px 0 12px;
+    font-size: 10.5px; color: var(--faint); font-weight: 600;
+  }
+  .day::before, .day::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
+
+  /* Messages participants */
+  .msg { display: flex; gap: 10px; margin-bottom: 11px; }
+  .msg .pav { width: 30px; height: 30px; font-size: 11px; margin-top: 1px; }
+  .msg-body { flex: 1; min-width: 0; }
+  .msg-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
+  .msg-head b { font-size: 12px; font-weight: 700; letter-spacing: -0.01em; }
+  .msg-head .you { font-size: 10.5px; font-weight: 500; color: var(--faint); }
+  .msg-head time, .orch-head time { font-size: 10.5px; color: var(--faint); font-weight: 400; }
+  .bubble {
+    display: inline-block;
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 7px 12px;
+    font-size: 13.5px;
+    max-width: 640px;
+  }
+
+  /* Cartes d'orchestration (Event Manager) */
+  .orch {
+    background: rgba(79, 124, 201, .055);
+    border: 1px solid var(--blue-tint);
+    border-radius: 14px;
+    padding: 11px 14px;
+    margin-bottom: 11px;
+  }
+  .orch-head { display: flex; align-items: center; gap: 8px; }
+  .orch-av {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--blue);
+    display: grid; place-items: center;
+    font-size: 14px; flex: none;
+  }
+  .orch-head b { font-size: 12.5px; font-weight: 700; letter-spacing: -0.01em; }
+  .orch-head time { margin-left: auto; }
+  .orch p { font-size: 13.5px; line-height: 1.55; margin-top: 7px; }
+  .orch .src { font-size: 11px; color: var(--muted); margin-top: 8px; display: flex; align-items: center; gap: 5px; }
+  .orch .src svg { width: 11px; height: 11px; color: var(--success); }
+  .pending-line { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11.5px; color: var(--muted); }
+  .pending-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex: none; }
+
+  /* Sondage de dates */
+  .poll { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 13px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--card);
+    font-size: 12.5px; font-weight: 600;
+    transition: border-color .12s, background .12s;
+  }
+  .chip:hover { border-color: var(--blue); }
+  .chip .n {
+    background: var(--bg); color: var(--muted);
+    border-radius: 999px; padding: 1px 8px;
+    font-size: 11px; font-weight: 700;
+  }
+  .chip.on { border-color: var(--blue); background: var(--blue-tint); color: var(--blue-700); }
+  .chip.on .n { background: var(--blue); color: #fff; }
+  .poll-hint { font-size: 11px; color: var(--faint); margin-top: 9px; }
+  .poll-hint b { color: var(--blue-700); font-weight: 600; }
+
+  /* Cartes de proposition */
+  .props { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+  .prop {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 11px 12px;
+    display: flex; flex-direction: column; gap: 4px;
+    transition: box-shadow .12s, transform .12s;
+  }
+  .prop:hover { box-shadow: 0 4px 14px rgba(21, 33, 43, .08); transform: translateY(-1px); }
+  .prop-ic {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: var(--bg);
+    display: grid; place-items: center;
+    font-size: 16px;
+    margin-bottom: 2px;
+  }
+  .prop h4 { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+  .prop .where { font-size: 11.5px; color: var(--muted); }
+  .prop .price { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; margin-top: 2px; }
+  .prop .price span { font-size: 11px; font-weight: 500; color: var(--muted); }
+  .prop .verif { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: #2f6b33; margin-top: 1px; }
+  .prop .verif svg { width: 11px; height: 11px; }
+  .vote {
+    margin-top: 7px;
+    padding: 7px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--blue-700);
+    font-size: 12px; font-weight: 700;
+    transition: border-color .12s, background .12s;
+  }
+  .vote:hover { border-color: var(--blue); }
+  .vote.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  /* Fiche récap (fil privé) */
+  .fiche {
+    margin-top: 9px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 12px;
+    display: flex; flex-direction: column; gap: 5px;
+    max-width: 420px;
+  }
+  .frow { display: flex; align-items: baseline; gap: 10px; font-size: 12px; }
+  .frow span { color: var(--muted); width: 110px; flex: none; }
+  .frow b { font-weight: 600; }
+  .frow .oktxt { color: #2f6b33; }
+
+  /* Alignement « moi » dans les fils privés */
+  .msg.me { flex-direction: row-reverse; }
+  .msg.me .msg-head { flex-direction: row-reverse; }
+  .msg.me .bubble { background: var(--blue-tint); }
+
+  /* Bandeau de confidentialité (fils entre participants) */
+  .p2p-banner {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 11.5px; color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .p2p-banner svg { width: 12px; height: 12px; flex: none; color: var(--blue-700); }
+  .p2p-banner b { color: var(--ink); font-weight: 600; }
+
+  /* État vide d'un fil entre participants */
+  .empty-state { text-align: center; padding: 46px 20px; color: var(--muted); }
+  .empty-state .pav { width: 46px; height: 46px; font-size: 16px; margin: 0 auto 10px; }
+  .empty-state p { font-size: 13.5px; }
+  .empty-state .empty-sub { font-size: 11.5px; color: var(--faint); margin-top: 4px; }
+
+  /* Badge « Créatrice » (corail, réservé à la créatrice de la mission) */
+  .badge-creator {
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--sage-700); background: var(--sage-tint);
+    padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+  }
+  .msg-head .badge-creator { align-self: center; }
+  .pname-me { white-space: normal; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .mchip.creator { background: var(--sage-tint); border-color: #f3c2ca; color: var(--sage-700); }
+  .mchip.creator svg { color: var(--sage-700); }
+
+  /* ── Onglet Synthèse ───────────────────────────────────────────── */
+  .syn { display: flex; flex-direction: column; gap: 12px; }
+  .syn-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .syn-card h3 {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .syn-decision { background: rgba(220, 163, 49, .07); border-color: var(--gold-tint); }
+  .syn-decision-top { display: flex; align-items: center; gap: 12px; }
+  .syn-decision-top .prop-ic { width: 36px; height: 36px; font-size: 19px; margin-bottom: 0; flex: none; }
+  .syn-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .syn-sub { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .badge-gold {
+    margin-left: auto; flex: none;
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 700; letter-spacing: .02em;
+    color: #8a6410; background: var(--gold-tint);
+    padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  .syn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .syn-kv {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px 12px;
+  }
+  .syn-kv .k {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--faint); display: flex; align-items: center; gap: 5px;
+  }
+  .syn-kv .v { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; margin-top: 4px; }
+  .syn-kv .s { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .pending-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .pending-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.5; }
+  .pending-list .pending-dot { margin-top: 6px; }
+  .pending-list b { font-weight: 700; }
+  .tl { display: flex; flex-direction: column; }
+  .tl-item { display: grid; grid-template-columns: 42px 16px 1fr; column-gap: 8px; align-items: start; }
+  .tl-item time { font-size: 11px; font-weight: 600; color: var(--faint); text-align: right; padding-top: 1px; }
+  .tl-rail { position: relative; display: flex; justify-content: center; align-self: stretch; }
+  .tl-rail::before { content: ""; position: absolute; top: 3px; bottom: -3px; width: 2px; background: var(--line-soft); }
+  .tl-item:last-child .tl-rail::before { display: none; }
+  .tl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); margin-top: 3px; z-index: 1; flex: none; }
+  .tl-item p { font-size: 12.5px; padding-bottom: 12px; }
+  .tl-item:last-child p { padding-bottom: 0; }
+  .syn-note {
+    text-align: center; font-size: 10.5px; color: var(--faint);
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .syn-note b { font-weight: 600; color: var(--muted); }
+
+  /* Composer désactivé (onglet Synthèse, lecture seule) */
+  .cbox input:disabled { color: var(--faint); cursor: not-allowed; }
+  .send:disabled { background: var(--line); cursor: not-allowed; }
+
+  /* Composer */
+  .composer {
+    flex: none;
+    border-top: 1px solid var(--line);
+    padding: 10px 22px 12px;
+  }
+  .composer-inner { max-width: 940px; margin: 0 auto; }
+  .cbox {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 5px 6px 5px 14px;
+  }
+  .cbox:focus-within { border-color: var(--blue); }
+  .cbox input {
+    flex: 1; border: none; outline: none; background: transparent;
+    font: inherit; color: var(--ink);
+    padding: 6px 0;
+  }
+  .cbox input::placeholder { color: var(--faint); }
+  .send {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--blue); color: #fff;
+    display: grid; place-items: center;
+    flex: none;
+    transition: background .12s;
+  }
+  .send:hover { background: var(--blue-700); }
+  .send svg { width: 14px; height: 14px; }
+  .cnote { font-size: 10px; color: var(--faint); text-align: center; margin-top: 7px; }
+</style>
+</head>
+<body>
+
+  <!-- Bandeau mission -->
+  <header class="topbar">
+    <div class="gent-av">🧭</div>
+    <div class="gent-meta">
+      <p class="gent-name">Event Manager <span class="badge-orch">Orchestrateur</span></p>
+      <p class="gent-sub">Team Building — octobre 2026</p>
+    </div>
+
+    <div class="mission-chips">
+      <span class="mchip creator" title="Vous avez lancé cette mission">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg>
+        Vous êtes la créatrice de cette mission
+      </span>
+      <span class="mchip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        8 participants
+      </span>
+      <span class="mchip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.5 6.5a7.5 7.5 0 1 0 0 11"/><path d="M4 10.5h10M4 13.5h9"/></svg>
+        150&nbsp;€/pers max
+      </span>
+      <span class="mchip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        &lt;&nbsp;1&nbsp;h de Paris
+      </span>
+      <span class="mchip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Week-ends d'octobre
+      </span>
+    </div>
+
+    <div class="top-right">
+      <div class="progress">
+        <p class="progress-label"><b>5/8</b> réponses</p>
+        <div class="bar"><i></i></div>
+      </div>
+      <button class="share-btn" id="shareBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <span id="shareLabel">Copier le lien d'invitation</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- Colonne participants -->
+    <aside class="people">
+      <div class="people-head">
+        <div class="people-title">
+          <h2>Participants</h2>
+          <span class="people-count">8</span>
+        </div>
+        <p class="people-hint">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 10V8a6 6 0 1 1 12 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h8V8a4 4 0 1 0-8 0v2z"/></svg>
+          Cliquez pour écrire en privé
+        </p>
+      </div>
+      <div class="people-list">
+
+        <div class="person me">
+          <span class="pav" style="--pav-bg:#dbe7fb;--pav-fg:#3a5fa3">Ca</span>
+          <div class="pmeta">
+            <p class="pname pname-me">Camille <span class="you">(vous)</span> <span class="badge-creator">Créatrice</span></p>
+          </div>
+          <span class="pill ok"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 16.2 5.8 12.5l-1.4 1.4 5.1 5.1 11-11-1.4-1.4z"/></svg>A répondu</span>
+        </div>
+
+        <div class="person" data-peer="hugo" data-name="Hugo" role="button" tabindex="0" title="Écrire à Hugo en privé">
+          <span class="pav" style="--pav-bg:#fde4bb;--pav-fg:#8a6410">Hu</span>
+          <div class="pmeta">
+            <p class="pname">Hugo</p>
+          </div>
+          <span class="pill ok"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 16.2 5.8 12.5l-1.4 1.4 5.1 5.1 11-11-1.4-1.4z"/></svg>A répondu</span>
+        </div>
+
+        <div class="person" data-peer="lea" data-name="Léa" role="button" tabindex="0" title="Écrire à Léa en privé">
+          <span class="pav" style="--pav-bg:#ffdee2;--pav-fg:#c73758">Lé</span>
+          <div class="pmeta">
+            <p class="pname">Léa</p>
+          </div>
+          <span class="pill ok"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 16.2 5.8 12.5l-1.4 1.4 5.1 5.1 11-11-1.4-1.4z"/></svg>A répondu</span>
+        </div>
+
+        <div class="person" data-peer="thomas" data-name="Thomas" role="button" tabindex="0" title="Écrire à Thomas en privé">
+          <span class="pav" style="--pav-bg:#d4f1d4;--pav-fg:#3c7a40">Th</span>
+          <div class="pmeta">
+            <p class="pname">Thomas</p>
+          </div>
+          <span class="pill ok"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 16.2 5.8 12.5l-1.4 1.4 5.1 5.1 11-11-1.4-1.4z"/></svg>A répondu</span>
+        </div>
+
+        <div class="person" data-peer="manon" data-name="Manon" role="button" tabindex="0" title="Écrire à Manon en privé">
+          <span class="pav" style="--pav-bg:#e6e0f8;--pav-fg:#5b4a9e">Ma</span>
+          <div class="pmeta">
+            <p class="pname">Manon</p>
+          </div>
+          <span class="pill ok"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 16.2 5.8 12.5l-1.4 1.4 5.1 5.1 11-11-1.4-1.4z"/></svg>A répondu</span>
+        </div>
+
+        <div class="person" data-peer="ines" data-name="Inès" role="button" tabindex="0" title="Écrire à Inès en privé">
+          <span class="pav">In</span>
+          <div class="pmeta">
+            <p class="pname">Inès</p>
+          </div>
+          <span class="pill wait"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5h-2v6l5.2 3.1 1-1.7-4.2-2.5z"/></svg>En attente</span>
+        </div>
+
+        <div class="person" data-peer="karim" data-name="Karim" role="button" tabindex="0" title="Écrire à Karim en privé">
+          <span class="pav">Ka</span>
+          <div class="pmeta">
+            <p class="pname">Karim</p>
+          </div>
+          <span class="pill wait"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5h-2v6l5.2 3.1 1-1.7-4.2-2.5z"/></svg>En attente</span>
+        </div>
+
+        <div class="person" data-peer="sophie" data-name="Sophie" role="button" tabindex="0" title="Écrire à Sophie en privé">
+          <span class="pav">So</span>
+          <div class="pmeta">
+            <p class="pname">Sophie</p>
+          </div>
+          <span class="pill wait"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5h-2v6l5.2 3.1 1-1.7-4.2-2.5z"/></svg>En attente</span>
+        </div>
+
+      </div>
+      <p class="people-foot">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 10V8a6 6 0 1 1 12 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h8V8a4 4 0 1 0-8 0v2z"/></svg>
+        Vos échanges avec Event Manager restent privés. Cliquez sur un participant pour lui écrire&nbsp;: ces conversations restent entre vous, Event Manager n'y a pas accès.
+      </p>
+    </aside>
+
+    <!-- Scène centrale -->
+    <main class="stage">
+      <nav class="tabs" role="tablist">
+        <button class="tab on" id="tab-salon" type="button" role="tab" aria-selected="true">Salon</button>
+        <button class="tab" id="tab-synthese" type="button" role="tab" aria-selected="false">📋 Synthèse</button>
+        <button class="tab" id="tab-prive" type="button" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 10V8a6 6 0 1 1 12 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h8V8a4 4 0 1 0-8 0v2z"/></svg>
+          Privé · Event Manager
+          <span class="dot" id="privDot"></span>
+        </button>
+      </nav>
+
+      <!-- ═══ Salon commun ═══ -->
+      <section class="feed" id="feed-salon" role="tabpanel">
+        <div class="feed-inner">
+
+          <div class="day">Aujourd'hui · mercredi 2 septembre</div>
+
+          <article class="orch">
+            <div class="orch-head">
+              <span class="orch-av">🧭</span>
+              <b>Event Manager</b>
+              <span class="badge-orch">Orchestrateur</span>
+              <time>08:30</time>
+            </div>
+            <p>Bienvenue dans le salon du team building&nbsp;! Ma mission&nbsp;: trouver la meilleure journée pour 8 personnes, à moins d'1&nbsp;h de Paris, avec 150&nbsp;€ max par personne. Je collecte vos disponibilités et préférences <b>en privé</b> (🔒 fils individuels), je vérifie les options sur le web, puis je vous propose un vote ici.</p>
+          </article>
+
+          <div class="msg">
+            <span class="pav" style="--pav-bg:#fde4bb;--pav-fg:#8a6410">Hu</span>
+            <div class="msg-body">
+              <div class="msg-head"><b>Hugo</b><time>09:03</time></div>
+              <p class="bubble">Bonjour à tous&nbsp;! Hâte de voir ce qu'Event Manager va nous trouver.</p>
+            </div>
+          </div>
+
+          <div class="msg">
+            <span class="pav" style="--pav-bg:#ffdee2;--pav-fg:#c73758">Lé</span>
+            <div class="msg-body">
+              <div class="msg-head"><b>Léa</b><time>09:05</time></div>
+              <p class="bubble">Pareil&nbsp;! J'ai répondu à ses questions en privé, ça a pris 30 secondes.</p>
+            </div>
+          </div>
+
+          <div class="msg">
+            <span class="pav" style="--pav-bg:#dbe7fb;--pav-fg:#3a5fa3">Ca</span>
+            <div class="msg-body">
+              <div class="msg-head"><b>Camille</b><span class="you">(vous)</span><span class="badge-creator">Créatrice</span><time>09:08</time></div>
+              <p class="bubble">Pour info, le budget est ferme à 150&nbsp;€/pers — pas de dérogation possible, c'est le plafond validé.</p>
+            </div>
+          </div>
+
+          <article class="orch">
+            <div class="orch-head">
+              <span class="orch-av">🧭</span>
+              <b>Event Manager</b>
+              <span class="badge-orch">Orchestrateur</span>
+              <time>09:10</time>
+            </div>
+            <p>Bien reçu, Camille 👌 Je ne retiens que des options sous l'enveloppe de 150&nbsp;€/pers, tout compris — transport inclus.</p>
+          </article>
+
+          <article class="orch">
+            <div class="orch-head">
+              <span class="orch-av">🧭</span>
+              <b>Event Manager</b>
+              <span class="badge-orch">Orchestrateur</span>
+              <time>09:12</time>
+            </div>
+            <p>J'ai reçu <b>5 réponses sur 8</b> — merci&nbsp;! Premier point à trancher ensemble&nbsp;: la date. Votez pour vos samedis préférés&nbsp;:</p>
+            <div class="poll" id="poll">
+              <button class="chip" type="button" data-base="2" data-label="sam. 3 oct.">sam. 3 oct.<span class="n">2</span></button>
+              <button class="chip on" type="button" data-base="1" data-label="sam. 10 oct.">sam. 10 oct.<span class="n">2</span></button>
+              <button class="chip" type="button" data-base="1" data-label="sam. 17 oct.">sam. 17 oct.<span class="n">1</span></button>
+            </div>
+            <p class="poll-hint" id="pollHint">5 votants · vous avez choisi <b>sam. 10 oct.</b></p>
+            <p class="pending-line"><span class="pending-dot"></span>En attente d'Inès, Karim et Sophie — je les relance en privé.</p>
+          </article>
+
+          <article class="orch">
+            <div class="orch-head">
+              <span class="orch-av">🧭</span>
+              <b>Event Manager</b>
+              <span class="badge-orch">Orchestrateur</span>
+              <time>10:47</time>
+            </div>
+            <p>Bonne nouvelle&nbsp;: j'ai vérifié <b>3 options faisables</b> sur le web ce matin. Toutes à moins d'1&nbsp;h de Paris et sous le budget — à vous de voter&nbsp;:</p>
+            <div class="props">
+              <article class="prop">
+                <span class="prop-ic">🌳</span>
+                <h4>Accrobranche + déjeuner</h4>
+                <p class="where">Fontainebleau · 45 min de Paris</p>
+                <p class="price">≈ 95&nbsp;€ <span>/ pers</span></p>
+                <p class="verif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>Prix vérifié il y a 2&nbsp;h</p>
+                <button class="vote" type="button" data-base="3">Choisir · 3</button>
+              </article>
+              <article class="prop">
+                <span class="prop-ic">🔐</span>
+                <h4>Escape game + brunch</h4>
+                <p class="where">Versailles · 35 min de Paris</p>
+                <p class="price">≈ 78&nbsp;€ <span>/ pers</span></p>
+                <p class="verif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>Prix vérifié il y a 2&nbsp;h</p>
+                <button class="vote" type="button" data-base="1">Choisir · 1</button>
+              </article>
+              <article class="prop">
+                <span class="prop-ic">⛵</span>
+                <h4>Voile + pique-nique</h4>
+                <p class="where">Base de Vaires-Torcy · 40 min de Paris</p>
+                <p class="price">≈ 120&nbsp;€ <span>/ pers</span></p>
+                <p class="verif"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>Prix vérifié il y a 2&nbsp;h</p>
+                <button class="vote" type="button" data-base="0">Choisir · 0</button>
+              </article>
+            </div>
+            <p class="src">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
+              Sources web consultées ce matin · Vote ouvert jusqu'à vendredi 18&nbsp;h — je réserve dès que le groupe tranche.
+            </p>
+          </article>
+
+          <div class="msg">
+            <span class="pav" style="--pav-bg:#e6e0f8;--pav-fg:#5b4a9e">Ma</span>
+            <div class="msg-body">
+              <div class="msg-head"><b>Manon</b><time>10:52</time></div>
+              <p class="bubble">L'accrobranche à Fontainebleau, j'adore. Mon vote est parti&nbsp;!</p>
+            </div>
+          </div>
+
+          <div class="msg">
+            <span class="pav" style="--pav-bg:#dbe7fb;--pav-fg:#3a5fa3">Ca</span>
+            <div class="msg-body">
+              <div class="msg-head"><b>Camille</b><span class="you">(vous)</span><span class="badge-creator">Créatrice</span><time>10:58</time></div>
+              <p class="bubble">Merci pour les 3 options 👌 Petit cadrage&nbsp;: on reste sur un samedi, et il me faut une activité accessible à tous les niveaux — personne ne reste au bord du chemin.</p>
+            </div>
+          </div>
+
+          <article class="orch">
+            <div class="orch-head">
+              <span class="orch-av">🧭</span>
+              <b>Event Manager</b>
+              <span class="badge-orch">Orchestrateur</span>
+              <time>11:02</time>
+            </div>
+            <p>Noté, Camille ✅ Les 3 options acceptent les débutants complets — je l'ai vérifié auprès de chaque prestataire ce matin.</p>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- ═══ Synthèse de la mission (maintenue par Event Manager) ═══ -->
+      <section class="feed off" id="feed-synthese" role="tabpanel">
+        <div class="feed-inner syn">
+
+          <div class="day">Récapitulatif vivant · mercredi 2 septembre</div>
+
+          <!-- Décision en tête -->
+          <div class="syn-card syn-decision">
+            <div class="syn-decision-top">
+              <span class="prop-ic">🌳</span>
+              <div>
+                <p class="syn-title">Accrobranche + déjeuner à Fontainebleau</p>
+                <p class="syn-sub">3 voix sur 5 votants · ≈ 95&nbsp;€/pers · vote ouvert jusqu'à vendredi 18&nbsp;h</p>
+              </div>
+              <span class="badge-gold">⏳ En attente de confirmation du groupe</span>
+            </div>
+          </div>
+
+          <!-- Infos clés -->
+          <div class="syn-grid">
+            <div class="syn-kv">
+              <p class="k">📅 Date</p>
+              <p class="v">sam. 17 oct. 2026</p>
+              <p class="s">la plus compatible · 5/5 répondants</p>
+            </div>
+            <div class="syn-kv">
+              <p class="k">⏰ Horaires</p>
+              <p class="v">RDV 9h15 · Paris</p>
+              <p class="s">retour ≈ 17h30</p>
+            </div>
+            <div class="syn-kv">
+              <p class="k">📍 Lieu</p>
+              <p class="v">Fontainebleau</p>
+              <p class="s">≈ 55 min de Paris</p>
+            </div>
+            <div class="syn-kv">
+              <p class="k">💶 Budget</p>
+              <p class="v">≈ 95&nbsp;€/pers</p>
+              <p class="s">dans l'enveloppe de 150&nbsp;€</p>
+            </div>
+            <div class="syn-kv">
+              <p class="k">👥 Participants</p>
+              <p class="v">5/8 ont répondu</p>
+              <p class="s">Inès, Karim, Sophie en attente</p>
+            </div>
+            <div class="syn-kv">
+              <p class="k">🍽 À prévoir</p>
+              <p class="v">1 végétarien · 1 sans gluten</p>
+              <p class="s">à transmettre au restaurant</p>
+            </div>
+          </div>
+
+          <!-- Points en suspens -->
+          <div class="syn-card">
+            <h3>⏳ Points en suspens</h3>
+            <ul class="pending-list">
+              <li><span class="pending-dot"></span><span><b>3 réponses manquantes</b> — Inès, Karim et Sophie&nbsp;: Event Manager les relance demain à 9&nbsp;h.</span></li>
+              <li><span class="pending-dot"></span><span><b>Choix du restaurant à finaliser</b> — 2 tables vérifiées à Fontainebleau, décision après les dernières réponses.</span></li>
+            </ul>
+          </div>
+
+          <!-- Fil des décisions -->
+          <div class="syn-card">
+            <h3>🧵 Fil des décisions</h3>
+            <div class="tl">
+              <div class="tl-item"><time>08:30</time><span class="tl-rail"><span class="tl-dot"></span></span><p>Mission créée par Camille</p></div>
+              <div class="tl-item"><time>09:08</time><span class="tl-rail"><span class="tl-dot"></span></span><p>Budget recadré par Camille&nbsp;: 150&nbsp;€/pers, ferme</p></div>
+              <div class="tl-item"><time>09:12</time><span class="tl-rail"><span class="tl-dot"></span></span><p>Sondage des dates publié dans le salon</p></div>
+              <div class="tl-item"><time>10:05</time><span class="tl-rail"><span class="tl-dot"></span></span><p>5/8 réponses reçues</p></div>
+              <div class="tl-item"><time>10:47</time><span class="tl-rail"><span class="tl-dot"></span></span><p>3 options vérifiées sur le web, vote ouvert</p></div>
+              <div class="tl-item"><time>14:05</time><span class="tl-rail"><span class="tl-dot"></span></span><p>Fontainebleau passe en tête avec 3 voix</p></div>
+            </div>
+          </div>
+
+          <p class="syn-note">✨ Synthèse maintenue automatiquement par <b>Event Manager</b> · mise à jour il y a 10&nbsp;min</p>
+
+        </div>
+      </section>
+
+      <!-- ═══ Fil privé avec Event Manager ═══ -->
+      <section class="feed off" id="feed-prive" role="tabpanel">
+        <div class="feed-inner">
+
+          <div class="day">Aujourd'hui · mercredi 2 septembre</div>
+
+          <article class="orch">
+            <div class="orch-head">
+              <span class="orch-av">🧭</span>
+              <b>Event Manager</b>
+              <span class="badge-orch">Fil privé</span>
+              <time>09:12</time>
+            </div>
+            <p>Bonjour Camille 👋 Je collecte les disponibilités du groupe pour le team building d'octobre. Quels samedis te conviennent&nbsp;: 3, 10, 17 ou 24&nbsp;?</p>
+          </article>
+
+          <div class="msg me">
+            <span class="pav" style="--pav-bg:#dbe7fb;--pav-fg:#3a5fa3">Ca</span>
+            <div class="msg-body">
+              <div class="msg-head"><b>Camille</b><span class="you">(vous)</span><time>09:41</time></div>
+              <p class="bubble">Salut Event Manager&nbsp;! Dispo les 3, 10 et 17. Pas le 24.</p>
+            </div>
+          </div>
+
+          <article class="orch">
+            <div class="orch-head">
+              <span class="orch-av">🧭</span>
+              <b>Event Manager</b>
+              <span class="badge-orch">Fil privé</span>
+              <time>09:42</time>
+            </div>
+            <p>Parfait, c'est noté. Et tu préfères une activité plutôt sportive, réflexion ou détente&nbsp;?</p>
+          </article>
+
+          <div class="msg me">
+            <span class="pav" style="--pav-bg:#dbe7fb;--pav-fg:#3a5fa3">Ca</span>
+            <div class="msg-body">
+              <div class="msg-head"><b>Camille</b><span class="you">(vous)</span><time>09:44</time></div>
+              <p class="bubble">Plutôt sportif pour moi.</p>
+            </div>
+          </div>
+
+          <article class="orch">
+            <div class="orch-head">
+              <span class="orch-av">🧭</span>
+              <b>Event Manager</b>
+              <span class="badge-orch">Fil privé</span>
+              <time>09:45</time>
+            </div>
+            <p>Merci&nbsp;! Voici ce que je retiens — dis-moi si je dois corriger&nbsp;:</p>
+            <div class="fiche">
+              <div class="frow"><span>Disponibilités</span><b>sam. 3 · 10 · 17 oct.</b></div>
+              <div class="frow"><span>Préférence</span><b>Activité sportive</b></div>
+              <div class="frow"><span>Statut</span><b class="oktxt">Transmis au groupe ✓</b></div>
+            </div>
+          </article>
+
+          <article class="orch">
+            <div class="orch-head">
+              <span class="orch-av">🧭</span>
+              <b>Event Manager</b>
+              <span class="badge-orch">Fil privé</span>
+              <time>10:47</time>
+            </div>
+            <p>Les 3 options vérifiées sont publiées dans le salon — viens voter&nbsp;! Ton profil «&nbsp;sportif&nbsp;» me fait penser que l'accrobranche pourrait te plaire, mais c'est toi qui décides.</p>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- Zone de saisie -->
+      <footer class="composer">
+        <div class="composer-inner">
+          <div class="cbox">
+            <input id="composerInput" type="text" placeholder="Écrire dans le salon…" autocomplete="off">
+            <button class="send" id="sendBtn" type="button" aria-label="Envoyer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </button>
+          </div>
+          <p class="cnote" id="composerNote">Event Manager anime ce salon&nbsp;; les réponses détaillées de chacun restent dans les fils privés.</p>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+<script>
+  /* ── Onglets : Salon, Synthèse, Privé Event Manager, fils entre participants ── */
+  const tabsBar = document.querySelector('.tabs');
+  const stage = document.querySelector('.stage');
+  const composerEl = document.querySelector('.composer');
+  const feeds = { salon: document.getElementById('feed-salon'), synthese: document.getElementById('feed-synthese'), prive: document.getElementById('feed-prive') };
+  const tabs = { salon: document.getElementById('tab-salon'), synthese: document.getElementById('tab-synthese'), prive: document.getElementById('tab-prive') };
+  const peers = {};
+  const privDot = document.getElementById('privDot');
+  const input = document.getElementById('composerInput');
+  const note = document.getElementById('composerNote');
+  const sendBtn = document.getElementById('sendBtn');
+  let active = 'salon';
+
+  const LOCK_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 10V8a6 6 0 1 1 12 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h8V8a4 4 0 1 0-8 0v2z"/></svg>';
+
+  function switchTab(name) {
+    active = name;
+    for (const key of Object.keys(feeds)) {
+      feeds[key].classList.toggle('off', key !== name);
+      tabs[key].classList.toggle('on', key === name);
+      tabs[key].setAttribute('aria-selected', key === name ? 'true' : 'false');
+    }
+    if (name === 'prive') {
+      privDot.style.display = 'none';
+      input.placeholder = 'Répondre à Event Manager en privé…';
+      note.textContent = 'Ce fil n\u2019est visible que par vous et Gustave.';
+    } else if (name === 'salon') {
+      input.placeholder = 'Écrire dans le salon…';
+      note.textContent = 'Event Manager anime ce salon ; les réponses détaillées de chacun restent dans les fils privés.';
+    } else {
+      input.placeholder = 'Écrire à ' + peers[name].name + ' en privé…';
+      note.textContent = 'Conversation privée avec ' + peers[name].name + ' — Gustave n\u2019y a pas accès, rien ne remonte dans le salon.';
+    }
+    scrollDown(feeds[name]);
+  }
+  tabs.salon.addEventListener('click', () => switchTab('salon'));
+  tabs.synthese.addEventListener('click', () => switchTab('synthese'));
+  tabs.prive.addEventListener('click', () => switchTab('prive'));
+
+  function scrollDown(feed) { feed.scrollTop = feed.scrollHeight; }
+  scrollDown(feeds.salon);
+
+  /* ── Fils privés entre participants (hors portée du gent) ── */
+  function msgHTML(initials, colors, name, time, text, mine) {
+    return '<div class="msg' + (mine ? ' me' : '') + '">' +
+      '<span class="pav" style="' + colors + '">' + initials + '</span>' +
+      '<div class="msg-body">' +
+        '<div class="msg-head"><b>' + name + '</b>' + (mine ? '<span class="you">(vous)</span>' : '') + '<time>' + time + '</time></div>' +
+        '<p class="bubble">' + text + '</p>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function peerSeed(id) {
+    if (id !== 'hugo') return '';
+    const hugoColors = '--pav-bg:#fde4bb;--pav-fg:#8a6410';
+    const meColors = '--pav-bg:#dbe7fb;--pav-fg:#3a5fa3';
+    return '<div class="day">Aujourd\u2019hui · mercredi 2 septembre</div>' +
+      msgHTML('Hu', hugoColors, 'Hugo', '09:15', 'Salut Camille&nbsp;! Tu as répondu à Gustave&nbsp;? Moi je lui ai dit 3, 10 et 17 octobre.', false) +
+      msgHTML('Ca', meColors, 'Camille', '09:18', 'Pareil&nbsp;! J\u2019ai voté pour le 10 au sondage, c\u2019est le samedi qui m\u2019arrange le plus.', true) +
+      msgHTML('Hu', hugoColors, 'Hugo', '10:55', 'Tu as vu les 3 options dans le salon&nbsp;? L\u2019accrobranche à Fontainebleau me tente bien.', false) +
+      msgHTML('Ca', meColors, 'Camille', '10:57', 'Carrément&nbsp;! L\u2019escape game me va aussi, mais l\u2019accrobranche a mon vote 🌳', true);
+  }
+
+  function openPeer(id, info) {
+    if (!feeds[id]) {
+      peers[id] = info;
+      const tab = document.createElement('button');
+      tab.className = 'tab';
+      tab.type = 'button';
+      tab.id = 'tab-' + id;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', 'false');
+      tab.innerHTML =
+        '<span class="tab-av" style="' + info.colors + '">' + info.initials + '</span>' +
+        '<span>' + info.name + '</span>' +
+        '<span class="tab-x" role="button" aria-label="Fermer la conversation avec ' + info.name + '" title="Fermer">×</span>';
+      tab.addEventListener('click', () => switchTab(id));
+      tab.querySelector('.tab-x').addEventListener('click', e => {
+        e.stopPropagation();
+        closePeer(id);
+      });
+      tabsBar.appendChild(tab);
+      tabs[id] = tab;
+
+      const feed = document.createElement('section');
+      feed.className = 'feed off';
+      feed.id = 'feed-' + id;
+      feed.setAttribute('role', 'tabpanel');
+      const seed = peerSeed(id);
+      feed.innerHTML = '<div class="feed-inner">' +
+        '<div class="p2p-banner">' + LOCK_SVG +
+          '<span>Conversation privée entre vous et <b>' + info.name + '</b> — Gustave n\u2019y a pas accès.</span>' +
+        '</div>' +
+        (seed ||
+          '<div class="day">Aujourd\u2019hui · mercredi 2 septembre</div>' +
+          '<div class="empty-state">' +
+            '<span class="pav" style="' + info.colors + '">' + info.initials + '</span>' +
+            '<p>Dites bonjour à <b>' + info.name + '</b> 👋</p>' +
+            '<p class="empty-sub">Cette conversation reste entre vous deux.</p>' +
+          '</div>') +
+      '</div>';
+      stage.insertBefore(feed, composerEl);
+      feeds[id] = feed;
+    }
+    switchTab(id);
+  }
+
+  function closePeer(id) {
+    const wasActive = active === id;
+    tabs[id].remove();
+    feeds[id].remove();
+    delete tabs[id];
+    delete feeds[id];
+    delete peers[id];
+    if (wasActive) switchTab('salon');
+  }
+
+  document.querySelectorAll('.person[data-peer]').forEach(el => {
+    const pav = el.querySelector('.pav');
+    const info = {
+      name: el.dataset.name,
+      initials: pav.textContent,
+      colors: pav.getAttribute('style') || ''
+    };
+    const open = () => openPeer(el.dataset.peer, info);
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+    });
+  });
+
+  /* ── Sondage de dates (un seul choix, déplaçable) ── */
+  const chips = Array.from(document.querySelectorAll('#poll .chip'));
+  const pollHint = document.getElementById('pollHint');
+  let pollSel = chips.findIndex(c => c.classList.contains('on'));
+
+  function renderPoll() {
+    chips.forEach((c, i) => {
+      const n = parseInt(c.dataset.base, 10) + (i === pollSel ? 1 : 0);
+      c.querySelector('.n').textContent = n;
+      c.classList.toggle('on', i === pollSel);
+    });
+    if (pollSel >= 0) {
+      pollHint.innerHTML = '5 votants · vous avez choisi <b>' + chips[pollSel].dataset.label + '</b>';
+    }
+  }
+  chips.forEach((c, i) => c.addEventListener('click', () => { pollSel = i; renderPoll(); }));
+  renderPoll();
+
+  /* ── Vote sur les propositions (un seul choix) ── */
+  const votes = Array.from(document.querySelectorAll('.vote'));
+  let voteSel = -1;
+
+  function renderVotes() {
+    votes.forEach((b, i) => {
+      const on = i === voteSel;
+      const n = parseInt(b.dataset.base, 10) + (on ? 1 : 0);
+      b.classList.toggle('on', on);
+      b.textContent = on ? '✓ Mon choix · ' + n : 'Choisir · ' + n;
+    });
+  }
+  votes.forEach((b, i) => b.addEventListener('click', () => {
+    voteSel = (voteSel === i) ? -1 : i;
+    renderVotes();
+  }));
+  renderVotes();
+
+  /* ── Envoi d'un message dans le fil actif ── */
+  function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+    const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const mine = active !== 'salon';
+    const wrap = document.createElement('div');
+    wrap.className = 'msg' + (mine ? ' me' : '');
+    wrap.innerHTML =
+      '<span class="pav" style="--pav-bg:#dbe7fb;--pav-fg:#3a5fa3">Ca</span>' +
+      '<div class="msg-body">' +
+        '<div class="msg-head"><b>Camille</b> <span class="you">(vous)</span> <time></time></div>' +
+        '<p class="bubble"></p>' +
+      '</div>';
+    wrap.querySelector('time').textContent = time;
+    wrap.querySelector('.bubble').textContent = text;
+    feeds[active].querySelector('.feed-inner').appendChild(wrap);
+    input.value = '';
+    scrollDown(feeds[active]);
+  }
+  document.getElementById('sendBtn').addEventListener('click', sendMessage);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+
+  /* ── Bouton de partage ── */
+  const shareBtn = document.getElementById('shareBtn');
+  const shareLabel = document.getElementById('shareLabel');
+  shareBtn.addEventListener('click', () => {
+    const url = 'https://getgent.app/g/gustave-tb-oct26';
+    if (navigator.clipboard) { navigator.clipboard.writeText(url).catch(() => {}); }
+    shareLabel.textContent = 'Lien copié ✓';
+    setTimeout(() => { shareLabel.textContent = 'Copier le lien d\u2019invitation'; }, 1600);
+  });
+</script>
+</body>
+</html>

@@ -103,6 +103,9 @@ export function espaceForPublicLink(espace: Espace): Espace {
     files: [],
     artefacts: visionneuseDoc ? [visionneuseDoc] : [],
     visionneuse: espace.visionneuse?.enabled ? { enabled: true } : undefined,
+    // Gent collaboratif : la mission, le cadre et les questions sont écrits
+    // POUR les participants — ils passent tels quels. Aucun secret n'y vit.
+    collab: espace.collab?.enabled ? espace.collab : undefined,
     jumpForm: espace.jumpForm,
     // Les déclencheurs décrivent les usages du gent, pas l'activité de son
     // créateur : ils sont donc transmis tels quels au destinataire, à qui ils

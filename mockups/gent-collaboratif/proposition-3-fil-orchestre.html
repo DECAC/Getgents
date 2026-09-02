@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gustave · Team building d'octobre — Le fil d'orchestre</title>
+<style>
+  /* Tokens repris de styles/tokens.css (piste « Chaleureux grand public ») */
+  :root{
+    --ink:#2a1f19; --muted:#73665f; --faint:#a2958f;
+    --bg:#fbf3ed; --card:#fffdf9; --line:#eadbd3; --line-soft:#f3e9e3;
+    --sage:#e65d76; --sage-700:#c73758; --sage-tint:#ffdee2; --sage-soft:#fdeef1;
+    --gold:#dca331; --gold-700:#8a5f0b; --gold-tint:#fde4bb;
+    --plum:#d64651; --plum-tint:#ffdbda;
+    --success:#57a45b; --success-700:#2f7a37; --success-tint:#d4f1d4;
+    --blue:#4f7cc9; --blue-700:#3a5fa3; --blue-tint:#dbe7fb;
+    --r:18px; --pill:999px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:var(--bg); color:var(--ink); font-size:14px; line-height:1.45;
+  }
+  .page{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  /* ---------- En-tête ---------- */
+  .head{display:flex;align-items:center;gap:16px;padding:14px 26px;background:var(--card);border-bottom:1px solid var(--line)}
+  .gIcon{width:42px;height:42px;flex:none;border-radius:14px;background:var(--sage-tint);border:1px solid #f3c2cd;display:flex;align-items:center;justify-content:center;font-size:22px}
+  .hMeta h1{font-size:16.5px;letter-spacing:-.01em}
+  .hSub{font-size:12px;color:var(--muted);margin-top:2px}
+  .hSub b{color:var(--sage-700)}
+  .hChips{display:flex;gap:8px;margin-left:14px}
+  .hChip{font-size:12px;font-weight:600;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:var(--pill);padding:6px 12px;white-space:nowrap}
+  .hRight{margin-left:auto;display:flex;align-items:center;gap:20px;flex:none}
+  .avatars{display:flex}
+  .av{border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;border:2px solid var(--card);position:relative;flex:none}
+  .avatars .av{margin-left:-8px}
+  .avatars .av:first-child{margin-left:0}
+  .avatars .av.answered::after{content:"";position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;background:var(--success);border:2px solid var(--card)}
+  .prog{width:200px}
+  .progMeta{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px}
+  .progMeta b{color:var(--ink)}
+  .segs{display:flex;gap:4px}
+  .segs i{height:6px;flex:1;border-radius:var(--pill);background:var(--line-soft)}
+  .segs i.d1{background:var(--success)}
+  .segs i.d2{background:var(--sage)}
+  .segs i.d3{background:var(--gold);opacity:.7}
+
+  /* ---------- Corps : stepper + détail ---------- */
+  .body{flex:1;min-height:0;display:grid;grid-template-columns:320px 1fr}
+  .rail{border-right:1px solid var(--line);padding:22px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+  .railTitle{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:0 8px}
+  .steps{position:relative;display:flex;flex-direction:column;gap:6px}
+  .steps::before{content:"";position:absolute;left:23px;top:26px;bottom:26px;width:2px;background:var(--line)}
+  .step{display:flex;gap:12px;align-items:flex-start;padding:10px;border-radius:14px;border:1px solid transparent;cursor:pointer;position:relative;background:transparent;text-align:left;width:100%;font:inherit;color:inherit}
+  .step:hover{background:#fff8f3}
+  .step.active{background:var(--card);border-color:var(--line);box-shadow:0 1px 2px rgba(42,31,25,.05)}
+  .node{flex:none;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:var(--card);border:2px solid var(--line);z-index:1}
+  .node.done{background:var(--success);border-color:var(--success);color:#fff}
+  .node.cur{background:var(--sage);border-color:var(--sage);color:#fff;animation:pulse 2.4s infinite}
+  .node.gold{background:var(--gold);border-color:var(--gold);color:#fff}
+  .node.lock{background:var(--line-soft);border-color:var(--line);color:var(--faint)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(230,93,118,.35)}70%{box-shadow:0 0 0 9px rgba(230,93,118,0)}100%{box-shadow:0 0 0 0 rgba(230,93,118,0)}}
+  @media (prefers-reduced-motion:reduce){.node.cur{animation:none}}
+  .sTxt{padding-top:1px}
+  .sTxt .st{font-weight:700;font-size:13.5px;display:block}
+  .sTxt .ss{font-size:11.5px;color:var(--muted);margin-top:2px;display:block}
+  .ss.ok{color:var(--success-700)} .ss.cur{color:var(--sage-700);font-weight:700} .ss.gold{color:var(--gold-700);font-weight:700} .ss.lock{color:var(--faint)}
+  .how{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+  .howT{font-weight:700;font-size:13px;margin-bottom:6px}
+  .how p{font-size:12.5px;color:var(--muted);line-height:1.5}
+
+  .main{overflow-y:auto;padding:22px 28px 60px}
+  .main::-webkit-scrollbar{width:10px}
+  .main::-webkit-scrollbar-thumb{background:#e3d2c8;border-radius:999px;border:3px solid var(--bg)}
+  .wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+
+  /* ---------- Détail d'étape ---------- */
+  .eyebrow{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .stepTitleRow{display:flex;align-items:center;gap:12px;margin-top:4px}
+  .stepTitleRow h2{font-size:21px;letter-spacing:-.02em}
+  .barRow{display:flex;align-items:center;gap:12px;margin-top:12px}
+  .bar{flex:none;width:min(340px,45%);height:8px;border-radius:var(--pill);background:var(--line-soft);overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:var(--pill);background:var(--sage)}
+  .bar.goldbar i{background:var(--gold)}
+  .barRow span{font-size:12px;color:var(--muted)}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 1px 2px rgba(42,31,25,.04),0 10px 30px -18px rgba(42,31,25,.18);padding:18px 20px}
+  .card.dashed{background:transparent;border:1.5px dashed var(--line);box-shadow:none}
+  .cardHead{font-weight:700;font-size:14px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .hSub2{font-weight:500;font-size:12px;color:var(--muted)}
+  .muted14{font-size:13px;color:var(--muted)}
+
+  .gentCard{display:flex;gap:14px;background:var(--sage-soft);border:1px solid #f3c2cd;border-radius:var(--r);padding:16px 18px}
+  .gAv{width:38px;height:38px;flex:none;border-radius:12px;background:#fff;border:1px solid #f3c2cd;display:flex;align-items:center;justify-content:center;font-size:20px}
+  .gLab{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--sage-700);margin-bottom:4px}
+  .gentCard p{font-size:13.5px}
+
+  .pill{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:var(--pill);display:inline-flex;align-items:center;gap:5px;justify-self:start;white-space:nowrap}
+  .pOk{background:var(--success-tint);color:var(--success-700)}
+  .pCur{background:var(--sage-tint);color:var(--sage-700)}
+  .pGold{background:var(--gold-tint);color:var(--gold-700)}
+  .pLock{background:var(--line-soft);color:var(--faint)}
+
+  .chip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:var(--pill);white-space:nowrap}
+  .cDate{background:var(--blue-tint);color:var(--blue-700)}
+  .cPref{background:var(--sage-tint);color:var(--sage-700)}
+  .cCadre{background:var(--bg);border:1px solid var(--line);color:var(--muted)}
+
+  /* Participants */
+  .pRow{display:grid;grid-template-columns:150px 92px 1fr;align-items:center;gap:12px;padding:10px 2px;border-top:1px solid var(--line-soft)}
+  .pRow:first-of-type{border-top:none}
+  .pId{display:flex;align-items:center;gap:10px}
+  .pName{font-weight:700;font-size:13.5px}
+  .pRight{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pWhen{width:100%;font-size:11px;color:var(--faint)}
+  .pNote{font-size:12px;color:var(--muted)}
+
+  /* Lieux (étape 3) */
+  .vRow{display:grid;grid-template-columns:14px 1fr auto;gap:12px;align-items:center;padding:12px 2px;border-top:1px solid var(--line-soft)}
+  .vRow:first-of-type{border-top:none}
+  .vRow.ko{opacity:.6}
+  .dot{width:10px;height:10px;border-radius:50%;justify-self:center}
+  .dok{background:var(--success)} .dwait{background:var(--gold)} .dko{background:var(--plum)}
+  .vName{font-weight:700;font-size:13.5px}
+  .vMeta{font-size:12px;color:var(--muted);margin-top:2px}
+  .vBadge{text-align:right;font-size:12px}
+  .vBadge .st{font-weight:700;display:block}
+  .vBadge .st.ok{color:var(--success-700)} .vBadge .st.wait{color:var(--gold-700)} .vBadge .st.ko{color:var(--plum)}
+  .vBadge .pr{color:var(--muted);margin-top:2px;display:block}
+  .vMini{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .mrow{display:flex;align-items:center;gap:10px;font-size:13px}
+  .mrow .vName{font-weight:600}
+  .mrow .st{margin-left:auto;font-size:12px;font-weight:700}
+  .mrow .st.ok{color:var(--success-700)} .mrow .st.wait{color:var(--gold-700)} .mrow .st.ko{color:var(--plum)}
+
+  /* Options squelettes (étape 4) */
+  .optGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+  .opt{border:1.5px dashed var(--line);border-radius:14px;padding:14px}
+  .optT{font-weight:700;color:var(--faint);font-size:13px}
+  .skl{height:10px;border-radius:var(--pill);background:var(--line-soft);margin-top:10px}
+  .skl.w60{width:60%} .skl.w80{width:80%} .skl.w40{width:40%}
+
+  /* Conversation */
+  .msgs{display:flex;flex-direction:column;gap:14px}
+  .msg{display:flex;gap:10px}
+  .mWrap{max-width:78%}
+  .mMeta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .mMeta b{color:var(--ink);font-size:12.5px}
+  .tag{font-size:10.5px;font-weight:700;color:var(--sage-700);background:var(--sage-tint);padding:2px 8px;border-radius:var(--pill)}
+  .mText{background:var(--card);border:1px solid var(--line);border-radius:4px 16px 16px 16px;padding:10px 14px;font-size:13.5px}
+  .msg.gent .mText{background:var(--sage-soft);border-color:#f3c2cd}
+  .sys{text-align:center;font-size:12px;color:var(--muted)}
+  .sys span{background:var(--line-soft);border-radius:var(--pill);padding:4px 12px;display:inline-flex}
+  .empty{border:1.5px dashed var(--line);border-radius:14px;padding:26px;text-align:center;color:var(--faint);font-size:13px}
+
+  .footNote{text-align:center;font-size:11.5px;color:var(--faint);padding-top:4px}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ===== En-tête : mission + participants + progression ===== -->
+  <header class="head">
+    <div class="gIcon">🧭</div>
+    <div class="hMeta">
+      <h1>Team building d'octobre</h1>
+      <div class="hSub"><b>Gustave</b> · gent collaboratif orchestrateur — mission lancée par Sophie le 31 août 2026</div>
+    </div>
+    <div class="hChips">
+      <span class="hChip">👥 8 participants</span>
+      <span class="hChip">💶 150 € / pers</span>
+      <span class="hChip">📍 &lt; 1 h de Paris</span>
+      <span class="hChip">📅 octobre 2026</span>
+    </div>
+    <div class="hRight">
+      <div class="avatars" id="avatars"></div>
+      <div class="prog">
+        <div class="progMeta"><span>Mission · étape 2/5</span><b>5/8 réponses</b></div>
+        <div class="segs"><i class="d1"></i><i class="d2"></i><i class="d3"></i><i></i><i></i></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <!-- ===== Colonne gauche : le fil d'orchestre ===== -->
+    <aside class="rail">
+      <div>
+        <div class="railTitle">Le fil de la mission</div>
+        <div class="steps" id="steps">
+          <button class="step" data-i="0">
+            <span class="node done">✓</span>
+            <span class="sTxt"><span class="st">Cadrage</span><span class="ss ok">Terminée · 31 août</span></span>
+          </button>
+          <button class="step active" data-i="1">
+            <span class="node cur">2</span>
+            <span class="sTxt"><span class="st">Collecte</span><span class="ss cur">En cours · 5/8 réponses</span></span>
+          </button>
+          <button class="step" data-i="2">
+            <span class="node gold">3</span>
+            <span class="sTxt"><span class="st">Vérification web</span><span class="ss gold">En cours · 3 lieux</span></span>
+          </button>
+          <button class="step" data-i="3">
+            <span class="node lock"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+            <span class="sTxt"><span class="st">Propositions &amp; vote</span><span class="ss lock">Verrouillée</span></span>
+          </button>
+          <button class="step" data-i="4">
+            <span class="node lock"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+            <span class="sTxt"><span class="st">Confirmation</span><span class="ss lock">Verrouillée</span></span>
+          </button>
+        </div>
+      </div>
+      <div class="how">
+        <div class="howT">🧭 Comment Gustave orchestre</div>
+        <p>Un salon pour tout le groupe, un privé pour chacun. Gustave avance étape par étape, relance en 1:1 sans afficher personne, et déverrouille la suite quand la précédente est bouclée.</p>
+      </div>
+    </aside>
+
+    <!-- ===== Centre : détail de l'étape sélectionnée ===== -->
+    <main class="main">
+      <div class="wrap" id="detail"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+/* ---------- Données réalistes ---------- */
+const AV = {
+  blue:["#dbe7fb","#3a5fa3"], sage:["#ffdee2","#c73758"], gold:["#fde4bb","#8a5f0b"],
+  green:["#d4f1d4","#2f7a37"], plum:["#ffdbda","#b03040"]
+};
+
+const PARTICIPANTS = [
+  {name:"Camille", c:"blue",  state:"ok",      when:"mar. 1 sept., 09 h 41", dates:["10–11 oct.","17–18 oct."], prefs:["Escape game","Karaoké"]},
+  {name:"Hugo",    c:"sage",  state:"ok",      when:"mar. 1 sept., 10 h 15", dates:["10–11 oct.","24–25 oct."], prefs:["Accrobranche"]},
+  {name:"Léa",     c:"gold",  state:"ok",      when:"mar. 1 sept., 12 h 02", dates:["17–18 oct.","24–25 oct.","31 oct."], prefs:["Dégustation","Atelier cuisine"]},
+  {name:"Nathan",  c:"green", state:"ok",      when:"mer. 2 sept., 08 h 54", dates:["10–11 oct.","17–18 oct."], prefs:["Accrobranche","Canoë"]},
+  {name:"Chloé",   c:"plum",  state:"ok",      when:"mer. 2 sept., 11 h 37", dates:["3–4 oct.","10–11 oct."], prefs:["Escape game","Pétanque"]},
+  {name:"Antoine", c:"blue",  state:"relance", note:"Relancé hier à 18 h 04 — message vu, pas encore de réponse."},
+  {name:"Emma",    c:"gold",  state:"wait",    note:"Invitation envoyée mardi à 9 h 12 — pas encore répondu."},
+  {name:"Louis",   c:"sage",  state:"wait",    note:"A rejoint le salon hier — première question envoyée ce matin."}
+];
+
+const STATE = {
+  ok:{label:"Répondu", cls:"pOk"}, relance:{label:"Relancé", cls:"pGold"}, wait:{label:"En attente", cls:"pLock"}
+};
+
+const VENUES = [
+  {name:"AccroCamp — forêt de Chantilly", meta:"25 min de Paris-Nord · accrobranche + pétanque géante", price:"46 € / pers", st:"ok",   stLabel:"Dispo confirmée", note:"Libre les 10–11 et 17–18 oct."},
+  {name:"Base de loisirs de Cergy-Pontoise", meta:"45 min · RER A · canoë, escalade, pique-nique", price:"tarif groupe demandé", st:"wait", stLabel:"Réponse sous 48 h", note:"Mail envoyé mer. 2 sept., 10 h 12"},
+  {name:"Manoir de Provins", meta:"1 h 20 de Paris · escape game médiéval", price:"—", st:"ko", stLabel:"Écarté", note:"Au-delà d'1 h de trajet"}
+];
+
+/* ---------- Conversations contextuelles par étape ---------- */
+const CONV = {
+  1: [
+    {k:"g", t:"lun. 31 août, 09 h 30", x:"Bienvenue à tous 👋 Sophie m'a chargé d'organiser votre prochain team building. Je propose ce cadre : <b>150 € max par personne</b>, <b>à moins d'1 h de Paris</b>, <b>en octobre</b>. Un souci avec ces règles ?"},
+    {k:"p", who:"Léa", t:"09 h 52", x:"Parfait pour moi 👌"},
+    {k:"p", who:"Camille", t:"10 h 03", x:"Go ! Octobre c'est idéal 🍂"},
+    {k:"sys", x:"✓ Le cadre a été validé par le groupe"},
+    {k:"g", t:"11 h 15", x:"Cadre verrouillé ✅ Je lance la collecte des disponibilités dans la foulée."}
+  ],
+  2: [
+    {k:"g", t:"lun. 31 août, 18 h 02", x:"Place à la <b>collecte</b> : j'ai besoin de vos <b>week-ends de dispo en octobre</b> et de vos <b>envies d'activité</b>. Répondez-moi ici ou en privé, comme vous préférez 🙌"},
+    {k:"p", who:"Camille", t:"mar. 1 sept., 09 h 41", x:"Répondu en privé ! J'ai coché 2 week-ends 😊"},
+    {k:"p", who:"Hugo", t:"mar. 1 sept., 10 h 15", x:"Team accrobranche 🌳, on est d'accord non ?"},
+    {k:"g", t:"mar. 1 sept., 18 h 04", x:"Déjà 3 réponses, merci 👏 Je relance Antoine en privé. Dès que j'ai les 8, je lance la vérification des lieux 🔎"},
+    {k:"sys", x:"✓ Nathan a répondu en privé"},
+    {k:"p", who:"Nathan", t:"mer. 2 sept., 11 h 20", x:"Si ça peut se faire le 10–11, ça m'arrange 🙏"},
+    {k:"sys", x:"✓ Chloé a répondu en privé — 5 réponses sur 8"}
+  ],
+  3: [
+    {k:"g", t:"mer. 2 sept., 10 h 12", x:"Pendant que j'attends les dernières réponses, je vérifie déjà <b>3 lieux</b> : trajet depuis Paris, dispo aux dates favorites, tarif groupe. Je vous tiens au courant 🔎"},
+    {k:"sys", x:"✓ AccroCamp Chantilly a confirmé ses disponibilités"},
+    {k:"p", who:"Hugo", t:"mer. 2 sept., 14 h 05", x:"Chantilly à 25 min, ça vend du rêve 🌳"}
+  ],
+  4: [], 5: []
+};
+
+/* ---------- Helpers de rendu ---------- */
+function av(p, size = 30, cls = ""){
+  const c = AV[p.c];
+  return `<span class="av ${cls}" title="${p.name}" style="width:${size}px;height:${size}px;background:${c[0]};color:${c[1]};font-size:${Math.round(size*0.42)}px">${p.name[0]}</span>`;
+}
+
+const pill = (cls, txt) => `<span class="pill ${cls}">${txt}</span>`;
+
+const stepHead = (n, title, pillHtml, extra = "") => `
+  <div class="stepHead">
+    <div class="eyebrow">Étape ${n} sur 5</div>
+    <div class="stepTitleRow"><h2>${title}</h2>${pillHtml}</div>
+    ${extra}
+  </div>`;
+
+const gentCard = txt => `
+  <div class="gentCard">
+    <div class="gAv">🧭</div>
+    <div><div class="gLab">Ce que fait Gustave à cette étape</div><p>${txt}</p></div>
+  </div>`;
+
+function msgsHtml(list, stepN){
+  if(!list.length) return `<div class="empty">Pas encore d'échanges — le salon s'animera quand l'étape démarrera.</div>`;
+  return list.map(m => {
+    if(m.k === "g") return `
+      <div class="msg gent">
+        <span class="gAv" style="width:30px;height:30px;font-size:16px;border-radius:50%">🧭</span>
+        <div class="mWrap">
+          <div class="mMeta"><b>Gustave</b><span class="tag">gent · étape ${stepN}</span><time>${m.t}</time></div>
+          <div class="mText">${m.x}</div>
+        </div>
+      </div>`;
+    if(m.k === "p"){
+      const p = PARTICIPANTS.find(q => q.name === m.who);
+      return `
+      <div class="msg">
+        ${av(p)}
+        <div class="mWrap">
+          <div class="mMeta"><b>${p.name}</b><time>${m.t}</time></div>
+          <div class="mText">${m.x}</div>
+        </div>
+      </div>`;
+    }
+    return `<div class="sys"><span>${m.x}</span></div>`;
+  }).join("");
+}
+
+const convSection = stepN => `
+  <section class="card">
+    <div class="cardHead">💬 Le salon <span class="hSub2">— échanges rattachés à l'étape ${stepN}</span></div>
+    <div class="msgs">${msgsHtml(CONV[stepN], stepN)}</div>
+  </section>`;
+
+/* ---------- Sections spécifiques ---------- */
+function participantsCard(){
+  const rows = PARTICIPANTS.map(p => {
+    const st = STATE[p.state];
+    let right;
+    if(p.state === "ok"){
+      right = `<div class="pRight">
+          ${p.dates.map(d => `<span class="chip cDate">${d}</span>`).join("")}
+          ${p.prefs.map(x => `<span class="chip cPref">${x}</span>`).join("")}
+          <span class="pWhen">répondu ${p.when}</span>
+        </div>`;
+    } else {
+      right = `<div class="pRight"><span class="pNote">${p.note}</span></div>`;
+    }
+    return `<div class="pRow">
+        <div class="pId">${av(p)}<span class="pName">${p.name}</span></div>
+        ${pill(st.cls, st.label)}
+        ${right}
+      </div>`;
+  }).join("");
+  return `<section class="card">
+    <div class="cardHead">Participants <span class="hSub2">— 5 réponses sur 8 · les réponses arrivent en privé et se rassemblent ici</span></div>
+    ${rows}
+  </section>`;
+}
+
+const preview3Card = `
+  <section class="card dashed">
+    <div class="cardHead">🔎 L'étape 3 se prépare en parallèle</div>
+    <p class="muted14">3 lieux en cours de vérification — priorité aux week-ends des <b>10–11 oct.</b> (4/5) et <b>17–18 oct.</b> (3/5), les plus cochés.</p>
+    <div class="vMini">
+      ${VENUES.map(v => `<div class="mrow"><span class="dot d${v.st}"></span><span class="vName">${v.name}</span><span class="st ${v.st}">${v.stLabel}</span></div>`).join("")}
+    </div>
+  </section>`;
+
+function venuesCard(){
+  return `<section class="card">
+    <div class="cardHead">Lieux passés au crible <span class="hSub2">— vérifiés sur le web aujourd'hui</span></div>
+    ${VENUES.map(v => `
+      <div class="vRow ${v.st === "ko" ? "ko" : ""}">
+        <span class="dot d${v.st}"></span>
+        <div>
+          <div class="vName">${v.name}</div>
+          <div class="vMeta">${v.meta} · ${v.note}</div>
+        </div>
+        <div class="vBadge"><span class="st ${v.st}">${v.stLabel}</span><span class="pr">${v.price}</span></div>
+      </div>`).join("")}
+  </section>`;
+}
+
+const skeletonOptions = `
+  <div class="optGrid">
+    <div class="opt"><div class="optT">Option A — en préparation</div><div class="skl w80"></div><div class="skl w60"></div><div class="skl w40"></div></div>
+    <div class="opt"><div class="optT">Option B — en préparation</div><div class="skl w80"></div><div class="skl w60"></div><div class="skl w40"></div></div>
+  </div>`;
+
+/* ---------- Contenu de chaque étape ---------- */
+function detailHTML(i){
+  switch(i){
+    case 0:
+      return stepHead(1, "Cadrage", pill("pOk", "✓ Terminée"))
+        + gentCard("J'ai reformulé la demande de Sophie en règles claires — budget, distance, période — puis je les ai fait valider par tout le groupe avant de démarrer. Personne n'avance dans le flou.")
+        + `<section class="card">
+            <div class="cardHead">Le cadre validé par le groupe <span class="hSub2">— le 31 août 2026</span></div>
+            <div class="pRight">
+              <span class="chip cCadre">💶 Budget : 150 € max / pers</span>
+              <span class="chip cCadre">📍 À moins d'1 h de Paris</span>
+              <span class="chip cCadre">📅 Un week-end d'octobre 2026</span>
+              <span class="chip cCadre">👥 8 participants</span>
+            </div>
+          </section>`
+        + convSection(1);
+    case 1:
+      return stepHead(2, "Collecte des disponibilités &amp; préférences", pill("pCur", "En cours · 5/8 réponses"),
+          `<div class="barRow"><div class="bar"><i style="width:62%"></i></div><span>J'attends encore <b>Antoine</b>, <b>Emma</b> et <b>Louis</b></span></div>`)
+        + gentCard("Je demande à chacun ses week-ends de disponibilité et ses préférences d'activité. Je réponds aux questions ici dans le salon, et je relance en privé ceux qui n'ont pas encore répondu — sans les afficher devant tout le monde.")
+        + participantsCard()
+        + preview3Card
+        + convSection(2);
+    case 2:
+      return stepHead(3, "Vérification web", pill("pGold", "En cours · 3 lieux"),
+          `<div class="barRow"><div class="bar goldbar"><i style="width:45%"></i></div><span>1 lieu confirmé · 1 en attente · 1 écarté</span></div>`)
+        + gentCard("Je croise vos réponses avec le web : temps de trajet depuis Paris, disponibilités aux dates favorites (10–11 et 17–18 oct.) et tarifs groupe. Tout ce qui sort du cadre — budget ou plus d'1 h de trajet — est écarté sans vous spammer.")
+        + venuesCard()
+        + convSection(3);
+    case 3:
+      return stepHead(4, "Propositions &amp; vote", pill("pLock", "🔒 Verrouillée — aperçu"))
+        + gentCard("Quand la collecte et la vérification seront bouclées, je déposerai <b>2 à 3 options chiffrées</b> dans le salon — date, lieu, programme, prix par personne — et j'ouvrirai un vote. Majorité simple ; je tranche en cas d'égalité.")
+        + `<section class="card">
+            <div class="cardHead">Ce que le groupe verra <span class="hSub2">— se déverrouille après l'étape 3</span></div>
+            ${skeletonOptions}
+          </section>`
+        + convSection(4);
+    case 4:
+      return stepHead(5, "Confirmation", pill("pLock", "🔒 Verrouillée — aperçu"))
+        + gentCard("Une fois l'option choisie, je récapitule tout : <b>date, lieu, budget par personne, itinéraire depuis Paris</b>. Chacun confirme sa présence en un clic, et je transmets la liste définitive à Sophie.")
+        + `<section class="card">
+            <div class="cardHead">Le récapitulatif final <span class="hSub2">— se déverrouille après le vote</span></div>
+            <div class="opt"><div class="optT">Récapitulatif — en attente du vote</div><div class="skl w80"></div><div class="skl w60"></div><div class="skl w40"></div></div>
+          </section>`
+        + convSection(5);
+  }
+}
+
+/* ---------- En-tête : avatars ---------- */
+document.getElementById("avatars").innerHTML = PARTICIPANTS
+  .map(p => av(p, 30, p.state === "ok" ? "answered" : ""))
+  .join("");
+
+/* ---------- Stepper interactif ---------- */
+const stepBtns = [...document.querySelectorAll(".step")];
+const detail = document.getElementById("detail");
+function select(i){
+  stepBtns.forEach((b, j) => b.classList.toggle("active", j === i));
+  detail.innerHTML = detailHTML(i) + `<div class="footNote">Maquette « Le fil d'orchestre » — gent collaboratif orchestrateur · proposition 3</div>`;
+  document.querySelector(".main").scrollTop = 0;
+}
+stepBtns.forEach(b => b.addEventListener("click", () => select(+b.dataset.i)));
+select(1); // étape 2 « Collecte » affichée par défaut
+</script>
+</body>
+</html>

@@ -456,6 +456,12 @@ export interface Espace {
   fileDownloadFormEnabled?: boolean;
   /** Documents proposés au téléchargement (texte déjà extrait, servi en PDF). */
   downloadableDocuments?: DownloadableDocument[];
+  /**
+   * Type de gent « collaboratif » : le lien de partage ouvre un salon à
+   * plusieurs participants, orchestré par le gent (voir lib/collab.ts et
+   * supabase/migrations/014_collab_sessions.sql).
+   */
+  collab?: CollabConfig;
 }
 
 /**
@@ -598,4 +604,70 @@ export interface DownloadLead {
   gentId: string;
   gentName: string;
   fileName?: string;
+}
+
+/**
+ * Question de collecte posée en privé par l'orchestrateur à chaque
+ * participant (ex. « Quels samedis te conviennent ? »). Le libellé est ce
+ * que le gent reformule ; le type guide le rendu cliquable côté salon.
+ */
+export interface CollabQuestion {
+  id: string;
+  label: string;
+  /** texte libre | dates à choix multiples | choix unique parmi options. */
+  kind: "text" | "dates" | "choice";
+  /** Options proposées pour "choice" et "dates". */
+  options?: string[];
+  /** Si vrai, la synthèse attend cette réponse avant de passer à la décision. */
+  required?: boolean;
+}
+
+/**
+ * Configuration d'un gent « collaboratif » : plusieurs participants rejoignent
+ * un salon via un lien + leur prénom ; le gent orchestre la mission (collecte
+ * en privé, vérification web, propositions, vote, synthèse).
+ *
+ * Tous ces champs sont PUBLICS par nature (ils décrivent la mission aux
+ * participants) : la projection `espaceForPublicLink` les transmet tels quels.
+ */
+export interface CollabConfig {
+  enabled: boolean;
+  /** Ce que le groupe doit accomplir (ex. « Trouver la journée team building »). */
+  mission?: string;
+  /** Cadre structuré : bornes affichées en bandeau et rappelées à l'orchestrateur. */
+  cadre?: {
+    budget?: string;
+    lieu?: string;
+    periode?: string;
+    taille?: string;
+  };
+  /** Ce qui est explicitement hors de propos pour la mission. */
+  exclusions?: string;
+  /** Questions que l'orchestrateur pose en privé à chaque participant. */
+  questions?: CollabQuestion[];
+  /** Relance des participants silencieux. */
+  relances?: {
+    /** Délai avant relance, en heures (défaut 24). */
+    delaiHeures?: number;
+    /** Nombre max de relances par participant (défaut 2). */
+    max?: number;
+  };
+  propositions?: {
+    /** Votes nécessaires avant de retenir une option (défaut : majorité). */
+    quorum?: number;
+    /** Nombre d'options vérifiées proposées au vote (défaut 3). */
+    options?: number;
+    /** Vérification web des options avant publication (défaut true). */
+    webCheck?: boolean;
+  };
+  /** Qui tranche : vote du groupe, ou le créateur seul. */
+  decision?: "vote" | "createur";
+  confidentialite?: {
+    /** Synthèses partagées dans l'onglet dédié (défaut true). */
+    syntheses?: boolean;
+    /** Verbatim des réponses privées visibles du groupe (défaut false). */
+    verbatim?: boolean;
+  };
+  /** Rôle du créateur dans le salon (défaut « membre » : il participe). */
+  roleCreateur?: "membre" | "organisateur";
 }
