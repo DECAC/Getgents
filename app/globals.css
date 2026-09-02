@@ -352,3 +352,36 @@ body.col-resizing {
     display: none;
   }
 }
+
+/* ——— Plancher de 16 px sur les champs de saisie ———
+   Safari sur iOS ZOOME la page dès qu'on touche un champ dont la police fait
+   moins de 16 px. L'utilisateur tape, la mise en page saute, et il doit pincer
+   pour revenir : le défaut d'ergonomie mobile le plus courant, présent ici sur
+   tous les formulaires — inscription comprise, donc dès le premier contact.
+
+   `pointer: coarse` plutôt qu'une largeur : le zoom dépend de l'appareil, pas
+   de la taille de la fenêtre. Une fenêtre de bureau étroite garde donc sa
+   typographie, et une tablette est couverte quelle que soit son orientation.
+
+   `!important` est ici délibéré, et c'est le seul du projet. Les tailles sont
+   posées par des modules CSS dont les sélecteurs de classe l'emportent sur un
+   sélecteur d'élément ; sans lui, la règle ne s'appliquerait nulle part. La
+   contourner demanderait de retoucher chaque module — et d'y penser à chaque
+   nouveau champ. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* Le texte agrandi ne tient plus dans une hauteur calibrée pour 12 ou 13 px :
+     mesuré, il manquait un pixel et les jambages étaient coupés. Le plancher
+     de 44 px règle le rognage ET la taille de cible tactile — c'est la hauteur
+     sous laquelle un doigt rate un champ. Les cases à cocher en sont exclues :
+     leur boîte est carrée, on les traitera autrement. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select {
+    min-height: 44px;
+  }
+}
