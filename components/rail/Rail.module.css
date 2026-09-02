@@ -327,9 +327,14 @@
     transform: translateX(-100%);
     transition: transform 0.22s;
     box-shadow: 6px 0 24px rgba(21, 33, 43, 0.12);
+    /* Fermé, le tiroir sort aussi du parcours au clavier : un contenu
+       simplement déplacé hors écran reste atteignable par la touche de
+       tabulation, et l'on se retrouve à naviguer dans un menu invisible. */
+    visibility: hidden;
   }
   .rail.open {
     transform: translateX(0);
+    visibility: visible;
   }
   .railToggle {
     display: none;

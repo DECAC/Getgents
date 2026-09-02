@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { NavMobileProvider } from "@/lib/context/NavMobileContext";
 
 /**
  * Aucune page n'est pré-générée.
@@ -24,7 +25,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>
+        <NavMobileProvider>{children}</NavMobileProvider>
+      </body>
     </html>
   );
 }

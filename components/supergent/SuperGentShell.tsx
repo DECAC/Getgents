@@ -3,6 +3,7 @@
 import { EspaceProvider } from "@/lib/context/EspaceContext";
 import { Rail } from "@/components/rail/Rail";
 import { SuperGentHome } from "./SuperGentHome";
+import { BoutonNavMobile } from "@/components/shared/BoutonNavMobile";
 import styles from "./SuperGentShell.module.css";
 
 /**
@@ -18,6 +19,7 @@ function SuperGentInner() {
     <div className={styles.shell}>
       <Rail />
       <main className={styles.main} id="main-content">
+        <BoutonNavMobile flottant />
         <SuperGentHome />
       </main>
     </div>

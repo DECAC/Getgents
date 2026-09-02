@@ -6,6 +6,7 @@ import { useBuilder, type BuilderTab } from "@/lib/context/BuilderContext";
 import { listVisibleDrafts } from "@/lib/builderDraftStorage";
 import { hasCustomName, isDirtySincePublish } from "@/lib/builderSnapshot";
 import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
+import { useNavMobile } from "@/lib/context/NavMobileContext";
 import styles from "./BuilderRail.module.css";
 import { MenuCompte } from "@/components/compte/MenuCompte";
 
@@ -239,9 +240,16 @@ function RailChrome({
   onPublish?: () => void;
   publishBlocked?: string;
 }) {
+  // Le tiroir mobile : sous 860 px la colonne sort de l'écran, et c'est ce
+  // drapeau qui la ramène. Elle était simplement masquée jusqu'ici, sans
+  // remplacement — le studio n'avait donc aucune navigation sur téléphone.
+  const { ouvert } = useNavMobile();
+
   return (
     <nav
-      className={[styles.rail, railCollapsed ? styles.collapsed : ""].filter(Boolean).join(" ")}
+      className={[styles.rail, railCollapsed ? styles.collapsed : "", ouvert ? styles.open : ""]
+        .filter(Boolean)
+        .join(" ")}
       aria-label="Configuration du gent"
       id="builder-rail"
     >

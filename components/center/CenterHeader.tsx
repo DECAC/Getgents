@@ -5,6 +5,7 @@ import { useEspace } from "@/lib/context/EspaceContext";
 import { readPublishedGents } from "@/lib/publishedGents";
 import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
 import styles from "./CenterHeader.module.css";
+import { BoutonNavMobile } from "@/components/shared/BoutonNavMobile";
 
 const STATUS_CLASS: Record<string, string> = {
   live: styles.pillLive,
@@ -31,6 +32,7 @@ export function CenterHeader() {
   return (
     <header className={styles.ehead}>
       <div className={styles.eheadTop}>
+        <BoutonNavMobile />
         <div className={styles.ic}>{e.icon}</div>
         <div className={styles.meta}>
           <div className={styles.titleRow}>

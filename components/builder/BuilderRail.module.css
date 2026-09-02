@@ -311,3 +311,33 @@
   padding-top: 10px;
   margin-bottom: 10px;
 }
+
+/* ——— Tiroir sur petit écran ———
+   Le rail était simplement masqué sous 780 px, sans remplacement : le studio
+   n'avait donc aucune navigation sur téléphone. Il coulisse désormais, comme
+   côté espace et au même point de rupture.
+
+   Ces règles vivent ICI et non dans BuilderShell : `styles.open` doit exister
+   dans le module que le composant importe, sinon la classe vaut `undefined`
+   et rien ne s'applique — c'est exactement ce qui s'était passé. */
+@media (max-width: 860px) {
+  .rail {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform 0.22s;
+    box-shadow: 6px 0 24px rgba(21, 33, 43, 0.12);
+    /* Fermé, le tiroir sort aussi du parcours au clavier : un contenu déplacé
+       hors écran reste sinon atteignable par la touche de tabulation. */
+    visibility: hidden;
+  }
+
+  .rail.open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+}

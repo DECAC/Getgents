@@ -2,6 +2,7 @@
 
 import { BuilderRail } from "./BuilderRail";
 import { MesGentsTab } from "./tabs/MesGentsTab";
+import { BoutonNavMobile } from "@/components/shared/BoutonNavMobile";
 import styles from "./StudioMesGentsShell.module.css";
 
 /**
@@ -15,6 +16,7 @@ export function StudioMesGentsShell() {
     <div className={styles.shell}>
       <BuilderRail mode="list" />
       <main className={styles.main} id="builder-main">
+        <BoutonNavMobile flottant />
         <MesGentsTab />
       </main>
     </div>

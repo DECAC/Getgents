@@ -328,3 +328,27 @@ body.col-resizing {
   color: var(--muted);
   text-decoration: line-through;
 }
+
+/* Voile du tiroir de navigation sur petit écran (lib/context/NavMobileContext).
+   Global parce qu'il couvre la page entière, au-dessus de tous les shells. */
+.nav-mobile-voile {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(21, 33, 43, 0.42);
+  animation: nav-mobile-voile-apparait 0.18s ease-out;
+}
+
+@keyframes nav-mobile-voile-apparait {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (min-width: 861px) {
+  /* Au-dessus du point de rupture le rail est permanent : un voile n'aurait
+     rien à masquer, et il bloquerait la page si un état restait ouvert. */
+  .nav-mobile-voile {
+    display: none;
+  }
+}

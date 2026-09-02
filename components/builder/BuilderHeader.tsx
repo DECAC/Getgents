@@ -7,6 +7,7 @@ import { hasCustomName } from "@/lib/builderSnapshot";
 import { deleteGentEverywhere } from "@/lib/deleteGent";
 import { GENT_ICON_PALETTE } from "@/lib/gentIcons";
 import styles from "./BuilderHeader.module.css";
+import { BoutonNavMobile } from "@/components/shared/BoutonNavMobile";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Brouillon",
@@ -79,6 +80,7 @@ export function BuilderHeader() {
   return (
     <header className={styles.head}>
       <div className={styles.top}>
+        <BoutonNavMobile />
         <div className={styles.icWrap} ref={iconRef}>
           <button
             type="button"

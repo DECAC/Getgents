@@ -5,6 +5,7 @@ import { useEspace } from "@/lib/context/EspaceContext";
 import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
 import styles from "./Rail.module.css";
 import { MenuCompte } from "@/components/compte/MenuCompte";
+import { useNavMobile } from "@/lib/context/NavMobileContext";
 
 const STATUS_DOT_CLASS: Record<string, string> = {
   live: styles.dotLive,
@@ -14,6 +15,7 @@ const STATUS_DOT_CLASS: Record<string, string> = {
 
 export function Rail() {
   const { espaces, currentId, railCollapsed, toggleRail, switchEspace } = useEspace();
+  const { ouvert } = useNavMobile();
   const router = useRouter();
 
   function handleSwitch(id: string) {
@@ -23,7 +25,9 @@ export function Rail() {
 
   return (
     <nav
-      className={[styles.rail, railCollapsed ? styles.collapsed : ""].filter(Boolean).join(" ")}
+      className={[styles.rail, railCollapsed ? styles.collapsed : "", ouvert ? styles.open : ""]
+        .filter(Boolean)
+        .join(" ")}
       aria-label="Mes gents actifs"
       id="rail"
     >

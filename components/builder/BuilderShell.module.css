@@ -34,11 +34,10 @@
   }
 }
 
-@media (max-width: 780px) {
+/* Le rail devient un tiroir : voir BuilderRail.module.css, qui porte les
+   règles de coulissement. Ici, la grille passe simplement en une colonne. */
+@media (max-width: 860px) {
   .shell {
     grid-template-columns: 1fr;
-  }
-  .shell :global(#builder-rail) {
-    display: none;
   }
 }
