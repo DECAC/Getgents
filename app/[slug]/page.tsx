@@ -4,6 +4,7 @@ import { lireGentPublic, tokenConversationPublique } from "@/lib/server/publicGe
 import { slugProbleme } from "@/lib/slug";
 import { SharedGentShell } from "@/components/shared-link/SharedGentShell";
 import { GentPublicVitrine } from "@/components/public/GentPublicVitrine";
+import { headers } from "next/headers";
 
 /**
  * Page publique d'un gent : `getgents.ai/<slug>`.
@@ -83,6 +84,11 @@ export default async function GentPublicPage({ params }: Props) {
     <>
       <script
         type="application/ld+json"
+        // Sans nonce, notre propre politique bloquerait ce bloc : les
+        // navigateurs appliquent `script-src` à toute balise <script>, même
+        // celles qui ne contiennent pas de code exécutable. Le gent
+        // disparaîtrait alors des résultats enrichis de Google.
+        nonce={headers().get("x-nonce") ?? undefined}
         // Contenu construit par nous à partir de champs déjà projetés par la
         // liste blanche publique : aucune donnée du créateur n'y transite.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(donneesStructurees) }}
