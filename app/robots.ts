@@ -19,7 +19,17 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/builder/", "/espace/", "/compte", "/accueil", "/l/", "/auth/", "/prototype/"],
+        disallow: [
+          "/api/",
+          "/builder/",
+          "/espace/",
+          "/compte",
+          "/accueil",
+          "/myspace",
+          "/l/",
+          "/auth/",
+          "/prototype/",
+        ],
       },
     ],
     sitemap: `${baseUrl()}/sitemap.xml`,

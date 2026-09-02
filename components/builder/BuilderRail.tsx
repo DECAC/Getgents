@@ -135,7 +135,10 @@ function BuilderRailList() {
       return;
     }
     if (tab === "accueil") {
-      router.push("/builder");
+      // L'accueil du studio est devenu l'accueil de Getgents : même écran,
+      // nouvelle adresse. Renvoyer ici vers /builder ferait atterrir sur la
+      // liste « Mes gents », que l'entrée juste en dessous atteint déjà.
+      router.push("/accueil");
       return;
     }
     const id = firstDraftId();

@@ -1,11 +1,16 @@
-import { StudioHome } from "@/components/builder/StudioHome";
+import { redirect } from "next/navigation";
 
 /**
- * Accueil du Gent' studio : une page nue avec un champ unique où le créateur
- * décrit le rôle de son gent (voir StudioHome). Cette route ne redirige plus
- * vers le dernier gent ouvert — ouvrir le studio ne doit pas revenir à éditer
- * un gent qu'on n'a pas choisi.
+ * Racine du Gent' studio.
+ *
+ * Elle portait l'« accueil du studio », parti à `/accueil` sous le nom
+ * Getgents. Le studio commence donc par la question qu'il pose réellement :
+ * sur quel gent travaille-t-on ? D'où le renvoi vers la liste.
+ *
+ * Une redirection plutôt qu'une copie de la liste : deux adresses servant le
+ * même écran se disputent l'indexation et brouillent la navigation — on ne
+ * saurait plus dire où l'on est.
  */
 export default function BuilderPage() {
-  return <StudioHome />;
+  redirect("/builder/mesgents");
 }

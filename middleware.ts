@@ -34,7 +34,13 @@ import { politiqueCsp, nouveauNonce } from "@/lib/csp";
  * chaque visiteur d'un gent public vers l'écran de connexion — et le moteur
  * de recherche avec lui.
  */
-const CHEMINS_PRIVES = [/^\/builder(\/|$)/, /^\/espace(\/|$)/, /^\/accueil$/, /^\/compte(\/|$)/];
+const CHEMINS_PRIVES = [
+  /^\/builder(\/|$)/,
+  /^\/espace(\/|$)/,
+  /^\/accueil$/,
+  /^\/myspace$/,
+  /^\/compte(\/|$)/,
+];
 
 function estPrive(pathname: string): boolean {
   return CHEMINS_PRIVES.some((re) => re.test(pathname));

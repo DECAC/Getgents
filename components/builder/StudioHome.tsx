@@ -78,7 +78,7 @@ export function StudioHome() {
   return (
     <div className={styles.page}>
       <header className={styles.topBar}>
-        <ProductBrandMenu surface="studio" />
+        <ProductBrandMenu surface="accueil" />
         {recent.length > 0 && (
           <a href="/builder/mesgents" className={styles.topLink}>
             Mes gents

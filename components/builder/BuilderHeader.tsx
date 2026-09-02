@@ -69,7 +69,9 @@ export function BuilderHeader() {
       setDeleting(false);
       return;
     }
-    router.push("/builder");
+    // Retour à la liste, pas à la racine du studio : celle-ci n'est plus qu'une
+    // redirection vers ici, et le gent qu'on vient de supprimer n'existe plus.
+    router.push("/builder/mesgents");
   }
 
   const nameOk = hasCustomName(currentDraft);

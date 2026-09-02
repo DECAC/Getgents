@@ -1,14 +1,14 @@
-import { ESPACES } from "@/lib/mock-data/espaces";
-import { SuperGentShell } from "@/components/supergent/SuperGentShell";
+import { StudioHome } from "@/components/builder/StudioHome";
 
 /**
- * Accueil du Gent' space : le « super gent ». Point d'entrée unique où l'on
- * interroge l'ensemble de ses gents sans avoir à choisir lequel ouvrir.
+ * Accueil de Getgents : une page nue avec un champ unique où l'on décrit le
+ * rôle du gent à construire (voir StudioHome).
  *
- * `initialId` ne sert qu'à amorcer l'EspaceProvider (qui détient la liste des
- * gents) : aucun espace n'est ouvert sur cette page.
+ * Elle vivait à `/builder`, où elle était l'« accueil du studio » — une porte
+ * d'entrée cachée derrière une adresse d'outil. C'est pourtant le premier
+ * geste de la plateforme : dire ce dont on a besoin. Elle prend donc l'adresse
+ * d'accueil, et le studio garde `/builder` pour le travail sur un gent existant.
  */
 export default function AccueilPage() {
-  const first = Object.keys(ESPACES)[0] ?? "voyage";
-  return <SuperGentShell initialId={first} />;
+  return <StudioHome />;
 }
