@@ -9,9 +9,11 @@ import { Aside } from "@/components/aside/Aside";
 import { ArtefactModal } from "@/components/shared/ArtefactModal";
 import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
 import { ResvModal } from "@/components/shared/ResvModal";
+import { CollabPreviewShell } from "@/components/collab/CollabPreviewShell";
 import styles from "./EspaceShell.module.css";
 
-function ShellInner() {
+/** Espace classique (conversationnel / mini-app / visionneuse). */
+function ClassicShellInner() {
   const { railCollapsed, assistantOpen, asideCollapsed, closeModal, closeAssistant, miniAppMode, documentViewerOpen } =
     useEspace();
   // Mode mini-application : le gent s'utilise par son tableau de bord ; le
@@ -65,6 +67,17 @@ function ShellInner() {
       <ResvModal />
     </>
   );
+}
+
+function ShellInner() {
+  const { currentEspace } = useEspace();
+  // Event Manager / collaboratif : Preview doit montrer le gabarit du salon,
+  // pas l'espace conversationnel classique (sinon le créateur ne voit rien
+  // de ce que les participants verront via le lien).
+  if (currentEspace.collab?.enabled) {
+    return <CollabPreviewShell espace={currentEspace} />;
+  }
+  return <ClassicShellInner />;
 }
 
 export function EspaceShell({ initialId }: { initialId: string }) {
