@@ -3,50 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import type { CollabQuestion } from "@/lib/types";
+import {
+  EVENT_MANAGER_DEFAULT_PROMPT,
+  TEAM_BUILDING_MISSION,
+  teamBuildingCollabConfig,
+} from "@/lib/eventManagerTemplate";
 import styles from "./PromptTab.module.css";
 import local from "./CollaboratifTab.module.css";
 
 function newQuestionId(): string {
   return `q_${Math.random().toString(36).slice(2, 10)}`;
-}
-
-const DEFAULT_PROMPT =
-  "Tu es Event Manager, l'orchestrateur d'événements d'équipe de Getgents.\n\n" +
-  "Ton : chaleureux, clair, efficace. Tu relances sans culpabiliser.\n\n" +
-  "Règles :\n" +
-  "- Tu animes le salon commun et tu interroges chacun en privé pour collecter les infos.\n" +
-  "- Tu ne révèles jamais le verbatim d'un échange privé au salon : uniquement des synthèses.\n" +
-  "- Tu proposes des options réalistes, vérifiées, dans le cadre (budget, lieu, période).\n" +
-  "- Tu tiens à jour la synthèse des décisions (date, lieu, horaires, budget).\n" +
-  "- Pour les disponibilités, accepte des dates précises OU une période en texte libre (ex. « les mardis à jeudi en octobre »).";
-
-const TEAM_BUILDING_MISSION =
-  "Organiser le team building d'équipe : trouver 3 options réalistes (lieu, activité, budget), " +
-  "collecter les disponibilités et préférences de chacun, faire voter le groupe.";
-
-function teamBuildingQuestions(): CollabQuestion[] {
-  return [
-    {
-      id: newQuestionId(),
-      label: "Quelles sont tes disponibilités ?",
-      kind: "dates",
-      options: ["sam. 3 oct", "sam. 10 oct", "sam. 17 oct", "sam. 24 oct"],
-      required: true,
-    },
-    {
-      id: newQuestionId(),
-      label: "Préférence d'activité ?",
-      kind: "choice",
-      options: ["Plein air", "Culturel", "Sportif", "Atelier créatif"],
-      required: true,
-    },
-    {
-      id: newQuestionId(),
-      label: "Régime alimentaire ou contrainte à prévoir ?",
-      kind: "text",
-      required: false,
-    },
-  ];
 }
 
 /**
@@ -77,8 +43,8 @@ export function CollaboratifTab() {
     setOptionsCountDraft(String(currentDraft.collab?.propositions?.options ?? 3));
   }, [currentDraft.id, currentDraft.collab?.propositions?.options]);
 
-  // Clic menu « Event Manager » = type actif + gabarit team building si besoin.
-  // Si une config collab existe déjà (même désactivée), on ne l'écrase jamais.
+  // Secours : si le brouillon n'a encore aucune config collab (ex. Accueil),
+  // on pose le gabarit. Le menu Créer le pose déjà à l'allocation.
   useEffect(() => {
     if (seededForDraftRef.current === currentDraft.id) return;
     seededForDraftRef.current = currentDraft.id;
@@ -87,32 +53,15 @@ export function CollaboratifTab() {
       return;
     }
 
-    setPromptValue(DEFAULT_PROMPT);
-    lastPushedRef.current = DEFAULT_PROMPT;
-    updateSystemPrompt(DEFAULT_PROMPT);
+    const seeded = teamBuildingCollabConfig();
+    setPromptValue(EVENT_MANAGER_DEFAULT_PROMPT);
+    lastPushedRef.current = EVENT_MANAGER_DEFAULT_PROMPT;
+    updateSystemPrompt(EVENT_MANAGER_DEFAULT_PROMPT);
     updateName("Event Manager");
     updateIcon("🧭");
     if (!currentDraft.webSearch) toggleWebSearch();
-
-    updateCollab({
-      enabled: true,
-      template: "team-building",
-      mission: TEAM_BUILDING_MISSION,
-      cadre: {
-        budget: "150 € / pers",
-        lieu: "< 1 h de Paris",
-        periode: "octobre 2026",
-        taille: "8 participants",
-      },
-      exclusions: "Pas d'activités aquatiques, rien hors Île-de-France, pas d'alcool obligatoire.",
-      propositions: { options: 3, webCheck: true },
-      decision: "vote",
-      confidentialite: { syntheses: true, verbatim: false },
-      roleCreateur: "membre",
-      relances: { delaiHeures: 24, max: 2 },
-      questions: teamBuildingQuestions(),
-    });
-    setOptionsCountDraft("3");
+    updateCollab(seeded);
+    setOptionsCountDraft(String(seeded.propositions?.options ?? 3));
     // Intentionnel : une seule fois par brouillon à l'ouverture de l'onglet.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDraft.id]);
@@ -224,7 +173,7 @@ export function CollaboratifTab() {
           className={styles.promptArea}
           value={promptValue}
           onChange={(e) => handlePromptChange(e.target.value)}
-          placeholder={DEFAULT_PROMPT}
+          placeholder={EVENT_MANAGER_DEFAULT_PROMPT}
           aria-label="Prompt système Event Manager"
         />
         <div className={styles.footRow}>

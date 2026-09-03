@@ -70,7 +70,27 @@ function ClassicShellInner() {
 }
 
 function ShellInner() {
-  const { currentEspace } = useEspace();
+  const { currentEspace, storageReady } = useEspace();
+
+  // Attendre l'hydratation (localStorage / serveur) : sinon on affiche un
+  // instant le shell classique sur le FALLBACK, et Preview Event Manager
+  // paraît « cassé » (chat vide au lieu du gabarit salon).
+  if (!storageReady || !currentEspace) {
+    return (
+      <div
+        style={{
+          minHeight: "100dvh",
+          display: "grid",
+          placeItems: "center",
+          color: "var(--muted, #667)",
+          fontSize: 14,
+        }}
+      >
+        Ouverture de l&apos;aperçu…
+      </div>
+    );
+  }
+
   // Event Manager / collaboratif : Preview doit montrer le gabarit du salon,
   // pas l'espace conversationnel classique (sinon le créateur ne voit rien
   // de ce que les participants verront via le lien).

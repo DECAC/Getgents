@@ -4,6 +4,7 @@ import { GENT_DRAFTS } from "@/lib/mock-data/builder";
 import { apiFetchInit, signalerSessionExpiree } from "@/lib/apiFetch";
 import { cacheKey } from "@/lib/session/currentUser";
 import { suggestGentIcon } from "@/lib/gentIcons";
+import { applyEventManagerTemplate } from "@/lib/eventManagerTemplate";
 
 // Base de la clé : la clé RÉELLE porte l'identifiant du compte (voir
 // lib/storageScope.ts). Un brouillon contient le prompt système en cours
@@ -217,6 +218,21 @@ export function allocateNewDraft(): string {
   writeStoredDrafts(stored);
   // Persistance immédiate : un gent tout juste créé ne doit pas dépendre d'une
   // édition ultérieure pour exister côté serveur.
+  pushRemoteDraft(id, draft);
+  return id;
+}
+
+/**
+ * Crée un brouillon déjà configuré en Event Manager (gabarit team building).
+ * Le collab est posé ICI pour que Preview / Diffusion voient le salon dès
+ * l'ouverture, sans attendre le montage de l'onglet Collaboratif.
+ */
+export function allocateEventManagerDraft(): string {
+  const id = createDraftId();
+  const stored = readStoredDrafts();
+  const draft = applyEventManagerTemplate(freshDraftFromTemplate(id));
+  stored[id] = draft;
+  writeStoredDrafts(stored);
   pushRemoteDraft(id, draft);
   return id;
 }

@@ -50,7 +50,12 @@ export function BuilderHeader() {
   // la version précédente et les nouveautés seraient intestables.
   function handlePreview() {
     syncWorkingVersion();
-    window.open(`/espace/${currentDraft.id}`, "_blank", "noopener,noreferrer");
+    // Laisser un tick au localStorage / draftsRef pour que l'onglet Preview
+    // lise bien la version qu'on vient d'écrire (surtout juste après le
+    // gabarit Event Manager).
+    window.setTimeout(() => {
+      window.open(`/espace/${currentDraft.id}`, "_blank", "noopener,noreferrer");
+    }, 0);
   }
 
   async function handleDelete() {

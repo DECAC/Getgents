@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBuilder, type BuilderTab } from "@/lib/context/BuilderContext";
-import { allocateNewDraft, listVisibleDrafts } from "@/lib/builderDraftStorage";
+import { allocateNewDraft, allocateEventManagerDraft, listVisibleDrafts } from "@/lib/builderDraftStorage";
 import { hasCustomName, isDirtySincePublish } from "@/lib/builderSnapshot";
 import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
 import { useNavMobile } from "@/lib/context/NavMobileContext";
@@ -161,9 +161,10 @@ function BuilderRailList() {
       return;
     }
     // Menu « Créer » : toujours un gent neuf + atterrissage sur le bon onglet
-    // (?tab=… lu par BuilderShell).
+    // (?tab=… lu par BuilderShell). Event Manager est pré-rempli dès la création
+    // pour que Preview montre le salon immédiatement.
     if (CREATE_TABS.includes(tab)) {
-      const id = allocateNewDraft();
+      const id = tab === "collaboratif" ? allocateEventManagerDraft() : allocateNewDraft();
       router.push(`/builder/${id}?tab=${tab}`);
       return;
     }
@@ -197,11 +198,10 @@ function BuilderRailGent() {
       return;
     }
     // Les entrées sous « Créer » ouvrent un NOUVEAU brouillon et atterrissent
-    // sur l'onglet choisi via ?tab=… (lu par BuilderShell). On n'utilise pas
-    // createDraft() ici : il forçait l'onglet « accueil » et marquait déjà
-    // l'id courant, ce qui empêchait l'URL d'appliquer le bon onglet.
+    // sur l'onglet choisi via ?tab=… (lu par BuilderShell). Event Manager est
+    // pré-rempli dès la création pour que Preview montre le salon tout de suite.
     if (CREATE_TABS.includes(tab)) {
-      const id = allocateNewDraft();
+      const id = tab === "collaboratif" ? allocateEventManagerDraft() : allocateNewDraft();
       router.push(`/builder/${id}?tab=${tab}`);
       return;
     }
