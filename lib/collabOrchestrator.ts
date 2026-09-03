@@ -291,7 +291,9 @@ function parseAsk(raw: unknown): CollabAsk | null {
   const options = Array.isArray(o.options)
     ? o.options.map((x) => asText(x, 80)).filter((x): x is string => x !== null).slice(0, 4)
     : [];
-  if (!options.length) return null;
+  // On conserve la question même si le modèle ne fournit pas d'options :
+  // le serveur peut ensuite enrichir (ex. questions "dates") à partir
+  // de la configuration du cadre.
   return { q, options, ...(o.multi === true ? { multi: true } : {}) };
 }
 

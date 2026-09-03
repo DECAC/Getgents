@@ -7,6 +7,8 @@ import {
   COLLAB_ROOM_CHANNEL,
   gentChannel,
   peerChannel,
+  isPeerChannel,
+  peerMembers,
   type CollabMessage,
   type CollabParticipant,
   type CollabProposalPayload,
@@ -28,7 +30,10 @@ import styles from "./CollabShell.module.css";
  * la route d'état a déjà décidé de lui servir.
  */
 
-const POLL_MS = 4000;
+// Réactivité : quand l'autre participant parle, l'affichage ne peut se
+// mettre à jour qu'au prochain polling `/state`. On réduit donc légèrement
+// l'intervalle pour limiter la sensation de "latence".
+const POLL_MS = 2500;
 
 function storageKey(token: string): string {
   return `getgents:collab:${token}`;
@@ -188,11 +193,17 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
   /** True pendant l'attente du tick LLM (envoi salon/privé ou vote). */
   const [awaitingOrch, setAwaitingOrch] = useState(false);
   const [shareLabel, setShareLabel] = useState("Copier le lien d'invitation");
+  const openPeersRef = useRef<string[]>(openPeers);
+  const autoSwitchedPeerRef = useRef<Set<string>>(new Set());
   // Sélections en cours pour les questions à choix multiples (par id de message).
   const [askSel, setAskSel] = useState<Record<number, string[]>>({});
   const feedRef = useRef<HTMLDivElement>(null);
   const lastSeenPerTab = useRef<Record<string, number>>({});
   const lastMessageId = useRef<number>(0);
+
+  useEffect(() => {
+    openPeersRef.current = openPeers;
+  }, [openPeers]);
 
   const gentName = espace.gent || espace.name;
   const mission = collab?.mission?.trim() || espace.name;
@@ -304,6 +315,37 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
     const seen = lastSeenPerTab.current[channel] ?? 0;
     return state.messages.some((m) => m.channel === channel && m.id > seen && m.author !== me.id);
   }
+
+  // Auto-affiche l'onglet 1:1 entre participants quand un premier message arrive,
+  // pour éviter la sensation de latence (openPeers était initialement alimenté
+  // uniquement par un clic utilisateur).
+  useEffect(() => {
+    if (!me || !state) return;
+    const peerOthers = new Set<string>();
+    for (const m of state.messages ?? []) {
+      if (!isPeerChannel(m.channel)) continue;
+      const members = peerMembers(m.channel);
+      if (!members) continue;
+      const other = members[0] === me.id ? members[1] : members[1] === me.id ? members[0] : null;
+      if (other) peerOthers.add(other);
+    }
+    const missing = Array.from(peerOthers).filter((id) => !openPeersRef.current.includes(id));
+    if (!missing.length) return;
+    setOpenPeers((prev) => {
+      const next = new Set(prev);
+      for (const id of missing) next.add(id);
+      return Array.from(next);
+    });
+
+    // Si on est sur le salon, on ouvre le 1:1 dès le premier message.
+    if (tab === "salon") {
+      const first = missing[0];
+      if (!autoSwitchedPeerRef.current.has(first)) {
+        autoSwitchedPeerRef.current.add(first);
+        setTab(`peer:${first}`);
+      }
+    }
+  }, [state, me, tab]);
 
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault();

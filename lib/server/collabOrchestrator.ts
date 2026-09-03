@@ -21,6 +21,7 @@ import {
   parseOrchestratorActions,
   type OrchestratorAction,
 } from "@/lib/collabOrchestrator";
+import type { CollabQuestion } from "@/lib/types";
 import {
   COLLAB_GENT_AUTHOR,
   COLLAB_ROOM_CHANNEL,
@@ -157,6 +158,8 @@ export async function tickCollabOrchestrator(token: string): Promise<CollabOrche
       gentName,
       collection: session.collection,
       actions,
+      existingMessages: tousLesMessages,
+      collabQuestions: collab.questions ?? [],
     });
     return { ok: true };
   } catch (e) {
@@ -180,6 +183,10 @@ async function applyActions(input: {
   gentName: string;
   collection: Record<string, Record<string, unknown>>;
   actions: OrchestratorAction[];
+  /** Messages récents déjà en base : sert à dédupliquer les "welcome" doublons. */
+  existingMessages: Awaited<ReturnType<typeof listRecentCollabMessages>>;
+  /** Pour enrichir des questions sans options (ex. kind "dates"). */
+  collabQuestions: CollabQuestion[];
 }): Promise<void> {
   // record et synthesis sont accumulés puis écrits UNE fois : plusieurs
   // réponses apprises au même tick ne déclenchent pas plusieurs updates.
@@ -192,6 +199,19 @@ async function applyActions(input: {
       case "nothing":
         break;
       case "room_message":
+        // Évite les messages "welcome" du gent répétés quand plusieurs
+        // participants rejoignent quasi-simultanément.
+        if (
+          input.existingMessages.some(
+            (m) =>
+              m.channel === COLLAB_ROOM_CHANNEL &&
+              m.author === COLLAB_GENT_AUTHOR &&
+              m.kind === "text" &&
+              m.text === action.text
+          )
+        ) {
+          break;
+        }
         await insertCollabMessage({
           sessionId: input.sessionId,
           channel: COLLAB_ROOM_CHANNEL,
@@ -202,14 +222,40 @@ async function applyActions(input: {
         });
         break;
       case "dm":
+        // Enrichit les questions pour lesquelles le modèle ne fournit
+        // pas d'options (cas typique des questions "dates").
+        const enrichedQuestions =
+          action.questions && action.questions.length
+            ? action.questions.map((ask) => {
+                if (ask.options && ask.options.length) return ask;
+                const match = input.collabQuestions.find((q) => q.label.trim() === ask.q.trim());
+                if (match && match.options?.length) {
+                  return { ...ask, options: match.options.slice(0, 4) };
+                }
+                return ask;
+              })
+            : undefined;
+
+        if (
+          input.existingMessages.some(
+            (m) =>
+              m.channel === gentChannel(action.participant) &&
+              m.author === COLLAB_GENT_AUTHOR &&
+              m.kind === (action.questions?.length ? "question" : "text") &&
+              m.text === action.text
+          )
+        ) {
+          break;
+        }
+
         await insertCollabMessage({
           sessionId: input.sessionId,
           channel: gentChannel(action.participant),
           author: COLLAB_GENT_AUTHOR,
           authorName: input.gentName,
-          kind: action.questions?.length ? "question" : "text",
+          kind: enrichedQuestions?.length ? "question" : "text",
           text: action.text,
-          payload: action.questions?.length ? { questions: action.questions } : undefined,
+          payload: enrichedQuestions?.length ? { questions: enrichedQuestions } : undefined,
         });
         break;
       case "record":
