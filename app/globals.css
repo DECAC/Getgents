@@ -49,6 +49,21 @@ textarea {
   color: #fff;
 }
 
+/* Placeholders en italique sur tout le site — ils indiquent des exemples,
+   pas des valeurs imposées. */
+::placeholder {
+  font-style: italic;
+  color: var(--faint);
+}
+::-webkit-input-placeholder {
+  font-style: italic;
+  color: var(--faint);
+}
+::-moz-placeholder {
+  font-style: italic;
+  color: var(--faint);
+}
+
 :focus-visible {
   outline: 2px solid var(--sage);
   outline-offset: 2px;

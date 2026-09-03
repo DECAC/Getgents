@@ -40,6 +40,13 @@
   box-shadow: 0 0 0 3px var(--sage-tint);
 }
 
+/* Placeholders en italique partout dans l'onglet Event Manager */
+.input::placeholder,
+.select::placeholder {
+  font-style: italic;
+  color: var(--faint);
+}
+
 .questionList {
   display: flex;
   flex-direction: column;

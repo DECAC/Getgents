@@ -34,6 +34,29 @@ export function CollaboratifTab() {
     String(collab?.propositions?.options ?? 3)
   );
 
+  // État local pour chaque champ "options" d'une question de type "choice" ou "dates" :
+  // évite le saut de curseur causé par le re-join à chaque frappe.
+  const [choiceDrafts, setChoiceDrafts] = useState<Record<string, string>>({});
+
+  function getChoiceDraft(id: string, options: string[] | undefined): string {
+    return id in choiceDrafts ? choiceDrafts[id] : (options ?? []).join(", ");
+  }
+
+  function setChoiceDraft(id: string, value: string) {
+    setChoiceDrafts((prev) => ({ ...prev, [id]: value }));
+  }
+
+  function commitChoiceDraft(id: string) {
+    const raw = choiceDrafts[id] ?? "";
+    const parsed = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    patchQuestion(id, { options: parsed });
+    // Normalise le draft après validation
+    setChoiceDrafts((prev) => ({ ...prev, [id]: parsed.join(", ") }));
+  }
+
   useEffect(() => {
     setPromptValue(currentDraft.systemPrompt);
     lastPushedRef.current = currentDraft.systemPrompt;
@@ -318,15 +341,12 @@ export function CollaboratifTab() {
                   <span className={local.fieldLabel}>Options (séparées par des virgules)</span>
                   <input
                     className={local.input}
-                    value={(q.options ?? []).join(", ")}
-                    onChange={(e) =>
-                      patchQuestion(q.id, {
-                        options: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
-                    }
+                    value={getChoiceDraft(q.id, q.options)}
+                    onChange={(e) => setChoiceDraft(q.id, e.target.value)}
+                    onBlur={() => commitChoiceDraft(q.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); commitChoiceDraft(q.id); }
+                    }}
                     placeholder="Plein air, Culturel, Sportif"
                   />
                 </label>
@@ -339,15 +359,12 @@ export function CollaboratifTab() {
                     </span>
                     <input
                       className={local.input}
-                      value={(q.options ?? []).join(", ")}
-                      onChange={(e) =>
-                        patchQuestion(q.id, {
-                          options: e.target.value
-                            .split(",")
-                            .map((s) => s.trim())
-                            .filter(Boolean),
-                        })
-                      }
+                      value={getChoiceDraft(q.id, q.options)}
+                      onChange={(e) => setChoiceDraft(q.id, e.target.value)}
+                      onBlur={() => commitChoiceDraft(q.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); commitChoiceDraft(q.id); }
+                      }}
                       placeholder="sam. 3 oct, sam. 10 oct, sam. 17 oct"
                     />
                   </label>
