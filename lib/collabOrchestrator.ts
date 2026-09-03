@@ -108,20 +108,22 @@ export function buildOrchestratorSystemPrompt(input: OrchestratorPromptInput): s
   const questions = collab.questions ?? [];
   if (questions.length) {
     blocks.push(
-      "QUESTIONS DE COLLECTE — à poser EN PRIVÉ à chaque participant, une ou deux à la fois, en reformulant avec ton style :\n" +
+      "QUESTIONS DE COLLECTE — à poser EN PRIVÉ à chaque participant, une ou deux à la fois :\n" +
         questions
           .map((q) => {
             const kindNote =
               q.kind === "dates"
                 ? q.options?.length
-                  ? ` (suggestions de dates : ${q.options.join(" / ")} — accepte aussi une période en texte libre, ex. « les mardis à jeudi en octobre »)`
-                  : " (dates ou période en texte libre, ex. « les mardis à jeudi en octobre »)"
+                  ? ` (suggestions : ${q.options.join(" / ")} — laisse aussi un choix "Autre (préciser)" en dernier)`
+                  : " (dates ou période en texte libre)"
                 : q.options?.length
-                  ? ` (options : ${q.options.join(" / ")})`
+                  ? ` (propose ces options : ${q.options.join(" / ")} — ajoute TOUJOURS "Autre (préciser)" comme dernier choix)`
                   : "";
             return `- [${q.id}] (${q.kind}) ${q.label}${kindNote}${q.required ? " — OBLIGATOIRE" : ""}`;
           })
-          .join("\n")
+          .join("\n") +
+        "\n\nRÈGLE ABSOLUE sur les questions : pour chaque question, fournis TOUJOURS un champ `questions` avec des `options` cliquables (2 à 4 choix max + « Autre (préciser) » en dernier). " +
+        "Ne pose JAMAIS une question sans options cliquables."
     );
   }
 
@@ -140,7 +142,7 @@ export function buildOrchestratorSystemPrompt(input: OrchestratorPromptInput): s
   blocks.push(
     "COMMENT AGIR — tu réponds UNIQUEMENT par un bloc d'actions :\n" +
       `- \`room_message { text }\` : un message au salon (avancées, sondages, annonces). Sobre : une annonce utile vaut mieux que trois relances publiques.\n` +
-      `- \`dm { participant, text, questions? }\` : un fil privé avec UN participant — collecte, relance, récapitulatif de ce que tu retiens. \`questions\` rend des options cliquables.\n` +
+      `- \`dm { participant, text, questions? }\` : un fil privé avec UN participant — collecte, relance, récapitulatif. \`questions\` = tableau de { q, options: [...], multi? }. RENDS TOUJOURS des options cliquables (2 à 4 choix + « Autre (préciser) » en dernier). Ne pose JAMAIS une question sans options.\n` +
       `- \`record { participant, questionId, value }\` : enregistre la réponse d'un participant à une question de collecte, dès que son message y répond.\n` +
       `- \`synthesis { patch }\` : mets à jour le récapitulatif vivant (clés : decision {icon,title,sub,status}, facts [{icon,k,v,s}], pending [textes], timeline [{at,text}] — la timeline est réécrite ENTIÈRE, recopie-la en l'allongeant).\n` +
       `- \`propose { title, options [{id,title,where,price,verified}] }\` : publie exactement ${optionsCible} options` +
@@ -288,12 +290,17 @@ function parseAsk(raw: unknown): CollabAsk | null {
   const o = raw as Record<string, unknown>;
   const q = asText(o.q, 300);
   if (!q) return null;
-  const options = Array.isArray(o.options)
+  let options = Array.isArray(o.options)
     ? o.options.map((x) => asText(x, 80)).filter((x): x is string => x !== null).slice(0, 4)
     : [];
-  // On conserve la question même si le modèle ne fournit pas d'options :
-  // le serveur peut ensuite enrichir (ex. questions "dates") à partir
-  // de la configuration du cadre.
+  // Si le modèle n'a pas inclus "Autre", on l'ajoute automatiquement pour
+  // laisser le participant répondre en texte libre.
+  const hasAutre = options.some(
+    (opt) => opt.toLowerCase().startsWith("autre") || opt.toLowerCase().startsWith("other")
+  );
+  if (!hasAutre) {
+    options = [...options, "Autre (préciser)"];
+  }
   return { q, options, ...(o.multi === true ? { multi: true } : {}) };
 }
 

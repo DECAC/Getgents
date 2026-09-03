@@ -39,7 +39,8 @@ export function teamBuildingQuestions(): CollabQuestion[] {
     {
       id: newQuestionId(),
       label: "Régime alimentaire ou contrainte à prévoir ?",
-      kind: "text",
+      kind: "choice",
+      options: ["Aucune", "Végétarien", "Vegan", "Halal", "Casher", "Sans gluten"],
       required: false,
     },
   ];

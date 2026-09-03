@@ -199,15 +199,17 @@ async function applyActions(input: {
       case "nothing":
         break;
       case "room_message":
-        // Évite les messages "welcome" du gent répétés quand plusieurs
-        // participants rejoignent quasi-simultanément.
+        // Déduplication tolérante : compare les textes normalisés (espaces,
+        // casse, ponctuation) pour éviter les doublons "Bonjour Romain !" vs
+        // "Bonjour Romain." quand plusieurs ticks se succèdent rapidement.
+        const normRoom = action.text.trim().toLowerCase().replace(/\s+/g, " ");
         if (
           input.existingMessages.some(
             (m) =>
               m.channel === COLLAB_ROOM_CHANNEL &&
               m.author === COLLAB_GENT_AUTHOR &&
               m.kind === "text" &&
-              m.text === action.text
+              m.text.trim().toLowerCase().replace(/\s+/g, " ") === normRoom
           )
         ) {
           break;
@@ -223,26 +225,49 @@ async function applyActions(input: {
         break;
       case "dm":
         // Enrichit les questions pour lesquelles le modèle ne fournit
-        // pas d'options (cas typique des questions "dates").
-        const enrichedQuestions =
-          action.questions && action.questions.length
-            ? action.questions.map((ask) => {
-                if (ask.options && ask.options.length) return ask;
-                const match = input.collabQuestions.find((q) => q.label.trim() === ask.q.trim());
-                if (match && match.options?.length) {
-                  return { ...ask, options: match.options.slice(0, 4) };
-                }
-                return ask;
-              })
-            : undefined;
+        // pas d'options — on les pioche dans la config du cadre et on
+        // ajoute "Autre (préciser)" pour laisser le choix du texte libre.
+        const enrichedQuestions = (() => {
+          if (!action.questions?.length) {
+            // Pas de questions du tout : on tente de trouver une correspondance
+            // dans les questions configurées et on en génère une avec options.
+            const match = input.collabQuestions.find((q) =>
+              action.text.toLowerCase().includes(q.label.toLowerCase().slice(0, 30))
+            );
+            if (match && match.options?.length) {
+              return [{
+                q: action.text,
+                options: [...match.options.slice(0, 3), "Autre (préciser)"],
+              }];
+            }
+            return undefined;
+          }
+          return action.questions.map((ask) => {
+            if (ask.options && ask.options.length > 1) return ask;
+            // Cherche dans les questions du cadre une correspondance par libellé.
+            const match = input.collabQuestions.find((q) =>
+              q.label.trim().toLowerCase() === ask.q.trim().toLowerCase() ||
+              ask.q.trim().toLowerCase().includes(q.label.trim().toLowerCase().slice(0, 20))
+            );
+            if (match && match.options?.length) {
+              return {
+                ...ask,
+                options: [...match.options.slice(0, 3), "Autre (préciser)"],
+              };
+            }
+            return ask;
+          });
+        })();
 
+        // Déduplication tolérante sur les DM aussi.
+        const normDm = action.text.trim().toLowerCase().replace(/\s+/g, " ");
         if (
           input.existingMessages.some(
             (m) =>
               m.channel === gentChannel(action.participant) &&
               m.author === COLLAB_GENT_AUTHOR &&
-              m.kind === (action.questions?.length ? "question" : "text") &&
-              m.text === action.text
+              m.kind === (enrichedQuestions?.length ? "question" : "text") &&
+              m.text.trim().toLowerCase().replace(/\s+/g, " ") === normDm
           )
         ) {
           break;
