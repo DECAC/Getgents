@@ -2,6 +2,7 @@
 
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { ShareLinksSection } from "./ShareLinksSection";
+import { CollabSuiviSection } from "./CollabSuiviSection";
 import { PanneauPartage } from "@/components/partage/PanneauPartage";
 import styles from "./DiffusionTab.module.css";
 
@@ -154,6 +155,7 @@ export function DiffusionTab() {
 
       <PanneauPartage />
       <ShareLinksSection />
+      <CollabSuiviSection />
 
       <div className={styles.card}>
         <h4 className={styles.title}>Autres canaux</h4>

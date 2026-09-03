@@ -175,6 +175,19 @@ export async function getCollabSession(token: string): Promise<CollabSession | n
   return data ? toSession(data as SessionRow) : null;
 }
 
+/** Toutes les sessions collaboratives d'un gent (suivi créateur). */
+export async function listCollabSessionsForGent(gentId: string): Promise<CollabSession[]> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) throw new Error("supabase_not_configured");
+  const { data, error } = await supabase
+    .from("collab_sessions")
+    .select("*")
+    .eq("gent_id", gentId)
+    .order("created_at", { ascending: false });
+  if (error) raise(error);
+  return ((data ?? []) as SessionRow[]).map(toSession);
+}
+
 /**
  * La session du lien, créée à la première arrivée. Le `upsert` sur l'index
  * unique `token` rend l'opération idempotente : deux participants qui
