@@ -6,14 +6,18 @@ import {
   createCollabParticipant,
   describeCollabFailure,
   getCollabParticipant,
-  getCollabSession,
   getOrCreateCollabSession,
   insertCollabMessage,
   listCollabParticipants,
+  patchCollabSynthesis,
 } from "@/lib/server/collab";
+import { tickCollabOrchestrator } from "@/lib/server/collabOrchestrator";
+import { initialSynthesis } from "@/lib/collabOrchestrator";
 import { COLLAB_GENT_AUTHOR, COLLAB_ROOM_CHANNEL, normalizeCollabName } from "@/lib/collab";
 
 export const dynamic = "force-dynamic";
+// L'arrivée attend le premier tick de l'orchestrateur (un appel LLM).
+export const maxDuration = 120;
 
 interface Params {
   params: { token: string };
@@ -85,7 +89,18 @@ export async function POST(req: Request, { params }: Params) {
           "Je collecte les informations de chacun en privé, je vérifie les options, " +
           "puis je vous propose une décision ici.",
       });
+      // L'onglet Synthèse ne doit pas attendre le premier tick réussi pour
+      // exister : on la sème dès l'ouverture, l'orchestrateur l'enrichit ensuite.
+      await patchCollabSynthesis(
+        session.id,
+        initialSynthesis(gentName, collab.mission?.trim() || espace.name)
+      );
     }
+
+    // L'arrivée d'un participant concerne l'orchestrateur : à lui d'engager
+    // la collecte en privé. Awaité (et non en tâche de fond) : en serverless,
+    // le travail survivant à la réponse peut être tué en vol.
+    await tickCollabOrchestrator(params.token);
 
     return NextResponse.json({
       participantToken: created.participantToken,

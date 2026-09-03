@@ -8,7 +8,7 @@ import {
   listRecentCollabMessages,
   touchCollabParticipant,
 } from "@/lib/server/collab";
-import { collabProgress, messagesForParticipant } from "@/lib/collab";
+import { collabProgress, collabVoteTallies, messagesForParticipant } from "@/lib/collab";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +55,10 @@ export async function GET(req: Request, { params }: Params) {
     void touchCollabParticipant(me.id);
 
     const questions = collab.questions ?? [];
+    const visibles = messagesForParticipant(tousLesMessages, me.id);
+    // Les bulletins de vote ne s'affichent pas comme des messages : ils sont
+    // dépouillés ici et servis agrégés (dernier vote de chacun faisant foi).
+    const votes = collabVoteTallies(visibles, me.id);
     return NextResponse.json({
       gent: { name: espace.gent || espace.name, icon: espace.icon },
       mission: collab.mission?.trim() || espace.name,
@@ -65,7 +69,8 @@ export async function GET(req: Request, { params }: Params) {
       questions,
       progress: collabProgress(participants, session.collection, questions.length),
       synthesis: session.synthesis,
-      messages: messagesForParticipant(tousLesMessages, me.id),
+      messages: visibles.filter((m) => m.kind !== "vote"),
+      votes,
     });
   } catch (e) {
     const { error, hint, status } = describeCollabFailure(e);

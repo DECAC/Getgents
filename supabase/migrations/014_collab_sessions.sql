@@ -75,10 +75,10 @@ create table if not exists public.collab_messages (
   author      text not null,
   author_name text not null,
   kind        text not null default 'text'
-                check (kind in ('text', 'question', 'proposal', 'system')),
+                check (kind in ('text', 'question', 'proposal', 'system', 'vote')),
   text        text not null,
   -- Contenu structure selon kind : options cliquables d'une question,
-  -- cartes de proposition avec votes, entree de synthese…
+  -- cartes de proposition, bulletin de vote { proposalId, optionId }…
   payload     jsonb,
   created_at  timestamptz not null default now()
 );

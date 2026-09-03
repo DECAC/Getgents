@@ -12,7 +12,7 @@ export type CollabSessionStatus = "collecting" | "proposing" | "done";
 
 export type CollabRole = "organizer" | "participant";
 
-export type CollabMessageKind = "text" | "question" | "proposal" | "system";
+export type CollabMessageKind = "text" | "question" | "proposal" | "system" | "vote";
 
 export interface CollabParticipant {
   id: string;
@@ -162,6 +162,64 @@ export function collabProgress(
   return { perParticipant, answered, total: participants.length };
 }
 
+/** Contenu d'un message kind 'proposal' : options soumises au vote du groupe. */
+export interface CollabProposalPayload {
+  title: string;
+  options: {
+    id: string;
+    title: string;
+    where?: string;
+    price?: string;
+    verified?: boolean;
+  }[];
+}
+
+/** Contenu d'un message kind 'question' : options cliquables en fil privé. */
+export interface CollabQuestionPayload {
+  questions: { q: string; options: string[]; multi?: boolean }[];
+}
+
+// ── Votes sur les propositions ───────────────────────────────────────────
+
+/**
+ * Dépouillement d'une proposition : voix par option, nombre de votants, et le
+ * choix de l'appelant. Un vote est un message kind 'vote' au salon ; le
+ * DERNIER vote d'un participant sur une proposition fait foi (on peut
+ * déplacer son choix).
+ */
+export interface CollabVoteTally {
+  counts: Record<string, number>;
+  voters: number;
+  my: string | null;
+}
+
+/** Messages en ordre chronologique ; clé du résultat : l'id du message proposal. */
+export function collabVoteTallies(
+  messages: CollabMessage[],
+  meId: string
+): Record<string, CollabVoteTally> {
+  const byProposal = new Map<number, Map<string, string>>();
+  for (const m of messages) {
+    if (m.kind !== "vote" || !m.payload || typeof m.payload !== "object") continue;
+    const p = m.payload as { proposalId?: unknown; optionId?: unknown };
+    if (typeof p.proposalId !== "number" || typeof p.optionId !== "string") continue;
+    let votes = byProposal.get(p.proposalId);
+    if (!votes) byProposal.set(p.proposalId, (votes = new Map()));
+    votes.set(m.author, p.optionId);
+  }
+  const out: Record<string, CollabVoteTally> = {};
+  byProposal.forEach((votes, proposalId) => {
+    const counts: Record<string, number> = {};
+    let my: string | null = null;
+    votes.forEach((optionId, author) => {
+      counts[optionId] = (counts[optionId] ?? 0) + 1;
+      if (author === meId) my = optionId;
+    });
+    out[String(proposalId)] = { counts, voters: votes.size, my };
+  });
+  return out;
+}
+
 /** Charge utile servie par GET /api/collab/[token]/state (déjà filtrée pour l'appelant). */
 export interface CollabStatePayload {
   gent: { name: string; icon: string };
@@ -178,6 +236,8 @@ export interface CollabStatePayload {
   };
   synthesis: Record<string, unknown>;
   messages: CollabMessage[];
+  /** Dépouillement des propositions du salon, par id de message proposal. */
+  votes: Record<string, CollabVoteTally>;
 }
 
 /** Tronconne un texte de message à une taille raisonnable (garde-fou). */
