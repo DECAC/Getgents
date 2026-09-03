@@ -200,7 +200,7 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
       try {
         const res = await fetch(
           `/api/collab/${encodeURIComponent(token)}/state?participant=${encodeURIComponent(participantToken)}`,
-          { cache: "no-store" }
+          { cache: "no-store", credentials: "include" }
         );
         if (res.status === 401 || res.status === 403 || res.status === 404) return "unknown";
         if (!res.ok) return "error";
@@ -235,6 +235,7 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
       const res = await fetch(`/api/collab/${encodeURIComponent(token)}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ participantToken: stored.participantToken }),
       }).catch(() => null);
       if (cancelled) return;
@@ -312,6 +313,7 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
       const res = await fetch(`/api/collab/${encodeURIComponent(token)}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ name }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -352,7 +354,7 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
           ? { kind: "gent" as const }
           : { kind: "peer" as const, participantId: tab.slice("peer:".length) };
 
-    // Affichage optimiste : id négatif, réconcilié au prochain poll.
+    // Affichage optimiste : id négatif, réconcilié au prochain poll / refresh.
     const optimistic: CollabMessage = {
       id: -Date.now(),
       channel: activeChannel,
@@ -371,6 +373,7 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
         const res = await fetch(`/api/collab/${encodeURIComponent(token)}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ participantToken: identity.participantToken, target, text }),
         });
         if (!res.ok) {
@@ -378,7 +381,11 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
             prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== optimistic.id) } : prev
           );
           setSendError("Votre message n'est pas parti. Réessayez.");
+          return;
         }
+        // Le serveur a attendu l'orchestrateur : on recharge tout de suite
+        // (sinon jusqu'à 4 s de silence avant le prochain poll).
+        await fetchState(identity.participantToken);
       } catch {
         setState((prev) =>
           prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== optimistic.id) } : prev
@@ -388,9 +395,10 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
     })();
   }
 
-  /** Vote sur une proposition (dernier choix faisant foi), optimiste. */
+  /** Vote / rétention sur une proposition (dernier choix faisant foi), optimiste. */
   function handleVote(proposalId: number, optionId: string) {
     if (!identity || !me) return;
+    const prevVotes = state?.votes ?? {};
     setState((prev) => {
       if (!prev) return prev;
       const key = String(proposalId);
@@ -398,21 +406,34 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
       const counts = { ...current.counts };
       if (current.my && counts[current.my]) counts[current.my] -= 1;
       counts[optionId] = (counts[optionId] ?? 0) + 1;
-      const tally: CollabVoteTally = { counts, voters: current.voters + (current.my ? 0 : 1), my: optionId };
+      const tally: CollabVoteTally = {
+        counts,
+        voters: current.voters + (current.my ? 0 : 1),
+        my: optionId,
+      };
       return { ...prev, votes: { ...prev.votes, [key]: tally } };
     });
     void (async () => {
       try {
-        await fetch(`/api/collab/${encodeURIComponent(token)}/messages`, {
+        const res = await fetch(`/api/collab/${encodeURIComponent(token)}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             participantToken: identity.participantToken,
             vote: { proposalId, optionId },
           }),
         });
+        if (!res.ok) {
+          setState((prev) => (prev ? { ...prev, votes: prevVotes } : prev));
+          const data = (await res.json().catch(() => ({}))) as { hint?: string };
+          setSendError(data.hint ?? "Votre choix n'a pas pu être enregistré. Réessayez.");
+          return;
+        }
+        await fetchState(identity.participantToken);
       } catch {
-        // le prochain poll remettra le dépouillement réel
+        setState((prev) => (prev ? { ...prev, votes: prevVotes } : prev));
+        setSendError("Connexion interrompue. Votre choix n'a pas été enregistré.");
       }
     })();
   }
@@ -707,6 +728,10 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
                         message={m}
                         icon={espace.icon}
                         votes={state?.votes[String(m.id)]}
+                        decision={state?.decision ?? "vote"}
+                        canDecide={
+                          (state?.decision ?? "vote") === "vote" || me?.role === "organizer"
+                        }
                         onVote={(optionId) => handleVote(m.id, optionId)}
                         isPrivate={tab === "prive"}
                         askSel={askSel[m.id] ?? []}
@@ -859,6 +884,8 @@ function GentCard({
   message,
   icon,
   votes,
+  decision,
+  canDecide,
   onVote,
   isPrivate,
   askSel,
@@ -868,6 +895,8 @@ function GentCard({
   message: CollabMessage;
   icon: string;
   votes?: CollabVoteTally;
+  decision: "vote" | "createur";
+  canDecide: boolean;
   onVote: (optionId: string) => void;
   isPrivate: boolean;
   askSel: string[];
@@ -882,6 +911,7 @@ function GentCard({
     message.kind === "question" && message.payload && typeof message.payload === "object"
       ? (message.payload as CollabQuestionPayload)
       : null;
+  const creatorMode = decision === "createur";
 
   return (
     <article className={styles.orch}>
@@ -937,28 +967,55 @@ function GentCard({
                   ) : (
                     <p className={styles.propVerifNo}>À confirmer</p>
                   )}
-                  <button
-                    type="button"
-                    className={`${styles.vote} ${mine ? styles.voteOn : ""}`}
-                    onClick={() => onVote(opt.id)}
-                  >
-                    {mine ? `✓ Mon choix · ${count}` : `Choisir · ${count}`}
-                  </button>
+                  {canDecide ? (
+                    <button
+                      type="button"
+                      className={`${styles.vote} ${mine ? styles.voteOn : ""}`}
+                      onClick={() => onVote(opt.id)}
+                    >
+                      {creatorMode
+                        ? mine
+                          ? `✓ Retenue · ${count}`
+                          : `Retenir · ${count}`
+                        : mine
+                          ? `✓ Mon choix · ${count}`
+                          : `Choisir · ${count}`}
+                    </button>
+                  ) : (
+                    <p className={styles.voteHint} style={{ margin: "8px 0 0" }}>
+                      {creatorMode
+                        ? "Le créateur tranche — pas de vote ouvert."
+                        : `${count} voix`}
+                    </p>
+                  )}
                 </article>
               );
             })}
           </div>
           {votes && votes.voters > 0 && (
             <p className={styles.voteHint}>
-              {votes.voters} votant{votes.voters > 1 ? "s" : ""}
-              {votes.my ? (
-                <>
-                  {" "}
-                  · vous avez choisi{" "}
-                  <b>{proposal.options.find((o) => o.id === votes.my)?.title ?? ""}</b>
-                </>
+              {creatorMode ? (
+                votes.my ? (
+                  <>
+                    Option retenue :{" "}
+                    <b>{proposal.options.find((o) => o.id === votes.my)?.title ?? ""}</b>
+                  </>
+                ) : (
+                  "En attente de la décision du créateur"
+                )
               ) : (
-                ""
+                <>
+                  {votes.voters} votant{votes.voters > 1 ? "s" : ""}
+                  {votes.my ? (
+                    <>
+                      {" "}
+                      · vous avez choisi{" "}
+                      <b>{proposal.options.find((o) => o.id === votes.my)?.title ?? ""}</b>
+                    </>
+                  ) : (
+                    ""
+                  )}
+                </>
               )}
             </p>
           )}

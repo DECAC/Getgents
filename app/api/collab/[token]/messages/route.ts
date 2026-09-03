@@ -79,6 +79,15 @@ export async function POST(req: Request, { params }: Params) {
 
     // ── Vote sur une proposition du salon ─────────────────────────────
     if (body.vote && typeof body.vote === "object") {
+      const decision = lien.value.collab.decision === "createur" ? "createur" : "vote";
+      // Mode « le créateur tranche » : seuls les organisateurs peuvent retenir
+      // une option — un vote participant serait trompeur.
+      if (decision === "createur" && me.role !== "organizer") {
+        return NextResponse.json(
+          { error: "creator_decides", hint: "Seul le créateur peut retenir une option." },
+          { status: 403 }
+        );
+      }
       const proposalId = typeof body.vote.proposalId === "number" ? body.vote.proposalId : null;
       const optionId = typeof body.vote.optionId === "string" ? body.vote.optionId : "";
       const recents = await listRecentCollabMessages(session.id);

@@ -64,6 +64,7 @@ export async function GET(req: Request, { params }: Params) {
       mission: collab.mission?.trim() || espace.name,
       cadre: collab.cadre ?? {},
       status: session.status,
+      decision: collab.decision === "createur" ? "createur" : "vote",
       me,
       participants,
       questions,

@@ -487,9 +487,11 @@ export function CollaboratifTab() {
                   type="radio"
                   name="decision"
                   checked={collab?.decision === "createur"}
-                  onChange={() => updateCollab({ decision: "createur" })}
+                  onChange={() =>
+                    updateCollab({ decision: "createur", roleCreateur: "organisateur" })
+                  }
                 />
-                Vous gardez la main
+                Vous gardez la main (bouton « Retenir », pas de vote ouvert)
               </label>
             </div>
           </div>
@@ -521,6 +523,10 @@ export function CollaboratifTab() {
           </label>
           <div>
             <span className={local.fieldLabel}>Votre place dans le salon</span>
+            <div className={styles.sub} style={{ marginTop: 4, marginBottom: 0 }}>
+              Effet uniquement si vous ouvrez le lien <b>connecté</b> à votre compte. Sans compte,
+              vous rejoignez toujours comme participant.
+            </div>
             <div className={local.radioRow} style={{ marginTop: 8 }}>
               <label className={local.radio}>
                 <input
@@ -529,7 +535,7 @@ export function CollaboratifTab() {
                   checked={(collab?.roleCreateur ?? "membre") === "membre"}
                   onChange={() => updateCollab({ roleCreateur: "membre" })}
                 />
-                Membre à part entière (vous pouvez intervenir)
+                Membre comme les autres (pas de badge spécial)
               </label>
               <label className={local.radio}>
                 <input
@@ -538,7 +544,7 @@ export function CollaboratifTab() {
                   checked={collab?.roleCreateur === "organisateur"}
                   onChange={() => updateCollab({ roleCreateur: "organisateur" })}
                 />
-                Organisateur (badge Créateur visible)
+                Organisateur (badge ★ Créateur + pouvoir de retenir une option)
               </label>
             </div>
           </div>

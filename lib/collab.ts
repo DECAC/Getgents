@@ -226,6 +226,8 @@ export interface CollabStatePayload {
   mission: string;
   cadre: { budget?: string; lieu?: string; periode?: string; taille?: string };
   status: CollabSessionStatus;
+  /** Mode de décision configuré par le créateur (défaut : vote du groupe). */
+  decision: "vote" | "createur";
   me: CollabParticipant;
   participants: CollabParticipant[];
   questions: import("@/lib/types").CollabQuestion[];

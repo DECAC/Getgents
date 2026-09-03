@@ -65,10 +65,9 @@ export async function POST(req: Request, { params }: Params) {
     const name = normalizeCollabName(body.name);
     if (!name) return NextResponse.json({ error: "invalid_name" }, { status: 400 });
 
-    // Badge « Créateur » : attribué quand la personne qui rejoint est le
-    // PROPRIÉTAIRE du gent — reconnu par sa session de compte, jamais sur
-    // déclaration. Un créateur non connecté rejoint comme simple participant.
-    const role = await roleOfCaller(link.gentId);
+    // Badge « Créateur » : propriétaire connecté ET rôle studio « organisateur ».
+    // En mode « membre », le propriétaire rejoint comme tout le monde.
+    const role = await roleOfCaller(link.gentId, collab.roleCreateur);
 
     // Premier arrivé : le salon s'ouvre par le mot de bienvenue du gent,
     // posé d'emblée pour que l'écran ne soit jamais muet — avant même que
@@ -118,15 +117,18 @@ export async function POST(req: Request, { params }: Params) {
 }
 
 /**
- * Rôle du nouvel arrivant : « organizer » si (et seulement si) la requête
- * porte la session du compte PROPRIÉTAIRE du gent — c'est ce qui lui donne le
- * badge « Créateur » dans le salon. Best-effort : sans authentification
- * configurée (développement local), tout le monde est simple participant.
- * `roleCreateur` affinera plus tard ce que ce rôle peut faire ; aujourd'hui
- * il participe comme tout le monde.
+ * Rôle du nouvel arrivant : « organizer » seulement si la requête porte la
+ * session du compte PROPRIÉTAIRE du gent ET que le studio a choisi
+ * `roleCreateur: "organisateur"`. Sinon, même le propriétaire est un
+ * participant ordinaire (mode « membre »). Sans authentification (dev local
+ * sans compte), tout le monde reste participant.
  */
-async function roleOfCaller(gentId: string) {
+async function roleOfCaller(
+  gentId: string,
+  roleCreateur: "membre" | "organisateur" | undefined
+) {
   try {
+    if (roleCreateur !== "organisateur") return "participant" as const;
     const user = await getUser();
     if (!user) return "participant" as const;
     const supabase = getSupabaseAdmin();

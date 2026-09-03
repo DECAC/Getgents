@@ -189,6 +189,16 @@ export function CollabSuiviSection() {
             <span className={styles.meta}>
               Orchestrations {active.orchestrationCount}/{active.maxOrchestrations}
             </span>
+            {active.token ? (
+              <a
+                className={styles.refresh}
+                href={`/l/${encodeURIComponent(active.token)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Ouvrir le salon
+              </a>
+            ) : null}
           </div>
 
           <div className={styles.barTrack} aria-hidden="true">
