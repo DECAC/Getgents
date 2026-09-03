@@ -3,12 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBuilder, type BuilderTab } from "@/lib/context/BuilderContext";
-import { listVisibleDrafts } from "@/lib/builderDraftStorage";
+import { allocateNewDraft, listVisibleDrafts } from "@/lib/builderDraftStorage";
 import { hasCustomName, isDirtySincePublish } from "@/lib/builderSnapshot";
 import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
 import { useNavMobile } from "@/lib/context/NavMobileContext";
 import styles from "./BuilderRail.module.css";
 import { MenuCompte } from "@/components/compte/MenuCompte";
+
+/** Entrées du menu « Créer » : chaque clic ouvre un NOUVEAU brouillon sur l'onglet cible. */
+const CREATE_TABS: BuilderTab[] = [
+  "conversationnel",
+  "miniapp",
+  "visionneuse",
+  "collaboratif",
+  "apercu",
+];
 
 interface NavEntry {
   id: BuilderTab;
@@ -151,6 +160,13 @@ function BuilderRailList() {
       router.push("/accueil");
       return;
     }
+    // Menu « Créer » : toujours un gent neuf + atterrissage sur le bon onglet
+    // (?tab=… lu par BuilderShell).
+    if (CREATE_TABS.includes(tab)) {
+      const id = allocateNewDraft();
+      router.push(`/builder/${id}?tab=${tab}`);
+      return;
+    }
     const id = firstDraftId();
     if (!id) {
       router.push("/builder");
@@ -173,29 +189,20 @@ function BuilderRailList() {
 /** Rail dans la vue d'un gent — configuration, diffusion, assistant. */
 function BuilderRailGent() {
   const router = useRouter();
-  const { currentDraft, activeTab, switchTab, createDraft, railCollapsed, toggleRail, publishDraft } =
-    useBuilder();
+  const { currentDraft, activeTab, switchTab, railCollapsed, toggleRail, publishDraft } = useBuilder();
 
   function handleNav(tab: BuilderTab) {
     if (tab === "mesgents") {
       router.push("/builder/mesgents");
       return;
     }
-    // Les entrées sous « Créer » (Conversationnel, Mini App, Visionneuse,
-    // Event Manager, Aperçu) ouvrent un NOUVEAU brouillon dans le type choisi,
-    // au lieu de changer l'onglet du gent en cours — qui aurait sinon vu sa
-    // mission/prompt écrasés par le gabarit du type.
-    const CREATE_TABS: BuilderTab[] = [
-      "conversationnel",
-      "miniapp",
-      "visionneuse",
-      "collaboratif",
-      "apercu",
-    ];
+    // Les entrées sous « Créer » ouvrent un NOUVEAU brouillon et atterrissent
+    // sur l'onglet choisi via ?tab=… (lu par BuilderShell). On n'utilise pas
+    // createDraft() ici : il forçait l'onglet « accueil » et marquait déjà
+    // l'id courant, ce qui empêchait l'URL d'appliquer le bon onglet.
     if (CREATE_TABS.includes(tab)) {
-      const id = createDraft();
-      switchTab(tab);
-      router.push(`/builder/${id}`);
+      const id = allocateNewDraft();
+      router.push(`/builder/${id}?tab=${tab}`);
       return;
     }
     switchTab(tab);
