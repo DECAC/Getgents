@@ -33,6 +33,14 @@ const OUVERTES: Record<string, string> = {
   "app/api/gmail/callback/route.ts": "atterrissage OAuth Google — état signé + requireUser",
   "app/api/whatsapp/webhook/route.ts": "webhook Meta — vérifié par WHATSAPP_VERIFY_TOKEN",
   "app/api/powens/connect/route.ts": "redirection vers la webview bancaire, sans donnée du compte",
+  // Salon collaboratif : mêmes règles que /l/<jeton>. Le jeton du lien fait
+  // l'authentification (resolveCollabLink + canChat), puis l'identité du
+  // participant est vérifiée dans la session — 401 sans elle, 403 si elle est
+  // inconnue. Un compte n'y est jamais demandé : c'est le principe même du
+  // salon, où les invités entrent avec leur seul prénom.
+  "app/api/collab/[token]/join/route.ts": "authentifiée par le jeton du salon",
+  "app/api/collab/[token]/messages/route.ts": "jeton du salon + identité du participant",
+  "app/api/collab/[token]/state/route.ts": "jeton du salon + identité du participant",
 };
 
 function routes(dir: string, acc: string[] = []): string[] {
