@@ -4,6 +4,7 @@ import { getUser } from "@/lib/server/session";
 import { isAuthConfigured } from "@/lib/authConfig";
 import styles from "./accueil-public.module.css";
 import { libelleAppelAction } from "@/lib/inscriptions";
+import { PiedLegal } from "@/components/shared/PiedLegal";
 
 /**
  * Racine du site.
@@ -44,6 +45,7 @@ export default async function Home() {
           </Link>
         </div>
       </section>
+      <PiedLegal />
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import type { GentPublic } from "@/lib/server/publicGent";
 import styles from "./GentPublicVitrine.module.css";
 import { libelleAppelAction } from "@/lib/inscriptions";
+import { PiedLegal } from "@/components/shared/PiedLegal";
 
 /**
  * Gent public dont la conversation n'est PAS ouverte aux visiteurs.
@@ -43,6 +44,7 @@ export function GentPublicVitrine({ gent }: { gent: GentPublic }) {
           {libelleAppelAction()}
         </a>
       </article>
+      <PiedLegal />
     </main>
   );
 }

@@ -1,0 +1,124 @@
+/* Écrans de texte légal. Même précaution que les autres pages-documents :
+   `globals.css` pose `overflow: hidden` sur html et body, donc la page porte
+   sa propre zone de défilement, sinon le bas est inatteignable. */
+.page {
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.contenu {
+  /* 68 caractères : la largeur au-delà de laquelle l'œil perd sa ligne. */
+  max-width: 68ch;
+  margin: 0 auto;
+  padding: 40px 24px 72px;
+}
+
+.retour {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 22px;
+  padding: 6px 12px 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.retour:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.titre {
+  font-size: clamp(24px, 4vw, 32px);
+  letter-spacing: -0.025em;
+  margin: 0 0 8px;
+  text-wrap: balance;
+}
+
+.chapeau {
+  color: var(--muted);
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin: 0 0 30px;
+}
+
+.section {
+  margin: 0 0 28px;
+}
+
+.sousTitre {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0 0 10px;
+}
+
+.texte {
+  font-size: 14.5px;
+  line-height: 1.65;
+  margin: 0 0 12px;
+  overflow-wrap: anywhere;
+}
+
+.texte a {
+  color: var(--sage);
+}
+
+.liste {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.liste li {
+  margin-bottom: 7px;
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 8px 18px;
+  margin: 0;
+  font-size: 14.5px;
+}
+
+.dl dt {
+  color: var(--muted);
+}
+
+.dl dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Une colonne sous le point de rupture : deux colonnes de 14,5 px dans 390 px
+   coupent chaque valeur en trois lignes. */
+@media (max-width: 620px) {
+  .dl {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .dl dd {
+    margin-bottom: 10px;
+  }
+}
+
+.note {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 26px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.manquant {
+  color: var(--plum);
+}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { listerAnnuaire } from "@/lib/server/publicGent";
 import styles from "./annuaire.module.css";
 import { libelleAppelAction } from "@/lib/inscriptions";
+import { PiedLegal } from "@/components/shared/PiedLegal";
 
 /**
  * Annuaire des gents publics.
@@ -54,6 +55,7 @@ export default async function AnnuairePage() {
             ))}
           </ul>
         )}
+        <PiedLegal />
       </div>
     </main>
   );

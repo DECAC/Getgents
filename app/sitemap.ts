@@ -21,6 +21,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: base, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/annuaire`, changeFrequency: "daily", priority: 0.8 },
+    /* Les pages légales. Elles ne rapporteront jamais de visiteur, mais un
+       service de catégorisation réseau qui découvre le domaine par son plan de
+       site doit tomber sur l'identité de l'éditeur — c'est exactement ce qui
+       distingue un domaine tenu par quelqu'un d'un domaine jetable. */
+    ...["a-propos", "mentions-legales", "confidentialite", "contact"].map((s) => ({
+      url: `${base}/${s}`,
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
+    })),
     ...gents.map((g) => ({
       url: `${base}/${g.slug}`,
       lastModified: g.publieLe ? new Date(g.publieLe) : undefined,

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import styles from "./auth.module.css";
+import { PiedLegal } from "@/components/shared/PiedLegal";
 
 /** Cadre commun aux écrans d'authentification. */
 export default function AuthLayout({ children }: { children: ReactNode }) {
@@ -12,6 +13,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </div>
         {children}
       </div>
+      <PiedLegal />
     </div>
   );
 }
