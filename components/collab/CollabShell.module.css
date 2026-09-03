@@ -13,6 +13,8 @@
   overflow: hidden;
 }
 
+/* Reset des boutons « nus » (onglets, liste participants…). Les boutons
+   stylés (.chip, .vote, .send…) surchargent border/background ci-dessous. */
 .page button {
   font: inherit;
   color: inherit;
@@ -92,7 +94,7 @@
   border-color: var(--blue);
 }
 
-.joinBtn {
+.page button.joinBtn {
   width: 100%;
   margin-top: 14px;
   background: var(--blue);
@@ -100,15 +102,16 @@
   font-weight: 700;
   font-size: 13.5px;
   border-radius: 11px;
+  border: none;
   padding: 11px 14px;
   transition: background 0.12s;
 }
 
-.joinBtn:hover:not(:disabled) {
+.page button.joinBtn:hover:not(:disabled) {
   background: var(--blue-700);
 }
 
-.joinBtn:disabled {
+.page button.joinBtn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -647,10 +650,11 @@
   color: var(--faint);
 }
 
-.send {
+.page button.send {
   width: 32px;
   height: 32px;
   border-radius: 50%;
+  border: none;
   background: var(--blue);
   color: #fff;
   display: grid;
@@ -659,11 +663,11 @@
   transition: background 0.12s;
 }
 
-.send:hover:not(:disabled) {
+.page button.send:hover:not(:disabled) {
   background: var(--blue-700);
 }
 
-.send:disabled {
+.page button.send:disabled {
   background: var(--line);
   cursor: not-allowed;
 }
@@ -818,40 +822,53 @@
   margin-top: 10px;
 }
 
-.chip {
+/* Spécificité > `.page button` pour que bordure/fond ne soient pas annulés. */
+.page button.chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 13px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--line);
-  background: var(--card);
+  padding: 9px 14px;
+  border-radius: 11px;
+  border: 1.5px solid var(--blue);
+  background: #fff;
+  color: var(--blue-700);
   font-size: 12.5px;
   font-weight: 600;
-  transition: border-color 0.12s, background 0.12s;
+  box-shadow: 0 1px 2px rgba(58, 95, 163, 0.08);
+  transition: border-color 0.12s, background 0.12s, box-shadow 0.12s, transform 0.1s;
 }
 
-.chip:hover {
-  border-color: var(--blue);
-}
-
-.chipOn {
-  border-color: var(--blue);
+.page button.chip:hover {
   background: var(--blue-tint);
-  color: var(--blue-700);
+  border-color: var(--blue-700);
+  box-shadow: 0 2px 6px rgba(58, 95, 163, 0.14);
+  transform: translateY(-1px);
 }
 
-.askValidate {
-  padding: 7px 14px;
-  border-radius: var(--r-pill);
+.page button.chip:active {
+  transform: translateY(0);
+}
+
+.page button.chipOn {
+  border-color: var(--blue-700);
+  background: var(--blue);
+  color: #fff;
+  box-shadow: none;
+}
+
+.page button.askValidate {
+  padding: 9px 16px;
+  border-radius: 11px;
+  border: none;
   background: var(--blue);
   color: #fff;
   font-size: 12.5px;
   font-weight: 700;
 }
 
-.askValidate:disabled {
+.page button.askValidate:disabled {
   background: var(--line);
+  color: var(--faint);
   cursor: not-allowed;
 }
 
@@ -902,23 +919,24 @@
   color: var(--faint);
 }
 
-.vote {
+.page button.vote {
   margin-top: 7px;
-  padding: 7px 10px;
+  padding: 8px 12px;
   border-radius: 9px;
-  border: 1px solid var(--line);
-  background: var(--card);
+  border: 1.5px solid var(--blue);
+  background: #fff;
   color: var(--blue-700);
   font-size: 12px;
   font-weight: 700;
   transition: border-color 0.12s, background 0.12s;
 }
 
-.vote:hover {
-  border-color: var(--blue);
+.page button.vote:hover {
+  background: var(--blue-tint);
+  border-color: var(--blue-700);
 }
 
-.voteOn {
+.page button.voteOn {
   background: var(--blue);
   border-color: var(--blue);
   color: #fff;
