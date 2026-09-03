@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import type { CollabQuestion } from "@/lib/types";
 import styles from "./PromptTab.module.css";
@@ -9,21 +10,97 @@ function newQuestionId(): string {
   return `q_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+const DEFAULT_PROMPT =
+  "Tu es Event Manager, l'orchestrateur d'événements d'équipe de Getgents.\n\n" +
+  "Ton : chaleureux, clair, efficace. Tu relances sans culpabiliser.\n\n" +
+  "Règles :\n" +
+  "- Tu animes le salon commun et tu interroges chacun en privé pour collecter les infos.\n" +
+  "- Tu ne révèles jamais le verbatim d'un échange privé au salon : uniquement des synthèses.\n" +
+  "- Tu proposes des options réalistes, vérifiées, dans le cadre (budget, lieu, période).\n" +
+  "- Tu tiens à jour la synthèse des décisions (date, lieu, horaires, budget).";
+
 /**
- * Type de gent « collaboratif » : plusieurs participants rejoignent un salon
- * via un lien + leur prénom ; le gent orchestre la mission (collecte en privé,
- * vérification web, propositions, vote, synthèse).
- *
- * Les 8 blocs de configuration suivent le cadrage produit : mission + cadre,
- * exclusions, questions de collecte, relances, propositions, décision,
- * confidentialité, rôle du créateur. Le ton et la base de connaissance restent
- * dans les onglets Conversationnel / Connaissances existants.
+ * Type de gent « Event Manager » : tout le paramétrage utile au même endroit —
+ * identité / ton (prompt), recherche web, puis la config collaborative
+ * (mission, cadre, collecte, propositions, confidentialité).
  */
 export function CollaboratifTab() {
-  const { currentDraft, updateCollab } = useBuilder();
+  const { currentDraft, updateCollab, updateSystemPrompt, toggleWebSearch, updateName, updateIcon } =
+    useBuilder();
   const collab = currentDraft.collab;
   const enabled = !!collab?.enabled;
   const questions = collab?.questions ?? [];
+
+  const [promptValue, setPromptValue] = useState(currentDraft.systemPrompt);
+  const lastPushedRef = useRef(currentDraft.systemPrompt);
+
+  useEffect(() => {
+    setPromptValue(currentDraft.systemPrompt);
+    lastPushedRef.current = currentDraft.systemPrompt;
+  }, [currentDraft.id, currentDraft.systemPrompt]);
+
+  function handlePromptChange(text: string) {
+    setPromptValue(text);
+    lastPushedRef.current = text;
+    updateSystemPrompt(text);
+  }
+
+  function toggleEnabled() {
+    const next = !enabled;
+    // Première activation : préremplir un gabarit utile si le brouillon est encore vide.
+    if (next) {
+      if (!currentDraft.systemPrompt.trim()) {
+        setPromptValue(DEFAULT_PROMPT);
+        lastPushedRef.current = DEFAULT_PROMPT;
+        updateSystemPrompt(DEFAULT_PROMPT);
+      }
+      if (!currentDraft.name.trim() || currentDraft.name === "Nouveau gent") {
+        updateName("Event Manager");
+      }
+      if (!currentDraft.icon || currentDraft.icon === "✨") {
+        updateIcon("🧭");
+      }
+      if (!currentDraft.webSearch) {
+        toggleWebSearch();
+      }
+      if (!collab?.mission) {
+        updateCollab({
+          enabled: true,
+          mission: "Organiser un événement d'équipe (team building) et faire voter le groupe.",
+          cadre: {
+            budget: "150 € / pers",
+            lieu: "< 1 h de Paris",
+            periode: "octobre 2026",
+            taille: "8 participants",
+          },
+          propositions: { options: 3, webCheck: true },
+          decision: "vote",
+          confidentialite: { syntheses: true, verbatim: false },
+          roleCreateur: "membre",
+          questions: [
+            {
+              id: newQuestionId(),
+              label: "Tes disponibilités ?",
+              kind: "dates",
+              options: ["3 oct", "10 oct", "17 oct", "24 oct"],
+              required: true,
+            },
+            {
+              id: newQuestionId(),
+              label: "Préférence d'activité ?",
+              kind: "choice",
+              options: ["Plein air", "Culturel", "Sportif"],
+              required: true,
+            },
+          ],
+        });
+      } else {
+        updateCollab({ enabled: true });
+      }
+    } else {
+      updateCollab({ enabled: false });
+    }
+  }
 
   function setQuestions(next: CollabQuestion[]) {
     updateCollab({ questions: next });
@@ -36,12 +113,7 @@ export function CollaboratifTab() {
   function addQuestion() {
     setQuestions([
       ...questions,
-      {
-        id: newQuestionId(),
-        label: "",
-        kind: "text",
-        required: true,
-      },
+      { id: newQuestionId(), label: "", kind: "text", required: true },
     ]);
   }
 
@@ -49,17 +121,18 @@ export function CollaboratifTab() {
     setQuestions(questions.filter((q) => q.id !== id));
   }
 
+  const wordCount = promptValue.trim().split(/\s+/).filter(Boolean).length;
+
   return (
     <div className={styles.wrap}>
       <div className={styles.card}>
         <div className={styles.webSearchRow}>
           <div>
-            <h4 className={styles.title}>Type « Collaboratif »</h4>
+            <h4 className={styles.title}>Event Manager</h4>
             <div className={styles.sub}>
-              Le gent devient un <b>orchestrateur de mission</b> : un salon commun pour
-              l&apos;équipe, des échanges privés pour collecter les réponses de chacun, une
-              synthèse vivante des décisions. Diffusez ensuite le <b>lien de salon</b> depuis
-              l&apos;onglet Diffusion.
+              Un gent <b>orchestrateur d&apos;événements</b> : salon commun, collecte en privé
+              auprès de chaque participant, vérification web, propositions au vote, synthèse des
+              décisions. Diffusez ensuite le <b>lien de salon</b> depuis l&apos;onglet Diffusion.
             </div>
           </div>
           <button
@@ -67,8 +140,8 @@ export function CollaboratifTab() {
             role="switch"
             aria-checked={enabled}
             className={[styles.switch, enabled ? styles.switchOn : ""].filter(Boolean).join(" ")}
-            onClick={() => updateCollab({ enabled: !enabled })}
-            aria-label="Activer le type Collaboratif"
+            onClick={toggleEnabled}
+            aria-label="Activer Event Manager"
           >
             <span className={styles.knob} />
           </button>
@@ -78,17 +151,89 @@ export function CollaboratifTab() {
       {enabled && (
         <>
           <div className={styles.card}>
-            <h4 className={styles.title}>Mission</h4>
+            <h4 className={styles.title}>Identité</h4>
+            <div className={styles.sub}>Nom et emblème affichés dans le salon.</div>
+            <div className={local.fieldGrid}>
+              <label className={local.field}>
+                <span className={local.fieldLabel}>Nom du gent</span>
+                <input
+                  className={local.input}
+                  value={currentDraft.name}
+                  onChange={(e) => updateName(e.target.value)}
+                  placeholder="Event Manager"
+                  aria-label="Nom du gent"
+                />
+              </label>
+              <label className={local.field}>
+                <span className={local.fieldLabel}>Icône (emoji)</span>
+                <input
+                  className={local.input}
+                  value={currentDraft.icon}
+                  onChange={(e) => updateIcon(e.target.value.slice(0, 4))}
+                  placeholder="🧭"
+                  aria-label="Icône du gent"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className={styles.card}>
+            <h4 className={styles.title}>Ton et consignes (prompt)</h4>
             <div className={styles.sub}>
-              Ce que le gent doit accomplir avec le groupe. Le ton et les consignes de style
-              restent dans l&apos;onglet <b>Gent Conversationnel</b> (prompt système).
+              Comportement du gent dans le salon : ton, règles, ce qu&apos;il doit ou ne doit pas
+              faire. Distinct de la <b>mission</b> ci-dessous (le « quoi » de l&apos;événement).
+            </div>
+            <textarea
+              className={styles.promptArea}
+              value={promptValue}
+              onChange={(e) => handlePromptChange(e.target.value)}
+              placeholder={DEFAULT_PROMPT}
+              aria-label="Prompt système Event Manager"
+            />
+            <div className={styles.footRow}>
+              <span>
+                {wordCount} mot{wordCount !== 1 ? "s" : ""}
+              </span>
+              <span>Modifiable à tout moment — versionné à chaque publication</span>
+            </div>
+          </div>
+
+          <div className={styles.card}>
+            <div className={styles.webSearchRow}>
+              <div>
+                <h4 className={styles.title}>Recherche web</h4>
+                <div className={styles.sub}>
+                  Permet à Event Manager de vérifier lieux, prix et disponibilités avant de
+                  proposer des options (recommandé).
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!!currentDraft.webSearch}
+                className={[styles.switch, currentDraft.webSearch ? styles.switchOn : ""]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={toggleWebSearch}
+                aria-label="Activer la recherche web"
+              >
+                <span className={styles.knob} />
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.card}>
+            <h4 className={styles.title}>Mission collaborative</h4>
+            <div className={styles.sub}>
+              Ce que le groupe doit accomplir ensemble — affiché en bandeau du salon et rappelé
+              à l&apos;orchestrateur.
             </div>
             <textarea
               className={styles.routineMission}
               value={collab?.mission ?? ""}
               onChange={(e) => updateCollab({ mission: e.target.value })}
               placeholder="Ex. : Organiser le team building d'octobre — trouver 3 options réalistes et faire voter l'équipe."
-              aria-label="Mission du gent collaboratif"
+              aria-label="Mission collaborative"
             />
             <div className={styles.routineConfig}>
               <div className={local.fieldGrid}>
@@ -135,7 +280,7 @@ export function CollaboratifTab() {
                   className={styles.routineMission}
                   value={collab?.exclusions ?? ""}
                   onChange={(e) => updateCollab({ exclusions: e.target.value })}
-                  placeholder="Ex. : pas d'activités aquatiques, pas de soirée en discothèque, rien hors Île-de-France."
+                  placeholder="Ex. : pas d'activités aquatiques, rien hors Île-de-France."
                   aria-label="Exclusions"
                 />
               </label>
@@ -145,9 +290,8 @@ export function CollaboratifTab() {
           <div className={styles.card}>
             <h4 className={styles.title}>Collecte auprès de chaque participant</h4>
             <div className={styles.sub}>
-              Questions posées <b>en privé</b> par le gent. Les réponses ne remontent au salon
-              que sous forme de synthèse (jamais en verbatim, sauf si vous l&apos;autorisez
-              ci-dessous).
+              Questions posées <b>en privé</b> par le gent. Les réponses ne remontent au salon que
+              sous forme de synthèse (sauf si vous autorisez le verbatim plus bas).
             </div>
             <div className={local.questionList}>
               {questions.map((q) => (
@@ -164,9 +308,7 @@ export function CollaboratifTab() {
                       className={local.select}
                       value={q.kind}
                       onChange={(e) =>
-                        patchQuestion(q.id, {
-                          kind: e.target.value as CollabQuestion["kind"],
-                        })
+                        patchQuestion(q.id, { kind: e.target.value as CollabQuestion["kind"] })
                       }
                       aria-label="Type de question"
                     >
@@ -187,9 +329,7 @@ export function CollaboratifTab() {
                   </div>
                   {(q.kind === "choice" || q.kind === "dates") && (
                     <label className={local.field}>
-                      <span className={local.fieldLabel}>
-                        Options (séparées par des virgules)
-                      </span>
+                      <span className={local.fieldLabel}>Options (séparées par des virgules)</span>
                       <input
                         className={local.input}
                         value={(q.options ?? []).join(", ")}
@@ -266,8 +406,8 @@ export function CollaboratifTab() {
           <div className={styles.card}>
             <h4 className={styles.title}>Propositions et décision</h4>
             <div className={styles.sub}>
-              Quand la collecte est assez avancée, le gent vérifie des options (recherche web si
-              activée) et les publie dans le salon.
+              Quand la collecte est assez avancée, le gent vérifie des options et les publie dans
+              le salon.
             </div>
             <div className={local.fieldGrid}>
               <label className={local.field}>
@@ -311,16 +451,10 @@ export function CollaboratifTab() {
                 <input
                   type="checkbox"
                   checked={collab?.propositions?.webCheck !== false}
-                  onChange={(e) =>
-                    updateCollab({ propositions: { webCheck: e.target.checked } })
-                  }
+                  onChange={(e) => updateCollab({ propositions: { webCheck: e.target.checked } })}
                 />
                 Vérifier la faisabilité sur le web avant de proposer
               </label>
-              <p className={local.hint}>
-                La recherche web doit aussi être activée pour ce gent (onglet Connecteurs /
-                Conversationnel).
-              </p>
               <div>
                 <span className={local.fieldLabel}>Qui tranche ?</span>
                 <div className={local.radioRow} style={{ marginTop: 8 }}>
@@ -350,8 +484,8 @@ export function CollaboratifTab() {
           <div className={styles.card}>
             <h4 className={styles.title}>Confidentialité et votre rôle</h4>
             <div className={styles.sub}>
-              Les conversations privées entre participants restent toujours invisibles au gent.
-              Ici, vous réglez ce qu&apos;il peut partager du fil privé gent ↔ participant.
+              Les messages privés entre participants restent toujours invisibles au gent. Ici :
+              ce qu&apos;il peut partager du fil privé gent ↔ participant.
             </div>
             <div className={styles.routineConfig}>
               <label className={local.check}>
@@ -393,14 +527,19 @@ export function CollaboratifTab() {
                       checked={collab?.roleCreateur === "organisateur"}
                       onChange={() => updateCollab({ roleCreateur: "organisateur" })}
                     />
-                    Organisateur (badge Créateur, mêmes droits de parole)
+                    Organisateur (badge Créateur visible)
                   </label>
                 </div>
-                <p className={local.hint}>
-                  Les deux options vous laissent intervenir dans le salon. « Organisateur »
-                  affiche simplement le badge Créateur auprès des participants.
-                </p>
               </div>
+            </div>
+          </div>
+
+          <div className={styles.card}>
+            <h4 className={styles.title}>Ensuite</h4>
+            <div className={styles.sub} style={{ marginBottom: 0 }}>
+              Documents de contexte → onglet <b>Connaissances</b>. Puis{" "}
+              <b>Diffuser</b>, et dans <b>Diffusion</b> créez le <b>lien de salon</b> à envoyer à
+              l&apos;équipe.
             </div>
           </div>
         </>

@@ -108,7 +108,7 @@ const NAV: NavSection[] = [
       { id: "conversationnel", label: "Gent Conversationnel", icon: ICON.conversationnel },
       { id: "miniapp", label: "Mini App", icon: ICON.miniapp },
       { id: "visionneuse", label: "Visionneuse", icon: ICON.visionneuse },
-      { id: "collaboratif", label: "Collaboratif", icon: ICON.collaboratif },
+      { id: "collaboratif", label: "Event Manager", icon: ICON.collaboratif },
       { id: "apercu", label: "Aperçu", icon: ICON.apercu },
     ],
   },
