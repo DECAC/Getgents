@@ -128,6 +128,14 @@ export interface MapPoint {
   label: string;
   lat: number;
   lon: number;
+  /** Texte court affiché dans la liste à côté de la carte (expérience type Gemini). */
+  description?: string;
+  /** Type de lieu (plage, médina, restaurant…). */
+  category?: string;
+  /** Note sur 5, optionnelle. */
+  rating?: number;
+  /** Photo https uniquement — jamais d'URL inventée par le modèle. */
+  imageUrl?: string;
 }
 
 export interface ArtefactProposal {
@@ -261,7 +269,7 @@ export interface Artefact {
   body?: string;
   chartData?: { label: string; value: number }[];
   checklistItems?: { label: string; checked: boolean }[];
-  /** Points géolocalisés pour les artefacts carte (fond IGN cartes.gouv.fr). */
+  /** Points géolocalisés pour les artefacts carte (fond mondial OSM / CARTO). */
   mapPoints?: MapPoint[];
   /** Schéma de tableau de bord (rendu Recharts + cartes en plein espace). */
   dashboard?: import("@/lib/dashboardArtefact").DashboardSpec;
@@ -614,9 +622,17 @@ export interface DownloadLead {
 export interface CollabQuestion {
   id: string;
   label: string;
-  /** texte libre | dates à choix multiples | choix unique parmi options. */
+  /**
+   * texte libre | dates/période (suggestions optionnelles + réponse libre autorisée)
+   * | choix unique parmi options.
+   */
   kind: "text" | "dates" | "choice";
-  /** Options proposées pour "choice" et "dates". */
+  /**
+   * Pour "choice" : options obligatoires.
+   * Pour "dates" : suggestions cliquables optionnelles (ex. samedis précis) ;
+   *   le participant peut aussi répondre en texte libre
+   *   (ex. « les mardis à jeudi en octobre »).
+   */
   options?: string[];
   /** Si vrai, la synthèse attend cette réponse avant de passer à la décision. */
   required?: boolean;
@@ -632,6 +648,11 @@ export interface CollabQuestion {
  */
 export interface CollabConfig {
   enabled: boolean;
+  /**
+   * Gabarit appliqué depuis le studio (évite de réécraser une config
+   * personnalisée, et force le bon exemple au premier passage sur l'onglet).
+   */
+  template?: "team-building";
   /** Ce que le groupe doit accomplir (ex. « Trouver la journée team building »). */
   mission?: string;
   /** Cadre structuré : bornes affichées en bandeau et rappelées à l'orchestrateur. */

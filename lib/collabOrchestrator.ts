@@ -110,12 +110,17 @@ export function buildOrchestratorSystemPrompt(input: OrchestratorPromptInput): s
     blocks.push(
       "QUESTIONS DE COLLECTE — à poser EN PRIVÉ à chaque participant, une ou deux à la fois, en reformulant avec ton style :\n" +
         questions
-          .map(
-            (q) =>
-              `- [${q.id}] ${q.label}` +
-              (q.options?.length ? ` (options : ${q.options.join(" / ")})` : "") +
-              (q.required ? " — OBLIGATOIRE" : "")
-          )
+          .map((q) => {
+            const kindNote =
+              q.kind === "dates"
+                ? q.options?.length
+                  ? ` (suggestions de dates : ${q.options.join(" / ")} — accepte aussi une période en texte libre, ex. « les mardis à jeudi en octobre »)`
+                  : " (dates ou période en texte libre, ex. « les mardis à jeudi en octobre »)"
+                : q.options?.length
+                  ? ` (options : ${q.options.join(" / ")})`
+                  : "";
+            return `- [${q.id}] (${q.kind}) ${q.label}${kindNote}${q.required ? " — OBLIGATOIRE" : ""}`;
+          })
           .join("\n")
     );
   }

@@ -173,11 +173,29 @@ function BuilderRailList() {
 /** Rail dans la vue d'un gent — configuration, diffusion, assistant. */
 function BuilderRailGent() {
   const router = useRouter();
-  const { currentDraft, activeTab, switchTab, railCollapsed, toggleRail, publishDraft } = useBuilder();
+  const { currentDraft, activeTab, switchTab, createDraft, railCollapsed, toggleRail, publishDraft } =
+    useBuilder();
 
   function handleNav(tab: BuilderTab) {
     if (tab === "mesgents") {
       router.push("/builder/mesgents");
+      return;
+    }
+    // Les entrées sous « Créer » (Conversationnel, Mini App, Visionneuse,
+    // Event Manager, Aperçu) ouvrent un NOUVEAU brouillon dans le type choisi,
+    // au lieu de changer l'onglet du gent en cours — qui aurait sinon vu sa
+    // mission/prompt écrasés par le gabarit du type.
+    const CREATE_TABS: BuilderTab[] = [
+      "conversationnel",
+      "miniapp",
+      "visionneuse",
+      "collaboratif",
+      "apercu",
+    ];
+    if (CREATE_TABS.includes(tab)) {
+      const id = createDraft();
+      switchTab(tab);
+      router.push(`/builder/${id}`);
       return;
     }
     switchTab(tab);
