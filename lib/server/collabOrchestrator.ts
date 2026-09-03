@@ -51,31 +51,49 @@ import {
 
 export const COLLAB_ORCHESTRATOR_MAX_TOKENS = 4096;
 
-export async function tickCollabOrchestrator(token: string): Promise<void> {
+/** Résultat d'un tick — exposé au client pour diagnostiquer un salon muet. */
+export type CollabOrchestratorTickResult =
+  | { ok: true }
+  | {
+      ok: false;
+      reason:
+        | "not_collab"
+        | "no_session"
+        | "done"
+        | "busy_or_capped"
+        | "no_key"
+        | "quota"
+        | "empty_llm"
+        | "bad_marker"
+        | "failed";
+      detail?: string;
+    };
+
+export async function tickCollabOrchestrator(token: string): Promise<CollabOrchestratorTickResult> {
   const lien = await resolveCollabLink(token);
-  if (!lien.ok) return;
+  if (!lien.ok) return { ok: false, reason: "not_collab" };
   const { link, espace, collab } = lien.value;
 
   const session = await getCollabSession(link.token);
-  if (!session) return;
-  if (session.status === "done") return;
+  if (!session) return { ok: false, reason: "no_session" };
+  if (session.status === "done") return { ok: false, reason: "done" };
 
   // Mutex + plafond, atomiquement : -1 = un tick est déjà en cours (il verra
   // nos messages) ou le plafond est atteint (le propriétaire est protégé).
   const claim = await collabOrchestrationBegin(session.id, session.maxOrchestrations);
-  if (claim < 0) return;
+  if (claim < 0) return { ok: false, reason: "busy_or_capped" };
 
   try {
     const ctx = await contexteForGent(link.gentId);
-    if (!ctx.cle) return; // propriétaire sans clé disponible : le gent se tait
+    if (!ctx.cle) return { ok: false, reason: "no_key" };
     const quota = await consommerPourVisiteur(ctx, "llm");
-    if (!quota.ok) return;
+    if (!quota.ok) return { ok: false, reason: "quota" };
 
     const [participants, tousLesMessages] = await Promise.all([
       listCollabParticipants(session.id),
       listRecentCollabMessages(session.id),
     ]);
-    if (!participants.length) return;
+    if (!participants.length) return { ok: true };
 
     const gentName = espace.gent || espace.name;
     const promptInput = {
@@ -118,15 +136,15 @@ export async function tickCollabOrchestrator(token: string): Promise<void> {
       choices?: { message?: { content?: string } }[];
     } | null;
     const raw = data?.choices?.[0]?.message?.content ?? "";
-    if (!raw) return;
+    if (!raw) return { ok: false, reason: "empty_llm" };
 
     const decoded = extractJsonFromHtmlMarker(raw, COLLAB_ACTION_MARKER);
-    if (!decoded) return;
+    if (!decoded) return { ok: false, reason: "bad_marker" };
     let parsedJson: unknown;
     try {
       parsedJson = JSON.parse(decoded);
     } catch {
-      return;
+      return { ok: false, reason: "bad_marker" };
     }
 
     const actions = parseOrchestratorActions(parsedJson, {
@@ -140,6 +158,7 @@ export async function tickCollabOrchestrator(token: string): Promise<void> {
       collection: session.collection,
       actions,
     });
+    return { ok: true };
   } catch (e) {
     // Le salon ne doit jamais tomber parce que son orchestrateur a failli.
     console.error(
@@ -149,6 +168,7 @@ export async function tickCollabOrchestrator(token: string): Promise<void> {
         detail: (e as Error).message,
       })
     );
+    return { ok: false, reason: "failed", detail: (e as Error).message };
   } finally {
     await collabOrchestrationEnd(session.id);
   }

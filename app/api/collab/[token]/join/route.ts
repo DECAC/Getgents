@@ -100,13 +100,16 @@ export async function POST(req: Request, { params }: Params) {
     // L'arrivée d'un participant concerne l'orchestrateur : à lui d'engager
     // la collecte en privé. Awaité (et non en tâche de fond) : en serverless,
     // le travail survivant à la réponse peut être tué en vol.
-    await tickCollabOrchestrator(params.token);
+    const orchestrator = await tickCollabOrchestrator(params.token);
 
     return NextResponse.json({
       participantToken: created.participantToken,
       me: created.participant,
       sessionId: session.id,
       status: session.status,
+      orchestrator: orchestrator.ok
+        ? { ok: true as const }
+        : { ok: false as const, reason: orchestrator.reason },
     });
   } catch (e) {
     const { error, hint, status } = describeCollabFailure(e);

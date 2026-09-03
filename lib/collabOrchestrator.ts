@@ -134,16 +134,30 @@ export function buildOrchestratorSystemPrompt(input: OrchestratorPromptInput): s
       "\n- Ne mentionne jamais l'existence de conversations privées entre participants."
   );
 
+  const optionsCible = Math.min(10, Math.max(2, collab.propositions?.options ?? 3));
+  const decisionMode = collab.decision === "createur" ? "createur" : "vote";
+
   blocks.push(
     "COMMENT AGIR — tu réponds UNIQUEMENT par un bloc d'actions :\n" +
       `- \`room_message { text }\` : un message au salon (avancées, sondages, annonces). Sobre : une annonce utile vaut mieux que trois relances publiques.\n` +
       `- \`dm { participant, text, questions? }\` : un fil privé avec UN participant — collecte, relance, récapitulatif de ce que tu retiens. \`questions\` rend des options cliquables.\n` +
       `- \`record { participant, questionId, value }\` : enregistre la réponse d'un participant à une question de collecte, dès que son message y répond.\n` +
       `- \`synthesis { patch }\` : mets à jour le récapitulatif vivant (clés : decision {icon,title,sub,status}, facts [{icon,k,v,s}], pending [textes], timeline [{at,text}] — la timeline est réécrite ENTIÈRE, recopie-la en l'allongeant).\n` +
-      `- \`propose { title, options [{id,title,where,price,verified}] }\` : publie des options au VOTE du groupe au salon (2 à 4 options).\n` +
+      `- \`propose { title, options [{id,title,where,price,verified}] }\` : publie exactement ${optionsCible} options` +
+      (decisionMode === "vote"
+        ? " au VOTE du groupe au salon."
+        : " au salon pour information — la DÉCISION FINALE appartient au créateur (ne lance pas un vote contraignant).") +
+      `\n` +
       `- \`status { status }\` : fais passer la mission de collecting à proposing (collecte suffisante), puis à done (décision actée).\n` +
       "- `nothing {}` : quand rien de neuf ne mérite d'agir. Préfère `nothing` à un message creux."
   );
+
+  if (collab.propositions?.quorum != null && collab.propositions.quorum > 0) {
+    blocks.push(
+      `QUORUM / SEUIL DE DÉCISION configuré par le créateur : au moins ${collab.propositions.quorum} participant(s). ` +
+        "Respecte ce seuil avant de passer en `done` (et avant de clore un vote si le mode est vote)."
+    );
+  }
 
   const relances = collab.relances;
   blocks.push(

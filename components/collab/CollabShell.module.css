@@ -130,6 +130,31 @@
   padding: 8px 11px;
 }
 
+.orchNotice {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 10px 22px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #7a4b00;
+  background: #fff6e5;
+  border-bottom: 1px solid #f0d9a8;
+}
+
+.orchNoticeDismiss {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
 /* ── Bandeau mission ──────────────────────────────────────────────── */
 
 .topbar {

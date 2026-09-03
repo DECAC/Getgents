@@ -6,14 +6,21 @@ import styles from "./AccueilTab.module.css";
 /**
  * Accueil du gent — l'écran d'arrivée depuis Gent' space. On y choisit ce
  * qu'on fabrique. Le choix PRÉCONFIGURE le gent sans rien verrouiller : les
- * deux onglets restent accessibles, on peut donc greffer une mini-app sur un
+ * onglets restent accessibles, on peut donc greffer une mini-app sur un
  * gent conversationnel (et l'inverse) après coup.
  */
 export function AccueilTab() {
   const { currentDraft, switchTab, updatePinnedArtefact, updateVisionneuse } = useBuilder();
   const miniAppOn = !!currentDraft.pinnedArtefact?.enabled;
   const visionneuseOn = !!currentDraft.visionneuse?.enabled;
-  const modeActuel = visionneuseOn ? "visionneuse" : miniAppOn ? "miniapp" : "conversationnel";
+  const collabOn = !!currentDraft.collab?.enabled;
+  const modeActuel = collabOn
+    ? "collaboratif"
+    : visionneuseOn
+      ? "visionneuse"
+      : miniAppOn
+        ? "miniapp"
+        : "conversationnel";
 
   function chooseConversationnel() {
     switchTab("conversationnel");
@@ -27,6 +34,12 @@ export function AccueilTab() {
   function chooseVisionneuse() {
     if (!visionneuseOn) updateVisionneuse({ enabled: true });
     switchTab("visionneuse");
+  }
+
+  function chooseCollaboratif() {
+    // N'active pas ici : l'onglet Event Manager précharge le gabarit s'il
+    // n'y a pas encore de config, sans écraser un gent déjà paramétré.
+    switchTab("collaboratif");
   }
 
   return (
@@ -109,6 +122,34 @@ export function AccueilTab() {
           </span>
           <span className={styles.choiceFoot}>
             {modeActuel === "visionneuse" ? "Configurer le document" : "Activer et configurer"}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className={[styles.choice, modeActuel === "collaboratif" ? styles.choiceOn : ""].filter(Boolean).join(" ")}
+          onClick={chooseCollaboratif}
+        >
+          <span className={styles.thumb}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+              <circle cx="9" cy="8" r="3" />
+              <circle cx="16" cy="9" r="2.5" />
+              <path d="M3.5 18.5c.6-2.4 2.4-3.8 5.5-3.8s4.9 1.4 5.5 3.8" />
+              <path d="M13 18.5c.5-2 1.8-3.2 3.5-3.2 1.4 0 2.5.8 3 2.2" />
+            </svg>
+          </span>
+          {modeActuel === "collaboratif" && <span className={styles.activeBadge}>Mode actuel</span>}
+          <span className={styles.choiceTitle}>Configurer Event Manager</span>
+          <span className={styles.choiceDesc}>
+            Plusieurs participants dans un salon : le gent collecte les dispos en privé, vérifie
+            les options en ligne, propose un choix et tient la synthèse. Pour créer un{" "}
+            <b>nouveau</b> Event Manager, utilisez le menu Créer à gauche.
+          </span>
+          <span className={styles.choiceFoot}>
+            {modeActuel === "collaboratif" ? "Configurer la mission" : "Ouvrir Event Manager"}
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>

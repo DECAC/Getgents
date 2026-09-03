@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
+import { isDirtySincePublish } from "@/lib/builderSnapshot";
 import { apiFetchInit, estSessionExpiree, signalerSessionExpiree } from "@/lib/apiFetch";
 import { SessionExpiree } from "@/components/shared/SessionExpiree";
 import styles from "./CollabSuiviSection.module.css";
@@ -96,6 +97,8 @@ export function CollabSuiviSection() {
 
   if (!enabled) return null;
 
+  const dirty = isDirtySincePublish(currentDraft);
+
   if (currentDraft.status !== "published") {
     return (
       <div className={styles.card}>
@@ -131,6 +134,13 @@ export function CollabSuiviSection() {
           {loading ? "…" : "Actualiser"}
         </button>
       </div>
+
+      {dirty && (
+        <div className={styles.warn}>
+          Des modifications Event Manager ne sont pas encore diffusées. Le salon public utilise
+          encore l&apos;ancienne version — cliquez <b>Diffuser les modifications</b>.
+        </div>
+      )}
 
       {error && (
         <div className={styles.warn}>

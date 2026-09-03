@@ -78,11 +78,12 @@ export function CollaboratifTab() {
   }, [currentDraft.id, currentDraft.collab?.propositions?.options]);
 
   // Clic menu « Event Manager » = type actif + gabarit team building si besoin.
+  // Si une config collab existe déjà (même désactivée), on ne l'écrase jamais.
   useEffect(() => {
     if (seededForDraftRef.current === currentDraft.id) return;
     seededForDraftRef.current = currentDraft.id;
 
-    if (currentDraft.collab?.template === "team-building" && currentDraft.collab.enabled) {
+    if (currentDraft.collab !== undefined) {
       return;
     }
 
@@ -157,13 +158,33 @@ export function CollaboratifTab() {
   return (
     <div className={styles.wrap}>
       <div className={styles.card}>
-        <h4 className={styles.title}>Event Manager</h4>
-        <div className={styles.sub} style={{ marginBottom: 0 }}>
-          Un gent <b>orchestrateur d&apos;événements</b> : salon commun, collecte en privé,
-          vérification web, propositions au vote, synthèse des décisions. Un gabarit{" "}
-          <b>team building</b> est préchargé — adaptez-le à votre mission. Diffusez ensuite le{" "}
-          <b>lien de salon</b> depuis Diffusion.
+        <div className={styles.webSearchRow}>
+          <div>
+            <h4 className={styles.title}>Event Manager</h4>
+            <div className={styles.sub} style={{ marginBottom: 0 }}>
+              Un gent <b>orchestrateur d&apos;événements</b> : salon commun, collecte en privé,
+              vérification web, propositions au vote, synthèse des décisions. Un gabarit{" "}
+              <b>team building</b> est préchargé — adaptez-le à votre mission. Diffusez ensuite le{" "}
+              <b>lien de salon</b> depuis Diffusion.
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!!collab?.enabled}
+            aria-label="Activer Event Manager"
+            className={[styles.switch, collab?.enabled ? styles.switchOn : ""].filter(Boolean).join(" ")}
+            onClick={() => updateCollab({ enabled: !collab?.enabled })}
+          >
+            <span className={styles.knob} />
+          </button>
         </div>
+        {!collab?.enabled && (
+          <div className={styles.sub} style={{ marginTop: 10 }}>
+            Event Manager est <b>désactivé</b> sur ce gent. Réactivez-le puis{" "}
+            <b>Diffusez les modifications</b> pour que le lien de salon fonctionne.
+          </div>
+        )}
       </div>
 
       <div className={styles.card}>

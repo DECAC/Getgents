@@ -128,7 +128,8 @@ describe("prompt de l'orchestrateur", () => {
     const sys = buildOrchestratorSystemPrompt(base);
     expect(sys).toContain("Trouver la journée team building");
     expect(sys).toContain("150 €/pers");
-    expect(sys).toContain("[dispos] Quels samedis ?");
+    expect(sys).toContain("[dispos] (dates) Quels samedis ?");
+    expect(sys).toContain("publie exactement 3 options");
     const msg = buildOrchestratorStateMessage(base);
     expect(msg).toContain("Alice");
     expect(msg).toContain("3 et 10 oct");

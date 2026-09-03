@@ -66,6 +66,23 @@ function clearIdentity(token: string): void {
   }
 }
 
+/** Message lisible quand l'orchestrateur n'a pas pu démarrer après le join. */
+function orchestratorHint(reason?: string): string {
+  switch (reason) {
+    case "no_key":
+      return "Le gent n'a pas pu démarrer : aucune clé API n'est disponible pour son propriétaire. Le salon reste ouvert — les messages entre vous fonctionnent.";
+    case "quota":
+      return "Le gent n'a pas pu démarrer : le crédit / quota du propriétaire est épuisé. Réessayez plus tard.";
+    case "busy_or_capped":
+      return "Le gent est momentanément saturé (trop d'actions). Réessayez dans un instant ; vous pouvez déjà écrire dans le salon.";
+    case "empty_llm":
+    case "bad_marker":
+      return "Le gent a répondu de façon inattendue. Écrivez dans le salon ou en privé — un prochain message le relancera.";
+    default:
+      return "Le gent n'a pas pu démarrer tout de suite. Le salon est ouvert ; un prochain message le relancera.";
+  }
+}
+
 /* Palette déterministe par prénom (mêmes teintes que la maquette). */
 const PAV_COLORS: [string, string][] = [
   ["#dbe7fb", "#3a5fa3"],
@@ -163,6 +180,7 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
   const [joinName, setJoinName] = useState("");
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [orchestratorNotice, setOrchestratorNotice] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("salon");
   const [openPeers, setOpenPeers] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
@@ -289,6 +307,7 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
     if (!name || joining) return;
     setJoining(true);
     setJoinError(null);
+    setOrchestratorNotice(null);
     try {
       const res = await fetch(`/api/collab/${encodeURIComponent(token)}/join`, {
         method: "POST",
@@ -298,6 +317,7 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
       const data = (await res.json().catch(() => ({}))) as {
         participantToken?: string;
         hint?: string;
+        orchestrator?: { ok: boolean; reason?: string };
       };
       if (!res.ok || !data.participantToken) {
         setJoinError(
@@ -311,6 +331,9 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
       const next = { participantToken: data.participantToken, name };
       writeIdentity(token, next);
       setIdentity(next);
+      if (data.orchestrator && !data.orchestrator.ok) {
+        setOrchestratorNotice(orchestratorHint(data.orchestrator.reason));
+      }
     } catch {
       setJoinError("Connexion interrompue. Vérifiez votre réseau et réessayez.");
     } finally {
@@ -530,6 +553,20 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
           </button>
         </div>
       </header>
+
+      {orchestratorNotice && (
+        <div className={styles.orchNotice} role="status">
+          <span>{orchestratorNotice}</span>
+          <button
+            type="button"
+            className={styles.orchNoticeDismiss}
+            onClick={() => setOrchestratorNotice(null)}
+            aria-label="Fermer l'avis"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <div className={styles.layout}>
         <aside className={styles.people}>

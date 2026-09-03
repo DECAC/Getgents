@@ -10,6 +10,7 @@ import {
   type ShareLink,
   type ShareLinkStats,
 } from "@/lib/shareLink";
+import { isDirtySincePublish } from "@/lib/builderSnapshot";
 import styles from "./ShareLinksSection.module.css";
 import { SessionExpiree } from "@/components/shared/SessionExpiree";
 
@@ -160,6 +161,8 @@ export function ShareLinksSection() {
 
   const published = currentDraft.status === "published";
   const isCollab = !!currentDraft.collab?.enabled;
+  const dirty = isDirtySincePublish(currentDraft);
+  const canCreateLink = published && !creating && !!target.trim() && !(isCollab && dirty);
 
   return (
     <div className={styles.card}>
@@ -191,6 +194,15 @@ export function ShareLinksSection() {
         </div>
       )}
 
+      {published && isCollab && dirty && (
+        <div className={styles.warn}>
+          Event Manager a été modifié (ou activé) depuis la dernière diffusion.{" "}
+          <b>Diffusez les modifications</b> avant de créer ou de partager un lien de salon —
+          sinon les participants verront encore l&apos;ancienne version (souvent un chat 1:1
+          classique, sans salon).
+        </div>
+      )}
+
       {published && currentDraft.fileDownloadEnabled && (
         <div className={styles.warn}>
           Le bouton <b>Télécharger</b> n&apos;apparaît sur ces liens qu&apos;après{" "}
@@ -214,7 +226,7 @@ export function ShareLinksSection() {
           placeholder="Cible (ex. Marie Dupont — Doctolib)"
           value={target}
           onChange={(e) => setTarget(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && void createLink()}
+          onKeyDown={(e) => e.key === "Enter" && canCreateLink && void createLink()}
           aria-label="Libellé de la cible"
         />
         <select
@@ -233,7 +245,14 @@ export function ShareLinksSection() {
           type="button"
           className={styles.createBtn}
           onClick={() => void createLink()}
-          disabled={creating || !target.trim()}
+          disabled={!canCreateLink}
+          title={
+            !published
+              ? "Diffusez d'abord le gent"
+              : isCollab && dirty
+                ? "Diffusez les modifications Event Manager d'abord"
+                : undefined
+          }
         >
           {creating ? "Création…" : isCollab ? "+ Créer le lien de salon" : "+ Créer le lien"}
         </button>
