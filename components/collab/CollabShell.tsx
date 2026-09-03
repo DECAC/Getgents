@@ -185,6 +185,8 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
   const [openPeers, setOpenPeers] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
+  /** True pendant l'attente du tick LLM (envoi salon/privé ou vote). */
+  const [awaitingOrch, setAwaitingOrch] = useState(false);
   const [shareLabel, setShareLabel] = useState("Copier le lien d'invitation");
   // Sélections en cours pour les questions à choix multiples (par id de message).
   const [askSel, setAskSel] = useState<Record<number, string[]>>({});
@@ -280,7 +282,8 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
     [state, activeChannel]
   );
 
-  // Marque l'onglet actif comme lu, puis scroll en bas sur nouveau message.
+  // Marque l'onglet actif comme lu, puis scroll en bas sur nouveau message
+  // (ou quand le gent « réfléchit » apparaît).
   useEffect(() => {
     if (!me || !activeChannel) return;
     const msgs = (state?.messages ?? []).filter((m) => m.channel === activeChannel);
@@ -289,12 +292,12 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
       lastSeenPerTab.current[activeChannel] ?? 0,
       lastId
     );
-    if (lastId !== lastMessageId.current) {
+    if (lastId !== lastMessageId.current || awaitingOrch) {
       lastMessageId.current = lastId;
       const el = feedRef.current;
       if (el) el.scrollTop = el.scrollHeight;
     }
-  }, [state, activeChannel, me]);
+  }, [state, activeChannel, me, awaitingOrch]);
 
   function unreadFor(channel: string): boolean {
     if (!state || !me) return false;
@@ -346,13 +349,15 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
   /** Envoi du brouillon vers le fil actif (salon, gent ou pair). */
   function handleSend(textOverride?: string) {
     const text = (textOverride ?? draft).trim();
-    if (!text || !identity || !me || !activeChannel) return;
+    if (!text || !identity || !me || !activeChannel || awaitingOrch) return;
     const target =
       tab === "salon"
         ? { kind: "room" as const }
         : tab === "prive"
           ? { kind: "gent" as const }
           : { kind: "peer" as const, participantId: tab.slice("peer:".length) };
+    // L'orchestrateur ne voit que salon + fil gent — pas les MP entre pairs.
+    const wakesOrch = target.kind === "room" || target.kind === "gent";
 
     // Affichage optimiste : id négatif, réconcilié au prochain poll / refresh.
     const optimistic: CollabMessage = {
@@ -367,6 +372,7 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
     setState((prev) => (prev ? { ...prev, messages: [...prev.messages, optimistic] } : prev));
     if (!textOverride) setDraft("");
     setSendError(null);
+    if (wakesOrch) setAwaitingOrch(true);
 
     void (async () => {
       try {
@@ -380,7 +386,8 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
           setState((prev) =>
             prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== optimistic.id) } : prev
           );
-          setSendError("Votre message n'est pas parti. Réessayez.");
+          const data = (await res.json().catch(() => ({}))) as { hint?: string };
+          setSendError(data.hint ?? "Votre message n'est pas parti. Réessayez.");
           return;
         }
         // Le serveur a attendu l'orchestrateur : on recharge tout de suite
@@ -391,13 +398,15 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
           prev ? { ...prev, messages: prev.messages.filter((m) => m.id !== optimistic.id) } : prev
         );
         setSendError("Connexion interrompue. Réessayez.");
+      } finally {
+        if (wakesOrch) setAwaitingOrch(false);
       }
     })();
   }
 
   /** Vote / rétention sur une proposition (dernier choix faisant foi), optimiste. */
   function handleVote(proposalId: number, optionId: string) {
-    if (!identity || !me) return;
+    if (!identity || !me || awaitingOrch) return;
     const prevVotes = state?.votes ?? {};
     setState((prev) => {
       if (!prev) return prev;
@@ -413,6 +422,8 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
       };
       return { ...prev, votes: { ...prev.votes, [key]: tally } };
     });
+    setSendError(null);
+    setAwaitingOrch(true);
     void (async () => {
       try {
         const res = await fetch(`/api/collab/${encodeURIComponent(token)}/messages`, {
@@ -434,6 +445,8 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
       } catch {
         setState((prev) => (prev ? { ...prev, votes: prevVotes } : prev));
         setSendError("Connexion interrompue. Votre choix n'a pas été enregistré.");
+      } finally {
+        setAwaitingOrch(false);
       }
     })();
   }
@@ -732,10 +745,12 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
                         canDecide={
                           (state?.decision ?? "vote") === "vote" || me?.role === "organizer"
                         }
+                        voteDisabled={awaitingOrch}
                         onVote={(optionId) => handleVote(m.id, optionId)}
                         isPrivate={tab === "prive"}
                         askSel={askSel[m.id] ?? []}
                         onAskToggle={(opt, multi) => {
+                          if (awaitingOrch) return;
                           setAskSel((prev) => {
                             const cur = prev[m.id] ?? [];
                             const next = multi
@@ -763,6 +778,23 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
                       />
                     )
                   )}
+                  {awaitingOrch && (tab === "salon" || tab === "prive") && (
+                    <article className={`${styles.orch} ${styles.orchThinking}`} aria-live="polite">
+                      <div className={styles.orchHead}>
+                        <span className={styles.orchAv}>{espace.icon}</span>
+                        <b>{gentName}</b>
+                        <span className={styles.badgeOrch}>Orchestrateur</span>
+                      </div>
+                      <p className={styles.orchText}>
+                        <span className={styles.thinkingDots} aria-hidden="true">
+                          <i />
+                          <i />
+                          <i />
+                        </span>
+                        {gentName} réfléchit…
+                      </p>
+                    </article>
+                  )}
                 </>
               )}
             </div>
@@ -780,27 +812,29 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
                 <input
                   type="text"
                   placeholder={
-                    tab === "salon"
-                      ? "Écrire dans le salon…"
-                      : tab === "prive"
-                        ? `Répondre à ${gentName} en privé…`
-                        : tab === "synthese"
-                          ? "Lecture seule"
-                          : activePeer
-                            ? `Écrire à ${activePeer.name} en privé…`
-                            : "Écrire…"
+                    awaitingOrch
+                      ? `${gentName} réfléchit…`
+                      : tab === "salon"
+                        ? "Écrire dans le salon…"
+                        : tab === "prive"
+                          ? `Répondre à ${gentName} en privé…`
+                          : tab === "synthese"
+                            ? "Lecture seule"
+                            : activePeer
+                              ? `Écrire à ${activePeer.name} en privé…`
+                              : "Écrire…"
                   }
                   autoComplete="off"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   maxLength={2000}
-                  disabled={tab === "synthese"}
+                  disabled={tab === "synthese" || awaitingOrch}
                 />
                 <button
                   className={styles.send}
                   type="submit"
                   aria-label="Envoyer"
-                  disabled={!draft.trim() || tab === "synthese"}
+                  disabled={!draft.trim() || tab === "synthese" || awaitingOrch}
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -818,6 +852,10 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
               </form>
               {sendError ? (
                 <p className={styles.errLine}>{sendError}</p>
+              ) : awaitingOrch ? (
+                <p className={styles.cnote}>
+                  {gentName} prépare sa réponse — cela peut prendre jusqu&apos;à une minute.
+                </p>
               ) : (
                 <p className={styles.cnote}>{composerNote}</p>
               )}
@@ -886,6 +924,7 @@ function GentCard({
   votes,
   decision,
   canDecide,
+  voteDisabled,
   onVote,
   isPrivate,
   askSel,
@@ -897,6 +936,7 @@ function GentCard({
   votes?: CollabVoteTally;
   decision: "vote" | "createur";
   canDecide: boolean;
+  voteDisabled?: boolean;
   onVote: (optionId: string) => void;
   isPrivate: boolean;
   askSel: string[];
@@ -972,6 +1012,7 @@ function GentCard({
                       type="button"
                       className={`${styles.vote} ${mine ? styles.voteOn : ""}`}
                       onClick={() => onVote(opt.id)}
+                      disabled={voteDisabled}
                     >
                       {creatorMode
                         ? mine
