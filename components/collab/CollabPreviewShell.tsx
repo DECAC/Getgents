@@ -46,6 +46,9 @@ export function CollabPreviewShell({ espace }: { espace: Espace }) {
   const questions = collab?.questions ?? [];
   const [tab, setTab] = useState<PreviewTab>("salon");
   const [entered, setEntered] = useState(false);
+  // Même volet que dans le vrai salon : l'aperçu doit montrer ce que les
+  // participants verront, sur téléphone comme sur grand écran.
+  const [personnesOuvertes, setPersonnesOuvertes] = useState(false);
 
   const demoPeople = useMemo(
     () => [
@@ -153,7 +156,12 @@ export function CollabPreviewShell({ espace }: { espace: Espace }) {
       </header>
 
       <div className={styles.layout}>
-        <aside className={styles.people}>
+        <aside
+          id="collab-participants"
+          className={[styles.people, personnesOuvertes ? styles.peopleOuvert : ""]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <div className={styles.peopleHead}>
             <div className={styles.peopleTitle}>
               <h2>Participants</h2>
@@ -217,7 +225,29 @@ export function CollabPreviewShell({ espace }: { espace: Espace }) {
             >
               🔒 Privé · {gentName}
             </button>
+          
+            <button
+              type="button"
+              className={styles.tabPersonnes}
+              onClick={() => setPersonnesOuvertes((v) => !v)}
+              aria-expanded={personnesOuvertes}
+              aria-controls="collab-participants"
+            >
+              <span aria-hidden="true">👥</span>
+              <span className={styles.tabPersonnesNb}>{demoPeople.length}</span>
+              <span className={styles.tabPersonnesTexte}>
+                {personnesOuvertes ? "Fermer" : "Participants"}
+              </span>
+            </button>
           </nav>
+
+          {personnesOuvertes && (
+            <div
+              className={styles.peopleVoile}
+              onClick={() => setPersonnesOuvertes(false)}
+              aria-hidden="true"
+            />
+          )}
 
           <div className={styles.feed}>
             <div className={styles.feedInner}>

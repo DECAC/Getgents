@@ -1194,37 +1194,114 @@
 }
 
 /* ── Mobile : la colonne participants passe au-dessus ─────────────── */
+/* ——— Téléphone ———
+   Mesuré sur iPhone : la colonne des participants prenait 168 px en haut, la
+   barre du gent une centaine d'autres, et le fil de discussion — la raison
+   d'être de l'écran — se retrouvait relégué dans le tiers restant.
+
+   Le fil prend donc toute la place. Les onglets descendent en barre du bas,
+   là où le pouce les atteint, et gardent leur pastille de message non lu.
+   Les participants deviennent un volet, ouvert depuis cette même barre. */
 @media (max-width: 860px) {
   .layout {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    /* Une seule rangée : le volet des participants sort du flux. */
+    grid-template-rows: 1fr;
   }
+
+  /* ── Volet des participants ── */
   .people {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    max-height: 62vh;
     border-right: none;
-    border-bottom: 1px solid var(--line);
-    max-height: 168px;
+    border-top: 1px solid var(--line);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -6px 28px rgba(21, 33, 43, 0.18);
+    transform: translateY(101%);
+    transition: transform 0.22s;
+    /* Fermé, le volet quitte aussi le parcours au clavier : un contenu
+       seulement déplacé hors écran reste atteignable à la tabulation. */
+    visibility: hidden;
   }
-  .peopleList {
-    flex-direction: row;
-    flex-wrap: wrap;
+
+  .peopleOuvert {
+    transform: translateY(0);
+    visibility: visible;
   }
-  .person {
-    grid-template-columns: 32px 1fr;
-    width: 100%;
-    max-width: 220px;
+
+  .peopleVoile {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(21, 33, 43, 0.42);
   }
-  .person .pill {
-    grid-column: 2;
-    justify-self: start;
-  }
+
   .peopleFoot {
     display: none;
   }
+
+  /* ── Barre du gent, réduite à l'essentiel ── */
   .missionChips {
     display: none;
   }
+
+  /* Le lien d'invitation se copie depuis le studio ; sur téléphone il vole
+     une place que le fil réclame. */
+  .shareBtn,
+  .progress {
+    display: none;
+  }
+
+  .topbar {
+    min-height: 0;
+    padding: 8px 14px;
+    gap: 10px;
+  }
+
+  /* La mission tient sur une ligne : sur trois, elle repoussait le fil d'une
+     cinquantaine de pixels pour une information qu'on lit une fois. */
   .gentSub {
     max-width: 70vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gentName {
+    font-size: 15px;
+  }
+
+  .gentAv {
+    width: 34px;
+    height: 34px;
+    font-size: 18px;
+  }
+
+  /* ── Le fil occupe l'écran, les onglets passent en bas ── */
+  .stage {
+    /* `order` ne s'applique qu'entre frères d'un même conteneur flex : le
+       `.stage` en est déjà un, en colonne. */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .feed {
+    order: 1;
+  }
+
+  .composer {
+    order: 2;
+  }
+
+  .tabs {
+    order: 3;
+    padding: 0 8px;
+    border-bottom: none;
+    border-top: 1px solid var(--line);
+    background: var(--card);
   }
 }
 
@@ -1260,4 +1337,46 @@
 
 .previewQuestions b {
   color: var(--ink);
+}
+
+/* Entrée « participants » de la barre du bas. Absente sur grand écran, où la
+   colonne latérale est déjà visible en permanence. */
+.tabPersonnes {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .tabPersonnes {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+    padding: 0 12px;
+    min-height: 44px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .tabPersonnes:focus-visible {
+    outline: 2px solid var(--sage);
+    outline-offset: -2px;
+  }
+
+  .tabPersonnesNb {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Le mot disparaît sur les écrans les plus étroits : le pictogramme et le
+     nombre suffisent, et les onglets ont besoin de la place. */
+  @media (max-width: 420px) {
+    .tabPersonnesTexte {
+      display: none;
+    }
+  }
 }

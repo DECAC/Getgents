@@ -187,6 +187,11 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
   const [joinError, setJoinError] = useState<string | null>(null);
   const [orchestratorNotice, setOrchestratorNotice] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("salon");
+  /* Sur téléphone, la colonne des participants prenait 168 px en haut de
+     l'écran et repoussait le fil hors de vue. Elle devient un volet, ouvert
+     depuis la barre du bas — on ne la supprime pas : c'est par elle qu'on
+     démarre une conversation privée avec quelqu'un. */
+  const [personnesOuvertes, setPersonnesOuvertes] = useState(false);
   const [openPeers, setOpenPeers] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
@@ -501,6 +506,7 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
   }
 
   function openPeer(id: string) {
+    setPersonnesOuvertes(false);
     setOpenPeers((prev) => (prev.includes(id) ? prev : [...prev, id]));
     setTab(`peer:${id}`);
   }
@@ -645,7 +651,12 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
       )}
 
       <div className={styles.layout}>
-        <aside className={styles.people}>
+        <aside
+          id="collab-participants"
+          className={[styles.people, personnesOuvertes ? styles.peopleOuvert : ""]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <div className={styles.peopleHead}>
             <div className={styles.peopleTitle}>
               <h2>Participants</h2>
@@ -731,7 +742,33 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
                 />
               );
             })}
+
+            {/* Accès aux participants depuis la barre du bas, sur téléphone
+                seulement : la colonne latérale y est masquée, et c'est par elle
+                qu'on ouvre une conversation privée avec quelqu'un. */}
+            <button
+              type="button"
+              className={styles.tabPersonnes}
+              onClick={() => setPersonnesOuvertes((v) => !v)}
+              aria-expanded={personnesOuvertes}
+              aria-controls="collab-participants"
+            >
+              <span aria-hidden="true">👥</span>
+              <span className={styles.tabPersonnesNb}>{participants.length}</span>
+              <span className={styles.tabPersonnesTexte}>
+                {personnesOuvertes ? "Fermer" : "Participants"}
+              </span>
+            </button>
           </nav>
+
+          {/* Voile du volet : il ferme d'un toucher n'importe où à côté. */}
+          {personnesOuvertes && (
+            <div
+              className={styles.peopleVoile}
+              onClick={() => setPersonnesOuvertes(false)}
+              aria-hidden="true"
+            />
+          )}
 
           <div className={styles.feed} ref={feedRef}>
             <div className={styles.feedInner}>
