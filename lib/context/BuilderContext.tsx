@@ -63,6 +63,7 @@ export type BuilderTab =
   | "conversationnel"
   | "miniapp"
   | "visionneuse"
+  | "collaboratif"
   | "apercu"
   | "connectors"
   | "knowledge"
@@ -121,6 +122,8 @@ interface BuilderContextValue {
   updatePinnedArtefact: (patch: Partial<import("@/lib/types").PinnedArtefact>) => void;
   /** Modifie la configuration du gent « visionneuse » du brouillon (patch partiel). */
   updateVisionneuse: (patch: Partial<import("@/lib/types").VisionneuseConfig>) => void;
+  /** Modifie la configuration du gent « collaboratif » du brouillon (patch partiel). */
+  updateCollab: (patch: Partial<import("@/lib/types").CollabConfig>) => void;
   /** Efface l'aperçu d'application pour repartir d'une page blanche. */
   clearAppPreview: () => void;
 
@@ -630,6 +633,39 @@ export function BuilderProvider({
         return {
           ...prev,
           [currentId]: { ...prev[currentId], visionneuse: { ...current, ...patch }, updatedAt: "à l'instant" },
+        };
+      });
+    },
+    [currentId]
+  );
+
+  // Type de gent « collaboratif » : patch partiel ; les sous-objets (cadre,
+  // relances, propositions, confidentialité) sont fusionnés pour qu'un champ
+  // isolé (ex. budget) n'efface pas le reste.
+  const updateCollab = useCallback(
+    (patch: Partial<import("@/lib/types").CollabConfig>) => {
+      setDrafts((prev) => {
+        const current = prev[currentId].collab ?? { enabled: false };
+        return {
+          ...prev,
+          [currentId]: {
+            ...prev[currentId],
+            collab: {
+              ...current,
+              ...patch,
+              cadre: patch.cadre ? { ...current.cadre, ...patch.cadre } : current.cadre,
+              relances: patch.relances ? { ...current.relances, ...patch.relances } : current.relances,
+              propositions: patch.propositions
+                ? { ...current.propositions, ...patch.propositions }
+                : current.propositions,
+              confidentialite: patch.confidentialite
+                ? { ...current.confidentialite, ...patch.confidentialite }
+                : current.confidentialite,
+              // questions : remplacement entier si fourni (édition de liste).
+              questions: patch.questions !== undefined ? patch.questions : current.questions,
+            },
+            updatedAt: "à l'instant",
+          },
         };
       });
     },
@@ -1289,6 +1325,7 @@ export function BuilderProvider({
         updateChannel,
         updatePinnedArtefact,
         updateVisionneuse,
+        updateCollab,
         clearAppPreview,
         sendBuilderMessage,
         toggleAutoPilot,

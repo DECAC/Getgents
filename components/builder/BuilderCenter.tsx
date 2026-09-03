@@ -6,6 +6,7 @@ import { AccueilTab } from "./tabs/AccueilTab";
 import { ConversationnelTab } from "./tabs/ConversationnelTab";
 import { MiniAppTab } from "./tabs/MiniAppTab";
 import { VisionneuseTab } from "./tabs/VisionneuseTab";
+import { CollaboratifTab } from "./tabs/CollaboratifTab";
 import { ApercuTab } from "./tabs/ApercuTab";
 import { ConnectorsTab } from "./tabs/ConnectorsTab";
 import { KnowledgeTab } from "./tabs/KnowledgeTab";
@@ -21,6 +22,7 @@ export function BuilderCenter() {
     if (activeTab === "conversationnel") return <ConversationnelTab />;
     if (activeTab === "miniapp") return <MiniAppTab />;
     if (activeTab === "visionneuse") return <VisionneuseTab />;
+    if (activeTab === "collaboratif") return <CollaboratifTab />;
     if (activeTab === "apercu") return <ApercuTab />;
     if (activeTab === "connectors") return <ConnectorsTab />;
     if (activeTab === "knowledge") return <KnowledgeTab />;

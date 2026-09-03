@@ -1,5 +1,11 @@
 import type { GentDraft } from "@/lib/types/builder";
-import type { NotificationChannel, PinnedArtefact, Routine, VisionneuseConfig } from "@/lib/types";
+import type {
+  CollabConfig,
+  NotificationChannel,
+  PinnedArtefact,
+  Routine,
+  VisionneuseConfig,
+} from "@/lib/types";
 
 export const DEFAULT_DRAFT_NAME = "Nouveau gent";
 
@@ -42,6 +48,29 @@ function visionneuseSnapshot(visionneuse?: VisionneuseConfig) {
   };
 }
 
+/** Empreinte collab — hors état de session (collecte, synthèse, messages). */
+function collabSnapshot(collab?: CollabConfig) {
+  if (!collab) return null;
+  return {
+    enabled: collab.enabled,
+    mission: collab.mission ?? null,
+    cadre: collab.cadre ?? null,
+    exclusions: collab.exclusions ?? null,
+    questions: (collab.questions ?? []).map((q) => ({
+      id: q.id,
+      label: q.label,
+      kind: q.kind,
+      options: q.options ?? null,
+      required: q.required ?? false,
+    })),
+    relances: collab.relances ?? null,
+    propositions: collab.propositions ?? null,
+    decision: collab.decision ?? null,
+    confidentialite: collab.confidentialite ?? null,
+    roleCreateur: collab.roleCreateur ?? null,
+  };
+}
+
 /** Empreinte canal — hors notes de livraison. */
 function channelSnapshot(channel?: NotificationChannel) {
   if (!channel) return null;
@@ -78,6 +107,7 @@ export function draftContentSnapshot(draft: GentDraft): string {
     jumpForm: draft.jumpForm,
     pinnedArtefact: pinnedSnapshot(draft.pinnedArtefact),
     visionneuse: visionneuseSnapshot(draft.visionneuse),
+    collab: collabSnapshot(draft.collab),
     routine: routineSnapshot(draft.routine),
     channel: channelSnapshot(draft.channel),
     appPreview: draft.appPreview

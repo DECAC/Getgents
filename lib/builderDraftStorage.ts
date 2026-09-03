@@ -317,6 +317,7 @@ export function restoreDraftFromPublished(id: string, espace: Espace): GentDraft
     connectors,
     pinnedArtefact: pinned,
     appPreview: espace.appPreview,
+    collab: espace.collab?.enabled ? espace.collab : undefined,
     routine: espace.routine
       ? {
           enabled: espace.routine.enabled,

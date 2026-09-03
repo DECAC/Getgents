@@ -54,6 +54,14 @@ const ICON = {
       <path d="M8 8h7M8 12h7M8 16h4" />
     </svg>
   ),
+  collaboratif: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="9" cy="8" r="3" />
+      <circle cx="16" cy="9" r="2.5" />
+      <path d="M3.5 18.5c.8-3 2.8-4.5 5.5-4.5s4.7 1.5 5.5 4.5" />
+      <path d="M13 18.5c.5-2 1.8-3.2 3.5-3.2 1.4 0 2.5.8 3 2.2" />
+    </svg>
+  ),
   apercu: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="3" y="4" width="18" height="16" rx="2.5" />
@@ -100,6 +108,7 @@ const NAV: NavSection[] = [
       { id: "conversationnel", label: "Gent Conversationnel", icon: ICON.conversationnel },
       { id: "miniapp", label: "Mini App", icon: ICON.miniapp },
       { id: "visionneuse", label: "Visionneuse", icon: ICON.visionneuse },
+      { id: "collaboratif", label: "Collaboratif", icon: ICON.collaboratif },
       { id: "apercu", label: "Aperçu", icon: ICON.apercu },
     ],
   },

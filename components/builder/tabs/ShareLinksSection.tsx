@@ -159,17 +159,28 @@ export function ShareLinksSection() {
   }
 
   const published = currentDraft.status === "published";
+  const isCollab = !!currentDraft.collab?.enabled;
 
   return (
     <div className={styles.card}>
       <div className={styles.headRow}>
         <div>
-          <h4 className={styles.title}>Lien personnalisé</h4>
+          <h4 className={styles.title}>{isCollab ? "Lien de salon" : "Lien personnalisé"}</h4>
           <div className={styles.sub}>
-            Chaque cible reçoit son propre lien vers le gent en <b>utilisation simple</b> (artefact
-            et conversation, sans accès au studio). <b>Intégrer</b> livre le même lien sous forme
-            d&apos;<code>iframe</code> à coller sur un site. Vous voyez si elle l&apos;a ouvert et
-            ce qu&apos;elle en a fait.
+            {isCollab ? (
+              <>
+                Chaque cible reçoit le même <b>lien de salon</b> : les participants indiquent leur
+                prénom, rejoignent le salon orchestré par le gent, et échangent (salon, privé avec
+                le gent, messages entre eux). Vous voyez si le lien a été ouvert.
+              </>
+            ) : (
+              <>
+                Chaque cible reçoit son propre lien vers le gent en <b>utilisation simple</b> (artefact
+                et conversation, sans accès au studio). <b>Intégrer</b> livre le même lien sous forme
+                d&apos;<code>iframe</code> à coller sur un site. Vous voyez si elle l&apos;a ouvert et
+                ce qu&apos;elle en a fait.
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -224,7 +235,7 @@ export function ShareLinksSection() {
           onClick={() => void createLink()}
           disabled={creating || !target.trim()}
         >
-          {creating ? "Création…" : "+ Créer le lien"}
+          {creating ? "Création…" : isCollab ? "+ Créer le lien de salon" : "+ Créer le lien"}
         </button>
       </div>
 

@@ -614,6 +614,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     channel: draft.channel,
     pinnedArtefact: draft.pinnedArtefact,
     visionneuse: draft.visionneuse,
+    collab: draft.collab?.enabled ? draft.collab : undefined,
     webSearch: draft.webSearch || undefined,
     appPreview: draft.appPreview?.modules.length ? draft.appPreview : undefined,
     fileDownloadEnabled: draft.fileDownloadEnabled || undefined,

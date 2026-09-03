@@ -129,6 +129,8 @@ export interface GentDraft {
   pinnedArtefact?: import("@/lib/types").PinnedArtefact;
   /** Type de gent « visionneuse » : document fixé par le créateur, lu en immersion. */
   visionneuse?: import("@/lib/types").VisionneuseConfig;
+  /** Type de gent « collaboratif » : salon multi-participants orchestré. */
+  collab?: import("@/lib/types").CollabConfig;
   /**
    * Application à blocs produite dans l'onglet Aperçu : copiée dans l'espace
    * à la Preview / publication, pour que l'utilisateur voie le nouveau rendu
