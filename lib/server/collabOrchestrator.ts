@@ -22,6 +22,7 @@ import {
   type OrchestratorAction,
 } from "@/lib/collabOrchestrator";
 import { mesurerTick, type InstantsTick } from "@/lib/collabTiming";
+import { maxTokensPourPhase, modelePourPhase } from "@/lib/collabModels";
 import type { CollabQuestion } from "@/lib/types";
 import {
   COLLAB_GENT_AUTHOR,
@@ -50,8 +51,6 @@ import {
  * - une panne de l'orchestrateur ne casse JAMAIS la requête de l'utilisateur
  *   (le message, lui, est déjà enregistré) — l'erreur part dans les journaux.
  */
-
-export const COLLAB_ORCHESTRATOR_MAX_TOKENS = 4096;
 
 /** Résultat d'un tick — exposé au client pour diagnostiquer un salon muet. */
 export type CollabOrchestratorTickResult =
@@ -90,7 +89,7 @@ export async function tickCollabOrchestrator(token: string): Promise<CollabOrche
   // relevés ici et mis en forme par `lib/collabTiming.ts`, qui est pur.
   const instants: InstantsTick = { debut: Date.now(), llmDebut: null, llmFin: null, fin: 0 };
   let actionsDecidees: number | null = null;
-  let modeleUtilise = espace.chatModelId ?? "anthropic/claude-sonnet-5";
+  let modeleUtilise = modelePourPhase(session.status, espace.chatModelId);
   let webSearchUtilise = false;
   let systemChars = 0;
   let etatChars = 0;
@@ -156,7 +155,11 @@ export async function tickCollabOrchestrator(token: string): Promise<CollabOrche
         maxOrchestrations: session.maxOrchestrations,
       };
 
-      const model = espace.chatModelId ?? "anthropic/claude-sonnet-5";
+      // Le modèle dépend de la PHASE, pas seulement du gent : la collecte est
+      // la phase longue et pauvre en décisions, et lui donner le modèle des
+      // propositions revenait à payer 15 s pour un « c'est noté ».
+      // Voir lib/collabModels.ts pour la mesure qui a motivé ce découpage.
+      const model = modelePourPhase(session.status, espace.chatModelId);
       modeleUtilise = model;
 
       // Les deux messages sont construits AVANT l'appel pour pouvoir mesurer ce
@@ -182,7 +185,7 @@ export async function tickCollabOrchestrator(token: string): Promise<CollabOrche
             { role: "user", content: messageEtat },
           ],
           stream: false,
-          max_tokens: COLLAB_ORCHESTRATOR_MAX_TOKENS,
+          max_tokens: maxTokensPourPhase(session.status),
           // La vérification web des options n'a de sens qu'en phase de
           // propositions — en collecte, elle facturerait des recherches
           // prématurées à chaque message du salon.

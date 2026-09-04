@@ -17,6 +17,15 @@ import {
   type CollabVoteTally,
 } from "@/lib/collab";
 import styles from "./CollabShell.module.css";
+import {
+  cleSelection,
+  envoiImmediat,
+  formatterReponses,
+  nombreRepondu,
+  reponsesCompletes,
+  type QuestionPosee,
+  type SelectionsParQuestion,
+} from "@/lib/collabAnswers";
 
 /**
  * Salon d'un gent collaboratif, ouvert par un lien de partage : salon commun,
@@ -200,8 +209,10 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
   const [shareLabel, setShareLabel] = useState("Copier le lien d'invitation");
   const openPeersRef = useRef<string[]>(openPeers);
   const autoSwitchedPeerRef = useRef<Set<string>>(new Set());
-  // Sélections en cours pour les questions à choix multiples (par id de message).
-  const [askSel, setAskSel] = useState<Record<number, string[]>>({});
+  // Sélections en cours, indexées par MESSAGE ET par question (voir
+  // lib/collabAnswers.ts). Une clé au seul id de message faisait que répondre
+  // à la deuxième question effaçait la réponse à la première.
+  const [askSel, setAskSel] = useState<Record<string, string[]>>({});
   const feedRef = useRef<HTMLDivElement>(null);
   const lastSeenPerTab = useRef<Record<string, number>>({});
   const lastMessageId = useRef<number>(0);
@@ -516,12 +527,27 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
     if (tab === `peer:${id}`) setTab("salon");
   }
 
-  /** Réponse à une question cliquable (privé) : choix unique direct, ou validation multi. */
-  function answerQuestion(message: CollabMessage, multi: boolean) {
-    const sel = askSel[message.id] ?? [];
-    if (!sel.length) return;
-    handleSend(multi ? sel.join(", ") : sel[0]);
-    setAskSel((prev) => ({ ...prev, [message.id]: [] }));
+  /**
+   * Envoie EN UNE FOIS les réponses à toutes les questions d'un message.
+   *
+   * Un envoi par clic était la cause des trois défauts observés : réponse
+   * partielle, questions reposées (lues comme des doublons), et une attente
+   * de modèle par question au lieu d'une seule.
+   */
+  function answerQuestion(message: CollabMessage, questions: QuestionPosee[]) {
+    const selections: SelectionsParQuestion = {};
+    questions.forEach((_, i) => {
+      const choix = askSel[cleSelection(message.id, i)];
+      if (choix?.length) selections[i] = choix;
+    });
+    if (!reponsesCompletes(questions, selections)) return;
+
+    handleSend(formatterReponses(questions, selections));
+    setAskSel((prev) => {
+      const suite = { ...prev };
+      questions.forEach((_, i) => delete suite[cleSelection(message.id, i)]);
+      return suite;
+    });
   }
 
   /* ── Écran d'arrivée ─────────────────────────────────────────────── */
@@ -827,25 +853,35 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
                         voteDisabled={awaitingOrch}
                         onVote={(optionId) => handleVote(m.id, optionId)}
                         isPrivate={tab === "prive"}
-                        askSel={askSel[m.id] ?? []}
-                        onAskToggle={(opt, multi) => {
+                        askSel={askSel}
+                        onAskToggle={(index, opt, multi, questions) => {
                           if (awaitingOrch) return;
-                          setAskSel((prev) => {
-                            const cur = prev[m.id] ?? [];
-                            const next = multi
-                              ? cur.includes(opt)
-                                ? cur.filter((o) => o !== opt)
-                                : [...cur, opt]
-                              : [opt];
-                            return { ...prev, [m.id]: next };
-                          });
-                          if (!multi) {
-                            // Choix unique : la réponse part immédiatement.
-                            setAskSel((prev) => ({ ...prev, [m.id]: [] }));
-                            handleSend(opt);
+                          const cle = cleSelection(m.id, index);
+                          const suite = {
+                            ...askSel,
+                            [cle]: multi
+                              ? (askSel[cle] ?? []).includes(opt)
+                                ? (askSel[cle] ?? []).filter((o) => o !== opt)
+                                : [...(askSel[cle] ?? []), opt]
+                              : [opt],
+                          };
+                          setAskSel(suite);
+
+                          // Une seule question à choix unique : elle part au
+                          // clic, c'est le cas rapide et un bouton de plus n'y
+                          // apporterait rien. Dès qu'il y en a plusieurs, on
+                          // attend que tout soit répondu — sinon
+                          // l'orchestrateur repose ce qui manque.
+                          if (envoiImmediat(questions)) {
+                            setAskSel((prev) => {
+                              const reste = { ...prev };
+                              delete reste[cle];
+                              return reste;
+                            });
+                            handleSend(formatterReponses(questions, { 0: [opt] }));
                           }
                         }}
-                        onAskValidate={(multi) => answerQuestion(m, multi)}
+                        onAskValidate={(questions) => answerQuestion(m, questions)}
                       />
                     ) : (
                       <ParticipantMessage
@@ -1018,9 +1054,9 @@ function GentCard({
   voteDisabled?: boolean;
   onVote: (optionId: string) => void;
   isPrivate: boolean;
-  askSel: string[];
-  onAskToggle: (option: string, multi: boolean) => void;
-  onAskValidate: (multi: boolean) => void;
+  askSel: Record<string, string[]>;
+  onAskToggle: (index: number, option: string, multi: boolean, questions: QuestionPosee[]) => void;
+  onAskValidate: (questions: QuestionPosee[]) => void;
 }) {
   const proposal =
     message.kind === "proposal" && message.payload && typeof message.payload === "object"
@@ -1032,6 +1068,15 @@ function GentCard({
       : null;
   const creatorMode = decision === "createur";
 
+  const questions: QuestionPosee[] = ask?.questions ?? [];
+  const selections: SelectionsParQuestion = {};
+  questions.forEach((_, i) => {
+    const choix = askSel[cleSelection(message.id, i)];
+    if (choix?.length) selections[i] = choix;
+  });
+  const complet = reponsesCompletes(questions, selections);
+  const repondu = nombreRepondu(questions, selections);
+
   return (
     <article className={styles.orch}>
       <div className={styles.orchHead}>
@@ -1042,33 +1087,45 @@ function GentCard({
       </div>
       {message.text && <p className={styles.orchText}>{message.text}</p>}
 
-      {ask?.questions?.map((q, i) => (
-        <div key={i}>
-          {q.q && q.q !== message.text && <p className={styles.orchText}>{q.q}</p>}
-          <div className={styles.ask}>
-            {q.options.map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                className={`${styles.chip} ${askSel.includes(opt) ? styles.chipOn : ""}`}
-                onClick={() => onAskToggle(opt, !!q.multi)}
-              >
-                {opt}
-              </button>
-            ))}
-            {q.multi && (
-              <button
-                type="button"
-                className={styles.askValidate}
-                disabled={!askSel.length}
-                onClick={() => onAskValidate(true)}
-              >
-                Valider
-              </button>
-            )}
+      {questions.map((q, i) => {
+        const choisis = askSel[cleSelection(message.id, i)] ?? [];
+        return (
+          <div key={i}>
+            {q.q && q.q !== message.text && <p className={styles.orchText}>{q.q}</p>}
+            <div className={styles.ask}>
+              {q.options.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  className={`${styles.chip} ${choisis.includes(opt) ? styles.chipOn : ""}`}
+                  aria-pressed={choisis.includes(opt)}
+                  onClick={() => onAskToggle(i, opt, !!q.multi, questions)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
           </div>
+        );
+      })}
+
+      {/* Un seul envoi pour tout le lot. Le décompte évite la question muette
+          — sans lui, on ne sait pas ce qui bloque le bouton. */}
+      {questions.length > 0 && !envoiImmediat(questions) && (
+        <div className={styles.askEnvoi}>
+          <button
+            type="button"
+            className={styles.askValidate}
+            disabled={!complet}
+            onClick={() => onAskValidate(questions)}
+          >
+            Envoyer mes réponses
+          </button>
+          <span className={styles.askCompte}>
+            {repondu} / {questions.length} répondue{questions.length > 1 ? "s" : ""}
+          </span>
         </div>
-      ))}
+      )}
 
       {proposal && (
         <>

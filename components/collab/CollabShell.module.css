@@ -872,6 +872,29 @@
   cursor: not-allowed;
 }
 
+/* Envoi groupé d'un lot de questions. Le décompte est à côté du bouton et non
+   dessous : désactivé sans explication, le bouton passe pour une panne. */
+.askEnvoi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.askCompte {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Au doigt, les pastilles et le bouton d'envoi sont des cibles isolées. */
+@media (pointer: coarse) {
+  .page button.chip,
+  .page button.askValidate {
+    min-height: 44px;
+  }
+}
+
 /* Cartes de proposition avec votes (salon) */
 .props {
   display: grid;
