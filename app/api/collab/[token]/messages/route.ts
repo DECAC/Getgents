@@ -22,7 +22,14 @@ import { canChat } from "@/lib/shareLink";
 export const dynamic = "force-dynamic";
 // L'envoi attend le tick de l'orchestrateur (un appel LLM) : sans ce plafond
 // relevé, un salon actif dépasserait la durée par défaut de la plateforme.
-export const maxDuration = 120;
+// 300 s, comme /api/chat, et non 120. Une requete de ce salon peut porter
+// DEUX ticks : celui qui traite le message, puis, quand la collecte
+// s'acheve, celui qui produit les propositions — gros modele et recherche
+// web. Au-dela du plafond, Vercel tue la fonction, le `finally` qui relache
+// le verrou d'orchestration n'est jamais execute, et le salon reste muet
+// jusqu'a expiration du verrou. Observe en production : verrou pris a
+// 14:00:00 par le tick de propositions, jamais relache.
+export const maxDuration = 300;
 
 interface Params {
   params: { token: string };
