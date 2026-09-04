@@ -258,7 +258,12 @@ export async function listCollabParticipants(sessionId: string): Promise<CollabP
     .from("collab_participants")
     .select("*")
     .eq("session_id", sessionId)
-    .order("last_seen_at", { ascending: true });
+    // Ordre d'ARRIVÉE, pas de dernière activité : `last_seen_at` est réécrit à
+    // chaque sondage du client (toutes les 2,5 s), et triait donc la liste des
+    // participants en permanence sous leurs yeux. `id` départage les arrivées
+    // simultanées, pour que deux appels successifs ne puissent pas différer.
+    .order("joined_at", { ascending: true })
+    .order("id", { ascending: true });
   if (error) raise(error);
   return ((data ?? []) as ParticipantRow[]).map(toParticipant);
 }

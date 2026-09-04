@@ -4,6 +4,7 @@ import {
   formatterReponses,
   nombreRepondu,
   reponsesCompletes,
+  ressembleAUnIdentifiant,
   type QuestionPosee,
 } from "@/lib/collabAnswers";
 
@@ -104,5 +105,27 @@ describe("formatterReponses", () => {
 
   it("se contente de la réponse si la question n'a pas de libellé", () => {
     expect(formatterReponses([{ q: "", options: ["oui"] }], { 0: ["oui"] })).toBe("oui");
+  });
+});
+
+describe("ressembleAUnIdentifiant", () => {
+  it("reconnaît un identifiant de question du cadre", () => {
+    // Observé en production : le fil privé affichait « q_ytdulcnc » au-dessus
+    // des pastilles, et la réponse repartait en « q_ytdulcnc : hotel ».
+    expect(ressembleAUnIdentifiant("q_ytdulcnc")).toBe(true);
+    expect(ressembleAUnIdentifiant("  q-abc123  ")).toBe(true);
+  });
+
+  it("laisse passer une vraie question", () => {
+    // Le filet ne doit surtout pas manger un libellé légitime.
+    expect(ressembleAUnIdentifiant("Airbnb ou hôtel ?")).toBe(false);
+    expect(ressembleAUnIdentifiant("Quelles sont tes disponibilités ?")).toBe(false);
+    expect(ressembleAUnIdentifiant("Quel budget ?")).toBe(false);
+  });
+
+  it("omet l'identifiant dans le message envoyé", () => {
+    expect(
+      formatterReponses([{ q: "q_ytdulcnc", options: ["airbnb", "hotel"] }], { 0: ["hotel"] })
+    ).toBe("hotel");
   });
 });

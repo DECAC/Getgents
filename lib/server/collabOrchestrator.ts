@@ -23,6 +23,8 @@ import {
 } from "@/lib/collabOrchestrator";
 import { mesurerTick, type InstantsTick } from "@/lib/collabTiming";
 import { maxTokensPourPhase, modelePourPhase } from "@/lib/collabModels";
+import { doitEnchainer, doitPasserEnPropositions } from "@/lib/collabPhase";
+import { collabProgress } from "@/lib/collab";
 import type { CollabQuestion } from "@/lib/types";
 import {
   COLLAB_GENT_AUTHOR,
@@ -70,7 +72,11 @@ export type CollabOrchestratorTickResult =
       detail?: string;
     };
 
-export async function tickCollabOrchestrator(token: string): Promise<CollabOrchestratorTickResult> {
+export async function tickCollabOrchestrator(
+  token: string,
+  /** Profondeur d'enchaînement. Voir `doitEnchainer` : bornée à un maillon. */
+  profondeur = 0
+): Promise<CollabOrchestratorTickResult> {
   const lien = await resolveCollabLink(token);
   if (!lien.ok) return { ok: false, reason: "not_collab" };
   const { link, espace, collab } = lien.value;
@@ -95,6 +101,8 @@ export async function tickCollabOrchestrator(token: string): Promise<CollabOrche
   let etatChars = 0;
   let messagesEnvoyes = 0;
   let participantsVus = 0;
+  /** Vrai si ce tick fait changer la mission de phase — déclenche l'enchaînement. */
+  let phaseAChange = false;
 
   /** Journalise le tick, quelle qu'en soit l'issue. Voir le `finally`. */
   const journaliser = (issue: string) => {
@@ -229,6 +237,24 @@ export async function tickCollabOrchestrator(token: string): Promise<CollabOrche
         existingMessages: tousLesMessages,
         collabQuestions: collab.questions ?? [],
       });
+
+      // Fin de collecte : c'est un DÉCOMPTE, pas un jugement — l'application
+      // le calcule, au lieu d'attendre du modèle une action `status` qu'il
+      // remplace volontiers par une phrase d'intention.
+      if (session.status === "collecting") {
+        const apres = await listCollabParticipants(session.id);
+        const majSession = await getCollabSession(link.token);
+        const progression = collabProgress(
+          apres,
+          majSession?.collection ?? session.collection,
+          (collab.questions ?? []).length
+        );
+        if (doitPasserEnPropositions(session.status, progression)) {
+          await updateCollabSessionStatus(session.id, "proposing");
+          phaseAChange = true;
+        }
+      }
+
       return { ok: true };
     })();
   } catch (e) {
@@ -246,6 +272,15 @@ export async function tickCollabOrchestrator(token: string): Promise<CollabOrche
   }
 
   journaliser(resultat.ok ? "ok" : resultat.reason);
+
+  // La phase vient de changer : on enchaîne UN tick, tout de suite. Sans lui,
+  // la mission passe en propositions puis se tait jusqu'à ce qu'un participant
+  // reprenne la parole — c'est le blocage observé, l'orchestrateur annonçant
+  // des propositions qui ne venaient jamais.
+  if (doitEnchainer(phaseAChange, profondeur)) {
+    return tickCollabOrchestrator(token, profondeur + 1);
+  }
+
   return resultat;
 }
 
@@ -314,7 +349,15 @@ async function applyActions(input: {
             }
             return undefined;
           }
-          return action.questions.map((ask) => {
+          return action.questions.map((brut) => {
+            // Le modèle écrit parfois l'IDENTIFIANT de la question du cadre à
+            // la place de son intitulé — observé en production, un fil privé
+            // affichant « q_ytdulcnc » au-dessus des pastilles. On le résout
+            // ici, avant écriture : une fois le message en base, plus rien ne
+            // le réécrira.
+            const parId = input.collabQuestions.find((q) => q.id === brut.q.trim());
+            const ask = parId ? { ...brut, q: parId.label } : brut;
+
             if (ask.options && ask.options.length > 1) return ask;
             // Cherche dans les questions du cadre une correspondance par libellé.
             const match = input.collabQuestions.find((q) =>

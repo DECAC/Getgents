@@ -74,6 +74,22 @@ export function envoiImmediat(questions: readonly QuestionPosee[]): boolean {
 }
 
 /**
+ * Un libellé de question est-il en réalité un identifiant technique ?
+ *
+ * Observé en production : l'orchestrateur a posé une question dont le libellé
+ * était `q_ytdulcnc` — l'identifiant de la question du cadre, et non son
+ * intitulé. Le participant voyait « q_ytdulcnc » au-dessus des pastilles, et
+ * sa réponse repartait en « q_ytdulcnc : hotel ».
+ *
+ * La cause est corrigée à la source (le serveur résout l'identifiant en
+ * intitulé avant d'écrire le message), mais on garde ce filet : les messages
+ * DÉJÀ en base portent le mauvais libellé, et rien ne les réécrira.
+ */
+export function ressembleAUnIdentifiant(libelle: string): boolean {
+  return /^q[_-][A-Za-z0-9_-]{4,}$/.test(libelle.trim());
+}
+
+/**
  * Met les réponses en une seule phrase pour l'orchestrateur.
  *
  * On répète la question devant sa réponse : le modèle reçoit le texte brut
@@ -93,7 +109,10 @@ export function formatterReponses(
       const choix = selections[i] ?? [];
       if (!choix.length) return null;
       const libelle = q.q.trim().replace(/\s*[?:：]\s*$/, "");
-      return libelle ? `${libelle} : ${choix.join(", ")}` : choix.join(", ");
+      // Un identifiant technique n'aide pas le modèle à rattacher la réponse —
+      // il lui donnerait au contraire l'exemple d'un libellé illisible.
+      if (!libelle || ressembleAUnIdentifiant(libelle)) return choix.join(", ");
+      return `${libelle} : ${choix.join(", ")}`;
     })
     .filter((l): l is string => l !== null)
     .join("\n");
