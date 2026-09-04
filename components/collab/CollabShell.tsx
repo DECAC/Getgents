@@ -87,8 +87,15 @@ function orchestratorHint(reason?: string): string {
       return "Le gent n'a pas pu démarrer : aucune clé API n'est disponible pour son propriétaire. Le salon reste ouvert — les messages entre vous fonctionnent.";
     case "quota":
       return "Le gent n'a pas pu démarrer : le crédit / quota du propriétaire est épuisé. Réessayez plus tard.";
-    case "busy_or_capped":
-      return "Le gent est momentanément saturé (trop d'actions). Réessayez dans un instant ; vous pouvez déjà écrire dans le salon.";
+    case "busy":
+      // Ce n'est pas une panne, c'est une attente : le tick en cours verra les
+      // messages qui viennent d'arriver. Le dire comme un incident — l'ancien
+      // « momentanément saturé » — faisait croire à un blocage alors que le
+      // gent réfléchissait, ce qui prend légitimement des dizaines de secondes
+      // en phase de propositions (gros modèle et recherche web).
+      return "Le gent réfléchit encore à la demande précédente. Sa réponse arrivera ici ; vous pouvez continuer à écrire entre-temps.";
+    case "capped":
+      return "Le gent a atteint sa limite d'actions pour cette mission. Le salon reste ouvert entre vous, mais il n'orchestrera plus.";
     case "empty_llm":
     case "bad_marker":
       return "Le gent a répondu de façon inattendue. Écrivez dans le salon ou en privé — un prochain message le relancera.";

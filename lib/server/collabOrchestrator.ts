@@ -63,7 +63,8 @@ export type CollabOrchestratorTickResult =
         | "not_collab"
         | "no_session"
         | "done"
-        | "busy_or_capped"
+        | "busy"
+        | "capped"
         | "no_key"
         | "quota"
         | "empty_llm"
@@ -88,7 +89,12 @@ export async function tickCollabOrchestrator(
   // Mutex + plafond, atomiquement : -1 = un tick est déjà en cours (il verra
   // nos messages) ou le plafond est atteint (le propriétaire est protégé).
   const claim = await collabOrchestrationBegin(session.id, session.maxOrchestrations);
-  if (claim < 0) return { ok: false, reason: "busy_or_capped" };
+  // -2 : un tick est en cours. Ce n'est PAS un incident — il verra les
+  // messages qui viennent d'arriver, et un tick de propositions dure
+  // legitimement des dizaines de secondes. -1 : plafond atteint, la seule
+  // sortie qui demande une action.
+  if (claim === -2) return { ok: false, reason: "busy" };
+  if (claim < 0) return { ok: false, reason: "capped" };
 
   // Mesure du tick. Elle commence APRÈS le mutex : ce qui précède n'est pas un
   // tick, et le compter diluerait le chiffre qu'on cherche. Les instants sont
@@ -278,7 +284,12 @@ export async function tickCollabOrchestrator(
   // reprenne la parole — c'est le blocage observé, l'orchestrateur annonçant
   // des propositions qui ne venaient jamais.
   if (doitEnchainer(phaseAChange, profondeur)) {
-    return tickCollabOrchestrator(token, profondeur + 1);
+    // Le resultat de l'enchainement est VOLONTAIREMENT ignore. Le premier tick
+    // a reussi : c'est ce que l'appelant doit apprendre. Renvoyer l'echec du
+    // second — typiquement « un tick est en cours », si un autre participant a
+    // parle entre-temps — ferait afficher un message d'incident pour une
+    // orchestration qui s'est parfaitement deroulee.
+    await tickCollabOrchestrator(token, profondeur + 1).catch(() => undefined);
   }
 
   return resultat;
