@@ -21,6 +21,7 @@ import {
   parseOrchestratorActions,
   type OrchestratorAction,
 } from "@/lib/collabOrchestrator";
+import { mesurerTick, type InstantsTick } from "@/lib/collabTiming";
 import type { CollabQuestion } from "@/lib/types";
 import {
   COLLAB_GENT_AUTHOR,
@@ -84,84 +85,149 @@ export async function tickCollabOrchestrator(token: string): Promise<CollabOrche
   const claim = await collabOrchestrationBegin(session.id, session.maxOrchestrations);
   if (claim < 0) return { ok: false, reason: "busy_or_capped" };
 
-  try {
-    const ctx = await contexteForGent(link.gentId);
-    if (!ctx.cle) return { ok: false, reason: "no_key" };
-    const quota = await consommerPourVisiteur(ctx, "llm");
-    if (!quota.ok) return { ok: false, reason: "quota" };
+  // Mesure du tick. Elle commence APRÈS le mutex : ce qui précède n'est pas un
+  // tick, et le compter diluerait le chiffre qu'on cherche. Les instants sont
+  // relevés ici et mis en forme par `lib/collabTiming.ts`, qui est pur.
+  const instants: InstantsTick = { debut: Date.now(), llmDebut: null, llmFin: null, fin: 0 };
+  let actionsDecidees: number | null = null;
+  let modeleUtilise = espace.chatModelId ?? "anthropic/claude-sonnet-5";
+  let webSearchUtilise = false;
+  let systemChars = 0;
+  let etatChars = 0;
+  let messagesEnvoyes = 0;
+  let participantsVus = 0;
 
-    const [participants, tousLesMessages] = await Promise.all([
-      listCollabParticipants(session.id),
-      listRecentCollabMessages(session.id),
-    ]);
-    if (!participants.length) return { ok: true };
-
-    const gentName = espace.gent || espace.name;
-    const promptInput = {
-      gentName,
-      espace: { name: espace.name, systemPrompt: espace.systemPrompt, webSearch: espace.webSearch },
-      collab,
-      status: session.status,
-      participants,
-      collection: session.collection,
-      synthesis: session.synthesis,
-      // LA règle de confidentialité, appliquée ici : le contexte du gent ne
-      // contient jamais un canal peer, quoi que le modèle en fasse ensuite.
-      messages: messagesForGent(tousLesMessages),
-      orchestrationCount: session.orchestrationCount,
-      maxOrchestrations: session.maxOrchestrations,
-    };
-
-    const model = espace.chatModelId ?? "anthropic/claude-sonnet-5";
-    const upstream = await chatResponseFor(
-      {
-        model,
-        messages: [
-          { role: "system", content: buildOrchestratorSystemPrompt(promptInput) },
-          { role: "user", content: buildOrchestratorStateMessage(promptInput) },
-        ],
-        stream: false,
-        max_tokens: COLLAB_ORCHESTRATOR_MAX_TOKENS,
-        // La vérification web des options n'a de sens qu'en phase de
-        // propositions — en collecte, elle facturerait des recherches
-        // prématurées à chaque message du salon.
-        webSearch: session.status === "proposing" && collab.propositions?.webCheck !== false
-          ? espace.webSearch
-          : false,
-      },
-      ctx,
-      "collab-orchestrator"
+  /** Journalise le tick, quelle qu'en soit l'issue. Voir le `finally`. */
+  const journaliser = (issue: string) => {
+    instants.fin = Date.now();
+    console.log(
+      JSON.stringify(
+        mesurerTick(instants, {
+          sessionId: session.id,
+          phase: session.status,
+          model: modeleUtilise,
+          webSearch: webSearchUtilise,
+          systemChars,
+          etatChars,
+          messages: messagesEnvoyes,
+          participants: participantsVus,
+          orchestration: claim,
+          maxOrchestrations: session.maxOrchestrations,
+          issue,
+          actions: actionsDecidees,
+        })
+      )
     );
+  };
 
-    const data = (await upstream.json().catch(() => null)) as {
-      choices?: { message?: { content?: string } }[];
-    } | null;
-    const raw = data?.choices?.[0]?.message?.content ?? "";
-    if (!raw) return { ok: false, reason: "empty_llm" };
+  let resultat: CollabOrchestratorTickResult;
+  try {
+    // Le corps du tick vit dans une fonction interne pour une seule raison :
+    // il compte une dizaine de sorties anticipées, et on veut journaliser
+    // CHACUNE avec sa durée. Les recopier une à une serait la garantie d'en
+    // oublier une — et une sortie non mesurée est précisément celle qui
+    // cacherait le problème qu'on cherche.
+    resultat = await (async (): Promise<CollabOrchestratorTickResult> => {
+      const ctx = await contexteForGent(link.gentId);
+      if (!ctx.cle) return { ok: false, reason: "no_key" };
+      const quota = await consommerPourVisiteur(ctx, "llm");
+      if (!quota.ok) return { ok: false, reason: "quota" };
 
-    const decoded = extractJsonFromHtmlMarker(raw, COLLAB_ACTION_MARKER);
-    if (!decoded) return { ok: false, reason: "bad_marker" };
-    let parsedJson: unknown;
-    try {
-      parsedJson = JSON.parse(decoded);
-    } catch {
-      return { ok: false, reason: "bad_marker" };
-    }
+      const [participants, tousLesMessages] = await Promise.all([
+        listCollabParticipants(session.id),
+        listRecentCollabMessages(session.id),
+      ]);
+      participantsVus = participants.length;
+      if (!participants.length) return { ok: true };
 
-    const actions = parseOrchestratorActions(parsedJson, {
-      participantIds: participants.map((p) => p.id),
-      questionIds: (collab.questions ?? []).map((q) => q.id),
-    });
+      const gentName = espace.gent || espace.name;
+      const promptInput = {
+        gentName,
+        espace: { name: espace.name, systemPrompt: espace.systemPrompt, webSearch: espace.webSearch },
+        collab,
+        status: session.status,
+        participants,
+        collection: session.collection,
+        synthesis: session.synthesis,
+        // LA règle de confidentialité, appliquée ici : le contexte du gent ne
+        // contient jamais un canal peer, quoi que le modèle en fasse ensuite.
+        messages: messagesForGent(tousLesMessages),
+        orchestrationCount: session.orchestrationCount,
+        maxOrchestrations: session.maxOrchestrations,
+      };
 
-    await applyActions({
-      sessionId: session.id,
-      gentName,
-      collection: session.collection,
-      actions,
-      existingMessages: tousLesMessages,
-      collabQuestions: collab.questions ?? [],
-    });
-    return { ok: true };
+      const model = espace.chatModelId ?? "anthropic/claude-sonnet-5";
+      modeleUtilise = model;
+
+      // Les deux messages sont construits AVANT l'appel pour pouvoir mesurer ce
+      // qu'on envoie réellement. Seule la longueur part aux journaux : le prompt
+      // du créateur et les messages du salon n'y figurent jamais.
+      const messageSysteme = buildOrchestratorSystemPrompt(promptInput);
+      const messageEtat = buildOrchestratorStateMessage(promptInput);
+      systemChars = messageSysteme.length;
+      etatChars = messageEtat.length;
+      messagesEnvoyes = promptInput.messages.length;
+
+      webSearchUtilise =
+        session.status === "proposing" && collab.propositions?.webCheck !== false
+          ? !!espace.webSearch
+          : false;
+
+      instants.llmDebut = Date.now();
+      const upstream = await chatResponseFor(
+        {
+          model,
+          messages: [
+            { role: "system", content: messageSysteme },
+            { role: "user", content: messageEtat },
+          ],
+          stream: false,
+          max_tokens: COLLAB_ORCHESTRATOR_MAX_TOKENS,
+          // La vérification web des options n'a de sens qu'en phase de
+          // propositions — en collecte, elle facturerait des recherches
+          // prématurées à chaque message du salon.
+          webSearch: webSearchUtilise,
+        },
+        ctx,
+        "collab-orchestrator"
+      );
+
+      const data = (await upstream.json().catch(() => null)) as {
+        choices?: { message?: { content?: string } }[];
+      } | null;
+      // Le chrono s'arrête ICI, pas au retour de `chatResponseFor` : l'appel est
+      // en `stream: false`, le corps n'est donc complet qu'une fois lu. S'arrêter
+      // plus tôt attribuerait au « reste » l'essentiel de la génération.
+      instants.llmFin = Date.now();
+      const raw = data?.choices?.[0]?.message?.content ?? "";
+      if (!raw) return { ok: false, reason: "empty_llm" };
+
+      const decoded = extractJsonFromHtmlMarker(raw, COLLAB_ACTION_MARKER);
+      if (!decoded) return { ok: false, reason: "bad_marker" };
+      let parsedJson: unknown;
+      try {
+        parsedJson = JSON.parse(decoded);
+      } catch {
+        return { ok: false, reason: "bad_marker" };
+      }
+
+      const actions = parseOrchestratorActions(parsedJson, {
+        participantIds: participants.map((p) => p.id),
+        questionIds: (collab.questions ?? []).map((q) => q.id),
+      });
+
+      actionsDecidees = actions.length;
+
+      await applyActions({
+        sessionId: session.id,
+        gentName,
+        collection: session.collection,
+        actions,
+        existingMessages: tousLesMessages,
+        collabQuestions: collab.questions ?? [],
+      });
+      return { ok: true };
+    })();
   } catch (e) {
     // Le salon ne doit jamais tomber parce que son orchestrateur a failli.
     console.error(
@@ -171,10 +237,13 @@ export async function tickCollabOrchestrator(token: string): Promise<CollabOrche
         detail: (e as Error).message,
       })
     );
-    return { ok: false, reason: "failed", detail: (e as Error).message };
+    resultat = { ok: false, reason: "failed", detail: (e as Error).message };
   } finally {
     await collabOrchestrationEnd(session.id);
   }
+
+  journaliser(resultat.ok ? "ok" : resultat.reason);
+  return resultat;
 }
 
 /** Écrit les actions validées en base, dans l'ordre décidé par le modèle. */
