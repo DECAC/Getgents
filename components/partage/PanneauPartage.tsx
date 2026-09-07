@@ -13,6 +13,28 @@ interface Grant {
   accepted_at: string | null;
 }
 
+/** Messages d'API lisibles — ne jamais afficher le code brut (`not_found`). */
+function messagePublication(code: string | undefined, status: number): string {
+  switch (code) {
+    case "not_found":
+      return "Ce gent n'est pas encore sur le serveur. Cliquez d'abord sur « Diffuser » dans le menu de gauche, puis republiez ici.";
+    case "forbidden":
+      return "Vous n'avez pas le droit de publier ce gent.";
+    case "unauthorized":
+    case "auth_required":
+      return "Session expirée. Reconnectez-vous, puis réessayez.";
+    case "supabase_not_configured":
+      return "Publication indisponible pour le moment (configuration serveur).";
+    default:
+      if (code && !/^[a-z0-9_]+$/i.test(code)) return code; // déjà un message humain
+      if (status === 401) return "Session expirée. Reconnectez-vous, puis réessayez.";
+      if (status === 404) {
+        return "Ce gent n'est pas encore sur le serveur. Cliquez d'abord sur « Diffuser » dans le menu de gauche, puis republiez ici.";
+      }
+      return code ?? "La publication a échoué.";
+  }
+}
+
 /**
  * Partager un gent : nommément à quelqu'un, ou publiquement à une adresse.
  *
@@ -22,8 +44,9 @@ interface Grant {
  * alors d'être entièrement révocable.
  */
 export function PanneauPartage() {
-  const { currentDraft } = useBuilder();
+  const { currentDraft, publishDraft } = useBuilder();
   const gentId = currentDraft.id;
+  const dejaDiffuse = currentDraft.status === "published";
 
   const [grants, setGrants] = useState<Grant[]>([]);
   const [email, setEmail] = useState("");
@@ -90,6 +113,12 @@ export function PanneauPartage() {
   async function publier(visibility: "public" | "private") {
     setErreurPub(null);
     if (visibility === "public") {
+      if (!dejaDiffuse) {
+        setErreurPub(
+          "Diffusez d'abord le gent (bouton « Diffuser » dans le menu de gauche), puis cliquez sur Publier."
+        );
+        return;
+      }
       const probleme = slugProbleme(toSlug(slug));
       if (probleme) {
         setErreurPub(slugMessage(probleme));
@@ -98,6 +127,26 @@ export function PanneauPartage() {
     }
     setOccupe(true);
     try {
+      // Diffuser (re)pousse le gent sur le serveur. Sans cette ligne en base,
+      // POST /publication répond not_found.
+      if (visibility === "public") {
+        publishDraft();
+        let pret = false;
+        for (let i = 0; i < 8 && !pret; i++) {
+          await new Promise((r) => setTimeout(r, 350));
+          const check = await fetch(`/api/gents/${encodeURIComponent(gentId)}`, {
+            credentials: "include",
+            cache: "no-store",
+          });
+          pret = check.ok;
+        }
+        if (!pret) {
+          setErreurPub(
+            "Le gent n'a pas pu être enregistré sur le serveur. Vérifiez que vous êtes connecté, cliquez sur « Diffuser », puis réessayez."
+          );
+          return;
+        }
+      }
       const res = await fetch(`/api/gents/${encodeURIComponent(gentId)}/publication`, {
         method: "POST",
         credentials: "include",
@@ -106,7 +155,7 @@ export function PanneauPartage() {
       });
       const data = (await res.json()) as { error?: string; slug?: string; slugAjuste?: boolean };
       if (!res.ok) {
-        setErreurPub(data.error ?? "La publication a échoué.");
+        setErreurPub(messagePublication(data.error, res.status));
         return;
       }
       if (data.slug) setSlug(data.slug);
@@ -119,7 +168,12 @@ export function PanneauPartage() {
     }
   }
 
-  const domaine = (process.env.NEXT_PUBLIC_APP_URL ?? "https://getgents.ai").replace(/^https?:\/\//, "");
+  const origine =
+    (typeof window !== "undefined" ? window.location.origin : null) ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "https://getgents.ai";
+  const domaine = origine.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const urlPublique = `${origine.replace(/\/$/, "")}/${slug}`;
 
   return (
     <div className={styles.panneau}>
@@ -177,8 +231,21 @@ export function PanneauPartage() {
         <h3 className={styles.titre}>Publier sur le web</h3>
         <p className={styles.aide}>
           Le gent devient accessible à tous à son adresse, et référençable par les moteurs
-          de recherche.
+          de recherche. L&apos;adresse publique n&apos;est <b>pas</b> l&apos;URL du studio
+          (celle avec <code>draft-…</code>) : c&apos;est{" "}
+          <code>
+            {domaine}/
+            {slug || "mon-gent"}
+          </code>
+          .
         </p>
+
+        {!dejaDiffuse && (
+          <div className={styles.erreur} role="status">
+            Ce gent n&apos;est pas encore diffusé. Cliquez d&apos;abord sur{" "}
+            <b>Diffuser</b> dans le menu de gauche, puis revenez publier ici.
+          </div>
+        )}
 
         {erreurPub ? <div className={styles.erreur}>{erreurPub}</div> : null}
 
@@ -229,7 +296,7 @@ export function PanneauPartage() {
             type="button"
             className={styles.bouton}
             onClick={() => publier("public")}
-            disabled={occupe}
+            disabled={occupe || !dejaDiffuse}
           >
             {publie ? "Mettre à jour la publication" : "Publier"}
           </button>
@@ -253,8 +320,12 @@ export function PanneauPartage() {
 
         {publie && (
           <p className={styles.note}>
-            En ligne sur <strong>{domaine}/{slug}</strong>. Dépublier retire la page, mais une
-            adresse déjà indexée peut rester visible quelque temps dans les moteurs.
+            En ligne sur{" "}
+            <a className={styles.lienPublic} href={urlPublique} target="_blank" rel="noreferrer">
+              {domaine}/{slug}
+            </a>
+            . Dépublier retire la page, mais une adresse déjà indexée peut rester visible quelque
+            temps dans les moteurs.
           </p>
         )}
       </section>

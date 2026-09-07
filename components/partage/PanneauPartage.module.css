@@ -181,11 +181,23 @@
   margin-top: 3px;
 }
 
+.lienPublic {
+  color: var(--blue-700, #3a5fa3);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.lienPublic:hover {
+  color: var(--blue, #4f7cc9);
+}
+
 .erreur {
   background: color-mix(in srgb, var(--plum) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--plum) 30%, transparent);
   border-radius: 10px;
   padding: 9px 12px;
   font-size: 13px;
+  margin-bottom: 12px;
   margin-bottom: 14px;
 }
