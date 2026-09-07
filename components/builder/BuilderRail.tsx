@@ -191,6 +191,8 @@ function BuilderRailList() {
 function BuilderRailGent() {
   const router = useRouter();
   const { currentDraft, activeTab, switchTab, railCollapsed, toggleRail, publishDraft } = useBuilder();
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
   function handleNav(tab: BuilderTab) {
     if (tab === "mesgents") {
@@ -226,6 +228,31 @@ function BuilderRailGent() {
       "Votre version de travail semble déjà diffusée. En cas de doute (réponses différentes entre Preview et lien), cliquez pour réécrire la version diffusée.";
   else publishHint = "Rend le gent accessible sur les canaux de l'onglet Diffusion";
 
+  async function handlePublish() {
+    setPublishError(null);
+    setPublishing(true);
+    try {
+      const res = await publishDraft();
+      if (!res.ok) {
+        if (res.status === 401 || res.error === "unauthorized" || res.error === "auth_required") {
+          setPublishError("Session expirée. Reconnectez-vous, puis cliquez à nouveau sur Diffuser.");
+        } else if (res.status === 503 || res.error === "supabase_not_configured") {
+          setPublishError("Serveur indisponible pour le moment. Réessayez dans un instant.");
+        } else if (res.error === "network") {
+          setPublishError("Connexion interrompue. Vérifiez votre réseau et réessayez.");
+        } else {
+          setPublishError(
+            res.error && !/^[a-z0-9_]+$/i.test(res.error)
+              ? res.error
+              : `La diffusion a échoué${res.status ? ` (${res.status})` : ""}. Réessayez.`
+          );
+        }
+      }
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   return (
     <RailChrome
       railCollapsed={railCollapsed}
@@ -233,17 +260,19 @@ function BuilderRailGent() {
       activeTab={activeTab}
       onNav={handleNav}
       showPublish
-      publishLabel={publishLabel}
-      publishDisabled={publishDisabled}
+      publishLabel={publishing ? "Diffusion…" : publishLabel}
+      publishDisabled={publishDisabled || publishing}
       publishHint={publishHint}
       publishLive={live && !dirty}
-      onPublish={publishDraft}
+      onPublish={handlePublish}
       publishBlocked={
-        publishDisabled
-          ? !nameOk
-            ? "Donnez un nom au gent (bandeau du haut) pour pouvoir le diffuser."
-            : "Rédigez les instructions système (onglet Gent Conversationnel) pour pouvoir diffuser."
-          : undefined
+        publishError
+          ? publishError
+          : publishDisabled
+            ? !nameOk
+              ? "Donnez un nom au gent (bandeau du haut) pour pouvoir le diffuser."
+              : "Rédigez les instructions système (onglet Gent Conversationnel) pour pouvoir diffuser."
+            : undefined
       }
     />
   );
@@ -271,7 +300,7 @@ function RailChrome({
   publishDisabled?: boolean;
   publishHint?: string;
   publishLive?: boolean;
-  onPublish?: () => void;
+  onPublish?: () => void | Promise<unknown>;
   publishBlocked?: string;
 }) {
   // Le tiroir mobile : sous 860 px la colonne sort de l'écran, et c'est ce

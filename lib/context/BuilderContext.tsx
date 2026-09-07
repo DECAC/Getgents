@@ -33,6 +33,7 @@ import {
 } from "@/lib/cadrage";
 import {
   writePublishedGent,
+  flushPublishedGent,
   draftToEspace,
   patchPublishedGentName,
   patchPublishedGentIcon,
@@ -91,7 +92,7 @@ interface BuilderContextValue {
   updateName: (text: string) => void;
   /** Change l'emblème (emoji) du gent — bandeau, liste, rail utilisateur. */
   updateIcon: (icon: string) => void;
-  publishDraft: () => void;
+  publishDraft: () => Promise<{ ok: boolean; status: number; error?: string }>;
   /** Écrit la version de travail (Preview) sans toucher à la version diffusée. */
   syncWorkingVersion: () => void;
 
@@ -469,14 +470,20 @@ export function BuilderProvider({
    * Diffusion : fige la version que verront les destinataires sur les canaux
    * (lien de partage, iframe, WhatsApp, routine). Distincte de la version de
    * travail — c'est le seul geste qui change ce que voient les utilisateurs.
+   * Attend la réponse du serveur pour que « Publier sur le web » sache si
+   * la ligne existe vraiment en base.
    */
-  const publishDraft = useCallback(() => {
-    setDrafts((prev) => {
-      const draft = { ...prev[currentId], status: "published" as const, updatedAt: "à l'instant" };
-      const published: GentDraft = { ...draft, publishedSnapshot: draftContentSnapshot(draft) };
-      writePublishedGent(currentId, buildEspaceFromDraft(published), true, true);
-      return { ...prev, [currentId]: published };
-    });
+  const publishDraft = useCallback(async () => {
+    const draft = draftsRef.current[currentId];
+    if (!draft) return { ok: false, status: 0, error: "missing_draft" };
+    const published: GentDraft = {
+      ...draft,
+      status: "published",
+      updatedAt: "à l'instant",
+      publishedSnapshot: draftContentSnapshot(draft),
+    };
+    setDrafts((prev) => ({ ...prev, [currentId]: published }));
+    return flushPublishedGent(currentId, buildEspaceFromDraft(published), true);
   }, [currentId, buildEspaceFromDraft]);
 
   const assignModel = useCallback((capability: ModelCapability, modelId: string | null) => {

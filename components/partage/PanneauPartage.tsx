@@ -25,11 +25,21 @@ function messagePublication(code: string | undefined, status: number): string {
       return "Session expirée. Reconnectez-vous, puis réessayez.";
     case "supabase_not_configured":
       return "Publication indisponible pour le moment (configuration serveur).";
+    case "network":
+      return "Connexion interrompue pendant l'enregistrement. Vérifiez votre réseau et réessayez.";
+    case "missing_local":
+    case "missing_draft":
+      return "Le brouillon local est introuvable. Rechargez la page, cliquez sur Diffuser, puis réessayez.";
+    case "invalid_id":
+      return "Identifiant de gent invalide. Rechargez la page et réessayez.";
     default:
       if (code && !/^[a-z0-9_]+$/i.test(code)) return code; // déjà un message humain
       if (status === 401) return "Session expirée. Reconnectez-vous, puis réessayez.";
       if (status === 404) {
         return "Ce gent n'est pas encore sur le serveur. Cliquez d'abord sur « Diffuser » dans le menu de gauche, puis republiez ici.";
+      }
+      if (status === 500 && code) {
+        return `Le serveur a refusé l'enregistrement : ${code}`;
       }
       return code ?? "La publication a échoué.";
   }
@@ -127,23 +137,12 @@ export function PanneauPartage() {
     }
     setOccupe(true);
     try {
-      // Diffuser (re)pousse le gent sur le serveur. Sans cette ligne en base,
-      // POST /publication répond not_found.
+      // Diffuser et ATTENDRE le serveur — sans ça, « Publier » part à vide
+      // (surtout si un 401/503 antérieur avait coupé les syncs en silence).
       if (visibility === "public") {
-        publishDraft();
-        let pret = false;
-        for (let i = 0; i < 8 && !pret; i++) {
-          await new Promise((r) => setTimeout(r, 350));
-          const check = await fetch(`/api/gents/${encodeURIComponent(gentId)}`, {
-            credentials: "include",
-            cache: "no-store",
-          });
-          pret = check.ok;
-        }
-        if (!pret) {
-          setErreurPub(
-            "Le gent n'a pas pu être enregistré sur le serveur. Vérifiez que vous êtes connecté, cliquez sur « Diffuser », puis réessayez."
-          );
+        const push = await publishDraft();
+        if (!push.ok) {
+          setErreurPub(messagePublication(push.error, push.status));
           return;
         }
       }

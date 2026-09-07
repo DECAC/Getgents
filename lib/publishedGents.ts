@@ -127,8 +127,63 @@ function sendRemoteGent(id: string, espace: Espace, diffuse = false): Promise<vo
     });
 }
 
+/**
+ * Pousse TOUT DE SUITE un gent vers le serveur et attend le résultat.
+ * Utilisé par « Diffuser » / « Publier sur le web » : ces gestes ne doivent
+ * jamais être avalés par le drapeau `remoteAvailable === false` (qui coupe
+ * sinon les envois en silence après un 401/503 antérieur).
+ */
+export async function flushPublishedGent(
+  id: string,
+  espace?: Espace,
+  diffuse = true
+): Promise<{ ok: boolean; status: number; error?: string }> {
+  if (typeof window === "undefined") return { ok: false, status: 0, error: "unavailable" };
+
+  const payload = espace
+    ? { ...espace, workingUpdatedAt: new Date().toISOString() }
+    : readPublishedGents()[id];
+  if (!payload) return { ok: false, status: 0, error: "missing_local" };
+
+  // Toujours réessayer sur une action explicite de l'utilisateur.
+  remoteAvailable = null;
+
+  const current = readPublishedGents();
+  current[id] = payload;
+  writeLocalCache(current);
+
+  try {
+    const res = await fetch(`/api/gents/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ espace: payload, ...(diffuse ? { diffuse: true } : {}) }),
+      // Pas de keepalive ici : on attend la réponse pour la remonter à l'UI.
+    });
+    if (res.status === 503 || res.status === 401) remoteAvailable = false;
+    else if (res.ok) remoteAvailable = true;
+
+    if (res.ok) return { ok: true, status: res.status };
+
+    let error = `http_${res.status}`;
+    try {
+      const data = (await res.json()) as { error?: string };
+      if (data.error) error = data.error;
+    } catch {
+      // corps non-JSON
+    }
+    return { ok: false, status: res.status, error };
+  } catch {
+    return { ok: false, status: 0, error: "network" };
+  }
+}
+
 function pushRemoteGent(id: string, espace: Espace, immediate = false, diffuse = false): void {
-  if (remoteAvailable === false) return;
+  // Après un 401/503, on arrête les syncs de fond — mais PAS les envois
+  // immédiats (Preview / Diffuser) : l'utilisateur a cliqué exprès.
+  if (remoteAvailable === false && !immediate) return;
+  if (immediate) remoteAvailable = null;
+
   const pending = pushTimers.get(id);
   if (pending) clearTimeout(pending);
 
