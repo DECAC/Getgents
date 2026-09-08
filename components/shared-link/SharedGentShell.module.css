@@ -141,10 +141,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 10px;
-    /* 10 px de marge latérale au lieu de 14 : mesuré, il manquait 19 px pour
-       réunir les trois actions sur une ligne. On les prend sur les marges,
-       jamais sur la taille des cibles tactiles. */
-    padding: 10px 10px;
+    padding: 10px 14px;
   }
 
   .icon {
@@ -248,9 +245,11 @@
     padding: 2px;
   }
 
+  /* La bascule retrouve sa taille lisible : le bouton de téléchargement
+     réduit à sa flèche a libéré une centaine de pixels, et il n'y a plus de
+     raison de serrer le seul élément que l'on doit vraiment lire. */
   .bascule button {
-    padding: 7px 8px;
-    font-size: 11.5px;
-    letter-spacing: -0.01em;
+    padding: 8px 13px;
+    font-size: 12.5px;
   }
 }

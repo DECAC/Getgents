@@ -145,3 +145,31 @@
   min-height: 0;
   overflow: hidden;
 }
+
+
+/* Sur téléphone, le bouton se réduit à la flèche universelle de
+   téléchargement. Il libère une centaine de pixels, ce qui permet de réunir
+   toutes les actions de l'en-tête sur une seule ligne au lieu de deux — la
+   ligne gagnée revient à la conversation.
+
+   EN FIN DE FICHIER, délibérément : `.btnShared` est redéclaré plus haut, et
+   une requête média placée avant serait écrasée à spécificité égale sans que
+   rien ne le signale. */
+@media (max-width: 620px) {
+  .btnTexte {
+    display: none;
+  }
+
+  .btnShared,
+  .btnHeader {
+    width: 40px;
+    /* Hauteur EXPLICITE : sans elle le bouton retombait à la taille de son
+       icône, une vingtaine de pixels — sous la cible tactile, et désaligné
+       avec les boutons voisins de la même barre. */
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+    flex: none;
+  }
+}
