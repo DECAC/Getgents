@@ -69,6 +69,14 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
 - **Attribution « Propulsé par »** figée à la diffusion, pas résolue au rendu :
   sinon chaque visiteur d'une page publique interrogerait le compte du
   propriétaire.
+- **L'onglet Aperçu est retiré VOLONTAIREMENT** — entrée du rail et étape du
+  plan de construction. Le code (`ApercuTab`, `appPreview`, l'action de cadrage
+  `apercu`) reste en place et n'est plus atteignable. Ne pas le « réparer » en
+  croyant à un oubli ; le supprimer pour de bon est en revanche envisageable.
+- **Les composants qui s'affichent pour un invité vont dans
+  `SharedGentShell`**, PAS dans `CenterHeader` : la page `/l/<jeton>` a son
+  propre en-tête. Un bouton de signalement monté au mauvais endroit ne
+  s'affichait nulle part, et rien ne le signalait.
 
 ## Pièges déjà payés
 
@@ -88,8 +96,6 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   Ce sont les accès à la boîte mail des utilisateurs. `lib/server/secretBox.ts`
   (AES-256-GCM) est prêt depuis le lot 8 ; prévoir une lecture tolérante
   (`enc_version = 0` → clair, rechiffré à la prochaine écriture).
-- **L'onglet Aperçu** (`ApercuTab`) n'est plus atteignable : son entrée a été
-  retirée du rail. Le code est intact, une ligne le ramène.
 - `reasoningModelId` est configurable, recommandé par l'assistant, affiché —
   et **jamais lu au moment de générer**. Le brancher, ou le retirer.
 - Environ 21 boutons textuels sous 40 px sur `/espace/[id]` (décision de

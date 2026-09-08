@@ -77,13 +77,11 @@ export function computeBuildPlan(draft: GentDraft): BuildStep[] {
       optional: true,
       hint: "Connecteurs et API, si le gent a besoin de données réelles.",
     },
-    {
-      id: "apercu",
-      label: "Dessiner l'application",
-      done: !!draft.appPreview?.modules.length,
-      optional: true,
-      hint: "L'aperçu de ce que verra l'utilisateur.",
-    },
+    // « Dessiner l'application » a été retiré du plan avec l'onglet Aperçu,
+    // sorti du rail à la demande du créateur. Une étape de plan qui renvoie
+    // vers un écran inatteignable envoie chercher un onglet qui n'existe plus
+    // — le pire des deux mondes, puisqu'elle donne l'impression d'un travail
+    // inachevé sans offrir le moyen de l'achever.
     {
       id: "diffusion",
       label: "Diffuser",

@@ -32,9 +32,11 @@ const complet = draft({
 });
 
 describe("plan de construction", () => {
-  it("part de sept étapes, toutes à faire sur un brouillon vierge", () => {
+  it("part de six étapes, toutes à faire sur un brouillon vierge", () => {
+    // Six et non sept depuis le retrait de « Dessiner l'application », partie
+    // avec l'onglet Aperçu.
     const plan = computeBuildPlan(draft());
-    expect(plan).toHaveLength(7);
+    expect(plan).toHaveLength(6);
     expect(plan.every((s) => !s.done)).toBe(true);
   });
 
@@ -47,7 +49,9 @@ describe("plan de construction", () => {
   it("distingue l'indispensable du facultatif", () => {
     const plan = computeBuildPlan(draft());
     const optional = plan.filter((s) => s.optional).map((s) => s.id);
-    expect(optional).toEqual(["knowledge", "connectors", "apercu"]);
+    // « apercu » a disparu du plan en même temps que son onglet : une étape
+    // qui renvoie vers un écran inatteignable est pire qu'une étape absente.
+    expect(optional).toEqual(["knowledge", "connectors"]);
   });
 
   it("associe chaque étape à un onglet du studio", () => {
