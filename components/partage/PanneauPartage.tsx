@@ -81,10 +81,56 @@ export function PanneauPartage() {
     setGrants(data.grants ?? []);
   }, [gentId]);
 
+  /**
+   * Recharge l'état de publication depuis le SERVEUR.
+   *
+   * Le panneau redérivait le slug du nom du gent à chaque montage, et
+   * n'apprenait donc jamais l'adresse réellement publiée. Résultat : juste par
+   * chance tant que le nom n'avait pas changé, faux dès que le serveur avait
+   * ajusté l'adresse pour cause de collision (« mon-gent-2 ») ou dès un
+   * renommage — le créateur copiait alors un lien qui ne menait nulle part. Le
+   * résumé de l'annuaire et l'ouverture de la conversation étaient réinitialisés
+   * de la même façon, à chaque ouverture de l'onglet.
+   */
+  const chargerPublication = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/gents/${encodeURIComponent(gentId)}/publication`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!res.ok) return false;
+      const data = (await res.json()) as {
+        visibility?: string;
+        slug?: string | null;
+        summary?: string;
+        publicChat?: boolean;
+      };
+      if (data.slug) setSlug(data.slug);
+      setResume(data.summary ?? "");
+      setChatPublic(!!data.publicChat);
+      setPublie(data.visibility === "public");
+      // `true` seulement si une adresse est déjà attribuée : c'est ce qui
+      // autorise l'appelant à ne PAS écraser le champ par le nom du gent.
+      return !!data.slug;
+    } catch {
+      // Serveur injoignable : on garde la proposition dérivée du nom plutôt
+      // que de laisser le champ vide, mais on n'affirme pas que c'est publié.
+      return false;
+    }
+  }, [gentId]);
+
   useEffect(() => {
     void charger();
-    setSlug(toSlug(currentDraft.name));
-  }, [charger, currentDraft.name]);
+    let annule = false;
+    void chargerPublication().then((connu) => {
+      // Le nom ne sert plus que de PROPOSITION, pour un gent jamais publié.
+      // L'adresse réelle, quand elle existe, fait foi.
+      if (!annule && !connu) setSlug(toSlug(currentDraft.name));
+    });
+    return () => {
+      annule = true;
+    };
+  }, [charger, chargerPublication, currentDraft.name]);
 
   async function inviter() {
     setErreur(null);

@@ -12,6 +12,43 @@ interface Params {
 }
 
 /**
+ * État de publication courant.
+ *
+ * Il manquait, et son absence ne se voyait pas comme un défaut de serveur mais
+ * comme un bug d'affichage : le panneau de partage n'avait aucun moyen de
+ * savoir sous quelle adresse un gent était réellement publié. Il redérivait le
+ * slug du NOM du gent à chaque montage, ce qui donne le bon résultat par
+ * chance — et le mauvais dès que le serveur a ajusté l'adresse pour cause de
+ * collision (« mon-gent-2 »), ou dès que le créateur renomme son gent. On
+ * affichait alors une adresse que personne ne pouvait ouvrir.
+ *
+ * Lecture réservée aux administrateurs du gent, comme l'écriture : l'adresse
+ * publique d'un gent non publié n'a pas à circuler.
+ */
+export async function GET(_req: Request, { params }: Params) {
+  if (!ID_RE.test(params.id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
+
+  const acces = await requireGentAccess(params.id, "admin");
+  if (!acces.ok) return acces.response;
+
+  const row = acces.value.row as {
+    visibility?: string | null;
+    public_slug?: string | null;
+    directory_summary?: string | null;
+    public_chat?: boolean | null;
+    published_at?: string | null;
+  };
+
+  return NextResponse.json({
+    visibility: row.visibility === "public" ? "public" : "private",
+    slug: row.public_slug ?? null,
+    summary: row.directory_summary ?? "",
+    publicChat: !!row.public_chat,
+    publishedAt: row.published_at ?? null,
+  });
+}
+
+/**
  * Publier un gent à la racine du domaine — `getgents.ai/<slug>` — ou l'en
  * retirer.
  *
