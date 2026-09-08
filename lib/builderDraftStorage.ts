@@ -137,6 +137,15 @@ export async function fetchRemoteDrafts(): Promise<GentDraftsMap | null | "unaut
 export type EtatSauvegarde = "repos" | "en-attente" | "enregistre" | "echec";
 
 let etatSauvegarde: EtatSauvegarde = "repos";
+
+/**
+ * Brouillons dont le dernier envoi a échoué.
+ *
+ * On les garde pour que le bouton les REPRENNE, au lieu de tout renvoyer :
+ * un créateur avec trente brouillons déclencherait sinon trente PUT à chaque
+ * clic, pour n'en corriger qu'un.
+ */
+const echecs = new Set<string>();
 const abonnes = new Set<(e: EtatSauvegarde) => void>();
 
 function poserEtat(e: EtatSauvegarde): void {
@@ -161,17 +170,31 @@ export function abonnerSauvegarde(f: (e: EtatSauvegarde) => void): () => void {
  * CONFIRME, ce qu'aucun écran ne faisait.
  */
 export function flushRemoteDrafts(): void {
+  // Un clic explicite REESSAIE toujours. Sans cette ligne, un seul 401/503
+  // antérieur mettait `remoteAvailable` à false et court-circuitait tous les
+  // envois suivants : le bouton n'aurait rien envoyé tout en affichant
+  // « Enregistré » — un mensonge, exactement le travers que ce bouton était
+  // censé corriger. Même raisonnement que `flushPublishedGent` pour les gents
+  // publiés : l'utilisateur a cliqué exprès, on ne décide pas à sa place que
+  // le serveur est injoignable.
+  remoteAvailable = null;
+
   for (const [, timer] of Array.from(pushTimers.entries())) clearTimeout(timer);
   const enAttente = Array.from(pushTimers.keys());
   pushTimers.clear();
-  if (!enAttente.length) {
-    // Rien en vol : l'état est déjà à jour. On le confirme quand même, pour
-    // que le clic produise toujours un retour visible.
+  // Ce qui attend l'anti-rebond, PLUS ce qui a échoué la dernière fois : après
+  // une coupure, on clique justement parce qu'on doute, et ne renvoyer que le
+  // brouillon en cours de frappe laisserait le précédent perdu côté serveur.
+  const aRenvoyer = new Set([...enAttente, ...Array.from(echecs)]);
+  if (!aRenvoyer.size) {
+    // Tout est déjà écrit. On le confirme quand même : un clic sans retour
+    // visible laisse croire à une panne.
     poserEtat("enregistre");
     return;
   }
+
   const stored = readStoredDrafts();
-  for (const id of enAttente) {
+  for (const id of Array.from(aRenvoyer)) {
     const draft = stored[id];
     if (draft) envoyerMaintenant(id, draft);
   }
@@ -188,17 +211,21 @@ function envoyerMaintenant(id: string, draft: GentDraft): void {
     .then((res) => {
       if (res.status === 503 || res.status === 401) {
         remoteAvailable = false;
+        echecs.delete(id);
         // Pas un échec à signaler : sans serveur configuré, le cache local
         // EST la sauvegarde. Crier à l'erreur ici serait mentir.
         poserEtat("enregistre");
       } else if (res.ok) {
         remoteAvailable = true;
+        echecs.delete(id);
         poserEtat("enregistre");
       } else {
+        echecs.add(id);
         poserEtat("echec");
       }
     })
     .catch(() => {
+      echecs.add(id);
       // Réseau indisponible : le cache local garde le brouillon, la
       // prochaine édition retentera. On le dit, sans dramatiser.
       poserEtat("echec");
