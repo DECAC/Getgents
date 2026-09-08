@@ -10,6 +10,7 @@ import { MAX_CHARS as DOC_MAX_CHARS } from "@/lib/extractDocumentText";
 import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import { resolveImageModelId } from "@/lib/imageModels";
 import { downloadableDocumentsFromDraft } from "@/lib/fileDownload";
+import { normaliserNomAffiche } from "@/lib/nomAffiche";
 
 // Persistance des gents publiés : la source de vérité est Supabase (via les
 // routes /api/gents), le localStorage n'est plus qu'un cache local pour un
@@ -630,6 +631,11 @@ export function draftToEspace(draft: GentDraft): Espace {
     icon: draft.icon,
     name: draft.name,
     gent: draft.name,
+    // Le nom du compte n'est pas connu ici (module partagé avec le serveur) :
+    // il est appliqué à la diffusion, dans BuilderContext. En aperçu, seule
+    // l'attribution propre au gent apparaît — ce qui est exact, c'est bien la
+    // seule chose décidée à ce stade.
+    propulsePar: normaliserNomAffiche(draft.propulsePar) || undefined,
     version: 1,
     status: "live",
     statusLabel: "Actif",

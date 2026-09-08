@@ -129,6 +129,11 @@ export interface GentDraft {
    * rien à télécharger est un état muet, pas une erreur qu'on peut deviner.
    */
   fileDownloadSelection?: string[];
+  /**
+   * Attribution propre à CE gent, affichée sous « Propulsé par ».
+   * Vide : on retombe sur le nom du compte au moment de la diffusion.
+   */
+  propulsePar?: string;
   /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
   jumpForm?: JumpForm;
   /** Routine planifiée (mission exécutée automatiquement côté serveur). */

@@ -44,6 +44,7 @@ import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, defaultStatusLabel } from "@/lib/streamChat";
 import { builderTurnBudget, BUILDER_FIRST_TOKEN_DEADLINE_MS } from "@/lib/builderLatency";
+import { attributionPublique } from "@/lib/nomAffiche";
 import {
   DRAFTS_STORAGE_KEY,
   clearStoredPendingBuilderMessage,
@@ -115,6 +116,10 @@ interface BuilderContextValue {
 
   toggleWebSearch: () => void;
   /** Active ou non le téléchargement de fichiers côté lecteur, et son formulaire. */
+  /** Attribution propre à ce gent, sous « Propulsé par ». */
+  updatePropulsePar: (valeur: string) => void;
+  /** Nom affiché du compte, attribution par défaut. Vide si non renseigné. */
+  nomCompte: string;
   updateFileDownload: (patch: {
     fileDownloadEnabled?: boolean;
     fileDownloadFormEnabled?: boolean;
@@ -328,6 +333,29 @@ export function BuilderProvider({
     }
   }, [drafts, storageReady]);
 
+  /**
+   * Nom affiché du compte, attribution par défaut des gents diffusés.
+   * Chargé une fois : il ne change pas en cours de session, et le relire à
+   * chaque diffusion ajouterait un aller-retour sur le geste le plus sensible
+   * du studio.
+   */
+  const [nomCompte, setNomCompte] = useState("");
+  useEffect(() => {
+    let annule = false;
+    fetch("/api/compte/nom", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { nom?: string } | null) => {
+        if (!annule && typeof d?.nom === "string") setNomCompte(d.nom);
+      })
+      .catch(() => {
+        // Sans nom de compte, seule l'attribution propre au gent s'applique.
+        // C'est une dégradation acceptable : on n'invente pas d'auteur.
+      });
+    return () => {
+      annule = true;
+    };
+  }, []);
+
   const currentDraft = drafts[currentId] ?? freshDraftFromTemplate(currentId);
 
   const switchDraft = useCallback((id: string) => {
@@ -489,8 +517,16 @@ export function BuilderProvider({
       publishedSnapshot: draftContentSnapshot(draft),
     };
     setDrafts((prev) => ({ ...prev, [currentId]: published }));
-    return flushPublishedGent(currentId, buildEspaceFromDraft(published), true);
-  }, [currentId, buildEspaceFromDraft]);
+    // L'attribution « Propulsé par » est FIGÉE ici, à la diffusion — le moment
+    // où le gent devient visible. La résoudre au rendu obligerait chaque
+    // visiteur d'une page publique à interroger le compte du propriétaire pour
+    // un nom qui ne change quasiment jamais. Contrepartie assumée, annoncée
+    // dans l'écran : renommer son compte n'agit sur les gents déjà diffusés
+    // qu'à la rediffusion.
+    const attribution = attributionPublique(published.propulsePar, nomCompte);
+    const espace = { ...buildEspaceFromDraft(published), propulsePar: attribution ?? undefined };
+    return flushPublishedGent(currentId, espace, true);
+  }, [currentId, buildEspaceFromDraft, nomCompte]);
 
   const assignModel = useCallback((capability: ModelCapability, modelId: string | null) => {
     setDrafts((prev) => {
@@ -583,6 +619,13 @@ export function BuilderProvider({
     setDrafts((prev) => ({
       ...prev,
       [currentId]: { ...prev[currentId], webSearch: !prev[currentId].webSearch, updatedAt: "à l'instant" },
+    }));
+  }, [currentId]);
+
+  const updatePropulsePar = useCallback((valeur: string) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: { ...prev[currentId], propulsePar: valeur, updatedAt: "à l'instant" },
     }));
   }, [currentId]);
 
@@ -1327,6 +1370,8 @@ export function BuilderProvider({
         toggleRail,
         toggleAssistant,
         createDraft,
+        updatePropulsePar,
+        nomCompte,
         updateObjective,
         updateSystemPrompt,
         updateName,

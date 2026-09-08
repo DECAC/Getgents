@@ -436,3 +436,30 @@
     height: 20px;
   }
 }
+
+
+/* Champ d'attribution « Propulsé par ». */
+.champ {
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.champ:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+/* iOS zoome sur tout champ sous 16 px : on le neutralise au toucher. */
+@media (pointer: coarse) {
+  .champ {
+    font-size: 16px;
+    min-height: 44px;
+  }
+}

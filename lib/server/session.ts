@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createAuthClient, readOnlyBridge } from "@/lib/server/supabaseAuth";
 import { isAuthConfigured, missingAuthEnvVars, unconfiguredPolicy } from "@/lib/authConfig";
+import { normaliserNomAffiche } from "@/lib/nomAffiche";
 
 /**
  * Identité du demandeur — source unique de vérité côté serveur.
@@ -19,6 +20,13 @@ export interface SessionUser {
    * l'adresse d'autrui pour hériter de ses accès.
    */
   confirmedEmail: string | null;
+  /**
+   * Nom affiché publiquement, sous « Proposé par » des gents publiés.
+   * Chaîne vide quand il n'a pas été renseigné : on n'affiche alors aucune
+   * attribution plutôt que de retomber sur l'adresse e-mail, qui serait
+   * divulguée sur une page indexée.
+   */
+  nomAffiche: string;
 }
 
 export async function getUser(): Promise<SessionUser | null> {
@@ -32,6 +40,7 @@ export async function getUser(): Promise<SessionUser | null> {
     return {
       id: data.user.id,
       confirmedEmail: data.user.email_confirmed_at ? (data.user.email ?? "").toLowerCase() || null : null,
+      nomAffiche: normaliserNomAffiche(data.user.user_metadata?.nom_affiche),
     };
   } catch (e) {
     // Service d'authentification injoignable. Sans ce filet, l'exception
@@ -81,7 +90,7 @@ export async function requireUser(): Promise<AuthOutcome> {
       `[getgents] Authentification non configurée (${missingAuthEnvVars().join(", ")}) — ` +
         `accès laissé ouvert en développement. En production, ces routes seraient refusées.`
     );
-    return { user: { id: "dev-local", confirmedEmail: null } };
+    return { user: { id: "dev-local", confirmedEmail: null, nomAffiche: "" } };
   }
 
   const user = await getUser();

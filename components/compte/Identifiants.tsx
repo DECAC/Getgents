@@ -12,7 +12,14 @@ import styles from "@/app/compte/compte.module.css";
  * fichiers pour comprendre un seul bloc à l'écran.
  */
 
-export default function Identifiants({ email }: { email: string | null }) {
+export default function Identifiants({
+  email,
+  nomAffiche,
+}: {
+  email: string | null;
+  nomAffiche: string;
+}) {
+  const [nom, setNom] = useState(nomAffiche);
   const [nouvelEmail, setNouvelEmail] = useState("");
   const [enAttente, setEnAttente] = useState<string | null>(null);
   const [actuel, setActuel] = useState("");
@@ -47,6 +54,42 @@ export default function Identifiants({ email }: { email: string | null }) {
   return (
     <section className={styles.bloc}>
       <h2 className={styles.sousTitre}>Identifiants</h2>
+
+      {/* Le nom vient en premier : c'est le seul de ces trois champs qui soit
+          PUBLIC. Il apparaît sous « Proposé par » sur chaque gent publié, et
+          le dire ici évite qu'on le découvre en ligne. */}
+      <dl className={styles.liste}>
+        <dt>Nom affiché</dt>
+        <dd>{nom.trim() || "aucun — vos gents publiés ne porteront pas d'attribution"}</dd>
+      </dl>
+
+      <div className={styles.actions}>
+        <input
+          type="text"
+          className={styles.champ}
+          placeholder="Prénom Nom, ou nom d'entreprise"
+          value={nom}
+          maxLength={60}
+          onChange={(e) => setNom(e.target.value)}
+          aria-label="Nom affiché publiquement"
+        />
+        <button
+          type="button"
+          className={styles.bouton}
+          disabled={occupe}
+          onClick={() =>
+            envoyer("/api/compte/nom", "PATCH", { nom }, () =>
+              nom.trim() ? "Nom enregistré." : "Attribution retirée de vos gents publiés."
+            )
+          }
+        >
+          Enregistrer
+        </button>
+      </div>
+      <p className={styles.aide}>
+        Visible de tous sous vos gents publiés. Un gent peut porter un autre nom, réglé dans son
+        studio.
+      </p>
 
       <dl className={styles.liste}>
         <dt>Adresse e-mail</dt>

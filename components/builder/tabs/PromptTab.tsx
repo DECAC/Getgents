@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { ModelsTab } from "./ModelsTab";
+import { NOM_AFFICHE_MAX } from "@/lib/nomAffiche";
 import styles from "./PromptTab.module.css";
 
 /**
@@ -22,7 +23,7 @@ import styles from "./PromptTab.module.css";
  * recherche web, routine, téléchargement, artefacts.
  */
 export function PromptTab() {
-  const { currentDraft, updateSystemPrompt } = useBuilder();
+  const { currentDraft, updateSystemPrompt, updatePropulsePar, nomCompte } = useBuilder();
   const wordCount = currentDraft.systemPrompt.trim().split(/\s+/).filter(Boolean).length;
 
   // Valeur locale découplée des re-rendus du contexte (ex. streaming de
@@ -74,6 +75,34 @@ export function PromptTab() {
         </div>
       </div>
       <ModelsTab />
+
+      <div className={styles.card}>
+        <h4 className={styles.title}>Propulsé par</h4>
+        <div className={styles.sub}>
+          Ce qui s&apos;affiche sous le titre du gent, une fois diffusé. La ligne montrait
+          jusqu&apos;ici le nom du gent — déjà écrit juste au-dessus. Elle sert désormais à dire
+          qui l&apos;a fait.
+        </div>
+        <input
+          type="text"
+          className={styles.champ}
+          value={currentDraft.propulsePar ?? ""}
+          maxLength={NOM_AFFICHE_MAX}
+          onChange={(e) => updatePropulsePar(e.target.value)}
+          placeholder={nomCompte || "Votre nom ou celui de votre organisation"}
+          aria-label="Attribution affichée sous « Propulsé par »"
+        />
+        <div className={styles.footRow}>
+          <span>
+            {currentDraft.propulsePar?.trim()
+              ? "Propre à ce gent."
+              : nomCompte
+                ? `À défaut : ${nomCompte}, votre nom de compte.`
+                : "Aucune attribution — la ligne n'apparaîtra pas."}
+          </span>
+          <span>Figé à la diffusion : rediffusez après un changement</span>
+        </div>
+      </div>
     </div>
   );
 }

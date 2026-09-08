@@ -382,6 +382,18 @@ export interface Espace {
   icon: string;
   name: string;
   gent: string;
+  /**
+   * Ce qui suit « Propulsé par » dans l'en-tête de l'espace.
+   *
+   * La ligne affichait `gent`, c'est-à-dire le NOM DU GENT — juste sous le
+   * titre, qui l'affiche déjà. Elle ne disait donc rien. Elle sert désormais à
+   * attribuer le gent à qui l'a fait : le nom posé sur ce gent, ou à défaut
+   * celui du compte, figé au moment de la diffusion.
+   *
+   * Absent sur les espaces d'avant ce champ : l'en-tête retombe alors sur
+   * l'ancien affichage plutôt que de perdre une ligne.
+   */
+  propulsePar?: string;
   version: number;
   status: EspaceStatus;
   statusLabel: string;

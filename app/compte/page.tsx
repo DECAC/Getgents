@@ -136,7 +136,7 @@ export default async function ComptePage() {
 
         <CleOpenRouter initial={etatCle} />
         <Consommation />
-        <Identifiants email={user.confirmedEmail} />
+        <Identifiants email={user.confirmedEmail} nomAffiche={user.nomAffiche} />
 
         <section className={styles.bloc}>
           <h2 className={styles.sousTitre}>Mes gents</h2>

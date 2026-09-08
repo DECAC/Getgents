@@ -43,7 +43,11 @@ export function CenterHeader() {
             </span>
           </div>
           <div className={styles.gentline}>
-            Propulsé par <b>{e.gent}</b> · version {e.version}
+            {/* `propulsePar` attribue le gent à qui l'a fait. Les espaces
+                diffusés avant ce champ n'en ont pas : on retombe alors sur
+                l'ancien affichage — le nom du gent — plutôt que de faire
+                disparaître une ligne de leur en-tête sans prévenir. */}
+            Propulsé par <b>{e.propulsePar?.trim() || e.gent}</b> · version {e.version}
           </div>
         </div>
         <div className={styles.headActions}>
