@@ -11,6 +11,12 @@
   white-space: nowrap;
 }
 
+@media (max-width: 620px) {
+  .declencheurSuite {
+    display: none;
+  }
+}
+
 .declencheur:hover {
   color: var(--ink);
   border-color: var(--ink);

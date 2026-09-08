@@ -88,7 +88,12 @@ export function SignalerIncident({ token }: { token: string }) {
   return (
     <>
       <button type="button" className={styles.declencheur} onClick={() => setOuvert(true)}>
-        Signaler un incident
+        Signaler
+        {/* « un incident » disparaît sur les écrans étroits : le libellé
+            complet poussait le bouton hors de l'écran, où il ne servait plus à
+            rien. « Signaler » seul reste sans ambiguïté à côté d'un bouton de
+            téléchargement. */}
+        <span className={styles.declencheurSuite}> un incident</span>
       </button>
 
       {ouvert && (

@@ -25,7 +25,8 @@ import styles from "./SharedGentShell.module.css";
  * une interface que le créateur n'avait jamais vue en Preview.
  */
 function SharedGentBody({ token }: { token: string }) {
-  const { currentEspace, assistantOpen, openAssistant, miniAppMode, documentViewerOpen } = useEspace();
+  const { currentEspace, assistantOpen, openAssistant, closeAssistant, miniAppMode, documentViewerOpen } =
+    useEspace();
 
   /**
    * Écran étroit : le canevas est masqué par la feuille de style, et c'est lui
@@ -92,13 +93,38 @@ function SharedGentBody({ token }: { token: string }) {
           </div>
         </div>
         <div className={styles.headActions}>
+          {/* Bascule permanente entre la conversation et l'espace du gent.
+              Sur téléphone la conversation occupe tout l'écran, et le canevas
+              — artefacts, documents, tableau de bord — disparaissait sans
+              qu'aucun chemin n'y ramène. On ne pouvait plus ni télécharger, ni
+              voir ce que le gent avait produit : il fallait deviner qu'un
+              bouton de fermeture, dans l'en-tête du panneau, faisait office de
+              retour. Ces deux segments disent où l'on est et où l'on peut
+              aller, à tout instant. */}
+          {chatAvailable && (
+            <div className={styles.bascule} role="tablist" aria-label="Affichage">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={assistantOpen}
+                className={assistantOpen ? styles.basculeOn : undefined}
+                onClick={openAssistant}
+              >
+                Conversation
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!assistantOpen}
+                className={!assistantOpen ? styles.basculeOn : undefined}
+                onClick={closeAssistant}
+              >
+                Le gent
+              </button>
+            </div>
+          )}
           <FileDownloadControl variant="shared" />
           <SignalerIncident token={token} />
-          {chatAvailable && !assistantOpen && (
-            <button type="button" className={styles.chatBtn} onClick={openAssistant}>
-              💬 Discuter
-            </button>
-          )}
         </div>
       </header>
 

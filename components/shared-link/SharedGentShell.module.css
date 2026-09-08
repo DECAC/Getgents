@@ -1,5 +1,11 @@
 .page {
+  /* `100dvh` et non `100vh` : sur iOS, `100vh` compte la hauteur AVEC la barre
+     d'adresse rétractée, si bien que le haut de la page — donc l'en-tête,
+     donc le bouton de téléchargement — passe sous la barre du navigateur et
+     devient inatteignable. `dvh` suit la hauteur réellement visible. La ligne
+     `100vh` reste comme repli pour les navigateurs qui ignorent `dvh`. */
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--bg);
   color: var(--ink);
@@ -176,6 +182,10 @@
     margin-left: 0;
     justify-content: flex-start;
     gap: 8px;
+    /* Sans retour à la ligne, le dernier bouton sortait de l'écran — présent
+       dans le DOM, inatteignable au doigt. Mieux vaut une ligne de plus qu'une
+       action qu'on ne peut pas toucher. */
+    flex-wrap: wrap;
   }
 
   .chatBtn {
@@ -187,3 +197,37 @@
 /* La conversation étant ouverte d'emblée sur téléphone, le bouton « Discuter »
    n'a plus de raison d'occuper une ligne : il ne réapparaît que si l'on ferme
    la conversation, cas où il redevient le seul chemin de retour. */
+
+
+/* ── Bascule Conversation / Le gent ──────────────────────────────────────── */
+.bascule {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  gap: 2px;
+}
+
+.bascule button {
+  padding: 7px 13px;
+  border: none;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bascule button.basculeOn {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+@media (pointer: coarse) {
+  .bascule button {
+    min-height: 40px;
+  }
+}
