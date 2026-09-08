@@ -943,7 +943,16 @@ export function AssistantPanel({
 
   return (
     <section
-      className={[styles.panel, fullscreen ? styles.panelFullscreen : ""].filter(Boolean).join(" ")}
+      className={[
+        styles.panel,
+        fullscreen ? styles.panelFullscreen : "",
+        // Annule le tiroir mobile : voir `.panelEmbedded` dans la feuille de
+        // style. Sans cette classe, un panneau embarqué sort de l'écran sur
+        // téléphone.
+        embedded ? styles.panelEmbedded : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-label="Assistant"
       aria-modal="false"
     >
@@ -975,15 +984,21 @@ export function AssistantPanel({
         </button>
       </div>
 
-      <div className={styles.scope}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="3" y="3" width="7" height="7" rx="1.5" />
-          <rect x="14" y="3" width="7" height="7" rx="1.5" />
-          <rect x="3" y="14" width="7" height="7" rx="1.5" />
-          <rect x="14" y="14" width="7" height="7" rx="1.5" />
-        </svg>
-        <span>L'assistant couvre tout le gent — naviguez librement entre les onglets pendant que vous échangez.</span>
-      </div>
+      {/* Cet avis invite à « naviguer entre les onglets » : il n'a de sens que
+          dans l'espace du créateur, qui en a. Embarqué — coquille de partage
+          sur téléphone, visionneuse — il n'y a pas d'onglets, et il coûte une
+          soixantaine de pixels pour dire quelque chose de faux. */}
+      {!embedded && (
+        <div className={styles.scope}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" />
+            <rect x="14" y="3" width="7" height="7" rx="1.5" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" />
+            <rect x="14" y="14" width="7" height="7" rx="1.5" />
+          </svg>
+          <span>L'assistant couvre tout le gent — naviguez librement entre les onglets pendant que vous échangez.</span>
+        </div>
+      )}
 
       <div className={styles.tabsRow}>
         <div className={styles.tabs}>

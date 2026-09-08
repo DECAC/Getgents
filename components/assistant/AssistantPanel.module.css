@@ -817,4 +817,23 @@
   .panel.open {
     transform: translateX(0);
   }
+
+  /* Panneau EMBARQUÉ : son conteneur gère déjà sa taille et sa place.
+     Le tiroir ci-dessus est fait pour l'espace du créateur, où la conversation
+     glisse par-dessus le contenu. La coquille de partage, elle, masque son
+     canevas sur téléphone et donne toute la grille au panneau — qui se
+     retrouvait alors `translateX(100%)`, c'est-à-dire ENTIÈREMENT HORS ÉCRAN,
+     à droite. Le visiteur voyait une page vide sous l'en-tête, sans le moindre
+     indice.
+
+     La classe `.open` qui aurait pu le ramener n'est appliquée nulle part dans
+     le code : elle existe dans cette feuille sans que rien ne la pose. */
+  .panel.panelEmbedded {
+    position: static;
+    width: auto;
+    max-width: none;
+    transform: none;
+    box-shadow: none;
+    z-index: auto;
+  }
 }

@@ -14,6 +14,15 @@
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr;
+  /* Rangée BORNÉE à la hauteur disponible.
+     Sans cette ligne, la rangée implicite se dimensionne sur son contenu : le
+     panneau de conversation mesurait 844 px dans un corps de 728, et poussait
+     ses propres questions d'amorce et son champ de saisie hors de l'écran. Le
+     visiteur voyait une page vide sous l'en-tête. Invisible sur grand écran,
+     où le contenu tient — c'est le passage au plein écran sur téléphone qui
+     l'a révélé. */
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
   transition: grid-template-columns 0.2s;
 }
 .bodyWithChat {

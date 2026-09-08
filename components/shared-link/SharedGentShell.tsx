@@ -107,7 +107,10 @@ function SharedGentBody({ token }: { token: string }) {
             porte d'ordinaire les questions d'amorce. Sans cela, le
             destinataire d'un lien arrivait sur un fil vide — rien à lire,
             rien à toucher, aucune idée de ce qu'on peut demander. */}
-        {chatOpen && <AssistantPanel starters={etroit} />}
+        {/* `embedded` sur écran étroit : la grille lui donne déjà toute la
+            place, il ne doit pas se comporter en tiroir superposé. Sur grand
+            écran il reste une colonne redimensionnable. */}
+        {chatOpen && <AssistantPanel starters={etroit} embedded={etroit} />}
         <main className={styles.main}>
           <div className={styles.mainInner}>
             {/* Même canvas que l'espace : aperçu d'application (avec déclencheurs
