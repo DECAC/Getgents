@@ -53,7 +53,7 @@ export default function AProposPage() {
       <section className={styles.section}>
         <h2 className={styles.sousTitre}>Qui édite le service</h2>
         <p className={styles.texte}>
-          {EDITEUR.raisonSociale}. Les informations complètes sont sur{" "}
+          {EDITEUR.nom}. Les informations complètes sont sur{" "}
           <a href="/mentions-legales">les mentions légales</a>, et l&apos;on nous écrit à{" "}
           <a href={`mailto:${EDITEUR.contact}`}>{EDITEUR.contact}</a>.
         </p>

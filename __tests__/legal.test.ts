@@ -10,10 +10,29 @@ describe("identité de l'éditeur", () => {
   });
 
   it("ne fabrique jamais d'adresse postale", () => {
-    // Elle est obligatoire (LCEN art. 6 III) et manque encore. Ce test garde
-    // l'invariant : tant qu'elle est inconnue, on l'omet — un siège inventé
-    // est invérifiable, donc pire qu'un vide assumé.
+    // Sous le régime non professionnel (LCEN art. 6 III), elle est
+    // communiquée à l'hébergeur et non au public. Si l'on en publie une un
+    // jour, ce sera une vraie adresse — jamais un texte de remplissage.
     expect(EDITEUR.adressePostale === null || EDITEUR.adressePostale.length > 10).toBe(true);
+  });
+
+  it("n'annonce aucune société tant qu'il n'y en a pas", () => {
+    // Ces pages ont d'abord publié « Raison sociale : The G Company », pour
+    // une société qui n'existait pas. Une mention fausse est pire qu'une
+    // mention incomplète : elle est vérifiable, et un catégoriseur qui
+    // cherche une société introuvable au registre conclut à l'inverse de ce
+    // qu'on recherchait. Ce test empêche la rechute.
+    const societe = /\b(SAS|SASU|SARL|EURL|SA|SCI|société|company|inc\.?|ltd)\b/i;
+    expect(societe.test(EDITEUR.nom)).toBe(false);
+    if (EDITEUR.immatriculation === null) {
+      expect(EDITEUR.qualite).toMatch(/non professionnelle|personne physique/i);
+    }
+  });
+
+  it("le directeur de la publication est l'éditeur lui-même", () => {
+    // Un directeur de publication fictif a le même défaut qu'une société
+    // fictive : il est invérifiable et se retourne contre le domaine.
+    expect(EDITEUR.directeurPublication).toBe(EDITEUR.nom);
   });
 });
 

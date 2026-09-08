@@ -20,8 +20,10 @@ export default function MentionsLegalesPage() {
       <section className={styles.section}>
         <h2 className={styles.sousTitre}>Éditeur</h2>
         <dl className={styles.dl}>
-          <dt>Raison sociale</dt>
-          <dd>{EDITEUR.raisonSociale}</dd>
+          <dt>Éditeur</dt>
+          <dd>{EDITEUR.nom}</dd>
+          <dt>Qualité</dt>
+          <dd>{EDITEUR.qualite}</dd>
           <dt>Directeur de la publication</dt>
           <dd>{EDITEUR.directeurPublication}</dd>
           <dt>Contact</dt>
@@ -41,6 +43,21 @@ export default function MentionsLegalesPage() {
             </>
           )}
         </dl>
+      </section>
+
+      <section className={styles.section}>
+        {/* Dire POURQUOI il n'y a ni siège ni immatriculation vaut mieux que
+            de laisser deux lignes manquantes : un lecteur — ou un service de
+            catégorisation réseau — y verrait sinon un oubli, voire une
+            dissimulation. */}
+        <p className={styles.texte}>
+          Getgents est édité à titre personnel et non professionnel. À ce titre, et conformément
+          à l&apos;article 6 III de la loi pour la confiance dans l&apos;économie numérique,
+          l&apos;adresse postale de l&apos;éditeur est communiquée à l&apos;hébergeur et
+          n&apos;est pas rendue publique. Il n&apos;existe aucune société éditrice à ce jour, et
+          donc aucun numéro d&apos;immatriculation. Ces mentions seront complétées le jour où
+          une structure sera immatriculée.
+        </p>
       </section>
 
       <section className={styles.section}>

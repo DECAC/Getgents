@@ -19,8 +19,28 @@
  */
 
 export const EDITEUR = {
-  raisonSociale: "The G Company",
-  directeurPublication: "Gary Gentle",
+  /**
+   * Getgents est édité par une PERSONNE PHYSIQUE, à titre non professionnel.
+   *
+   * Ces pages ont d'abord annoncé « Raison sociale : The G Company ». C'était
+   * inexact : la société n'existe pas. Une mention légale fausse est pire
+   * qu'une mention incomplète — elle est vérifiable, et un service de
+   * catégorisation qui cherche une société introuvable au registre en tire la
+   * conclusion inverse de celle qu'on recherchait.
+   *
+   * L'article 6 III de la LCEN prévoit ce cas : un éditeur non professionnel
+   * peut ne rendre publique que l'identité de son hébergeur, à condition de
+   * lui avoir communiqué la sienne. C'est le régime retenu ici — d'où une
+   * identité d'éditeur donnée, mais pas d'adresse postale privée.
+   *
+   * À REVOIR le jour où une société est immatriculée, ou dès que le service
+   * encaisse des paiements : le régime professionnel s'applique alors, et
+   * exige l'adresse du siège et le numéro d'immatriculation.
+   */
+  nom: "Charles de Cassan",
+  /** Nature de l'édition, dite explicitement plutôt que laissée à deviner. */
+  qualite: "Éditeur personne physique — projet personnel, édition non professionnelle",
+  directeurPublication: "Charles de Cassan",
   /**
    * Contact public. `getgents.ai` et non `.com` : c'est le domaine dont vous
    * êtes propriétaire, dont le DNS porte les enregistrements de messagerie
@@ -30,15 +50,14 @@ export const EDITEUR = {
    */
   contact: "ceo@getgents.ai",
   /**
-   * Adresse postale du siège. `null` tant qu'elle n'a pas été fournie.
+   * Adresse postale : volontairement absente, et c'est LÉGAL ici.
    *
-   * Elle est LÉGALEMENT OBLIGATOIRE en France (article 6 III de la LCEN) :
-   * des mentions légales sans elle sont incomplètes. Les pages omettent la
-   * ligne plutôt que d'afficher un texte inventé — un faux siège serait pire
-   * qu'une absence, et invérifiable pour un catégoriseur.
+   * Sous le régime non professionnel, elle est communiquée à l'hébergeur et
+   * non au public. Ce n'est donc plus un trou à combler, comme ce l'était
+   * tant que ces pages annonçaient une société.
    */
   adressePostale: null as string | null,
-  /** Numéro d'immatriculation (SIREN, RCS…), quand il sera connu. */
+  /** Immatriculation : aucune, il n'y a pas de société. */
   immatriculation: null as string | null,
 } as const;
 
@@ -113,7 +132,7 @@ export const SOUS_TRAITANTS: readonly SousTraitant[] = [
 ] as const;
 
 /** Date de dernière révision des textes légaux, affichée en pied de page. */
-export const DERNIERE_REVISION = "3 septembre 2026";
+export const DERNIERE_REVISION = "8 septembre 2026";
 
 /**
  * Contenu de `/.well-known/security.txt` (RFC 9116).
