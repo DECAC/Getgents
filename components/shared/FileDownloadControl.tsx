@@ -15,6 +15,11 @@ import {
 } from "@/lib/fileDownload";
 import { downloadPdfBytes, textToPdfBytes } from "@/lib/textToPdf";
 import { TURNSTILE_SITEKEY, TURNSTILE_VERIFY_URL } from "@/lib/turnstile";
+import {
+  DELAI_CHARGEMENT_MS,
+  MESSAGE_SCRIPT_ABSENT,
+  diagnostiquerTurnstile,
+} from "@/lib/turnstileErreurs";
 import type { DownloadableDocument } from "@/lib/types";
 import modalStyles from "./Modal.module.css";
 import styles from "./FileDownloadControl.module.css";
@@ -23,7 +28,7 @@ declare global {
   interface Window {
     onTurnstileSuccess?: (token: string) => void;
     onTurnstileExpire?: () => void;
-    onTurnstileError?: () => void;
+    onTurnstileError?: (code?: string) => void;
     turnstile?: {
       render: (el: string | HTMLElement, opts: Record<string, unknown>) => string;
       reset: (widgetId?: string) => void;
@@ -93,6 +98,8 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
     let widgetId: string | undefined;
     let timer: number | undefined;
 
+    const debut = Date.now();
+
     function mount(): boolean {
       const el = document.getElementById("download-turnstile");
       if (!el || !window.turnstile || cancelled) return false;
@@ -102,16 +109,40 @@ export function FileDownloadControl({ variant = "header" }: { variant?: "header"
         appearance: "always",
         retry: "auto",
         theme: "light",
-        callback: (t: string) => setToken(t),
+        callback: (t: string) => {
+          setToken(t);
+          setError(null);
+        },
         "expired-callback": () => setToken(""),
-        "error-callback": () => setToken(""),
+        // L'échec était muet : on effaçait le jeton, sans un mot. Le visiteur
+        // se retrouvait devant un formulaire qui refusait de partir sans
+        // raison, et nous ne pouvions pas distinguer une clé mal configurée
+        // d'un réseau coupé — deux pannes qui ne se réparent pas au même
+        // endroit. Le code part aussi dans la console, pour le diagnostic.
+        "error-callback": (code?: string) => {
+          setToken("");
+          const diag = diagnostiquerTurnstile(code);
+          setError(diag.message);
+          console.error(
+            JSON.stringify({ tag: "getgents:turnstile", code: code ?? "inconnu" })
+          );
+        },
       });
       return true;
     }
 
     if (!mount()) {
       timer = window.setInterval(() => {
-        if (mount() && timer) window.clearInterval(timer);
+        if (mount() && timer) {
+          window.clearInterval(timer);
+          return;
+        }
+        // Le script ne vient pas. On cesse d'attendre en silence : sans cette
+        // borne, la boucle tournait indéfiniment devant un cadre vide.
+        if (Date.now() - debut > DELAI_CHARGEMENT_MS && !window.turnstile) {
+          if (timer) window.clearInterval(timer);
+          if (!cancelled) setError(MESSAGE_SCRIPT_ABSENT);
+        }
       }, 200);
     }
 
