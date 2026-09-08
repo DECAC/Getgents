@@ -121,3 +121,28 @@ describe("avecModeleConfigure", () => {
     expect(avecModeleConfigure(catalogue, null)).toHaveLength(1);
   });
 });
+
+describe("messageCleOpenRouter — clé plateforme", () => {
+  it("ne conseille pas de réessayer quand réessayer ne peut rien changer", () => {
+    // 402 = crédit épuisé côté plateforme. « Réessayez » serait faux, et
+    // laisserait le visiteur croire qu'il s'y prend mal.
+    const m = messageCleOpenRouter({ source: "plateforme", status: 402 });
+    expect(m).toMatch(/pas de votre fait/i);
+    expect(m).not.toMatch(/réessayez dans quelques instants/i);
+  });
+
+  it("invite à réessayer sur une saturation passagère", () => {
+    expect(messageCleOpenRouter({ source: "plateforme", status: 429 })).toMatch(
+      /réessayez dans quelques instants/i
+    );
+  });
+
+  it("ne révèle jamais notre configuration au visiteur", () => {
+    // Un visiteur n'a pas à apprendre l'état de nos clés : ça ne l'aide pas,
+    // et ça renseigne qui n'a rien à savoir.
+    for (const status of [401, 402, 403, 429, 500]) {
+      const m = messageCleOpenRouter({ source: "plateforme", status });
+      expect(m).not.toMatch(/clé|key|token|serveur|OpenRouter/i);
+    }
+  });
+});

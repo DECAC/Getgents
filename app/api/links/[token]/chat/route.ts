@@ -130,8 +130,46 @@ export async function POST(req: Request, { params }: Params) {
 
   if (!upstream.ok || !upstream.body) {
     const detail = await upstream.text().catch(() => "");
+
+    // Le détail complet part dans les journaux, jamais à l'écran : il contient
+    // la réponse brute d'OpenRouter, qui peut nommer le modèle, le compte, ou
+    // la raison exacte d'un refus de clé.
+    console.error(
+      JSON.stringify({
+        tag: "getgents:chat",
+        event: "lien_partage_upstream",
+        status: upstream.status,
+        gentId: link.gentId,
+        model: chatModelId,
+        detail: detail.slice(0, 300),
+      })
+    );
+
+    // `chatResponseFor` a DÉJÀ produit un message lisible pour un refus de clé
+    // (401/402/403) — voir messageCleOpenRouter. Ce relais l'écrasait par un
+    // « upstream_error » qui n'apprend rien à personne : ni au visiteur, qui ne
+    // sait pas quoi faire, ni au propriétaire, qui ne sait pas que son crédit
+    // est épuisé. On le laisse passer tel quel.
+    let message = "";
+    try {
+      const data = JSON.parse(detail) as { error?: unknown };
+      if (typeof data.error === "string" && data.error.trim()) message = data.error;
+      else if (
+        data.error &&
+        typeof (data.error as { message?: unknown }).message === "string"
+      ) {
+        message = (data.error as { message: string }).message;
+      }
+    } catch {
+      // Corps non-JSON : on retombe sur un message générique.
+    }
+
     return NextResponse.json(
-      { error: "upstream_error", detail: detail.slice(0, 300) },
+      {
+        error:
+          message ||
+          "Le gent n'a pas pu répondre. Réessayez dans quelques instants ; si cela persiste, prévenez la personne qui vous a partagé ce lien.",
+      },
       { status: upstream.status || 502 }
     );
   }
