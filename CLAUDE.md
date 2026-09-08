@@ -70,9 +70,13 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   sinon chaque visiteur d'une page publique interrogerait le compte du
   propriétaire.
 - **L'onglet Aperçu est retiré VOLONTAIREMENT** — entrée du rail et étape du
-  plan de construction. Le code (`ApercuTab`, `appPreview`, l'action de cadrage
-  `apercu`) reste en place et n'est plus atteignable. Ne pas le « réparer » en
-  croyant à un oubli ; le supprimer pour de bon est en revanche envisageable.
+  plan de construction. Ne pas le « réparer » en croyant à un oubli.
+  ATTENTION à ne pas en déduire que l'aperçu d'application est mort : SEUL
+  l'écran de prévisualisation du créateur a disparu. `appPreview` est bien
+  VIVANT — l'assistant du builder produit toujours des modules, `WorkspaceCanvas`
+  les rend à l'utilisateur final, et ils partent dans le gent diffusé comme dans
+  les liens de partage. Le créateur voit le résultat par le bouton Preview, qui
+  ouvre l'espace réel. Seul `ApercuTab` est du code sans point d'entrée.
 - **Les composants qui s'affichent pour un invité vont dans
   `SharedGentShell`**, PAS dans `CenterHeader` : la page `/l/<jeton>` a son
   propre en-tête. Un bouton de signalement monté au mauvais endroit ne
