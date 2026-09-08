@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useEspace } from "@/lib/context/EspaceContext";
 import {
   MOTIFS,
   MOTIF_EXIGEANT_PRECISION,
@@ -27,8 +26,22 @@ import styles from "./SignalerIncident.module.css";
  * gent sous les yeux : se signaler un incident à soi-même n'aurait pas de
  * sens.
  */
-export function SignalerIncident() {
-  const { shareMode, shareToken } = useEspace();
+/**
+ * Le jeton arrive en PROP, jamais d'un contexte.
+ *
+ * Première version : il était lu dans `useEspace()`. Deux défauts, découverts
+ * en production sur un signalement qui n'arrivait jamais. D'abord le bouton
+ * avait été monté dans `CenterHeader`, que la page de partage n'utilise pas —
+ * il ne s'affichait donc nulle part. Ensuite `useEspace()` LÈVE hors de son
+ * fournisseur : le monter dans le salon collaboratif, qui n'en a pas, aurait
+ * fait planter la page entière pour un bouton secondaire.
+ *
+ * Une prop supprime les deux problèmes : la coquille qui affiche le bouton
+ * connaît forcément son jeton, et rien ne dépend plus d'un contexte qui peut
+ * être absent.
+ */
+export function SignalerIncident({ token }: { token: string }) {
+  const jeton = token;
   const [ouvert, setOuvert] = useState(false);
   const [appreciation, setAppreciation] = useState<Appreciation | null>(null);
   const [motif, setMotif] = useState<MotifId | null>(null);
@@ -37,13 +50,13 @@ export function SignalerIncident() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoye, setEnvoye] = useState(false);
 
-  if (!shareMode || !shareToken) return null;
+  if (!jeton) return null;
 
   async function envoyer() {
     setOccupe(true);
     setErreur(null);
     try {
-      const res = await fetch(`/api/links/${encodeURIComponent(shareToken!)}/signalement`, {
+      const res = await fetch(`/api/links/${encodeURIComponent(jeton)}/signalement`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appreciation, motif, precision }),

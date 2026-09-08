@@ -6,6 +6,7 @@ import { AssistantPanel } from "@/components/assistant/AssistantPanel";
 import { ArtefactModal } from "@/components/shared/ArtefactModal";
 import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
 import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
+import { SignalerIncident } from "@/components/shared/SignalerIncident";
 import type { Espace } from "@/lib/types";
 import styles from "./SharedGentShell.module.css";
 
@@ -22,7 +23,7 @@ import styles from "./SharedGentShell.module.css";
  * Une mise en page propre au partage désorientait — le destinataire découvrait
  * une interface que le créateur n'avait jamais vue en Preview.
  */
-function SharedGentBody() {
+function SharedGentBody({ token }: { token: string }) {
   const { currentEspace, assistantOpen, openAssistant, miniAppMode, documentViewerOpen } = useEspace();
   // Un gent en mode mini-application s'utilise par son tableau de bord : le
   // destinataire n'a pas non plus accès à la conversation.
@@ -41,6 +42,7 @@ function SharedGentBody() {
         </div>
         <div className={styles.headActions}>
           <FileDownloadControl variant="shared" />
+          <SignalerIncident token={token} />
           {chatAvailable && !assistantOpen && (
             <button type="button" className={styles.chatBtn} onClick={openAssistant}>
               💬 Discuter
@@ -71,7 +73,7 @@ function SharedGentBody() {
 export function SharedGentShell({ token, espace }: { token: string; espace: Espace }) {
   return (
     <EspaceProvider initialId="shared" shareToken={token} initialEspaces={{ shared: espace }}>
-      <SharedGentBody />
+      <SharedGentBody token={token} />
     </EspaceProvider>
   );
 }
