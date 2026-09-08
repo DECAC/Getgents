@@ -11,9 +11,33 @@
   white-space: nowrap;
 }
 
+/* Le point d'exclamation ne sert que sur les écrans étroits. */
+.declencheurIcone {
+  display: none;
+}
+
+/* Sous 620 px, le bouton devient une pastille ronde : il tient alors sur la
+   même ligne que le téléchargement, au lieu de rejeter les actions sur une
+   troisième ligne qui rognait la conversation. */
 @media (max-width: 620px) {
-  .declencheurSuite {
+  .declencheurTexte {
     display: none;
+  }
+
+  .declencheurIcone {
+    display: block;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .declencheur {
+    width: 40px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
   }
 }
 

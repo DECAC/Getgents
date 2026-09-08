@@ -87,13 +87,21 @@ export function SignalerIncident({ token }: { token: string }) {
 
   return (
     <>
-      <button type="button" className={styles.declencheur} onClick={() => setOuvert(true)}>
-        Signaler
-        {/* « un incident » disparaît sur les écrans étroits : le libellé
-            complet poussait le bouton hors de l'écran, où il ne servait plus à
-            rien. « Signaler » seul reste sans ambiguïté à côté d'un bouton de
-            téléchargement. */}
-        <span className={styles.declencheurSuite}> un incident</span>
+      <button
+        type="button"
+        className={styles.declencheur}
+        onClick={() => setOuvert(true)}
+        /* Le libellé se réduit à un point d'exclamation sous 620 px, pour
+           tenir sur la même ligne que le téléchargement. Le nom accessible,
+           lui, reste ENTIER : un lecteur d'écran annoncerait sinon « point
+           d'exclamation », ce qui n'est pas une action. */
+        aria-label="Signaler un incident"
+        title="Signaler un incident"
+      >
+        <span className={styles.declencheurTexte}>Signaler un incident</span>
+        <span className={styles.declencheurIcone} aria-hidden="true">
+          !
+        </span>
       </button>
 
       {ouvert && (
