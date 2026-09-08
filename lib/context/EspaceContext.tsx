@@ -236,6 +236,8 @@ interface EspaceContextValue {
   getResvItem: (id: string) => ReservationItem | undefined;
   /** Vrai quand l'espace est consulté via un lien de partage (destinataire externe). */
   shareMode: boolean;
+  /** Jeton du lien de partage, quand on est arrivé par là. Sert au signalement. */
+  shareToken?: string;
   /**
    * Mode « mini-application » : l'artefact figé est actif, le gent s'utilise
    * alors par son tableau de bord et non par la conversation.
@@ -1773,6 +1775,7 @@ export function EspaceProvider({
         pinnedRefreshing,
         pinnedError,
         shareMode,
+        shareToken,
         miniAppMode: !!currentEspace.pinnedArtefact?.enabled,
         addFile,
         removeFile,

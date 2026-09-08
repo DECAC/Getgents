@@ -11,6 +11,7 @@ import { chatResponseFor } from "@/lib/server/chatEngine";
 import { contexteForGent } from "@/lib/server/openRouterKey";
 import { consommerPourVisiteur } from "@/lib/server/gentGuard";
 import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
+import { notifierUsageInvite } from "@/lib/server/signalements";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -82,6 +83,17 @@ export async function POST(req: Request, { params }: Params) {
   const systemPrompt = buildGentSystemPrompt(espace, { variant: "sharedLink" });
 
   await recordShareEvent(token, "chat", link.targetLabel);
+
+  // Notification d'usage : au plus une par lien et par jour, jamais une par
+  // message (voir lib/server/signalements.ts). Volontairement PAS attendue —
+  // une conversation ne doit pas patienter derrière un envoi d'e-mail, ni
+  // échouer si la messagerie est en panne.
+  void notifierUsageInvite({
+    gentId: link.gentId,
+    nomGent: espace.name,
+    token,
+    label: link.targetLabel,
+  });
 
   // Appel DIRECT du moteur de conversation, sans repasser par HTTP.
   //

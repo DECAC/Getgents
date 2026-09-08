@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { readPublishedGents } from "@/lib/publishedGents";
 import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
+import { SignalerIncident } from "@/components/shared/SignalerIncident";
 import styles from "./CenterHeader.module.css";
 import { BoutonNavMobile } from "@/components/shared/BoutonNavMobile";
 
@@ -52,6 +53,10 @@ export function CenterHeader() {
         </div>
         <div className={styles.headActions}>
           <FileDownloadControl />
+          {/* Ne s'affiche que pour un visiteur arrivé par un lien de partage :
+              se signaler un incident à soi-même n'aurait pas de sens dans le
+              studio, où le créateur a le gent sous les yeux. */}
+          <SignalerIncident />
           {isPublishedGent && (
             <a className={styles.builderLink} href={`/builder/${currentId}`} title="Modifier ce gent dans le gent studio">
               🛠️ Ouvrir dans le gent studio

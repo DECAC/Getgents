@@ -30,6 +30,12 @@ const OUVERTES: Record<string, string> = {
   "app/api/links/[token]/chat/route.ts": "authentifiée par le jeton du lien",
   "app/api/links/[token]/refresh/route.ts": "authentifiée par le jeton du lien",
   "app/api/links/[token]/starters/route.ts": "authentifiée par le jeton du lien",
+  // Signalement d'incident : celui qui signale n'a PAS de compte — c'est
+  // précisément pourquoi il n'avait aucun moyen de se faire entendre. Le jeton
+  // du lien autorise le dépôt, et le débit est plafonné à trois par heure et
+  // par lien, une route ouverte qui envoie des e-mails étant sinon un
+  // distributeur de courrier indésirable.
+  "app/api/links/[token]/signalement/route.ts": "jeton du lien + plafond de débit",
   "app/api/gmail/callback/route.ts": "atterrissage OAuth Google — état signé + requireUser",
   "app/api/whatsapp/webhook/route.ts": "webhook Meta — vérifié par WHATSAPP_VERIFY_TOKEN",
   "app/api/powens/connect/route.ts": "redirection vers la webview bancaire, sans donnée du compte",
