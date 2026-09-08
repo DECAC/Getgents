@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { EspaceProvider, useEspace } from "@/lib/context/EspaceContext";
 import { WorkspaceCanvas } from "@/components/center/WorkspaceCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
@@ -25,6 +26,24 @@ import styles from "./SharedGentShell.module.css";
  */
 function SharedGentBody({ token }: { token: string }) {
   const { currentEspace, assistantOpen, openAssistant, miniAppMode, documentViewerOpen } = useEspace();
+
+  // Sur téléphone, la conversation s'ouvre D'EMBLÉE.
+  //
+  // Le destinataire d'un lien vient pour parler au gent, pas pour lire un
+  // écran d'accueil. Sur grand écran l'accueil et la conversation cohabitent ;
+  // sur un téléphone ils se disputent la même hauteur, et l'accueil gagnait —
+  // il fallait repérer un bouton « Discuter » pour atteindre ce qu'on était
+  // venu chercher. Une seule fois : rouvrir de force après une fermeture
+  // volontaire empêcherait de revenir à l'accueil.
+  useEffect(() => {
+    if (miniAppMode) return;
+    if (typeof window === "undefined") return;
+    if (!window.matchMedia("(max-width: 860px)").matches) return;
+    openAssistant();
+    // Volontairement sans `assistantOpen` en dépendance : cet effet ne doit
+    // s'exécuter qu'au montage.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [miniAppMode]);
   // Un gent en mode mini-application s'utilise par son tableau de bord : le
   // destinataire n'a pas non plus accès à la conversation.
   const chatAvailable = !miniAppMode;

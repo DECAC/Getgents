@@ -98,3 +98,65 @@
   max-width: 1080px;
   margin: 0 auto;
 }
+
+
+/* ── Téléphone : une barre de titre mince, et la conversation en dessous ──
+   Constaté sur un appareil réel : `.headActions` en `flex: none` avec trois
+   boutons laissait une trentaine de pixels au titre, qui s'empilait un mot par
+   ligne sur sept lignes — et les boutons débordaient quand même hors de
+   l'écran. L'en-tête mangeait la moitié de la hauteur pour ne rien dire de
+   plus qu'un nom.
+
+   La règle ici : le titre tient sur UNE ligne et se coupe, les actions passent
+   sur une seconde ligne compacte. On vise l'allure d'une messagerie — un
+   bandeau mince, puis l'échange. */
+@media (max-width: 620px) {
+  .head {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 10px 14px;
+  }
+
+  .icon {
+    font-size: 22px;
+  }
+
+  .headMeta {
+    /* `flex: 1` avec `min-width: 0` : le titre prend ce qui reste et se coupe,
+       au lieu de comprimer la colonne jusqu'à un mot par ligne. */
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .title {
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Le sous-titre répète l'objectif du gent, déjà lisible dans la
+     conversation. Sur cette largeur il coûte une ligne pour rien. */
+  .sub {
+    display: none;
+  }
+
+  /* Deuxième ligne, sur toute la largeur : les actions ne rognent plus le
+     titre, et ne débordent plus. */
+  .headActions {
+    flex: 1 0 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .chatBtn {
+    padding: 8px 14px;
+    min-height: 40px;
+  }
+}
+
+/* La conversation étant ouverte d'emblée sur téléphone, le bouton « Discuter »
+   n'a plus de raison d'occuper une ligne : il ne réapparaît que si l'on ferme
+   la conversation, cas où il redevient le seul chemin de retour. */
