@@ -66,6 +66,10 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   visible et supprime l'anti-rebond.
 - **Un clic explicite REESSAIE toujours**, même après un 401/503. Le drapeau
   `remoteAvailable` ne coupe que les synchronisations de fond.
+- **Jetons OAuth CHIFFRÉS au repos** (migration 018). `enc_version` dit comment
+  lire : 0 = clair hérité, 1 = AES-256-GCM. On n'écrit JAMAIS en clair — sans
+  `SECRET_BOX_KEY`, l'enregistrement est refusé. Une ligne héritée est
+  rechiffrée dès qu'on la LIT, pas seulement à la prochaine écriture.
 - **Attribution « Propulsé par »** figée à la diffusion, pas résolue au rendu :
   sinon chaque visiteur d'une page publique interrogerait le compte du
   propriétaire.
@@ -96,10 +100,6 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
 
 ## Dette assumée, à traiter avant l'ouverture publique
 
-- **`005_integration_credentials.sql` stocke les jetons OAuth Gmail EN CLAIR.**
-  Ce sont les accès à la boîte mail des utilisateurs. `lib/server/secretBox.ts`
-  (AES-256-GCM) est prêt depuis le lot 8 ; prévoir une lecture tolérante
-  (`enc_version = 0` → clair, rechiffré à la prochaine écriture).
 - `reasoningModelId` est configurable, recommandé par l'assistant, affiché —
   et **jamais lu au moment de générer**. Le brancher, ou le retirer.
 - Environ 21 boutons textuels sous 40 px sur `/espace/[id]` (décision de

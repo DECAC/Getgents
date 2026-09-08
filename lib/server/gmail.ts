@@ -235,11 +235,24 @@ async function validAccessToken(gentId: string): Promise<{ token: string } | { e
   }
   const expiresAt =
     typeof refreshed.expires_in === "number" ? new Date(Date.now() + refreshed.expires_in * 1000) : null;
-  await upsertCredential({
+  const enregistre = await upsertCredential({
     ...cred,
     accessToken: refreshed.access_token,
     expiresAt,
   });
+  if ("error" in enregistre) {
+    // Le jeton fraîchement obtenu reste utilisable pour CET appel, mais il
+    // n'est pas conservé : chaque requête suivante en redemandera un. Silence
+    // ici voudrait dire « connecteur lent sans raison » ; on le nomme.
+    console.error(
+      JSON.stringify({
+        tag: "getgents:oauth",
+        event: "refresh_non_enregistre",
+        gentId,
+        detail: enregistre.error,
+      })
+    );
+  }
   return { token: refreshed.access_token };
 }
 

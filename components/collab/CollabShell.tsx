@@ -17,6 +17,7 @@ import {
   type CollabVoteTally,
 } from "@/lib/collab";
 import styles from "./CollabShell.module.css";
+import { SignalerIncident } from "@/components/shared/SignalerIncident";
 import {
   cleSelection,
   envoiImmediat,
@@ -666,6 +667,11 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
           <button className={styles.shareBtn} type="button" onClick={handleShare}>
             🔗 <span>{shareLabel}</span>
           </button>
+          {/* Les participants d'un salon sont exactement ceux qui rencontrent
+              des ennuis — orchestrateur muet, questions reposées, attente
+              interminable — et n'ont aucun moyen de le dire. Le jeton du salon
+              EST celui du lien de partage : la même route les reçoit. */}
+          <SignalerIncident token={token} />
         </div>
       </header>
 
