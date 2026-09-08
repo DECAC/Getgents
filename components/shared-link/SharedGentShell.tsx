@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { EspaceProvider, useEspace } from "@/lib/context/EspaceContext";
 import { WorkspaceCanvas } from "@/components/center/WorkspaceCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
@@ -26,6 +26,25 @@ import styles from "./SharedGentShell.module.css";
  */
 function SharedGentBody({ token }: { token: string }) {
   const { currentEspace, assistantOpen, openAssistant, miniAppMode, documentViewerOpen } = useEspace();
+
+  /**
+   * Écran étroit : le canevas est masqué par la feuille de style, et c'est lui
+   * qui porte d'ordinaire les questions d'amorce. La conversation doit alors
+   * les reprendre — sans quoi le fil s'ouvre vide.
+   *
+   * Suivi en direct plutôt que lu une fois : une rotation d'appareil fait
+   * passer d'un régime à l'autre, et un état figé au montage afficherait les
+   * questions en double sur grand écran, ou pas du tout après rotation.
+   */
+  const [etroit, setEtroit] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 860px)");
+    const suivre = () => setEtroit(mq.matches);
+    suivre();
+    mq.addEventListener("change", suivre);
+    return () => mq.removeEventListener("change", suivre);
+  }, []);
 
   // Sur téléphone, la conversation s'ouvre D'EMBLÉE.
   //
@@ -57,7 +76,20 @@ function SharedGentBody({ token }: { token: string }) {
         <span className={styles.icon}>{currentEspace.icon}</span>
         <div className={styles.headMeta}>
           <h1 className={styles.title}>{currentEspace.gent}</h1>
-          <div className={styles.sub}>{currentEspace.name}</div>
+          <div className={styles.sub}>
+            <span className={styles.subObjectif}>{currentEspace.name}</span>
+            {/* L'attribution vit ICI, et non seulement dans `CenterHeader` :
+                cet en-tête est le seul que voient les destinataires d'un lien
+                et les visiteurs d'un gent public — c'est-à-dire exactement le
+                public à qui cette mention s'adresse. Elle n'apparaît que si
+                elle a une valeur : « Propulsé par » suivi du nom du gent, déjà
+                écrit au-dessus, ne dirait rien. */}
+            {currentEspace.propulsePar?.trim() && (
+              <span className={styles.subAuteur}>
+                Propulsé par <b>{currentEspace.propulsePar}</b>
+              </span>
+            )}
+          </div>
         </div>
         <div className={styles.headActions}>
           <FileDownloadControl variant="shared" />
@@ -71,7 +103,11 @@ function SharedGentBody({ token }: { token: string }) {
       </header>
 
       <div className={[styles.body, chatOpen ? styles.bodyWithChat : ""].filter(Boolean).join(" ")}>
-        {chatOpen && <AssistantPanel />}
+        {/* `starters` : sur téléphone le canevas est masqué, et c'est lui qui
+            porte d'ordinaire les questions d'amorce. Sans cela, le
+            destinataire d'un lien arrivait sur un fil vide — rien à lire,
+            rien à toucher, aucune idée de ce qu'on peut demander. */}
+        {chatOpen && <AssistantPanel starters={etroit} />}
         <main className={styles.main}>
           <div className={styles.mainInner}>
             {/* Même canvas que l'espace : aperçu d'application (avec déclencheurs

@@ -62,7 +62,21 @@ function themeTabLabel(espace: Espace, tabId: string): string {
  * La poignée de redimensionnement pilote une variable CSS de cette grille :
  * hors d'elle, c'est un contrôle mort — on ne l'affiche pas.
  */
-export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}) {
+export function AssistantPanel({
+  embedded = false,
+  /**
+   * Force l'affichage des questions d'amorce sur un fil vide.
+   *
+   * `shouldShowConversationStarters` les réserve aux gents dotés d'un aperçu
+   * d'application. Ailleurs, elles vivent dans le canevas — qui les affiche
+   * déjà, et les montrer deux fois serait redondant. Mais la coquille de
+   * partage MASQUE ce canevas sur téléphone pour laisser toute la place à la
+   * conversation : le fil s'ouvrait alors vide, sans rien à quoi se
+   * raccrocher. C'est un fait de MISE EN PAGE, pas une propriété du gent, d'où
+   * cette prop plutôt qu'un assouplissement de la règle.
+   */
+  starters = false,
+}: { embedded?: boolean; starters?: boolean } = {}) {
   const {
     currentEspace,
     activeConversation,
@@ -1008,7 +1022,8 @@ export function AssistantPanel({ embedded = false }: { embedded?: boolean } = {}
           <>
             {activeConversation.messages.length ? (
               activeConversation.messages.map((m, i) => renderMessage(m, i))
-            ) : shouldShowConversationStarters(currentEspace, activeConversation.messages.length) ? (
+            ) : starters ||
+              shouldShowConversationStarters(currentEspace, activeConversation.messages.length) ? (
               <StarterBubbles espace={currentEspace} variant="compact" />
             ) : !currentEspace.jumpForm ? (
               <div className={styles.empty}>
