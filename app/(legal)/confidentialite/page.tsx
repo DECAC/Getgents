@@ -41,7 +41,26 @@ export default function ConfidentialitePage() {
             <b>Des compteurs d&apos;usage</b> par heure, pour borner la dépense. Ils ne
             contiennent aucun contenu.
           </li>
+          <li>
+            <b>Les signalements d&apos;incident</b> laissés par les utilisateurs d&apos;un gent
+            partagé : vos réponses aux deux questions et, si vous en écrivez, votre description.
+            Rien d&apos;autre — ni compte, ni adresse e-mail, ni adresse IP, ni le contenu de
+            votre conversation. Ils sont transmis à la personne qui gère le gent, qui n&apos;a
+            donc aucun moyen de vous répondre.
+          </li>
         </ul>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sousTitre}>Ce qui est signalé au créateur d&apos;un gent</h2>
+        <p className={styles.texte}>
+          Le créateur d&apos;un gent est prévenu par e-mail lorsque quelqu&apos;un se sert
+          d&apos;un lien qu&apos;il a partagé — au plus une fois par jour et par lien, et non à
+          chaque message. Cette notification indique le gent et le partage concernés.
+          <b> Elle ne contient jamais le contenu des échanges</b>, et n&apos;identifie pas
+          l&apos;utilisateur : elle dit qu&apos;un lien sert, pas qui s&apos;en sert ni ce
+          qu&apos;il demande.
+        </p>
       </section>
 
       <section className={styles.section}>
