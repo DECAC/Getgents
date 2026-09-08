@@ -8,11 +8,13 @@ import { MiniAppTab } from "./tabs/MiniAppTab";
 import { VisionneuseTab } from "./tabs/VisionneuseTab";
 import { CollaboratifTab } from "./tabs/CollaboratifTab";
 import { ApercuTab } from "./tabs/ApercuTab";
+import { PromptTab } from "./tabs/PromptTab";
 import { ConnectorsTab } from "./tabs/ConnectorsTab";
 import { KnowledgeTab } from "./tabs/KnowledgeTab";
 import { DiffusionTab } from "./tabs/DiffusionTab";
 import { MarketingTab } from "./tabs/MarketingTab";
 import { AuditTab } from "./tabs/AuditTab";
+import { BoutonSauvegarde } from "./BoutonSauvegarde";
 import styles from "./BuilderCenter.module.css";
 
 export function BuilderCenter() {
@@ -24,6 +26,7 @@ export function BuilderCenter() {
     if (activeTab === "visionneuse") return <VisionneuseTab />;
     if (activeTab === "collaboratif") return <CollaboratifTab />;
     if (activeTab === "apercu") return <ApercuTab />;
+    if (activeTab === "prompt") return <PromptTab />;
     if (activeTab === "connectors") return <ConnectorsTab />;
     if (activeTab === "knowledge") return <KnowledgeTab />;
     if (activeTab === "diffusion") return <DiffusionTab />;
@@ -38,6 +41,9 @@ export function BuilderCenter() {
       <div className={styles.content} key={currentId}>
         {renderContent()}
       </div>
+      {/* Hors du conteneur qui défile : il doit rester visible quelle que soit
+          la position dans une page de configuration longue. */}
+      <BoutonSauvegarde />
     </main>
   );
 }

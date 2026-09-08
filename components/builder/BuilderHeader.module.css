@@ -101,10 +101,30 @@
   border: none;
   background: none;
   color: var(--ink);
-  flex: 1;
+  /* `flex: 1` étirait le champ sur toute la largeur, et rejetait donc
+     l'indicateur de statut à l'autre bout du bandeau — loin du nom qu'il
+     qualifie. On laisse le champ prendre la taille de son contenu. */
+  flex: 0 1 auto;
   min-width: 0;
   padding: 2px 0 2px 6px;
   border-radius: 6px;
+}
+
+/* `field-sizing` ajuste la largeur au texte saisi. Là où il manque (Firefox,
+   Safari à ce jour), on retombe sur un champ élastique : le statut s'éloigne
+   du titre comme avant, ce qui est le comportement d'aujourd'hui — jamais un
+   champ tronqué. */
+@supports (field-sizing: content) {
+  .nameInput {
+    field-sizing: content;
+    max-width: 100%;
+  }
+}
+
+@supports not (field-sizing: content) {
+  .nameInput {
+    flex: 1;
+  }
 }
 .nameInput:focus {
   outline: none;

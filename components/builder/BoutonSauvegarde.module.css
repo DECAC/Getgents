@@ -1,0 +1,69 @@
+/* Flottant au-dessus du contenu : la configuration d'un gent est longue, et
+   chercher un bouton au bas d'une page qu'il faut dérouler est exactement ce
+   qu'on veut éviter ici. */
+.bouton {
+  position: absolute;
+  right: 22px;
+  bottom: 18px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transition: border-color 0.15s, box-shadow 0.15s, color 0.15s;
+}
+
+.bouton:hover {
+  border-color: var(--ink);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.14);
+}
+
+.pastille {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: background 0.15s;
+}
+
+/* Une écriture est en cours ou attend l'anti-rebond. */
+.en-attente .pastille {
+  background: var(--plum);
+}
+
+.enregistre {
+  color: var(--sage);
+  border-color: var(--sage);
+}
+
+.enregistre .pastille {
+  background: var(--sage);
+}
+
+/* Le serveur n'a pas pris l'écriture. Le cache local garde tout — on alerte
+   sans dramatiser, la prochaine édition retentera. */
+.echec {
+  color: var(--plum);
+  border-color: var(--plum);
+}
+
+.echec .pastille {
+  background: var(--plum);
+}
+
+/* Au doigt : 44 px de haut, et remonté au-dessus de la barre de navigation
+   basse du navigateur mobile. */
+@media (pointer: coarse) {
+  .bouton {
+    min-height: 44px;
+    right: 14px;
+    bottom: 14px;
+  }
+}

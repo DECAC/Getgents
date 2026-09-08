@@ -1,4 +1,7 @@
 .center {
+  /* Repère de positionnement du bouton d'enregistrement flottant, qui vit hors
+     de la zone qui défile pour rester visible en toute position. */
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -12,4 +15,7 @@
   overflow-y: auto;
   padding: 24px 22px 32px;
   min-height: 0;
+  /* Le bouton d'enregistrement flotte au-dessus de cette zone : sans cette
+     réserve, il masquerait le dernier réglage de chaque page. */
+  padding-bottom: 72px;
 }

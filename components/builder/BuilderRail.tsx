@@ -100,6 +100,12 @@ const ICON = {
       <path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" />
     </svg>
   ),
+  prompt: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 5h16M4 10h16M4 15h10" />
+      <path d="M15.5 20.5 21 15l-2-2-5.5 5.5-.5 2.5z" />
+    </svg>
+  ),
   marketing: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M4 10v4a2 2 0 0 0 2 2h3l7 4V4l-7 4H6a2 2 0 0 0-2 2z" />
@@ -118,12 +124,16 @@ const NAV: NavSection[] = [
       { id: "miniapp", label: "Mini App", icon: ICON.miniapp },
       { id: "visionneuse", label: "Visionneuse", icon: ICON.visionneuse },
       { id: "collaboratif", label: "Event Manager", icon: ICON.collaboratif },
-      { id: "apercu", label: "Aperçu", icon: ICON.apercu },
     ],
   },
   {
-    title: "Contexte",
+    // « Contexte » ne disait pas ce qu'on y fait. Ces entrées sont les réglages
+    // du gent, valables quel que soit son type — d'où le titre, et d'où
+    // l'arrivée du prompt, qui était introuvable derrière « Gent
+    // Conversationnel ».
+    title: "Configuration du gent",
     entries: [
+      { id: "prompt", label: "Prompt & Modèle", icon: ICON.prompt },
       { id: "connectors", label: "Connecteurs", icon: ICON.connectors },
       { id: "knowledge", label: "Connaissances", icon: ICON.knowledge },
     ],
@@ -160,9 +170,11 @@ function BuilderRailList() {
       router.push("/accueil");
       return;
     }
-    // Menu « Créer » : toujours un gent neuf + atterrissage sur le bon onglet
-    // (?tab=… lu par BuilderShell). Event Manager est pré-rempli dès la création
-    // pour que Preview montre le salon immédiatement.
+    // Ici — et ICI SEULEMENT — le menu « Créer » crée. On est sur la liste des
+    // gents ou l'accueil : il n'y a pas de gent courant dont ces entrées
+    // pourraient être une facette, donc en ouvrir un neuf est le seul sens
+    // possible. Depuis un gent ouvert, elles changent d'onglet (voir
+    // BuilderRailGent) — c'est là que la création à la volée était insupportable.
     if (CREATE_TABS.includes(tab)) {
       const id = tab === "collaboratif" ? allocateEventManagerDraft() : allocateNewDraft();
       router.push(`/builder/${id}?tab=${tab}`);
@@ -199,14 +211,16 @@ function BuilderRailGent() {
       router.push("/builder/mesgents");
       return;
     }
-    // Les entrées sous « Créer » ouvrent un NOUVEAU brouillon et atterrissent
-    // sur l'onglet choisi via ?tab=… (lu par BuilderShell). Event Manager est
-    // pré-rempli dès la création pour que Preview montre le salon tout de suite.
-    if (CREATE_TABS.includes(tab)) {
-      const id = tab === "collaboratif" ? allocateEventManagerDraft() : allocateNewDraft();
-      router.push(`/builder/${id}?tab=${tab}`);
-      return;
-    }
+    // ON NE CRÉE PLUS DE GENT EN NAVIGUANT. Ces entrées allouaient un nouveau
+    // brouillon — immédiatement poussé au serveur — à CHAQUE clic. Parcourir le
+    // menu « Créer » depuis un gent ouvert fabriquait donc un gent par entrée
+    // visitée, qu'il fallait ensuite supprimer un par un.
+    //
+    // Ces entrées ne sont pas des actions de création : ce sont les FACETTES du
+    // gent courant. Un même gent est conversationnel, et/ou mini-app, et/ou
+    // visionneuse. Depuis un gent ouvert, elles changent donc d'onglet, comme
+    // toutes les autres. La création reste un acte explicite : « Mes gents →
+    // Nouveau gent », ou la description saisie sur l'accueil.
     switchTab(tab);
   }
 
@@ -271,7 +285,7 @@ function BuilderRailGent() {
           : publishDisabled
             ? !nameOk
               ? "Donnez un nom au gent (bandeau du haut) pour pouvoir le diffuser."
-              : "Rédigez les instructions système (onglet Gent Conversationnel) pour pouvoir diffuser."
+              : "Rédigez les instructions système (Configuration du gent → Prompt & Modèle) pour pouvoir diffuser."
             : undefined
       }
     />

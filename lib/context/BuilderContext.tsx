@@ -66,6 +66,7 @@ export type BuilderTab =
   | "visionneuse"
   | "collaboratif"
   | "apercu"
+  | "prompt"
   | "connectors"
   | "knowledge"
   | "audit"

@@ -1,27 +1,28 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { draftToEspace, readPublishedGents, writePublishedGent } from "@/lib/publishedGents";
 import { espaceForRoutineRun, formatApiNetworkError, mergeRoutineRunResult } from "@/lib/espaceApiPayload";
-import { ModelsTab } from "./ModelsTab";
 import { ArtefactExamples } from "./ArtefactExamples";
 import styles from "./PromptTab.module.css";
 
 /**
- * Gent conversationnel : tout ce qui définit son comportement en dialogue.
- * Les connaissances (transverses avec la mini-app) vivent sous « Contexte »,
- * et le mode mini-application sous son propre onglet.
+ * Gent conversationnel : ce qui lui est propre en dialogue — recherche web,
+ * routine planifiée, téléchargement de fichiers, artefacts produits.
+ *
+ * Le prompt et les modèles ont quitté cet onglet pour « Configuration du gent
+ * → Prompt & Modèle » : ils valent pour TOUS les types de gent, et personne ne
+ * pensait à les chercher derrière un libellé qui nomme un type. Les
+ * connaissances vivent au même endroit, la mini-application sous son onglet.
  */
 export function ConversationnelTab() {
   const {
     currentDraft,
-    updateSystemPrompt,
     toggleWebSearch,
     updateFileDownload,
     updateRoutine,
   } = useBuilder();
-  const wordCount = currentDraft.systemPrompt.trim().split(/\s+/).filter(Boolean).length;
   const [routineRunning, setRoutineRunning] = useState(false);
   const [routineRunResult, setRoutineRunResult] = useState<string | null>(null);
 
@@ -63,57 +64,8 @@ export function ConversationnelTab() {
     }
   }
 
-  // Valeur locale découplée des re-rendus du contexte (ex. streaming de
-  // l'assistant du builder) : sans ça, chaque frappe pouvait interrompre une
-  // composition de caractère accentué en cours (le navigateur reset le champ
-  // au milieu d'une séquence de touche morte), donnant des accents mangés.
-  const [promptValue, setPromptValue] = useState(currentDraft.systemPrompt);
-  const lastPushedRef = useRef(currentDraft.systemPrompt);
-
-  useEffect(() => {
-    setPromptValue(currentDraft.systemPrompt);
-    lastPushedRef.current = currentDraft.systemPrompt;
-  }, [currentDraft.id, currentDraft.systemPrompt]);
-
-  function handlePromptChange(text: string) {
-    setPromptValue(text);
-    lastPushedRef.current = text;
-    updateSystemPrompt(text);
-  }
-
   return (
     <div className={styles.wrap}>
-      <div className={styles.card}>
-        <h4 className={styles.title}>Instructions système (prompt)</h4>
-        <div className={styles.sub}>
-          Ce texte définit le comportement du gent en production. Décrivez son rôle, ses règles
-          impératives (ex. invariants de sécurité) et le ton attendu — l&apos;assistant du builder
-          peut vous aider à le rédiger.
-        </div>
-        <textarea
-          className={styles.promptArea}
-          value={promptValue}
-          onChange={(e) => handlePromptChange(e.target.value)}
-          placeholder={
-            "Tu es [nom du gent] de Getgents.\n\nObjectif : ...\n\nRègles impératives :\n- ...\n- ..."
-          }
-          aria-label="Prompt système du gent"
-        />
-        <div className={styles.footRow}>
-          <span>{wordCount} mot{wordCount !== 1 ? "s" : ""}</span>
-          <span>Modifiable à tout moment — versionné à chaque publication</span>
-        </div>
-      </div>
-
-      <div className={styles.sectionHead}>
-        <h4 className={styles.title}>Modèles</h4>
-        <div className={styles.sub}>
-          Le modèle utilisé par ce gent se choisit directement ici, capacité par capacité (voir
-          ci-dessous).
-        </div>
-      </div>
-      <ModelsTab />
-
       <div className={styles.card}>
         <div className={styles.webSearchRow}>
           <div>

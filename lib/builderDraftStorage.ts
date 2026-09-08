@@ -121,29 +121,110 @@ export async function fetchRemoteDrafts(): Promise<GentDraftsMap | null | "unaut
   }
 }
 
+/**
+ * État de la sauvegarde distante, observable par l'interface.
+ *
+ * Le studio enregistre tout seul, en permanence — mais rien ne le disait, et
+ * l'écran ne montrait aucune trace de l'écriture. On ne peut pas demander à
+ * quelqu'un de faire confiance à un mécanisme invisible : de là vient
+ * l'impression qu'il faut « penser à sauver ».
+ *
+ * `en-attente` couvre aussi le délai anti-rebond : pendant 1,5 s après la
+ * dernière frappe, la modification n'est QUE locale. C'est court, mais réel —
+ * fermer l'onglet dans cette fenêtre perd les derniers caractères, et c'est
+ * précisément ce que le bouton « Enregistrer » rend maîtrisable.
+ */
+export type EtatSauvegarde = "repos" | "en-attente" | "enregistre" | "echec";
+
+let etatSauvegarde: EtatSauvegarde = "repos";
+const abonnes = new Set<(e: EtatSauvegarde) => void>();
+
+function poserEtat(e: EtatSauvegarde): void {
+  etatSauvegarde = e;
+  for (const f of Array.from(abonnes)) f(e);
+}
+
+export function lireEtatSauvegarde(): EtatSauvegarde {
+  return etatSauvegarde;
+}
+
+export function abonnerSauvegarde(f: (e: EtatSauvegarde) => void): () => void {
+  abonnes.add(f);
+  return () => abonnes.delete(f);
+}
+
+/**
+ * Écrit tout de suite ce qui attend, sans attendre l'anti-rebond.
+ *
+ * C'est ce que fait le bouton « Enregistrer » : il n'invente pas une
+ * sauvegarde qui n'existerait pas, il supprime le délai — et surtout il
+ * CONFIRME, ce qu'aucun écran ne faisait.
+ */
+export function flushRemoteDrafts(): void {
+  for (const [, timer] of Array.from(pushTimers.entries())) clearTimeout(timer);
+  const enAttente = Array.from(pushTimers.keys());
+  pushTimers.clear();
+  if (!enAttente.length) {
+    // Rien en vol : l'état est déjà à jour. On le confirme quand même, pour
+    // que le clic produise toujours un retour visible.
+    poserEtat("enregistre");
+    return;
+  }
+  const stored = readStoredDrafts();
+  for (const id of enAttente) {
+    const draft = stored[id];
+    if (draft) envoyerMaintenant(id, draft);
+  }
+}
+
+/** L'envoi lui-même, séparé de son ordonnancement. */
+function envoyerMaintenant(id: string, draft: GentDraft): void {
+  fetch(`/api/drafts/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ draft }),
+  })
+    .then((res) => {
+      if (res.status === 503 || res.status === 401) {
+        remoteAvailable = false;
+        // Pas un échec à signaler : sans serveur configuré, le cache local
+        // EST la sauvegarde. Crier à l'erreur ici serait mentir.
+        poserEtat("enregistre");
+      } else if (res.ok) {
+        remoteAvailable = true;
+        poserEtat("enregistre");
+      } else {
+        poserEtat("echec");
+      }
+    })
+    .catch(() => {
+      // Réseau indisponible : le cache local garde le brouillon, la
+      // prochaine édition retentera. On le dit, sans dramatiser.
+      poserEtat("echec");
+    });
+}
+
 /** Pousse un brouillon vers le serveur, débouncé par id (l'édition est frappe à frappe). */
 export function pushRemoteDraft(id: string, draft: GentDraft): void {
-  if (remoteAvailable === false || id === NOUVEAU_GENT_TEMPLATE_ID) return;
+  if (id === NOUVEAU_GENT_TEMPLATE_ID) return;
+  if (remoteAvailable === false) {
+    // Pas de serveur (Supabase non configuré, session expirée) : le cache
+    // local EST la sauvegarde, et elle vient d'avoir lieu. Sans cette ligne
+    // l'indicateur restait figé sur son dernier état — il aurait affiché
+    // « Enregistrer » pendant qu'on tape, ce qui laisse croire à une attente
+    // qui n'existe pas.
+    poserEtat("enregistre");
+    return;
+  }
   const pending = pushTimers.get(id);
   if (pending) clearTimeout(pending);
+  poserEtat("en-attente");
   pushTimers.set(
     id,
     setTimeout(() => {
       pushTimers.delete(id);
-      fetch(`/api/drafts/${encodeURIComponent(id)}`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ draft }),
-      })
-        .then((res) => {
-          if (res.status === 503 || res.status === 401) remoteAvailable = false;
-          else if (res.ok) remoteAvailable = true;
-        })
-        .catch(() => {
-          // Réseau indisponible : le cache local garde le brouillon, la
-          // prochaine édition retentera.
-        });
+      envoyerMaintenant(id, draft);
     }, PUSH_DEBOUNCE_MS)
   );
 }
