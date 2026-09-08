@@ -5,12 +5,50 @@ import type { GentDraft } from "@/lib/types/builder";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
+ * Applique la sélection du créateur à la liste des documents disponibles.
+ *
+ * `undefined` rend TOUT : c'était le seul comportement possible avant que la
+ * sélection existe, et un gent déjà diffusé ne doit pas se mettre à offrir
+ * moins parce qu'on a ajouté un réglage. Une liste vide ne rend rien — c'est
+ * un choix explicite, distinct de l'absence de choix.
+ *
+ * L'ordre suivi est celui des documents, pas celui de la sélection : le
+ * créateur range ses connaissances, et le lecteur doit les retrouver dans cet
+ * ordre-là. Les identifiants qui ne correspondent plus à rien — un document
+ * retiré des connaissances après coup — disparaissent d'eux-mêmes.
+ */
+export function documentsSelectionnes(
+  documents: DownloadableDocument[],
+  selection: string[] | undefined
+): DownloadableDocument[] {
+  if (!selection) return documents;
+  const retenus = new Set(selection);
+  return documents.filter((d) => retenus.has(d.id));
+}
+
+/**
  * Documents que le lecteur pourra télécharger en PDF : sources de connaissance
  * dont le texte a été lu, plus le document d'une visionneuse s'il y en a une.
  * Les liens URL sans contenu et les fichiers non extraits sont ignorés — on
  * ne peut pas fabriquer un PDF à partir d'un nom seul.
+ *
+ * Voir `documentsDisponiblesDuBrouillon` pour la liste AVANT sélection, celle
+ * que l'écran de configuration doit présenter à cocher.
  */
 export function downloadableDocumentsFromDraft(draft: GentDraft): DownloadableDocument[] {
+  return documentsSelectionnes(
+    documentsDisponiblesDuBrouillon(draft),
+    draft.fileDownloadSelection
+  );
+}
+
+/**
+ * Tout ce qui POURRAIT être téléchargé, sélection non appliquée.
+ *
+ * L'écran de configuration a besoin de cette liste : ne montrer que les
+ * documents déjà retenus empêcherait d'en ajouter un.
+ */
+export function documentsDisponiblesDuBrouillon(draft: GentDraft): DownloadableDocument[] {
   const docs: DownloadableDocument[] = [];
   const seen = new Set<string>();
 

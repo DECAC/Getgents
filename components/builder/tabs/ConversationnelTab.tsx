@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
+import { documentsDisponiblesDuBrouillon } from "@/lib/fileDownload";
 import { draftToEspace, readPublishedGents, writePublishedGent } from "@/lib/publishedGents";
 import { espaceForRoutineRun, formatApiNetworkError, mergeRoutineRunResult } from "@/lib/espaceApiPayload";
 import { ArtefactExamples } from "./ArtefactExamples";
@@ -23,6 +24,12 @@ export function ConversationnelTab() {
     updateFileDownload,
     updateRoutine,
   } = useBuilder();
+  const disponibles = documentsDisponiblesDuBrouillon(currentDraft);
+  // `undefined` veut dire « tous » : on le déplie en cases cochées, sinon le
+  // créateur verrait une liste vide alors que tout est proposé, et croirait
+  // devoir cocher ce qui l'est déjà.
+  const selection = currentDraft.fileDownloadSelection ?? disponibles.map((d) => d.id);
+
   const [routineRunning, setRoutineRunning] = useState(false);
   const [routineRunResult, setRoutineRunResult] = useState<string | null>(null);
 
@@ -223,6 +230,60 @@ export function ConversationnelTab() {
             >
               <span className={styles.knob} />
             </button>
+          </div>
+        )}
+
+        {currentDraft.fileDownloadEnabled && (
+          <div className={styles.subOption} style={{ display: "block" }}>
+            <div className={styles.subOptionTitle}>Documents proposés</div>
+            <div className={styles.sub}>
+              Cochez ce que le lecteur pourra télécharger. Sans sélection explicite, tous les
+              documents lisibles du gent sont proposés.
+            </div>
+
+            {disponibles.length === 0 ? (
+              /* Le téléchargement est actif mais il n'y a rien à télécharger. Dire
+                 pourquoi vaut mieux qu'une liste vide : le créateur croirait à une
+                 panne alors qu'il lui manque une étape. */
+              <p className={styles.sub}>
+                Aucun document lisible pour l&apos;instant. Ajoutez un fichier dans{" "}
+                <b>Configuration du gent → Connaissances</b>, ou activez une visionneuse : seuls
+                les documents dont le texte a pu être extrait peuvent devenir un PDF.
+              </p>
+            ) : (
+              <>
+                <ul className={styles.docList}>
+                  {disponibles.map((doc) => {
+                    const coche = selection.includes(doc.id);
+                    return (
+                      <li key={doc.id}>
+                        <label className={styles.docItem}>
+                          <input
+                            type="checkbox"
+                            checked={coche}
+                            onChange={() =>
+                              updateFileDownload({
+                                fileDownloadSelection: coche
+                                  ? selection.filter((id) => id !== doc.id)
+                                  : [...selection, doc.id],
+                              })
+                            }
+                          />
+                          <span className={styles.docNom}>{doc.name}</span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {selection.length === 0 && (
+                  /* État muet s'il en est : le bouton de téléchargement
+                     n'apparaîtra pas côté lecteur, et rien ne le dirait. */
+                  <p className={styles.docAvertissement}>
+                    Aucun document coché : le lecteur ne verra aucun bouton de téléchargement.
+                  </p>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>

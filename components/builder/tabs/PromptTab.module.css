@@ -379,3 +379,60 @@
   color: var(--muted);
   margin-bottom: 8px;
 }
+
+
+/* ── Sélection des documents téléchargeables ─────────────────────────────── */
+.docList {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.docItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.docItem:hover {
+  background: var(--bg);
+}
+
+.docItem input {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  accent-color: var(--blue);
+}
+
+/* Un nom de fichier peut être long : il se coupe plutôt que d'élargir la
+   colonne, qui pousserait la page à défiler latéralement. */
+.docNom {
+  font-size: 13px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.docAvertissement {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--plum);
+}
+
+/* Au doigt, chaque ligne est une cible à part entière. */
+@media (pointer: coarse) {
+  .docItem {
+    min-height: 44px;
+  }
+  .docItem input {
+    width: 20px;
+    height: 20px;
+  }
+}

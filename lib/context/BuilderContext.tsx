@@ -115,7 +115,12 @@ interface BuilderContextValue {
 
   toggleWebSearch: () => void;
   /** Active ou non le téléchargement de fichiers côté lecteur, et son formulaire. */
-  updateFileDownload: (patch: { fileDownloadEnabled?: boolean; fileDownloadFormEnabled?: boolean }) => void;
+  updateFileDownload: (patch: {
+    fileDownloadEnabled?: boolean;
+    fileDownloadFormEnabled?: boolean;
+    /** Documents retenus. `undefined` laisse la sélection en place. */
+    fileDownloadSelection?: string[];
+  }) => void;
   /** Modifie la routine planifiée du brouillon (patch partiel). */
   updateRoutine: (patch: Partial<Routine>) => void;
   /** Modifie le canal de diffusion du brouillon (patch partiel). */
@@ -582,7 +587,11 @@ export function BuilderProvider({
   }, [currentId]);
 
   const updateFileDownload = useCallback(
-    (patch: { fileDownloadEnabled?: boolean; fileDownloadFormEnabled?: boolean }) => {
+    (patch: {
+      fileDownloadEnabled?: boolean;
+      fileDownloadFormEnabled?: boolean;
+      fileDownloadSelection?: string[];
+    }) => {
       setDrafts((prev) => {
         const draft = prev[currentId];
         const fileDownloadEnabled = patch.fileDownloadEnabled ?? !!draft.fileDownloadEnabled;
@@ -594,6 +603,10 @@ export function BuilderProvider({
             fileDownloadFormEnabled: fileDownloadEnabled
               ? (patch.fileDownloadFormEnabled ?? !!draft.fileDownloadFormEnabled)
               : draft.fileDownloadFormEnabled,
+            // La sélection SURVIT à l'extinction du téléchargement : on la
+            // retrouve telle quelle en réactivant. L'effacer punirait un
+            // aller-retour sur l'interrupteur.
+            fileDownloadSelection: patch.fileDownloadSelection ?? draft.fileDownloadSelection,
             updatedAt: "à l'instant",
           },
         };

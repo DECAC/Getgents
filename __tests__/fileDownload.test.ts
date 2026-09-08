@@ -2,6 +2,7 @@ import { draftToEspace } from "@/lib/publishedGents";
 import {
   downloadableDocumentsForReader,
   downloadableDocumentsFromDraft,
+  documentsSelectionnes,
   isValidDownloadEmail,
   pdfFileName,
   validateDownloadLeadForm,
@@ -175,5 +176,68 @@ describe("textToPdfBytes", () => {
     expect(header).toBe("%PDF-1.4");
     expect(tail).toBe("%%EOF");
     expect(wrapPdfText("un deux trois").join(" ")).toContain("un deux trois");
+  });
+});
+
+describe("documentsSelectionnes", () => {
+  const docs = [
+    { id: "a", name: "Guide.pdf", text: "un" },
+    { id: "b", name: "Annexe.docx", text: "deux" },
+    { id: "c", name: "Tarifs.xlsx", text: "trois" },
+  ];
+
+  it("rend tout quand aucune sélection n'a été faite", () => {
+    // Le comportement d'avant la fonctionnalité. Un gent déjà diffusé ne doit
+    // pas se mettre à offrir moins parce qu'on a ajouté un réglage.
+    expect(documentsSelectionnes(docs, undefined)).toHaveLength(3);
+  });
+
+  it("ne rend rien sur une sélection vide", () => {
+    // Distinct de `undefined` : c'est un choix explicite du créateur.
+    expect(documentsSelectionnes(docs, [])).toEqual([]);
+  });
+
+  it("ne rend que les documents cochés", () => {
+    expect(documentsSelectionnes(docs, ["a", "c"]).map((d) => d.id)).toEqual(["a", "c"]);
+  });
+
+  it("garde l'ordre des documents, pas celui de la sélection", () => {
+    // Le créateur range ses connaissances ; le lecteur doit les retrouver
+    // dans cet ordre, quel que soit l'ordre des clics.
+    expect(documentsSelectionnes(docs, ["c", "a"]).map((d) => d.id)).toEqual(["a", "c"]);
+  });
+
+  it("ignore un identifiant qui ne correspond plus à rien", () => {
+    // Cas réel : un document retiré des connaissances après avoir été coché.
+    expect(documentsSelectionnes(docs, ["a", "disparu"]).map((d) => d.id)).toEqual(["a"]);
+  });
+
+  it("ne duplique pas un document coché deux fois", () => {
+    expect(documentsSelectionnes(docs, ["a", "a"])).toHaveLength(1);
+  });
+});
+
+describe("downloadableDocumentsFromDraft avec sélection", () => {
+  const draft = {
+    knowledgeSources: [
+      { id: "k1", label: "Guide.pdf", text: "contenu un" },
+      { id: "k2", label: "Annexe.docx", text: "contenu deux" },
+    ],
+  } as unknown as Parameters<typeof downloadableDocumentsFromDraft>[0];
+
+  it("propose tout sans sélection", () => {
+    expect(downloadableDocumentsFromDraft(draft)).toHaveLength(2);
+  });
+
+  it("n'expose que ce qui est coché", () => {
+    // La garantie qui compte : un document non coché ne doit atteindre ni
+    // l'espace publié, ni le lecteur.
+    const restreint = { ...draft, fileDownloadSelection: ["k2"] };
+    expect(downloadableDocumentsFromDraft(restreint).map((d) => d.name)).toEqual(["Annexe.docx"]);
+  });
+
+  it("n'expose rien quand la sélection est vide", () => {
+    const aucun = { ...draft, fileDownloadSelection: [] };
+    expect(downloadableDocumentsFromDraft(aucun)).toEqual([]);
   });
 });
