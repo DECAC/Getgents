@@ -18,9 +18,18 @@
 export interface InstantsReponse {
   /** Début du traitement de la requête. */
   debut: number;
-  /** En-têtes reçues du fournisseur : la requête est partie et acceptée. */
+  /**
+   * Notre travail est fait et la réponse commence à couler. Dans la boucle
+   * d'outils, ce n'est PAS l'accusé de réception du fournisseur : le flux est
+   * construit par nous, avant même l'appel au modèle.
+   */
   enTetes: number | null;
-  /** Premier octet de contenu reçu. `null` si rien n'est jamais venu. */
+  /**
+   * Premier fragment portant du TEXTE pour le visiteur — voir
+   * `porteDuContenu`. Surtout pas le premier octet venu : dans la boucle
+   * d'outils, ce sont nos propres événements de statut, émis aussitôt.
+   * `null` si aucun mot n'est jamais venu.
+   */
   premierJeton: number | null;
   /** Fin du flux. */
   fin: number | null;
@@ -65,4 +74,42 @@ export function mesurerReponse(i: InstantsReponse, ctx: ContexteReponse): Mesure
     premierJetonMs: delta(i.debut, i.premierJeton),
     totalMs: delta(i.debut, i.fin),
   };
+}
+
+/**
+ * Le fragment SSE porte-t-il du TEXTE destiné au visiteur ?
+ *
+ * Question vitale pour la mesure : dans la boucle d'outils, le serveur émet
+ * d'abord ses propres événements — statut « preparing », pings anti-coupure,
+ * événements d'outils. Ils partent immédiatement. Horodater le premier
+ * fragment venu revenait donc à chronométrer notre propre ping, et
+ * `premierJetonMs` retombait exactement sur `preparationMs` — un silence de
+ * vingt secondes passait inaperçu.
+ *
+ * On ne retient donc que le premier fragment portant un `delta.content` non
+ * vide : c'est le moment où un mot s'affiche pour de bon.
+ *
+ * Fonction PURE — elle lit un texte, rien d'autre.
+ */
+export function porteDuContenu(fragment: string): boolean {
+  for (const ligne of fragment.split("\n")) {
+    const t = ligne.trim();
+    if (!t.startsWith("data:")) continue;
+    const charge = t.slice(5).trim();
+    if (!charge || charge === "[DONE]") continue;
+    let json: unknown;
+    try {
+      json = JSON.parse(charge);
+    } catch {
+      // Fragment coupé au milieu d'un objet : le suivant le portera.
+      continue;
+    }
+    const choix = (json as { choices?: { delta?: { content?: unknown } }[] }).choices;
+    if (!Array.isArray(choix)) continue;
+    for (const c of choix) {
+      const contenu = c?.delta?.content;
+      if (typeof contenu === "string" && contenu.length > 0) return true;
+    }
+  }
+  return false;
 }

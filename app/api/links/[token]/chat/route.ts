@@ -13,7 +13,7 @@ import { consommerPourVisiteur } from "@/lib/server/gentGuard";
 import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 import { notifierUsageInvite } from "@/lib/server/signalements";
 import { langueDeLEnTete } from "@/lib/langue";
-import { mesurerReponse, type InstantsReponse } from "@/lib/chatTiming";
+import { mesurerReponse, porteDuContenu, type InstantsReponse } from "@/lib/chatTiming";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -212,6 +212,9 @@ export async function POST(req: Request, { params }: Params) {
    * quatre corrections différentes.
    */
   const source = upstream.body.getReader();
+  // Décodeur dédié à l'INSPECTION : les octets repartent tels quels, jamais
+  // ré-encodés — un fragment coupé au milieu d'un caractère resterait intact.
+  const decodeur = new TextDecoder();
   const mesure = new ReadableStream<Uint8Array>({
     async pull(controller) {
       const { done, value } = await source.read();
@@ -233,7 +236,12 @@ export async function POST(req: Request, { params }: Params) {
         controller.close();
         return;
       }
-      if (instants.premierJeton === null) instants.premierJeton = Date.now();
+      // On ne retient QUE le premier fragment portant du texte. Les
+      // événements de statut et les pings de la boucle d'outils partent
+      // immédiatement : les horodater mesurerait notre propre ping.
+      if (instants.premierJeton === null && porteDuContenu(decodeur.decode(value, { stream: true }))) {
+        instants.premierJeton = Date.now();
+      }
       controller.enqueue(value);
     },
     cancel(raison) {
