@@ -85,6 +85,11 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   `SharedGentShell`**, PAS dans `CenterHeader` : la page `/l/<jeton>` a son
   propre en-tête. Un bouton de signalement monté au mauvais endroit ne
   s'affichait nulle part, et rien ne le signalait.
+- **`AssistantPanel` est un TIROIR sous 860 px** (`position: fixed`,
+  `translateX(100%)`), ramené par une classe `.open` que RIEN n'applique dans
+  le code. Monté tel quel dans une coquille qui lui donne toute la place, il
+  part hors écran à droite et la page paraît vide. La prop `embedded` annule ce
+  comportement — la passer dès qu'un conteneur gère lui-même la taille.
 
 ## Pièges déjà payés
 
@@ -105,10 +110,46 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
 - Environ 21 boutons textuels sous 40 px sur `/espace/[id]` (décision de
   densité, proposée et non tranchée).
 
+## Langues
+
+**Lot A fait** : le gent répond dans la langue de son interlocuteur
+(`lib/langue.ts`, consigne injectée dans `buildGentSystemPrompt`). La langue du
+MESSAGE prime ; `Accept-Language` ne sert qu'au premier tour.
+
+**Lots B à D non faits** — et une contrainte à connaître AVANT de les planifier :
+`app/[slug]` occupe la RACINE. Un préfixe de langue (`/en/mon-gent`) entrerait
+en collision avec l'espace de noms des slugs et casserait les adresses déjà
+diffusées. La détection doit donc passer par cookie et en-tête, sans préfixe —
+au prix du référencement multilingue, qui est un vrai renoncement à assumer.
+
+L'orchestrateur du salon n'a PAS reçu la consigne : son format de sortie est
+strict (JSON dans un marqueur HTML), et un `bad_marker` rend le salon muet.
+À traiter séparément, journaux sous les yeux.
+
+## Le dépôt GitHub
+
+**PUBLIC.** Décision assumée après discussion. Conséquence : le secret scanning
+et la push protection sont gratuits (ils deviendraient payants en privé).
+Aucun secret n'a jamais été committé — vérifié sur 241 commits.
+
+`LICENSE` pose une réserve de droits explicite. Elle EXCLUT les composants
+tiers : `public/pdfjs/pdf.worker.min.mjs` reste sous Apache 2.0 (Mozilla), et
+les dépendances npm gardent la leur. Ne pas élargir la réserve à ces
+fichiers — ce serait juridiquement faux.
+
 ## Configuration hors dépôt
 
 `SECRET_BOX_KEY` : sa perte rend **illisibles** toutes les clés OpenRouter
 enregistrées par les créateurs. Elle doit vivre ailleurs que sur Vercel.
+
+**BREVO N'EST PAS CONFIGURÉ** en production. Quatre fonctionnalités en
+dépendent et ne font donc rien : invitation par e-mail, notification de
+signalement, notification d'usage par un invité, note de routine. Les échecs
+sont désormais journalisés (tag `getgents:email`) et le panneau de partage
+prévient que l'accès a été accordé mais que l'e-mail n'est pas parti. Pour
+l'activer : `BREVO_API_KEY` et `BREVO_SENDER_EMAIL`, ET l'authentification du
+domaine chez Brevo — sans elle, les envois sont refusés ou finissent en
+indésirables.
 
 Les inscriptions sont fermées **chez Supabase** (Authentication → Providers →
 Email). `lib/inscriptions.ts` ne fait que rendre l'interface honnête — il ne
