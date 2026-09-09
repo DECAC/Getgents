@@ -9,7 +9,6 @@ import type { ConversationMessage } from "@/lib/types";
 import { setBuilderAssistWidthFromPointer, canResizeAssist } from "@/lib/assistResize";
 import { buildBuilderReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
-import { ThinkingIndicator } from "@/components/shared/ThinkingIndicator";
 import { BuildPlanChecklist } from "./BuildPlanChecklist";
 import { extractDocumentText, type ExtractedDoc } from "@/lib/extractDocumentText";
 import { frameBuilderKnowledgeFileMessage } from "@/lib/builderAssistantPrompt";
@@ -130,9 +129,11 @@ export function BuilderAssistantPanel() {
     setExpandedReasoning((prev) => ({ ...prev, [i]: !prev[i] }));
   }
 
-  function isReasoningOpen(i: number, m: ConversationMessage): boolean {
+  function isReasoningOpen(i: number): boolean {
     if (i in expandedReasoning) return expandedReasoning[i];
-    return isThinking && i === currentDraft.builderConversation.length - 1 && !m.text;
+    // Replié par défaut, y compris pendant la réflexion : seul un clic de
+    // l'utilisateur (via toggleReasoning) l'ouvre.
+    return false;
   }
 
   const handleSend = useCallback(() => {
@@ -429,7 +430,7 @@ export function BuilderAssistantPanel() {
     const isUser = m.role === "user";
     const isLastMessage = i === lastAgentIndex;
     const live = isThinking && i === currentDraft.builderConversation.length - 1 && !isUser && !m.text;
-    const open = isReasoningOpen(i, m);
+    const open = isReasoningOpen(i);
     return (
       <div key={i} className={[styles.msg, isUser ? styles.msgUser : styles.msgAgent].join(" ")}>
         <div className={styles.av}>{isUser ? "V" : "🛠️"}</div>
@@ -451,7 +452,7 @@ export function BuilderAssistantPanel() {
               </button>
               {open && (
                 <div className={styles.reasoningBox}>
-                  {m.reasoning || (live ? "Le modèle analyse votre demande…" : "")}
+                  {m.reasoning || (live ? "Le gent prépare sa réponse…" : "")}
                 </div>
               )}
             </>
@@ -609,7 +610,6 @@ export function BuilderAssistantPanel() {
         ) : (
           <div className={styles.empty}>Décrivez l&apos;objectif de ce gent pour commencer.</div>
         )}
-        {isThinking && <ThinkingIndicator label={thinkingStatus ?? "Réflexion en cours…"} />}
       </div>
 
       <div className={styles.composerWrap}>

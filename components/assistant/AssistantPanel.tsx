@@ -22,7 +22,6 @@ import { setAssistWidthFromPointer } from "@/lib/assistResize";
 import { threadPreview, threadLastActivity } from "@/lib/conversationUtils";
 import { buildEspaceReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
-import { ThinkingIndicator } from "@/components/shared/ThinkingIndicator";
 import { StarterBubbles } from "@/components/center/StarterBubbles";
 import { shouldShowConversationStarters } from "@/lib/starterSignal";
 import styles from "./AssistantPanel.module.css";
@@ -352,12 +351,10 @@ export function AssistantPanel({
   }, []);
 
   function isReasoningOpen(i: number): boolean {
-    const m = activeConversation.messages[i];
     if (i in expandedReasoning) return expandedReasoning[i];
-    // Ouvert automatiquement pendant que le modèle réfléchit et n'a pas
-    // encore commencé à répondre — se referme dès que le texte arrive,
-    // sauf si l'utilisateur l'a déjà déplié/replié manuellement.
-    return isThinking && i === lastAgentIndex && !m?.text;
+    // Replié par défaut, y compris pendant la réflexion : seul un clic de
+    // l'utilisateur (via toggleReasoning) l'ouvre.
+    return false;
   }
 
   function renderReasoning(m: ConversationMessage, i: number) {
@@ -381,7 +378,7 @@ export function AssistantPanel({
         </button>
         {open && (
           <div className={styles.reasoningBox}>
-            {m.reasoning || (live ? "Le modèle analyse votre demande…" : "")}
+            {m.reasoning || (live ? "Le gent prépare sa réponse…" : "")}
           </div>
         )}
       </>
@@ -1046,9 +1043,6 @@ export function AssistantPanel({
                 inchangé.
               </div>
             ) : null}
-            {isThinking && cdView === "chat" && (
-              <ThinkingIndicator label={thinkingStatus ?? "Réflexion en cours…"} />
-            )}
             {currentEspace.jumpForm && (activeConversation.messages.length === 0 || jumpFormOpen) && (
               <div className={styles.jumpFormWrap}>
                 <JumpFormCard

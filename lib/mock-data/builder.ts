@@ -71,6 +71,29 @@ export const MODEL_CATALOG: OpenRouterModel[] = [
     tagline: "Rapide et économique — bon choix pour un premier brouillon.",
   },
   {
+    id: "google/gemini-2.5-pro",
+    label: "Gemini 2.5 Pro",
+    provider: "Google",
+    capability: "chat",
+    contextWindow: 1_048_576,
+    pricing: { input: 1.25, output: 10 },
+    tagline: "Le plus capable de la famille Gemini — raisonnement plus fin que Flash, plus cher.",
+  },
+  {
+    // Route chaque requête vers le modèle le plus adapté selon OpenRouter.
+    // Tarif RÉELLEMENT variable — facturé au prix du modèle choisi, pas un
+    // prix fixe. Les deux montants ci-dessous sont un plancher indicatif, pas
+    // le prix payé : OpenRouter peut river la requête vers un modèle
+    // nettement plus cher sans avertissement préalable au créateur.
+    id: "openrouter/auto",
+    label: "Auto Router (OpenRouter)",
+    provider: "OpenRouter",
+    capability: "chat",
+    contextWindow: 2_000_000,
+    pricing: { input: 0, output: 0 },
+    tagline: "Choisit automatiquement le modèle le plus adapté par requête — tarif variable, dépend du modèle réellement choisi.",
+  },
+  {
     id: "deepseek/deepseek-r1",
     label: "DeepSeek R1",
     provider: "DeepSeek",
