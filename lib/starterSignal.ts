@@ -21,6 +21,16 @@ export const STARTER_PROMPT_INSTRUCTION =
   `chacune fait au maximum ${MAX_STARTER_CHARS} caractères ; elles doivent être immédiatement compréhensibles ` +
   "hors contexte, concrètes, et fidèles à ce que ce gent sait réellement faire d'après sa configuration. " +
   "N'invente aucune capacité qu'il n'a pas.\n" +
+  // Sans cette règle, les instructions du créateur étaient lues comme un
+  // simple CONTEXTE : le générateur y puisait de quoi décrire le gent, sans se
+  // sentir tenu par ses interdictions. Observé en production — un créateur
+  // écrivait « ne nomme jamais les documents de ta base » et recevait une
+  // amorce nommant un document, parce que la plateforme lui en avait fourni la
+  // liste juste au-dessus.
+  "IMPÉRATIF : les instructions du créateur reproduites ci-dessus sont des CONTRAINTES, " +
+  "pas une simple description. Respecte-les intégralement, et en particulier ses INTERDICTIONS — " +
+  "ne pas nommer un document, ne pas aborder un sujet, ne pas employer un ton. " +
+  "Une amorce qui enfreint une de ses règles est inutilisable, même si elle est bonne par ailleurs.\n" +
   'Réponds UNIQUEMENT par un tableau JSON de chaînes, sans texte autour : ["question 1","question 2",...]';
 
 /**
@@ -28,6 +38,22 @@ export const STARTER_PROMPT_INSTRUCTION =
  * déclencheurs collent à ses capacités effectives plutôt qu'à une idée
  * générique de ce que fait un assistant.
  */
+/** Longueur maximale du prompt transmis au générateur d'amorces. */
+const PROMPT_MAX = 4000;
+
+/**
+ * Borne un prompt en gardant son DÉBUT et sa FIN.
+ *
+ * Les créateurs écrivent leur rôle en premier et leurs interdictions en
+ * dernier. Ne garder que le début revient à ne transmettre que la moitié
+ * permissive de leurs instructions.
+ */
+export function bornerPrompt(prompt: string, max = PROMPT_MAX): string {
+  if (prompt.length <= max) return prompt;
+  const part = Math.floor((max - 20) / 2);
+  return `${prompt.slice(0, part)}\n[…]\n${prompt.slice(-part)}`;
+}
+
 export function describeGentForStarters(espace: Espace): string {
   const lines: string[] = [];
   lines.push(`Nom du gent : ${espace.gent || espace.name || "sans nom"}`);
@@ -36,7 +62,13 @@ export function describeGentForStarters(espace: Espace): string {
   if (prompt) {
     // Le prompt système porte déjà la base de connaissance intégrale : on le
     // borne, sinon la requête d'amorce coûterait autant qu'une vraie réponse.
-    lines.push(`\nInstructions système du gent (extrait) :\n${prompt.slice(0, 4000)}`);
+    //
+    // Mais on garde la FIN autant que le début. Un `slice(0, 4000)` coupait la
+    // queue du prompt — or c'est là que vivent les limites et les
+    // interdictions, qu'on écrit presque toujours en dernier. Un créateur
+    // verbeux voyait donc ses règles silencieusement écartées du générateur
+    // d'amorces, et ne pouvait pas comprendre pourquoi.
+    lines.push(`\nInstructions système du gent (CONTRAINTES à respecter) :\n${bornerPrompt(prompt)}`);
   }
 
   const capabilities: string[] = [];

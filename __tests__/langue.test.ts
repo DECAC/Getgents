@@ -71,6 +71,10 @@ describe("consigneDeLangue", () => {
     // « Tout dire dans la langue de l'utilisateur » pousse les modèles à
     // traduire une citation en la présentant comme l'original — c'est-à-dire
     // à la falsifier.
-    expect(consigneDeLangue("es")).toMatch(/CITATIONS.*langue d'origine/is);
+    // Sans le drapeau `s`, que la cible TypeScript du projet n'accepte pas :
+    // on vérifie les deux fragments séparément.
+    const c = consigneDeLangue("es");
+    expect(c).toMatch(/CITATIONS/);
+    expect(c).toMatch(/langue d'origine/);
   });
 });

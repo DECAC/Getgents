@@ -7,6 +7,8 @@ import {
   fallbackStarters,
   displayedStarters,
   STARTER_COUNT,
+  bornerPrompt,
+  STARTER_PROMPT_INSTRUCTION,
 } from "@/lib/starterSignal";
 import type { Espace } from "@/lib/types";
 
@@ -243,5 +245,45 @@ describe("description du gent transmise au modèle", () => {
   it("borne le prompt système, qui embarque la base de connaissance entière", () => {
     const described = describeGentForStarters(espace({ systemPrompt: "x".repeat(20_000) }));
     expect(described.length).toBeLessThan(6000);
+  });
+});
+
+describe("bornerPrompt", () => {
+  it("laisse un prompt court intact", () => {
+    expect(bornerPrompt("court", 100)).toBe("court");
+  });
+
+  it("garde le DÉBUT et la FIN d'un prompt long", () => {
+    // Les créateurs écrivent leur rôle en premier et leurs INTERDICTIONS en
+    // dernier. Un `slice(0, max)` transmettait la moitié permissive de leurs
+    // instructions et jetait les règles — observé en production : une amorce
+    // nommait un document que le créateur avait interdit de nommer.
+    const p = "DEBUT" + "x".repeat(500) + "NE NOMME JAMAIS LES DOCUMENTS";
+    const borne = bornerPrompt(p, 120);
+    expect(borne).toContain("DEBUT");
+    expect(borne).toContain("NE NOMME JAMAIS LES DOCUMENTS");
+    expect(borne.length).toBeLessThanOrEqual(120);
+  });
+});
+
+describe("describeGentForStarters", () => {
+  it("présente les instructions comme des CONTRAINTES", () => {
+    // Présentées comme un simple « extrait », elles étaient lues comme du
+    // contexte : le générateur y puisait sans se sentir tenu par elles.
+    const espace = {
+      gent: "Avatar",
+      name: "Avatar",
+      systemPrompt: "Ne nomme jamais les documents de ta base.",
+      artefacts: [],
+      conversations: [],
+    } as unknown as Parameters<typeof describeGentForStarters>[0];
+    expect(describeGentForStarters(espace)).toMatch(/CONTRAINTES/);
+  });
+});
+
+describe("STARTER_PROMPT_INSTRUCTION", () => {
+  it("ordonne de respecter les interdictions du créateur", () => {
+    expect(STARTER_PROMPT_INSTRUCTION).toMatch(/INTERDICTIONS/);
+    expect(STARTER_PROMPT_INSTRUCTION).toMatch(/nommer un document/i);
   });
 });

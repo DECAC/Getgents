@@ -21,6 +21,12 @@ export function espaceForPinnedRefresh(espace: Espace, inputs?: Record<string, s
     icon: espace.icon,
     name: espace.name,
     gent: espace.gent,
+    // L'attribution « Propulsé par » est un LIVRABLE PUBLIC du gent, au même
+    // titre que son nom. Absente de cette liste blanche, elle était retirée de
+    // tout lien de diffusion : le créateur la voyait en aperçu et jamais en
+    // ligne, ce qui donne exactement l'impression que la rediffusion ne prend
+    // pas les modifications.
+    propulsePar: espace.propulsePar,
     version: espace.version,
     status: espace.status,
     statusLabel: espace.statusLabel,
@@ -84,6 +90,12 @@ export function espaceForPublicLink(espace: Espace): Espace {
     icon: espace.icon,
     name: espace.name,
     gent: espace.gent,
+    // L'attribution « Propulsé par » est un LIVRABLE PUBLIC du gent, au même
+    // titre que son nom. Absente de cette liste blanche, elle était retirée de
+    // tout lien de diffusion : le créateur la voyait en aperçu et jamais en
+    // ligne, ce qui donne exactement l'impression que la rediffusion ne prend
+    // pas les modifications.
+    propulsePar: espace.propulsePar,
     version: espace.version,
     status: espace.status,
     statusLabel: espace.statusLabel,
@@ -158,6 +170,12 @@ export function espaceForStarters(espace: Espace): Espace {
     icon: espace.icon,
     name: espace.name,
     gent: espace.gent,
+    // L'attribution « Propulsé par » est un LIVRABLE PUBLIC du gent, au même
+    // titre que son nom. Absente de cette liste blanche, elle était retirée de
+    // tout lien de diffusion : le créateur la voyait en aperçu et jamais en
+    // ligne, ce qui donne exactement l'impression que la rediffusion ne prend
+    // pas les modifications.
+    propulsePar: espace.propulsePar,
     version: espace.version,
     status: espace.status,
     statusLabel: espace.statusLabel,
