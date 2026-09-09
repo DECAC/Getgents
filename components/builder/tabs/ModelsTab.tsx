@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { correspond } from "@/lib/rechercheModele";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import type { ModelCapability, OpenRouterModel } from "@/lib/types/builder";
@@ -90,12 +91,11 @@ export function ModelsTab() {
     () =>
       ORDER.map((capability) => ({
         capability,
+        // `correspond` cherche chaque mot séparément, dans le libellé, le
+        // fournisseur ET l'identifiant : « gemini flash » doit trouver
+        // « Google: Gemini 2.5 Flash », que le « 2.5 » coupait en deux.
         models: catalogueComplet.filter(
-          (m) =>
-            m.capability === capability &&
-            (normalizedQuery === "" ||
-              m.label.toLowerCase().includes(normalizedQuery) ||
-              m.provider.toLowerCase().includes(normalizedQuery))
+          (m) => m.capability === capability && correspond(m, normalizedQuery)
         ),
       })),
     [normalizedQuery, catalogueComplet]
@@ -180,6 +180,17 @@ export function ModelsTab() {
               </div>
 
               <div className={styles.comboList}>
+                {/* Sans ce message, une recherche infructueuse vidait le
+                    panneau sans un mot : le créateur en concluait que le
+                    modèle n'existait pas, alors qu'il l'avait mal orthographié. */}
+                {normalizedQuery && groups.every((g) => g.models.length === 0) && (
+                  <div className={styles.comboGroup}>
+                    <div className={styles.comboGroupHead}>
+                      <span>Aucun modèle ne correspond à « {normalizedQuery} »</span>
+                    </div>
+                  </div>
+                )}
+
                 {groups.map(({ capability, models }) => {
                   const meta = CAPABILITY_META[capability];
                   const selectedId = assignmentByCapability.get(capability) ?? null;
