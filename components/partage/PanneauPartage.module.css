@@ -201,3 +201,21 @@
   margin-bottom: 12px;
   margin-bottom: 14px;
 }
+
+
+/* Avertissement : l'opération a réussi, mais pas entièrement. Distinct de
+   `.erreur` — annoncer un échec là où l'accès a bien été accordé ferait
+   recommencer le créateur, et créerait un doublon de partage. */
+.avis {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 12.5px;
+  line-height: 1.5;
+  /* Un lien de partage est long et sans espace : sans coupure il élargirait
+     le panneau et ferait défiler la page latéralement. */
+  overflow-wrap: anywhere;
+}

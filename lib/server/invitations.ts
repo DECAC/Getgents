@@ -41,7 +41,7 @@ export async function envoyerInvitation(
   nomGent: string,
   role: "viewer" | "editor",
   lienInvite?: string | null
-): Promise<void> {
+): Promise<boolean> {
   const base = appUrl();
   const invite = role === "viewer" && !!lienInvite;
 
@@ -75,10 +75,14 @@ export async function envoyerInvitation(
   <h2 style="font-size:19px;letter-spacing:-0.02em;margin:0 0 14px">Un gent a été partagé avec vous</h2>${corps}
 </div>`.trim();
 
+  // Le résultat est RENVOYÉ, pas avalé. L'ancienne version l'ignorait dans un
+  // `try/catch` qui ne rattrapait rien — `sendBrevoEmail` ne lève jamais, il
+  // renvoie `{ ok: false }`. Le partage réussissait, l'e-mail ne partait pas,
+  // et le créateur n'en savait rien.
   try {
-    await sendBrevoEmail(email, `« ${nomGent} » a été partagé avec vous`, html);
+    const res = await sendBrevoEmail(email, `« ${nomGent} » a été partagé avec vous`, html);
+    return res.ok;
   } catch {
-    // Journalisé par sendBrevoEmail. Un échec d'envoi ne doit pas faire croire
-    // à un partage raté : il a bien eu lieu.
+    return false;
   }
 }

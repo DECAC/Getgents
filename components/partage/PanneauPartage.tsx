@@ -62,6 +62,8 @@ export function PanneauPartage() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"viewer" | "editor">("viewer");
   const [erreur, setErreur] = useState<string | null>(null);
+  /** Message d'AVERTISSEMENT : l'opération a réussi, mais pas entièrement. */
+  const [avis, setAvis] = useState<string | null>(null);
   const [occupe, setOccupe] = useState(false);
 
   const [slug, setSlug] = useState("");
@@ -134,6 +136,7 @@ export function PanneauPartage() {
 
   async function inviter() {
     setErreur(null);
+    setAvis(null);
     if (!estEmailPlausible(email)) {
       setErreur("Cette adresse e-mail n'est pas valide.");
       return;
@@ -146,11 +149,21 @@ export function PanneauPartage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, role }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as { error?: string; lien?: string; emailEnvoye?: boolean };
       if (!res.ok) {
         setErreur(data.error ?? "L'invitation n'a pas pu être envoyée.");
         return;
       }
+      // Le partage a réussi, l'e-mail non : deux faits distincts, et taire le
+      // second laissait le créateur attendre une réponse qui ne viendrait
+      // jamais. On lui donne le lien pour qu'il le transmette lui-même.
+      setAvis(
+        data.emailEnvoye === false
+          ? data.lien
+            ? `Accès accordé, mais l'e-mail n'est pas parti. Transmettez ce lien vous-même : ${data.lien}`
+            : "Accès accordé, mais l'e-mail n'est pas parti. Prévenez la personne vous-même."
+          : null
+      );
       setEmail("");
       await charger();
     } finally {
@@ -230,6 +243,11 @@ export function PanneauPartage() {
         </p>
 
         {erreur ? <div className={styles.erreur}>{erreur}</div> : null}
+        {avis ? (
+          <div className={styles.avis} role="status">
+            {avis}
+          </div>
+        ) : null}
 
         <div className={styles.ligne}>
           <input

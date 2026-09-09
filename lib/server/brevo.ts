@@ -15,7 +15,7 @@ export interface EmailResult {
 
 /** Envoie un e-mail HTML. Le sujet et le corps sont composés par l'appelant. */
 export async function sendBrevoEmail(to: string, subject: string, htmlContent: string): Promise<EmailResult> {
-  if (!isBrevoConfigured()) return { ok: false, note: "Brevo non configuré (BREVO_API_KEY / BREVO_SENDER_EMAIL)" };
+  if (!isBrevoConfigured()) return echec("Brevo non configuré (BREVO_API_KEY / BREVO_SENDER_EMAIL)");
   const senderEmail = process.env.BREVO_SENDER_EMAIL!;
   const senderName = process.env.BREVO_SENDER_NAME ?? "Getgents";
 
@@ -37,11 +37,28 @@ export async function sendBrevoEmail(to: string, subject: string, htmlContent: s
     });
     if (!res.ok) {
       const detail = (await res.text()).slice(0, 200);
-      return { ok: false, note: `échec Brevo ${res.status} : ${detail}` };
+      return echec(`échec Brevo ${res.status} : ${detail}`);
     }
     const data = (await res.json()) as { messageId?: string };
     return { ok: true, note: `livré (${data.messageId ?? "ok"})` };
   } catch (e) {
-    return { ok: false, note: `échec réseau Brevo : ${(e as Error).message.slice(0, 160)}` };
+    return echec(`échec réseau Brevo : ${(e as Error).message.slice(0, 160)}`);
   }
+}
+
+/**
+ * Un échec d'envoi LAISSE UNE TRACE.
+ *
+ * Ce module ne journalisait rien. Pire, un commentaire de `invitations.ts`
+ * affirmait que « sendBrevoEmail journalise » — c'était faux, et cette
+ * croyance a laissé la seule voie d'invitation échouer en silence : le
+ * créateur voyait « invitation envoyée », le destinataire ne recevait rien,
+ * et aucun journal ne le disait.
+ *
+ * L'adresse du destinataire n'est PAS journalisée : c'est une donnée
+ * personnelle, et savoir QU'UN envoi a échoué suffit à diagnostiquer.
+ */
+function echec(note: string): EmailResult {
+  console.error(JSON.stringify({ tag: "getgents:email", event: "envoi_echoue", note }));
+  return { ok: false, note };
 }

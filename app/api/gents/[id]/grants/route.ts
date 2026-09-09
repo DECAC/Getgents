@@ -136,7 +136,11 @@ export async function POST(req: Request, { params }: Params) {
   // s'est perdu. Échouer ici ferait croire à un partage raté qui a bien eu lieu.
   const nomGent =
     (acces.value.row.espace as { name?: string } | null)?.name ?? "un gent";
-  void envoyerInvitation(email, nomGent, role, lien);
+  // ATTENDU, et non plus lancé dans le vide : le créateur doit apprendre que
+  // l'e-mail n'est pas parti. Le partage, lui, a bien eu lieu — c'est la
+  // distinction que la réponse doit porter, sous peine de faire croire à un
+  // échec complet, ou pire, à une réussite complète.
+  const emailEnvoye = await envoyerInvitation(email, nomGent, role, lien);
 
-  return NextResponse.json({ grant: data, lien });
+  return NextResponse.json({ grant: data, lien, emailEnvoye });
 }
