@@ -172,7 +172,12 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
       "N'invente jamais un fait, une date, un chiffre ni une citation, même plausible, " +
       "même pour rendre service. Une réponse courte et sûre vaut mieux qu'une réponse " +
       "complète et hasardeuse : ton interlocuteur peut toujours en demander plus. " +
-      "Si un outil de recherche ne renvoie rien d'utile, annonce-le au lieu de combler le vide."
+      "Si un outil de recherche ne renvoie rien d'utile, annonce-le au lieu de combler le vide.\n" +
+      "ORDRE DES SOURCES — ta base de connaissance D'ABORD. Elle a été constituée pour toi : " +
+      "si elle répond, réponds avec elle, sans rien chercher. Ne recours à la recherche web que " +
+      "si elle est réellement muette sur la question, ou s'il s'agit d'un fait postérieur à elle. " +
+      "Ne cherche jamais pour confirmer, compléter ou affiner ce que tu as déjà : chaque " +
+      "recherche fait attendre ton interlocuteur plusieurs secondes."
   );
 
   blocks.push(

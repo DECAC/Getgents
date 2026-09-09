@@ -134,3 +134,20 @@ describe("règle d'exactitude", () => {
     expect(p).toMatch(/N'invente jamais/i);
   });
 });
+
+describe("ordre des sources", () => {
+  it("ordonne le corpus avant la recherche web", () => {
+    const p = buildGentSystemPrompt(espace(), { variant: "sharedLink" });
+    expect(p).toMatch(/ORDRE DES SOURCES/);
+    expect(p).toMatch(/base de connaissance D'ABORD/);
+  });
+
+  it("interdit de chercher pour confirmer ce qu'il sait deja", () => {
+    expect(buildGentSystemPrompt(espace(), { variant: "sharedLink" })).toMatch(/jamais pour confirmer/);
+  });
+
+  it("place l'ordre des sources AVANT les instructions du createur", () => {
+    const p = buildGentSystemPrompt(espace({ systemPrompt: "MARQUEUR_CREATEUR" }), { variant: "sharedLink" });
+    expect(p.indexOf("ORDRE DES SOURCES")).toBeLessThan(p.indexOf("MARQUEUR_CREATEUR"));
+  });
+});
