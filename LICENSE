@@ -1,0 +1,65 @@
+Copyright © 2026 Charles de Cassan. Tous droits réservés.
+
+Getgents — https://getgents.ai
+
+
+1. PORTÉE
+
+Cette réserve de droits couvre le code, les textes, la configuration et les
+éléments graphiques originaux de ce dépôt.
+
+Elle NE COUVRE PAS les composants tiers qui y sont inclus, lesquels restent
+régis par leur propre licence. À ce jour :
+
+  - public/pdfjs/pdf.worker.min.mjs
+    PDF.js — Copyright 2024 Mozilla Foundation, licence Apache 2.0.
+
+  - les dépendances installées depuis npm (voir package.json), qui ne sont pas
+    versionnées ici et conservent chacune leur licence.
+
+Aucune disposition du présent texte ne restreint les droits que ces licences
+accordent sur ces composants.
+
+
+2. CE QUI N'EST PAS AUTORISÉ
+
+En l'absence d'accord écrit préalable de l'auteur, il n'est accordé aucune
+autorisation :
+
+  - d'exécuter ce logiciel, en tout ou partie, sur une autre infrastructure ;
+  - de le modifier, de l'adapter ou d'en produire une œuvre dérivée ;
+  - de le redistribuer, de le publier ou de le revendre ;
+  - de l'exploiter à des fins commerciales ;
+  - d'en reproduire l'apparence, la dénomination « Getgents », ses emblèmes ou
+    son identité visuelle, de façon à créer une confusion avec le service
+    d'origine.
+
+L'absence de licence libre n'est pas un oubli : c'est un choix. En droit
+d'auteur, un dépôt sans licence est intégralement réservé — ce fichier ne fait
+que le dire explicitement, pour lever une ambiguïté fréquente.
+
+
+3. CE QUI EST AUTORISÉ
+
+  - Consulter le code, et le forker au sein de GitHub, dans les limites que
+    fixent les conditions d'utilisation de la plateforme.
+  - Le lire à des fins d'étude, d'analyse de sécurité ou d'interopérabilité,
+    dans les limites permises par la loi applicable.
+  - Signaler une vulnérabilité : voir /.well-known/security.txt, ou écrire à
+    l'adresse ci-dessous.
+
+Ces autorisations ne valent pas droit d'exploitation.
+
+
+4. ABSENCE DE GARANTIE
+
+Ce logiciel est fourni « en l'état », sans garantie d'aucune sorte, expresse
+ou implicite. L'auteur ne saurait être tenu responsable d'un dommage résultant
+de son utilisation, y compris d'une utilisation non autorisée.
+
+
+5. DEMANDES
+
+Toute demande d'autorisation, de licence ou de partenariat :
+
+  ceo@getgents.ai
