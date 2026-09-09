@@ -118,6 +118,8 @@ interface BuilderContextValue {
   /** Active ou non le téléchargement de fichiers côté lecteur, et son formulaire. */
   /** Attribution propre à ce gent, sous « Propulsé par ». */
   updatePropulsePar: (valeur: string) => void;
+  /** Questions d'amorce écrites par le créateur. Liste vide = génération auto. */
+  updateStarters: (valeurs: string[]) => void;
   /** Nom affiché du compte, attribution par défaut. Vide si non renseigné. */
   nomCompte: string;
   updateFileDownload: (patch: {
@@ -626,6 +628,23 @@ export function BuilderProvider({
     setDrafts((prev) => ({
       ...prev,
       [currentId]: { ...prev[currentId], propulsePar: valeur, updatedAt: "à l'instant" },
+    }));
+  }, [currentId]);
+
+  const updateStarters = useCallback((valeurs: string[]) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: {
+        ...prev[currentId],
+        // Les lignes VIDES SONT CONSERVÉES dans le brouillon. Les filtrer ici
+        // rendait le champ impossible à remplir : « Ajouter » créait une ligne
+        // vide, aussitôt supprimée par ce même filtre — et effacer un champ
+        // pour le retaper faisait disparaître sa ligne sous le curseur.
+        // Le brouillon est un travail en cours ; c'est `draftToEspace` qui
+        // nettoie au moment de la diffusion.
+        starters: valeurs,
+        updatedAt: "à l'instant",
+      },
     }));
   }, [currentId]);
 
@@ -1371,6 +1390,7 @@ export function BuilderProvider({
         toggleAssistant,
         createDraft,
         updatePropulsePar,
+        updateStarters,
         nomCompte,
         updateObjective,
         updateSystemPrompt,

@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { ModelsTab } from "./ModelsTab";
 import { NOM_AFFICHE_MAX } from "@/lib/nomAffiche";
+import { Amorces } from "./Amorces";
 import styles from "./PromptTab.module.css";
 
 /**
@@ -75,6 +76,8 @@ export function PromptTab() {
         </div>
       </div>
       <ModelsTab />
+
+      <Amorces />
 
       <div className={styles.card}>
         <h4 className={styles.title}>Propulsé par</h4>

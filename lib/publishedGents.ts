@@ -453,6 +453,20 @@ function knowledgeBaseBlock(sources: KnowledgeSource[]): string {
   return block;
 }
 
+/**
+ * Amorces prêtes à partir : sans blancs ni doublons, et bornées.
+ *
+ * `undefined` plutôt qu'un tableau vide — c'est la valeur qui rend la main à
+ * la génération automatique, et un `[]` la bloquerait en laissant le gent
+ * sans aucune bulle.
+ */
+function nettoyerAmorces(brut: string[] | undefined): string[] | undefined {
+  const propres = Array.from(
+    new Set((brut ?? []).map((a) => a.trim()).filter(Boolean))
+  ).slice(0, 8);
+  return propres.length ? propres : undefined;
+}
+
 export function draftToEspace(draft: GentDraft): Espace {
   // Le modèle d'outils du builder (8 types génériques configurables : MCP,
   // API REST, connecteur personnalisé…) ne porte plus de catégorie
@@ -636,6 +650,14 @@ export function draftToEspace(draft: GentDraft): Espace {
     // l'attribution propre au gent apparaît — ce qui est exact, c'est bien la
     // seule chose décidée à ce stade.
     propulsePar: normaliserNomAffiche(draft.propulsePar) || undefined,
+    // Les amorces du créateur priment. `ensureStarters` ne génère que si le
+    // champ est vide : les fournir ici suffit à empêcher toute génération, et
+    // à remplacer celles qu'un ancien passage avait mémorisées.
+    //
+    // C'EST ICI qu'on retire les lignes vides, pas dans le brouillon : une
+    // amorce blanche deviendrait une bulle cliquable sans texte, alors qu'un
+    // champ vide en cours de saisie est parfaitement normal.
+    starters: nettoyerAmorces(draft.starters),
     version: 1,
     status: "live",
     statusLabel: "Actif",

@@ -134,6 +134,17 @@ export interface GentDraft {
    * Vide : on retombe sur le nom du compte au moment de la diffusion.
    */
   propulsePar?: string;
+  /**
+   * Questions d'amorce ÉCRITES PAR LE CRÉATEUR.
+   *
+   * Absentes ou vides, la plateforme en génère à la première ouverture de
+   * l'espace, puis les mémorise — et plus rien ne les régénère jamais. Le
+   * créateur n'avait donc aucune main : ni pour les corriger, ni pour imposer
+   * la formulation qu'il avait pourtant décrite dans son prompt.
+   *
+   * Renseignées, elles font foi et le générateur ne s'exécute pas.
+   */
+  starters?: string[];
   /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
   jumpForm?: JumpForm;
   /** Routine planifiée (mission exécutée automatiquement côté serveur). */

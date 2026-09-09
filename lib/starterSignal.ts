@@ -10,7 +10,7 @@ import type { Espace } from "@/lib/types";
  * deviner par où commencer. Ces bulles remplacent la devinette par l'exemple.
  */
 export const STARTER_COUNT = 5;
-const MAX_STARTER_CHARS = 110;
+export const MAX_STARTER_CHARS = 110;
 
 export const STARTER_PROMPT_INSTRUCTION =
   `Propose exactement ${STARTER_COUNT} questions d'amorce qu'un utilisateur pourrait te poser, ` +
