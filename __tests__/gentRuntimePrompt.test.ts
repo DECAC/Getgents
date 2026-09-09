@@ -118,3 +118,19 @@ describe("consigne de langue", () => {
     expect(p).toMatch(/espagnol/);
   });
 });
+
+describe("règle d'exactitude", () => {
+  it("est présente dans toutes les variantes", () => {
+    for (const variant of ["espace", "sharedLink", "superGent"] as const) {
+      expect(buildGentSystemPrompt(espace(), { variant })).toMatch(/^EXACTITUDE —/m);
+    }
+  });
+
+  it("préfère explicitement une réponse courte à une réponse fausse", () => {
+    // Un gent qui invente pour paraître complet détruit la confiance en une
+    // phrase ; un aveu d'ignorance appelle une question de plus.
+    const p = buildGentSystemPrompt(espace(), { variant: "sharedLink" });
+    expect(p).toMatch(/courte et sûre vaut mieux/i);
+    expect(p).toMatch(/N'invente jamais/i);
+  });
+});

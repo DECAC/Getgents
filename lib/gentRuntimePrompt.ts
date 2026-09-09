@@ -161,6 +161,20 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
   // quelle langue les appliquer.
   blocks.push(consigneDeLangue(options.langueNavigateur));
 
+  // Règle de plateforme, sous les instructions du créateur mais au-dessus de
+  // toute tentation de bien faire : mieux vaut une réponse courte qu'une
+  // réponse fausse. Un gent qui invente pour paraître complet détruit la
+  // confiance en une phrase, là où un aveu d'ignorance appelle simplement une
+  // question de plus.
+  blocks.push(
+    "EXACTITUDE — Si ta base de connaissance ne contient pas de quoi répondre, DIS-LE " +
+      "franchement et brièvement, puis propose ce que tu peux réellement traiter. " +
+      "N'invente jamais un fait, une date, un chiffre ni une citation, même plausible, " +
+      "même pour rendre service. Une réponse courte et sûre vaut mieux qu'une réponse " +
+      "complète et hasardeuse : ton interlocuteur peut toujours en demander plus. " +
+      "Si un outil de recherche ne renvoie rien d'utile, annonce-le au lieu de combler le vide."
+  );
+
   blocks.push(
     "INSTRUCTIONS DU GENT — elles priment sur tout ce qui précède, en particulier les consignes de style, " +
       "de ton et de LONGUEUR de réponse, que tu respectes à la lettre :\n\n" +

@@ -34,11 +34,11 @@ import { formatOpenRouterError, supportsReasoningStream } from "@/lib/openRouter
 import { resolveModelId } from "@/lib/allowedModels";
 import { enTetesOpenRouter, noterEchecCle, type ContexteLlm } from "@/lib/server/openRouterKey";
 import { messageCleOpenRouter } from "@/lib/openRouterKey";
+import { DECLARATION_RECHERCHE_WEB, executerRechercheWeb } from "@/lib/server/webTool";
 import {
   applyToolCallDelta,
   flattenToolRoundForRetry,
   isOrphanToolCallOutputError,
-  shouldAttachWebPlugin,
   toOpenAIToolCalls,
   userFacingToolLoopError,
   type StreamedToolCall,
@@ -149,12 +149,17 @@ export async function chatResponseFor(
     (r) => r && typeof r.name === "string" && r.config && typeof r.config.baseUrl === "string"
   );
 
+  // `body.webSearch` fait desormais partie des declencheurs : la recherche
+  // n'est plus un plugin pre-active a chaque tour, mais un OUTIL que le modele
+  // appelle s'il en a besoin. C'est ce qui rend immediats les tours
+  // repondables depuis le corpus deja ingere — la grande majorite.
   if (
     (mcpServers.length > 0 ||
       datasets.length > 0 ||
       body.prim ||
       body.powens ||
       body.gmail ||
+      body.webSearch ||
       restApis.length > 0) &&
     body.stream
   ) {
@@ -280,6 +285,13 @@ function toolLoopResponse(
 
         if (servers.length || datasets.length || prim || powens || gmail || restApis.length) {
           sendStatus("connecting");
+        }
+
+        // La recherche web, en OUTIL. Le modele decide de l'appeler ou non ;
+        // le plugin, lui, s'executait avant chaque reponse.
+        if (body.webSearch) {
+          registry.set("recherche_web", { exec: (args) => executerRechercheWeb(args, ctx) });
+          openaiTools.push(DECLARATION_RECHERCHE_WEB);
         }
 
         for (const srv of servers) {
@@ -712,7 +724,10 @@ function toolLoopResponse(
               max_tokens: body.max_tokens ?? 12_288,
               stream: true,
               ...(withTools ? { tools: openaiTools } : {}),
-              ...(shouldAttachWebPlugin(body.webSearch, messages) ? { plugins: [{ id: "web" }] } : {}),
+              // Plus de plugin ici : la recherche est un outil declare
+              // ci-dessus. Le laisser ferait payer une recherche AVANT chaque
+              // tour, en plus de celle que le modele demande — exactement ce
+              // qu'on vient de supprimer.
               ...(body.reasoning?.enabled && supportsReasoningStream(body.model)
                 ? { reasoning: body.reasoning }
                 : {}),
