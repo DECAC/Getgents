@@ -821,9 +821,30 @@ function toolLoopResponse(
 
           const toolCalls = toOpenAIToolCalls(toolCallsAcc);
 
+          // Trace d'un TOUR. Sans elle, un silence de 40 secondes ne se
+          // distingue pas d'un modèle lent : on ne sait ni combien de tours
+          // ont eu lieu, ni lequel a appelé quoi. Aucun contenu n'est écrit,
+          // seulement des longueurs et des noms d'outils.
+          console.log(
+            JSON.stringify({
+              tag: "getgents:chat",
+              event: "tour_outils",
+              round,
+              finishReason: finishReason ?? null,
+              contenuChars: content.length,
+              outils: toolCalls.map((t) => t.function.name),
+            })
+          );
+
           if (!toolCalls.length) {
             if (finishReason === "length") {
               send({ choices: [{ finish_reason: "length" }] });
+              // Le drapeau seul laissait le visiteur devant une phrase coupée
+              // en plein mot, sans un signe. Un état d'échec muet est pire
+              // qu'une erreur : on le DIT, dans le fil de la réponse.
+              sendContent(
+                "\n\n_(Réponse interrompue : longueur maximale atteinte. Demandez-moi la suite.)_"
+              );
             }
             break;
           }
