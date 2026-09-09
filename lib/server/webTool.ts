@@ -1,5 +1,11 @@
 import type { ContexteLlm } from "@/lib/server/openRouterKey";
 import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
+import {
+  budgetEpuise,
+  DELAI_RECHERCHE_MS,
+  MESSAGE_BUDGET_EPUISE,
+  MESSAGE_DELAI_DEPASSE,
+} from "@/lib/rechercheBudget";
 
 /**
  * La recherche web, donnée au modèle comme un OUTIL qu'il appelle s'il en a
@@ -36,7 +42,8 @@ export const DECLARATION_RECHERCHE_WEB = {
     description:
       "Cherche une information sur le web ouvert. À n'utiliser QUE si la réponse ne peut pas " +
       "être trouvée dans ta base de connaissance : actualité, événement récent, page publique " +
-      "précise. Chaque appel ralentit sensiblement la réponse — ne t'en sers pas par confort.",
+      "précise. Chaque appel ralentit sensiblement la réponse — ne t'en sers pas par confort. " +
+      "Une seule recherche, bien formulée, suffit presque toujours : ne relance pas pour affiner.",
     parameters: {
       type: "object",
       properties: {
@@ -70,9 +77,16 @@ export async function executerRechercheWeb(
     return { text: "La recherche web n'est pas disponible pour le moment.", ok: false };
   }
 
+  // Sans délai maximal, une recherche lente bloque tout le tour : c'est la
+  // moitié des 150 secondes mesurées en production. `AbortSignal` coupe la
+  // requête ET libère la connexion chez le fournisseur.
+  const minuteur = AbortSignal.timeout(DELAI_RECHERCHE_MS);
+  const debut = Date.now();
+
   try {
     const res = await fetch(OPENROUTER_API, {
       method: "POST",
+      signal: minuteur,
       headers: enTetesOpenRouter(ctx.cle),
       body: JSON.stringify({
         model: MODELE_RECHERCHE,
@@ -101,8 +115,49 @@ export async function executerRechercheWeb(
     if (!texte) {
       return { text: "AUCUN RÉSULTAT PERTINENT", ok: false };
     }
+    journaliser(requete, debut, "ok");
     return { text: texte.slice(0, MAX_RESULTAT), ok: true };
-  } catch {
+  } catch (e) {
+    const expire = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+    journaliser(requete, debut, expire ? "delai_depasse" : "echec");
+    if (expire) return { text: MESSAGE_DELAI_DEPASSE, ok: false };
     return { text: "La recherche web a échoué. Réponds sans elle, en le disant.", ok: false };
   }
+}
+
+/**
+ * Trace d'une recherche. La REQUÊTE est écrite — elle vient du modèle, pas du
+ * visiteur, et sans elle on ne peut pas savoir pourquoi il a cherché. Le
+ * résultat, lui, ne l'est jamais : il porterait le contenu de la conversation.
+ */
+function journaliser(requete: string, debut: number, issue: string) {
+  console.log(
+    JSON.stringify({
+      tag: "getgents:chat",
+      event: "recherche_web",
+      issue,
+      dureeMs: Date.now() - debut,
+      requete: requete.slice(0, 120),
+    })
+  );
+}
+
+/**
+ * L'outil tel qu'il est remis à UN tour de conversation : il porte son propre
+ * compteur. Le modèle qui insiste reçoit un refus lisible plutôt qu'une
+ * nouvelle attente — c'est ce qui borne le silence total, le délai par appel
+ * ne bornant que chaque appel pris isolément.
+ */
+export function creerOutilRechercheWeb(ctx: ContexteLlm) {
+  let appels = 0;
+  return {
+    exec: async (args: Record<string, unknown>) => {
+      if (budgetEpuise(appels)) {
+        journaliser(String(args.requete ?? ""), Date.now(), "budget_epuise");
+        return { text: MESSAGE_BUDGET_EPUISE, ok: false };
+      }
+      appels += 1;
+      return executerRechercheWeb(args, ctx);
+    },
+  };
 }

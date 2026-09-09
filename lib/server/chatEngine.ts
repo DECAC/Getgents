@@ -34,7 +34,7 @@ import { formatOpenRouterError, supportsReasoningStream } from "@/lib/openRouter
 import { resolveModelId } from "@/lib/allowedModels";
 import { enTetesOpenRouter, noterEchecCle, type ContexteLlm } from "@/lib/server/openRouterKey";
 import { messageCleOpenRouter } from "@/lib/openRouterKey";
-import { DECLARATION_RECHERCHE_WEB, executerRechercheWeb } from "@/lib/server/webTool";
+import { DECLARATION_RECHERCHE_WEB, creerOutilRechercheWeb } from "@/lib/server/webTool";
 import {
   applyToolCallDelta,
   flattenToolRoundForRetry,
@@ -290,7 +290,7 @@ function toolLoopResponse(
         // La recherche web, en OUTIL. Le modele decide de l'appeler ou non ;
         // le plugin, lui, s'executait avant chaque reponse.
         if (body.webSearch) {
-          registry.set("recherche_web", { exec: (args) => executerRechercheWeb(args, ctx) });
+          registry.set("recherche_web", creerOutilRechercheWeb(ctx));
           openaiTools.push(DECLARATION_RECHERCHE_WEB);
         }
 
