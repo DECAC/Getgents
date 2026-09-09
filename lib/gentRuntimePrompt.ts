@@ -7,6 +7,7 @@ import { GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
 import { profileContextNote, PROFILE_PROMPT_INSTRUCTION } from "@/lib/profileSignal";
 import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import { IMAGE_PROMPT_INSTRUCTION } from "@/lib/imageSignal";
+import { consigneDeLangue } from "@/lib/langue";
 
 /**
  * Assemble le message système d'un gent à l'exécution.
@@ -37,6 +38,13 @@ export interface GentPromptOptions {
    */
   variant: "espace" | "sharedLink" | "superGent";
   position?: { lat: number; lon: number } | null;
+  /**
+   * Code de langue du navigateur de l'interlocuteur (`fr`, `es`…), tiré de
+   * l'en-tête `Accept-Language`. Sert d'amorce au PREMIER tour, avant que
+   * l'interlocuteur ait écrit quoi que ce soit ; ensuite la langue de son
+   * message prime. Absent : le modèle suit simplement la langue du message.
+   */
+  langueNavigateur?: string | null;
 }
 
 export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions): string {
@@ -146,6 +154,12 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
     (shared
       ? `Tu es le gent « ${espace.name} » de Getgents.`
       : `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`);
+
+  // AVANT les instructions du créateur, délibérément : celles-ci « priment sur
+  // tout ce qui précède », et une consigne de langue placée après pourrait être
+  // lue comme les contredisant. Elle ne les contredit pas — elle dit dans
+  // quelle langue les appliquer.
+  blocks.push(consigneDeLangue(options.langueNavigateur));
 
   blocks.push(
     "INSTRUCTIONS DU GENT — elles priment sur tout ce qui précède, en particulier les consignes de style, " +

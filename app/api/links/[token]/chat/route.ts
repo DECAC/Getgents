@@ -12,6 +12,7 @@ import { contexteForGent } from "@/lib/server/openRouterKey";
 import { consommerPourVisiteur } from "@/lib/server/gentGuard";
 import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 import { notifierUsageInvite } from "@/lib/server/signalements";
+import { langueDeLEnTete } from "@/lib/langue";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -80,7 +81,15 @@ export async function POST(req: Request, { params }: Params) {
   // Même assemblage que l'espace du créateur : le gent répond de façon
   // identique en Preview et par un lien — mêmes garde-fous, même format
   // d'artefacts, et son prompt qui gouverne le style.
-  const systemPrompt = buildGentSystemPrompt(espace, { variant: "sharedLink" });
+  // La langue du navigateur sert d'amorce au premier tour, avant que le
+  // visiteur ait écrit ; ensuite la langue de son message prime (voir
+  // lib/langue.ts). L'en-tête est déjà là, il n'y a rien à demander ni à
+  // stocker — donc rien à faire accepter à qui que ce soit.
+  const langueNavigateur = langueDeLEnTete(req.headers.get("accept-language"));
+  const systemPrompt = buildGentSystemPrompt(espace, {
+    variant: "sharedLink",
+    langueNavigateur,
+  });
 
   await recordShareEvent(token, "chat", link.targetLabel);
 

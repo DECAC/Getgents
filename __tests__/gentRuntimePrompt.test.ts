@@ -96,3 +96,25 @@ describe("assemblage du message système d'un gent", () => {
     expect(prompt).toContain('<!--IMAGE: {"kind":"web"');
   });
 });
+
+describe("consigne de langue", () => {
+  it("est présente dans toutes les variantes", () => {
+    // Un gent doit se comporter pareil chez son créateur et derrière un lien.
+    for (const variant of ["espace", "sharedLink", "superGent"] as const) {
+      expect(buildGentSystemPrompt(espace(), { variant })).toMatch(/^LANGUE —/m);
+    }
+  });
+
+  it("précède les instructions du créateur", () => {
+    // Celles-ci « priment sur tout ce qui précède » : placée après, la
+    // consigne de langue pourrait être lue comme les contredisant. Elle ne les
+    // contredit pas — elle dit dans quelle langue les appliquer.
+    const p = buildGentSystemPrompt(espace(), { variant: "sharedLink" });
+    expect(p.indexOf("LANGUE —")).toBeLessThan(p.indexOf("INSTRUCTIONS DU GENT"));
+  });
+
+  it("reprend la langue du navigateur quand elle est fournie", () => {
+    const p = buildGentSystemPrompt(espace(), { variant: "sharedLink", langueNavigateur: "es" });
+    expect(p).toMatch(/espagnol/);
+  });
+});
