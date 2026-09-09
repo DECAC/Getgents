@@ -13,6 +13,7 @@ import { consommerPourVisiteur } from "@/lib/server/gentGuard";
 import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 import { notifierUsageInvite } from "@/lib/server/signalements";
 import { langueDeLEnTete } from "@/lib/langue";
+import { mesurerReponse, type InstantsReponse } from "@/lib/chatTiming";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -38,6 +39,7 @@ interface ClientMessage {
  * boucle d'outils (MCP, datasets, API REST) qui y est écrite.
  */
 export async function POST(req: Request, { params }: Params) {
+  const debutRequete = Date.now();
   const token = params.token;
   if (!TOKEN_RE.test(token)) return NextResponse.json({ error: "invalid_token" }, { status: 400 });
 
@@ -126,6 +128,9 @@ export async function POST(req: Request, { params }: Params) {
   if (!quota.ok) return quota.response;
 
   const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
+  const raisonnement = supportsReasoningStream(chatModelId);
+  const instants: InstantsReponse = { debut: debutRequete, enTetes: null, premierJeton: null, fin: null };
+
   const upstream = await chatResponseFor(
     {
       model: chatModelId,
@@ -135,7 +140,7 @@ export async function POST(req: Request, { params }: Params) {
       // défaut du fournisseur, bien plus haute — une réponse déjà trop longue
       // n'était même pas bornée.
       max_tokens: CHAT_MAX_TOKENS.espace,
-      ...(supportsReasoningStream(chatModelId) ? { reasoning: { enabled: true } } : {}),
+      ...(raisonnement ? { reasoning: { enabled: true } } : {}),
       mcpServers: espace.mcpServers,
       datasets: espace.datasets,
       prim: espace.prim,
@@ -195,7 +200,51 @@ export async function POST(req: Request, { params }: Params) {
     );
   }
 
-  return new Response(upstream.body, {
+  instants.enTetes = Date.now();
+
+  /**
+   * Le flux est traversé pour l'HORODATER, pas pour le modifier : chaque
+   * fragment repart tel quel. On note le premier — le silence avant lui est
+   * ce que le visiteur vit comme un temps de réflexion — puis la fin.
+   *
+   * Sans cette mesure, on ne peut pas distinguer un modèle lent d'un prompt
+   * trop gros, d'un raisonnement coûteux ou d'une recherche web. Ce sont
+   * quatre corrections différentes.
+   */
+  const source = upstream.body.getReader();
+  const mesure = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const { done, value } = await source.read();
+      if (done) {
+        instants.fin = Date.now();
+        console.log(
+          JSON.stringify(
+            mesurerReponse(instants, {
+              gentId: link.gentId,
+              model: chatModelId,
+              raisonnement,
+              webSearch: !!espace.webSearch,
+              systemChars: systemPrompt.length,
+              historique: history.length,
+              maxTokens: CHAT_MAX_TOKENS.espace,
+            })
+          )
+        );
+        controller.close();
+        return;
+      }
+      if (instants.premierJeton === null) instants.premierJeton = Date.now();
+      controller.enqueue(value);
+    },
+    cancel(raison) {
+      // Le visiteur a fermé l'onglet ou changé d'avis. On relâche la source :
+      // sans cela la requête continuerait de couler chez le fournisseur, et
+      // resterait facturée au propriétaire du gent.
+      void source.cancel(raison);
+    },
+  });
+
+  return new Response(mesure, {
     headers: {
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
