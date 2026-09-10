@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
+import { sousTitreDuGent } from "@/lib/enteteGent";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
@@ -961,7 +962,10 @@ export function AssistantPanel({
         <div className={styles.headIc}>{currentEspace.icon}</div>
         <div className={styles.headMeta}>
           <h3 className={styles.headTitle}>{currentEspace.gent}</h3>
-          <div className={styles.headSub}>{currentEspace.name}</div>
+          {/* Meme regle que l'en-tete de la coquille : pas de doublon. */}
+          {sousTitreDuGent(currentEspace.gent, currentEspace.name) && (
+            <div className={styles.headSub}>{sousTitreDuGent(currentEspace.gent, currentEspace.name)}</div>
+          )}
         </div>
         {/* Le rapport est un outil du créateur : jamais proposé au destinataire d'un lien de partage. */}
         {!shareMode && (

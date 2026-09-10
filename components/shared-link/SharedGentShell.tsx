@@ -9,6 +9,7 @@ import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
 import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
 import { SignalerIncident } from "@/components/shared/SignalerIncident";
 import { aDesArtefacts, nombreDArtefacts, MESSAGE_ESPACE_VIDE } from "@/lib/espaceArtefacts";
+import { sousTitreDuGent } from "@/lib/enteteGent";
 import type { Espace } from "@/lib/types";
 import styles from "./SharedGentShell.module.css";
 
@@ -125,6 +126,7 @@ function SharedGentBody({ token }: { token: string }) {
   }, [compte]);
 
   const espaceGarni = aDesArtefacts(currentEspace);
+  const sousTitre = sousTitreDuGent(currentEspace.gent, currentEspace.name);
   // Deux colonnes seulement si la conversation ET le volet sont là. Sur écran
   // étroit la feuille de style ramène à une colonne : le volet n'a pas la
   // place, et « Le gent » reste le chemin vers le canevas.
@@ -140,7 +142,8 @@ function SharedGentBody({ token }: { token: string }) {
         <div className={styles.headMeta}>
           <h1 className={styles.title}>{currentEspace.gent}</h1>
           <div className={styles.sub}>
-            <span className={styles.subObjectif}>{currentEspace.name}</span>
+            {/* Tu seulement s'il repete le titre — voir `sousTitreDuGent`. */}
+            {sousTitre && <span className={styles.subObjectif}>{sousTitre}</span>}
             {/* L'attribution vit ICI, et non seulement dans `CenterHeader` :
                 cet en-tête est le seul que voient les destinataires d'un lien
                 et les visiteurs d'un gent public — c'est-à-dire exactement le
