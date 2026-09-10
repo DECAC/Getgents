@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { EspaceProvider, useEspace } from "@/lib/context/EspaceContext";
 import { WorkspaceCanvas } from "@/components/center/WorkspaceCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
-import { ArtefactModal } from "@/components/shared/ArtefactModal";
+import { ArtefactModal, ArtefactCorps } from "@/components/shared/ArtefactModal";
 import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
 import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
 import { SignalerIncident } from "@/components/shared/SignalerIncident";
@@ -26,8 +26,31 @@ import styles from "./SharedGentShell.module.css";
  * une interface que le créateur n'avait jamais vue en Preview.
  */
 function SharedGentBody({ token }: { token: string }) {
-  const { currentEspace, assistantOpen, openAssistant, closeAssistant, miniAppMode, documentViewerOpen } =
-    useEspace();
+  const {
+    currentEspace,
+    assistantOpen,
+    openAssistant,
+    closeAssistant,
+    miniAppMode,
+    documentViewerOpen,
+    pendingArtefactVerdict,
+    confirmArtefactProposal,
+    declarerVoletVerdict,
+  } = useEspace();
+
+  /**
+   * Cette coquille a un volet : un artefact en attente de verdict s'y affiche,
+   * et la fenêtre plein écran ne s'ouvre plus toute seule pour lui.
+   *
+   * « Agrandir » rend la main à la fenêtre le temps d'une lecture — c'est le
+   * même drapeau, relâché volontairement. Un aperçu n'existant pas encore
+   * dans l'espace, `openArtefactModal` ne saurait pas le retrouver.
+   */
+  const [agrandi, setAgrandi] = useState(false);
+  useEffect(() => {
+    declarerVoletVerdict(!agrandi);
+    return () => declarerVoletVerdict(false);
+  }, [declarerVoletVerdict, agrandi]);
 
   /**
    * Écran étroit : le canevas est masqué par la feuille de style, et c'est lui
@@ -84,6 +107,14 @@ function SharedGentBody({ token }: { token: string }) {
    * quelque chose à montrer, et le seul où l'interrompre se justifie.
    */
   const [voletOuvert, setVoletOuvert] = useState(false);
+
+  // Un artefact qui attend une décision ouvre le volet : c'est exactement le
+  // moment où il a quelque chose à montrer.
+  useEffect(() => {
+    if (pendingArtefactVerdict) setVoletOuvert(true);
+    // Verdict rendu : l'agrandissement n'a plus d'objet.
+    else setAgrandi(false);
+  }, [pendingArtefactVerdict]);
   const compte = nombreDArtefacts(currentEspace);
   const comptePrecedent = useRef(compte);
   useEffect(() => {
@@ -98,6 +129,9 @@ function SharedGentBody({ token }: { token: string }) {
   // étroit la feuille de style ramène à une colonne : le volet n'a pas la
   // place, et « Le gent » reste le chemin vers le canevas.
   const deuxColonnes = chatOpen && voletOuvert;
+  // L'aperçu ne prend la place du canevas que si le volet est effectivement
+  // visible : sinon la décision serait demandée dans un écran qu'on ne voit pas.
+  const apercu = voletOuvert ? pendingArtefactVerdict : null;
 
   return (
     <div className={styles.page}>
@@ -175,17 +209,51 @@ function SharedGentBody({ token }: { token: string }) {
         <main className={styles.main}>
           {chatOpen && (
             <div className={styles.voletBarre}>
-              <span className={styles.voletTitre}>Ce que le gent a produit</span>
-              <button
-                type="button"
-                className={styles.voletFermer}
-                onClick={() => setVoletOuvert(false)}
-                // Fermer ne détruit rien : le canevas reste atteignable par
-                // « Le gent ». Le dire évite de faire hésiter le visiteur.
-                title="Fermer — vous le retrouverez dans « Le gent »"
-              >
-                Fermer
-              </button>
+              <span className={styles.voletTitre}>
+                {apercu ? apercu.preview.title : "Ce que le gent a produit"}
+              </span>
+              <div className={styles.voletActions}>
+                {apercu ? (
+                  <>
+                    {/* Agrandir : la fenêtre plein écran reste accessible,
+                        elle n'est simplement plus imposée. */}
+                    <button
+                      type="button"
+                      className={styles.voletIcone}
+                      onClick={() => setAgrandi(true)}
+                      title="Agrandir dans la fenêtre"
+                      aria-label="Agrandir dans la fenêtre"
+                    >
+                      ⤢
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.voletJeter}
+                      onClick={() => confirmArtefactProposal(apercu.proposalMessageId, "dismiss")}
+                    >
+                      Jeter
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.voletGarder}
+                      onClick={() => confirmArtefactProposal(apercu.proposalMessageId, "add")}
+                    >
+                      Garder dans l&apos;espace
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.voletFermer}
+                    onClick={() => setVoletOuvert(false)}
+                    // Fermer ne détruit rien : le canevas reste atteignable
+                    // par « Le gent ». Le dire évite de faire hésiter.
+                    title="Fermer — vous le retrouverez dans « Le gent »"
+                  >
+                    Fermer
+                  </button>
+                )}
+              </div>
             </div>
           )}
           <div className={styles.mainInner}>
@@ -193,7 +261,11 @@ function SharedGentBody({ token }: { token: string }) {
                 d'amorce tant que la conversation n'a pas commencé) ou ancien
                 canevas d'artefacts. Sans lui, un artefact accepté par le
                 destinataire était bien enregistré mais ne s'affichait nulle part. */}
-            {espaceGarni ? (
+            {apercu ? (
+              /* Aperçu en attente : le MÊME rendu que la fenêtre, par le
+                 composant partagé — ce qu'on garde doit être ce qu'on a vu. */
+              <ArtefactCorps artefact={apercu.preview} interactif={false} />
+            ) : espaceGarni ? (
               <WorkspaceCanvas espace={currentEspace} />
             ) : (
               /* Un espace vide sans un mot est un cul-de-sac : le visiteur

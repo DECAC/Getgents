@@ -152,6 +152,14 @@ interface EspaceContextValue {
    */
   pendingArtefactVerdict: PendingArtefactVerdict | null;
   /**
+   * Une coquille dote-t-elle l'ecran d'un VOLET capable d'accueillir un
+   * artefact en attente de verdict ? Si oui, la fenetre plein ecran ne
+   * s'ouvre pas pour lui — c'est le volet qui l'affiche et porte la decision.
+   * Faux par defaut : un ecran sans volet garde l'ancien chemin.
+   */
+  verdictEnVolet: boolean;
+  declarerVoletVerdict: (present: boolean) => void;
+  /**
    * Emplacement PROPRE à la visionneuse, distinct de `modalArtefactId` : les
    * deux doivent pouvoir coexister. Un artefact ouvert depuis la conversation
    * pendant la lecture se superpose à la visionneuse au lieu de la remplacer —
@@ -278,6 +286,8 @@ export function EspaceProvider({
   const [modalArtefactId, setModalArtefactId] = useState<string | null>(null);
   const [modalResvId, setModalResvId] = useState<string | null>(null);
   const [pendingArtefactVerdict, setPendingArtefactVerdict] = useState<PendingArtefactVerdict | null>(null);
+  const [verdictEnVolet, setVerdictEnVolet] = useState(false);
+  const declarerVoletVerdict = useCallback((present: boolean) => setVerdictEnVolet(present), []);
   const [viewerArtefactId, setViewerArtefactId] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
@@ -1736,6 +1746,8 @@ export function EspaceProvider({
         modalArtefactId,
         modalResvId,
         pendingArtefactVerdict,
+        verdictEnVolet,
+        declarerVoletVerdict,
         viewerArtefactId,
         documentViewerOpen: !!viewerArtefactId,
         currentEspace,

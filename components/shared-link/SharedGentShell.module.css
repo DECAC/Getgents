@@ -282,6 +282,25 @@
  * Volet d'artefact et espace vide
  * ------------------------------------------------------------------------- */
 
+/*
+ * L'artefact est POSÉ dans la fenêtre, pas encastré dedans.
+ *
+ * Une colonne collée aux bords se lit comme une seconde page ; un panneau
+ * détaché, avec un filet et une ombre très basse, se lit comme un objet qu'on
+ * peut prendre, garder ou jeter — ce qui est exactement la décision demandée.
+ * L'ombre reste sous le seuil du décoratif : elle sépare, elle n'attire pas.
+ */
+.bodyWithChat .main {
+  margin: 14px 14px 14px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgba(42, 31, 25, 0.04),
+    0 8px 24px -12px rgba(42, 31, 25, 0.16);
+  overflow: hidden auto;
+}
+
 .voletBarre {
   position: sticky;
   top: 0;
@@ -301,6 +320,66 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--faint);
+}
+
+.voletActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Commande carrée et discrète — l'agrandissement, le partage plus tard. */
+.voletIcone {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.voletIcone:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/*
+ * Jeter et Garder : la même taille, un poids différent.
+ *
+ * Jeter reste en retrait — c'est une action destructrice qu'aucune confirmation
+ * ne protège, et qu'il ne faut donc pas rendre facile à toucher par mégarde.
+ */
+.voletJeter,
+.voletGarder {
+  border-radius: var(--r-pill);
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.voletJeter {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+.voletJeter:hover {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+.voletGarder {
+  border: 1px solid var(--sage);
+  background: var(--sage);
+  color: #fff;
+}
+.voletGarder:hover {
+  background: var(--sage-700);
+  border-color: var(--sage-700);
 }
 
 .voletFermer {
