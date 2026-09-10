@@ -17,6 +17,7 @@ import {
   type SuperGentReportEntry,
 } from "@/lib/superGent";
 import type { Espace } from "@/lib/types";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./SuperGentHome.module.css";
 
 interface Turn {
@@ -117,8 +118,8 @@ export function SuperGentHome() {
           text: descriptors.length
             ? `Aucun de vos gents actifs ne couvre ce sujet. Vos gents savent traiter : ${descriptors
                 .map((d) => d.name)
-                .join(", ")}. Vous pouvez en construire un nouveau depuis le Gent' studio.`
-            : "Vous n'avez pas encore de gent actif capable de répondre. Construisez-en un depuis le Gent' studio.",
+                .join(", ")}. Vous pouvez en construire un nouveau depuis GetStudio.`
+            : "Vous n'avez pas encore de gent actif capable de répondre. Construisez-en un depuis GetStudio.",
         },
       ]);
       setBusy(false);
@@ -296,7 +297,7 @@ export function SuperGentHome() {
                   <div className={styles.answer}>
                     <div className={styles.answerHead}>
                       <span className={styles.answerIcon} aria-hidden="true">
-                        {t.role === "none" ? "🧭" : t.gentIcon}
+                        <BrandIcon variant="fillSm" />
                       </span>
                       <span className={styles.answerName}>
                         {t.role === "none" ? "Aucun gent mobilisé" : t.gentName}

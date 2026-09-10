@@ -4,6 +4,7 @@ import { useBuilder } from "@/lib/context/BuilderContext";
 import { buildAppPreviewEvolveRequest, buildAppPreviewRequest } from "@/lib/appPreview";
 import { shouldSkipCadrage } from "@/lib/cadrage";
 import { AppPreview } from "@/components/appPreview/AppPreview";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./ApercuTab.module.css";
 
 /**
@@ -67,7 +68,9 @@ export function ApercuTab() {
       {hasPreview ? (
         <div className={styles.frame}>
           <div className={styles.frameBar}>
-            <div className={styles.frameMark}>{currentDraft.icon || "✦"}</div>
+            <div className={styles.frameMark} aria-hidden="true">
+              <BrandIcon variant="fillSm" />
+            </div>
             <div>
               <div className={styles.frameName}>
                 {preview?.appName || currentDraft.name || "Application du gent"}

@@ -17,6 +17,7 @@ import {
   type CollabVoteTally,
 } from "@/lib/collab";
 import styles from "./CollabShell.module.css";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import { SignalerIncident } from "@/components/shared/SignalerIncident";
 import {
   cleSelection,
@@ -564,7 +565,9 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
       <div className={styles.page}>
         <main className={styles.join}>
           <form className={styles.joinCard} onSubmit={handleJoin}>
-            <div className={styles.joinIcon}>{espace.icon}</div>
+            <div className={styles.joinIcon} aria-hidden="true">
+              <BrandIcon variant="fill" />
+            </div>
             <h1 className={styles.joinTitle}>
               {gentName} <span className={styles.badgeOrch}>Orchestrateur</span>
             </h1>
@@ -626,7 +629,9 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
   return (
     <div className={styles.page}>
       <header className={styles.topbar}>
-        <div className={styles.gentAv}>{espace.icon}</div>
+        <div className={styles.gentAv} aria-hidden="true">
+          <BrandIcon variant="fillSm" />
+        </div>
         <div className={styles.gentMeta}>
           <p className={styles.gentName}>
             {gentName} <span className={styles.badgeOrch}>Orchestrateur</span>
@@ -857,7 +862,6 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
                       <GentCard
                         key={m.id}
                         message={m}
-                        icon={espace.icon}
                         votes={state?.votes[String(m.id)]}
                         decision={state?.decision ?? "vote"}
                         canDecide={
@@ -909,7 +913,9 @@ export function CollabShell({ token, espace }: { token: string; espace: Espace }
                   {awaitingOrch && (tab === "salon" || tab === "prive") && (
                     <article className={`${styles.orch} ${styles.orchThinking}`} aria-live="polite">
                       <div className={styles.orchHead}>
-                        <span className={styles.orchAv}>{espace.icon}</span>
+                        <span className={styles.orchAv} aria-hidden="true">
+                          <BrandIcon variant="fillSm" />
+                        </span>
                         <b>{gentName}</b>
                         <span className={styles.badgeOrch}>Orchestrateur</span>
                       </div>
@@ -1048,7 +1054,6 @@ function TabButton({
 
 function GentCard({
   message,
-  icon,
   votes,
   decision,
   canDecide,
@@ -1060,7 +1065,6 @@ function GentCard({
   onAskValidate,
 }: {
   message: CollabMessage;
-  icon: string;
   votes?: CollabVoteTally;
   decision: "vote" | "createur";
   canDecide: boolean;
@@ -1093,7 +1097,9 @@ function GentCard({
   return (
     <article className={styles.orch}>
       <div className={styles.orchHead}>
-        <span className={styles.orchAv}>{icon}</span>
+        <span className={styles.orchAv} aria-hidden="true">
+          <BrandIcon variant="fillSm" />
+        </span>
         <b>{message.authorName}</b>
         <span className={styles.badgeOrch}>{isPrivate ? "Fil privé" : "Orchestrateur"}</span>
         <time>{formatTime(message.createdAt)}</time>

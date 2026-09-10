@@ -20,6 +20,10 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Getgents — Espace",
   description: "Votre espace de travail avec vos gents",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

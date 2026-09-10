@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { STARTER_COUNT, displayedStarters } from "@/lib/starterSignal";
 import type { Espace } from "@/lib/types";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./StarterBubbles.module.css";
 
 /** Largeurs variées pour que l'attente préfigure le rang de bulles à venir. */
@@ -40,7 +41,11 @@ export function StarterBubbles({
 
   return (
     <div className={[styles.wrap, variant === "compact" ? styles.compact : ""].filter(Boolean).join(" ")}>
-      {variant === "canvas" && <div className={styles.icon}>{espace.icon}</div>}
+      {variant === "canvas" && (
+        <div className={styles.icon} aria-hidden="true">
+          <BrandIcon variant="fill" />
+        </div>
+      )}
 
       <div className={styles.intro}>
         <h2 className={styles.title}>Par quoi commencer&nbsp;?</h2>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { readPublishedGents } from "@/lib/publishedGents";
 import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./CenterHeader.module.css";
 import { BoutonNavMobile } from "@/components/shared/BoutonNavMobile";
 
@@ -33,7 +34,9 @@ export function CenterHeader() {
     <header className={styles.ehead}>
       <div className={styles.eheadTop}>
         <BoutonNavMobile />
-        <div className={styles.ic}>{e.icon}</div>
+        <div className={styles.ic} aria-hidden="true">
+          <BrandIcon variant="fill" />
+        </div>
         <div className={styles.meta}>
           <div className={styles.titleRow}>
             <h2 className={styles.title}>{e.name}</h2>
@@ -53,8 +56,8 @@ export function CenterHeader() {
         <div className={styles.headActions}>
           <FileDownloadControl />
           {isPublishedGent && (
-            <a className={styles.builderLink} href={`/builder/${currentId}`} title="Modifier ce gent dans le gent studio">
-              🛠️ Ouvrir dans le gent studio
+            <a className={styles.builderLink} href={`/builder/${currentId}`} title="Modifier ce gent dans GetStudio">
+              🛠️ Ouvrir dans GetStudio
             </a>
           )}
         </div>

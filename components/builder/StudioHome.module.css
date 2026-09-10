@@ -255,8 +255,13 @@
 }
 
 .cardIcon {
-  font-size: 22px;
-  line-height: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--sage-tint);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
 }
 
 .cardTitle {
@@ -318,8 +323,14 @@
 }
 
 .recentIcon {
-  font-size: 19px;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--sage-tint);
   flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
 }
 
 .recentBody {

@@ -103,8 +103,14 @@
 }
 
 .icon {
-  font-size: 26px;
-  line-height: 1;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: var(--sage-tint);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex: none;
 }
 
 .headMeta {

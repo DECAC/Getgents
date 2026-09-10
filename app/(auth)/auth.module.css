@@ -30,27 +30,7 @@
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-bottom: 22px;
-}
-
-.mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  background: var(--sage);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 15px;
-}
-
-.brandName {
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  margin-bottom: 0;
 }
 
 .title {

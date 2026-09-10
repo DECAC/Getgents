@@ -4,6 +4,7 @@ import { listerAnnuaire } from "@/lib/server/publicGent";
 import styles from "./annuaire.module.css";
 import { libelleAppelAction } from "@/lib/inscriptions";
 import { PiedLegal } from "@/components/shared/PiedLegal";
+import { BrandIcon } from "@/components/shared/BrandMark";
 
 /**
  * Annuaire des gents publics.
@@ -45,7 +46,7 @@ export default async function AnnuairePage() {
               <li key={g.slug}>
                 <Link href={`/${g.slug}`} className={styles.carte}>
                   <span className={styles.icone} aria-hidden="true">
-                    {g.icone}
+                    <BrandIcon variant="fillSm" />
                   </span>
                   <span className={styles.nom}>{g.nom}</span>
                   {g.resume ? <span className={styles.resume}>{g.resume}</span> : null}

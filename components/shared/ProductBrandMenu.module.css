@@ -18,72 +18,38 @@
   background: var(--bg);
 }
 
-.markStudio {
+.mark {
   width: 26px;
   height: 26px;
   border-radius: 7px;
-  background: var(--sage);
-  position: relative;
+  background: var(--sage-tint);
+  display: grid;
+  place-items: center;
   flex: none;
-}
-.markStudio::before {
-  content: "";
-  position: absolute;
-  inset: 7px;
-  border-radius: 3px;
-  background: #fff;
-  opacity: 0.85;
+  overflow: hidden;
 }
 
-.markSpace {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: var(--sage);
-  position: relative;
+.wordmarkSlot {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.wordmarkSlot img {
+  max-width: 100%;
+}
+
+.menuMark {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--sage-tint);
+  display: grid;
+  place-items: center;
   flex: none;
-}
-.markSpace::before,
-.markSpace::after {
-  content: "";
-  position: absolute;
-  background: #fff;
-  border-radius: 1px;
-}
-.markSpace::before {
-  width: 11px;
-  height: 2px;
-  left: 7px;
-  top: 11px;
-}
-.markSpace::after {
-  width: 2px;
-  height: 11px;
-  left: 12px;
-  top: 7px;
-  background: var(--gold-tint);
-}
-
-.name {
-  font-family: "Sora", sans-serif;
-  font-size: 15.5px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.nameSpace {
-  font-family: "Sora", sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
 }
 
 .chevron {

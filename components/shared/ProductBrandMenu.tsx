@@ -2,13 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import styles from "./ProductBrandMenu.module.css";
+import { BrandIcon, BrandWordmark } from "@/components/shared/BrandMark";
+import type { BrandWordmarkKey } from "@/lib/brand";
+import { BRAND_LABEL } from "@/lib/brand";
 
 export type ProductSurface = "studio" | "space" | "accueil";
 
-const TITRES: Record<ProductSurface, string> = {
-  studio: "Gent' studio",
-  space: "Gent' space",
-  accueil: "Getgents",
+const WORDMARK: Record<ProductSurface, BrandWordmarkKey> = {
+  studio: "getstudio",
+  space: "getspace",
+  accueil: "getgents",
 };
 
 const DESTINATIONS: Record<ProductSurface, { href: string; sous: string; chemins: string[] }> = {
@@ -40,17 +43,20 @@ const AUTRES: Record<ProductSurface, ProductSurface[]> = {
 
 /**
  * Bascule entre les trois surfaces : une seule porte d'entrée, le clic sur le
- * titre en haut à gauche. Pas de lien parallèle ailleurs dans l'interface.
+ * titre en haut à gauche.
  *
- *   Getgents     → /accueil   décrire le gent dont on a besoin
- *   Gent' space  → /myspace   interroger ses gents actifs
- *   Gent' studio → /builder   construire et configurer un gent
- *
- * Le menu affiche les DEUX autres surfaces, jamais celle où l'on se trouve :
- * une entrée qui renvoie sur la page courante n'apprend rien et fait douter
- * de l'endroit où l'on est.
+ *   Getgents  → /accueil
+ *   GetSpace  → /myspace
+ *   GetStudio → /builder
  */
-export function ProductBrandMenu({ surface }: { surface: ProductSurface }) {
+export function ProductBrandMenu({
+  surface,
+  compact = false,
+}: {
+  surface: ProductSurface;
+  /** Rail replié : n'affiche que l'icône GG. */
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -70,7 +76,7 @@ export function ProductBrandMenu({ surface }: { surface: ProductSurface }) {
     };
   }, [open]);
 
-  const title = TITRES[surface];
+  const title = BRAND_LABEL[WORDMARK[surface]];
 
   return (
     <div className={styles.wrap} ref={ref}>
@@ -82,29 +88,35 @@ export function ProductBrandMenu({ surface }: { surface: ProductSurface }) {
         aria-haspopup="menu"
         title={title}
       >
-        <span
-          className={surface === "studio" ? styles.markStudio : styles.markSpace}
-          aria-hidden="true"
-        />
-        <span className={surface === "space" ? styles.nameSpace : styles.name}>{title}</span>
-        <svg
-          className={styles.chevron}
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          aria-hidden="true"
-        >
-          <path d="M6 9l6 6 6-6" />
-        </svg>
+        <span className={styles.mark} aria-hidden="true">
+          <BrandIcon size={22} />
+        </span>
+        {!compact && (
+          <span className={styles.wordmarkSlot}>
+            <BrandWordmark which={WORDMARK[surface]} height={surface === "space" ? 26 : 24} />
+          </span>
+        )}
+        {!compact && (
+          <svg
+            className={styles.chevron}
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            aria-hidden="true"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        )}
       </button>
 
       {open && (
         <div className={styles.menu} role="menu">
           {AUTRES[surface].map((cible) => {
             const d = DESTINATIONS[cible];
+            const label = BRAND_LABEL[WORDMARK[cible]];
             return (
               <a
                 key={cible}
@@ -113,13 +125,11 @@ export function ProductBrandMenu({ surface }: { surface: ProductSurface }) {
                 role="menuitem"
                 onClick={() => setOpen(false)}
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  {d.chemins.map((c) => (
-                    <path key={c} d={c} />
-                  ))}
-                </svg>
+                <span className={styles.menuMark} aria-hidden="true">
+                  <BrandIcon size={18} />
+                </span>
                 <span>
-                  <span className={styles.menuLabel}>{TITRES[cible]}</span>
+                  <span className={styles.menuLabel}>{label}</span>
                   <span className={styles.menuSub}>{d.sous}</span>
                 </span>
               </a>

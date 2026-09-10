@@ -331,7 +331,7 @@ function RailChrome({
       id="builder-rail"
     >
       <div className={styles.brand}>
-        <ProductBrandMenu surface="studio" />
+        <ProductBrandMenu surface="studio" compact={railCollapsed} />
         <button
           className={styles.railToggle}
           onClick={onToggleRail}

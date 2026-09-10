@@ -16,6 +16,7 @@ import {
 } from "@/lib/studioExamples";
 import type { GentDraft } from "@/lib/types/builder";
 import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./StudioHome.module.css";
 
 const MAX_RECENT = 6;
@@ -159,7 +160,7 @@ export function StudioHome() {
               {recent.slice(0, MAX_RECENT).map((draft) => (
                 <a key={draft.id} href={`/builder/${draft.id}?tab=conversationnel`} className={styles.recentItem}>
                   <span className={styles.recentIcon} aria-hidden="true">
-                    {draft.icon}
+                    <BrandIcon variant="fillSm" />
                   </span>
                   <span className={styles.recentBody}>
                     <span className={styles.recentName}>{draft.name}</span>
@@ -199,7 +200,7 @@ function ExampleCard({
       disabled={disabled}
     >
       <span className={styles.cardIcon} aria-hidden="true">
-        {example.icon}
+        <BrandIcon variant="fillSm" />
       </span>
       <span className={styles.cardTitle}>{example.title}</span>
       <span className={styles.cardPrompt}>{example.prompt}</span>

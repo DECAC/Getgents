@@ -11,6 +11,7 @@ import { SignalerIncident } from "@/components/shared/SignalerIncident";
 import { aDesArtefacts, nombreDArtefacts, MESSAGE_ESPACE_VIDE } from "@/lib/espaceArtefacts";
 import { sousTitreDuGent } from "@/lib/enteteGent";
 import type { Espace } from "@/lib/types";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./SharedGentShell.module.css";
 
 /**
@@ -143,7 +144,9 @@ function SharedGentBody({ token }: { token: string }) {
   return (
     <div className={styles.page}>
       <header className={styles.head}>
-        <span className={styles.icon}>{currentEspace.icon}</span>
+        <span className={styles.icon} aria-hidden="true">
+          <BrandIcon variant="fill" />
+        </span>
         <div className={styles.headMeta}>
           <h1 className={styles.title}>{currentEspace.gent}</h1>
           <div className={styles.sub}>

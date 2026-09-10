@@ -25,6 +25,7 @@ import { buildEspaceReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
 import { StarterBubbles } from "@/components/center/StarterBubbles";
 import { shouldShowConversationStarters } from "@/lib/starterSignal";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./AssistantPanel.module.css";
 
 const PROPOSAL_KIND_LABEL: Record<string, string> = {
@@ -972,7 +973,9 @@ export function AssistantPanel({
 
       {!sansEntete && (
       <div className={styles.head}>
-        <div className={styles.headIc}>{currentEspace.icon}</div>
+        <div className={styles.headIc} aria-hidden="true">
+          <BrandIcon variant="fillSm" />
+        </div>
         <div className={styles.headMeta}>
           <h3 className={styles.headTitle}>{currentEspace.gent}</h3>
           {/* Meme regle que l'en-tete de la coquille : pas de doublon. */}

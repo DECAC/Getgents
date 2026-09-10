@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./Rail.module.css";
 import { MenuCompte } from "@/components/compte/MenuCompte";
 import { useNavMobile } from "@/lib/context/NavMobileContext";
+import { BRAND_LABEL } from "@/lib/brand";
 
 const STATUS_DOT_CLASS: Record<string, string> = {
   live: styles.dotLive,
@@ -32,7 +34,7 @@ export function Rail() {
       id="rail"
     >
       <div className={styles.brand}>
-        <ProductBrandMenu surface="space" />
+        <ProductBrandMenu surface="space" compact={railCollapsed} />
         <button
           className={styles.railToggle}
           onClick={toggleRail}
@@ -60,7 +62,7 @@ export function Rail() {
           <path d="M3 10.5 12 3l9 7.5" />
           <path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" />
         </svg>
-        <span className={styles.homeLinkLabel}>Gent&apos; space</span>
+        <span className={styles.homeLinkLabel}>{BRAND_LABEL.getspace}</span>
       </a>
 
       <div className={styles.railLabel}>Mes gents actifs</div>
@@ -75,7 +77,7 @@ export function Rail() {
               aria-current={id === currentId ? "page" : undefined}
             >
               <span className={[styles.ic, id === currentId ? styles.icActive : ""].filter(Boolean).join(" ")}>
-                {e.icon}
+                <BrandIcon variant="fillSm" />
               </span>
               <span className={styles.body}>
                 <span className={styles.name}>{e.name}</span>

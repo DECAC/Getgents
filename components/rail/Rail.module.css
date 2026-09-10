@@ -161,9 +161,9 @@
   flex: none;
   display: grid;
   place-items: center;
-  font-size: 15px;
   background: #fff;
   border: 1px solid var(--line);
+  overflow: hidden;
 }
 .icActive {
   border-color: var(--blue);

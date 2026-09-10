@@ -13,7 +13,8 @@
   --line: #eadbd3;
   --line-soft: #f3e9e3;
 
-  /* Accent principal : corail. Boutons primaires, liens, focus, mode actif. */
+  /* Accent principal : corail. Boutons primaires, liens, focus, mode actif.
+   * Couleur produit GetStudio (création / builder). */
   --sage: #e65d76;
   --sage-700: #c73758;
   --sage-tint: #ffdee2;
@@ -32,9 +33,9 @@
   --success: #57a45b;
   --success-tint: #d4f1d4;
 
-  /* Bleu pastel — distingue « Gent' space » (le produit, côté utilisateur)
-   * du corail réservé au studio (l'outil de création). Même famille de
-   * lumière/chroma que --sage, teinte différente. */
+  /* Bleu — couleur produit GetSpace (usage / conversation / myspace).
+   * Distingue l’espace d’usage du corail GetStudio (création). Même famille
+   * de lumière/chroma que --sage, teinte différente. */
   --blue: #4f7cc9;
   --blue-700: #3a5fa3;
   --blue-tint: #dbe7fb;

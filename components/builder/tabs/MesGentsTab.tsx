@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { allocateNewDraft } from "@/lib/builderDraftStorage";
 import { useGentsList } from "@/lib/hooks/useGentsList";
 import { SessionExpiree } from "@/components/shared/SessionExpiree";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./MesGentsTab.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -264,7 +265,7 @@ export function MesGentsTab() {
               </div>
               <a href={`/builder/${d.id}`} className={styles.cardLink}>
                 <div className={styles.cardTop}>
-                  <div className={styles.ic}>{d.icon}</div>
+                  <div className={styles.ic} aria-hidden="true"><BrandIcon variant="fillSm" /></div>
                   <div>
                     <div className={styles.name}>{d.name}</div>
                     <span className={[styles.statusBadge, STATUS_CLASS[d.status]].join(" ")}>
@@ -304,7 +305,7 @@ export function MesGentsTab() {
                 />
               </div>
               <div className={styles.cardTop}>
-                <div className={styles.ic}>{espace.icon}</div>
+                <div className={styles.ic} aria-hidden="true"><BrandIcon variant="fillSm" /></div>
                 <div>
                   <div className={styles.name}>{espace.gent || espace.name}</div>
                   <span className={[styles.statusBadge, styles.statusPublished].join(" ")}>Publié (espace seul)</span>
@@ -351,7 +352,7 @@ export function MesGentsTab() {
                 onToggle={() => toggleId(d.id)}
               />
               <a href={`/builder/${d.id}`} className={styles.rowLink}>
-                <div className={styles.ic}>{d.icon}</div>
+                <div className={styles.ic} aria-hidden="true"><BrandIcon variant="fillSm" /></div>
                 <span className={styles.rowName}>{d.name}</span>
                 <span className={[styles.statusBadge, STATUS_CLASS[d.status]].join(" ")}>
                   {STATUS_LABEL[d.status]}
@@ -383,7 +384,7 @@ export function MesGentsTab() {
                 onToggle={() => toggleId(id)}
               />
               <a href={`/espace/${id}`} className={styles.rowLink}>
-                <div className={styles.ic}>{espace.icon}</div>
+                <div className={styles.ic} aria-hidden="true"><BrandIcon variant="fillSm" /></div>
                 <span className={styles.rowName}>{espace.gent || espace.name}</span>
                 <span className={[styles.statusBadge, styles.statusPublished].join(" ")}>Publié (espace seul)</span>
               </a>

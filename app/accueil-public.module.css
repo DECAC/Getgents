@@ -24,19 +24,7 @@
   text-align: center;
 }
 
-.mark {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: var(--sage);
-  color: #fff;
-  display: inline-grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 21px;
-  margin-bottom: 22px;
-}
-
+/* Marque : wordmark Getgents (voir BrandWordmark). */
 .titre {
   font-size: clamp(28px, 5vw, 40px);
   letter-spacing: -0.03em;

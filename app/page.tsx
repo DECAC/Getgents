@@ -5,6 +5,7 @@ import { isAuthConfigured } from "@/lib/authConfig";
 import styles from "./accueil-public.module.css";
 import { libelleAppelAction } from "@/lib/inscriptions";
 import { PiedLegal } from "@/components/shared/PiedLegal";
+import { BrandWordmark } from "@/components/shared/BrandMark";
 
 /**
  * Racine du site.
@@ -27,7 +28,7 @@ export default async function Home() {
   return (
     <main className={styles.page}>
       <section className={styles.hero}>
-        <span className={styles.mark}>G</span>
+        <BrandWordmark which="getgents" layout="hero" />
         <h1 className={styles.titre}>Vos agents, construits par vous.</h1>
         <p className={styles.lede}>
           Décrivez ce dont vous avez besoin, et Getgents en fait un gent : un assistant qui

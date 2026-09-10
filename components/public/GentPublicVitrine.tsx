@@ -2,6 +2,7 @@ import type { GentPublic } from "@/lib/server/publicGent";
 import styles from "./GentPublicVitrine.module.css";
 import { libelleAppelAction } from "@/lib/inscriptions";
 import { PiedLegal } from "@/components/shared/PiedLegal";
+import { BrandIcon } from "@/components/shared/BrandMark";
 
 /**
  * Gent public dont la conversation n'est PAS ouverte aux visiteurs.
@@ -18,7 +19,7 @@ export function GentPublicVitrine({ gent }: { gent: GentPublic }) {
     <main className={styles.page}>
       <article className={styles.carte}>
         <div className={styles.icone} aria-hidden="true">
-          {espace.icon}
+          <BrandIcon variant="fill" />
         </div>
         <h1 className={styles.titre}>{espace.name}</h1>
         {espace.gent ? <p className={styles.sousTitre}>{espace.gent}</p> : null}

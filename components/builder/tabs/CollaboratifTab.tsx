@@ -173,16 +173,6 @@ export function CollaboratifTab() {
               aria-label="Nom du gent"
             />
           </label>
-          <label className={local.field}>
-            <span className={local.fieldLabel}>Icône (emoji)</span>
-            <input
-              className={local.input}
-              value={currentDraft.icon}
-              onChange={(e) => updateIcon(e.target.value.slice(0, 4))}
-              placeholder="🧭"
-              aria-label="Icône du gent"
-            />
-          </label>
         </div>
       </div>
 

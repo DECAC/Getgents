@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Espace } from "@/lib/types";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./CollabShell.module.css";
 
 /**
@@ -38,7 +39,6 @@ type PreviewTab = "salon" | "synthese" | "prive";
 export function CollabPreviewShell({ espace }: { espace: Espace }) {
   const collab = espace.collab;
   const gentName = espace.gent || espace.name || "Event Manager";
-  const icon = espace.icon || "🧭";
   const mission =
     collab?.mission?.trim() ||
     "Mission collaborative — précisez-la dans l'onglet Event Manager du studio.";
@@ -83,7 +83,9 @@ export function CollabPreviewShell({ espace }: { espace: Espace }) {
         </div>
         <main className={styles.join}>
           <div className={styles.joinCard}>
-            <div className={styles.joinIcon}>{icon}</div>
+            <div className={styles.joinIcon} aria-hidden="true">
+              <BrandIcon variant="fill" />
+            </div>
             <h1 className={styles.joinTitle}>
               {gentName} <span className={styles.badgeOrch}>Orchestrateur</span>
             </h1>
@@ -127,7 +129,9 @@ export function CollabPreviewShell({ espace }: { espace: Espace }) {
         <b>Mode Preview</b> — données fictives. Diffuser + lien de salon pour tester en réel.
       </div>
       <header className={styles.topbar}>
-        <div className={styles.gentAv}>{icon}</div>
+        <div className={styles.gentAv} aria-hidden="true">
+          <BrandIcon variant="fillSm" />
+        </div>
         <div className={styles.gentMeta}>
           <p className={styles.gentName}>
             {gentName} <span className={styles.badgeOrch}>Orchestrateur</span>
@@ -255,7 +259,9 @@ export function CollabPreviewShell({ espace }: { espace: Espace }) {
                 <>
                   <article className={styles.orch}>
                     <div className={styles.orchHead}>
-                      <span className={styles.orchAv}>{icon}</span>
+                      <span className={styles.orchAv} aria-hidden="true">
+                        <BrandIcon variant="fillSm" />
+                      </span>
                       <b>{gentName}</b>
                       <span className={styles.badgeOrch}>Orchestrateur</span>
                     </div>
@@ -285,7 +291,9 @@ export function CollabPreviewShell({ espace }: { espace: Espace }) {
               {tab === "prive" && (
                 <article className={styles.orch}>
                   <div className={styles.orchHead}>
-                    <span className={styles.orchAv}>{icon}</span>
+                    <span className={styles.orchAv} aria-hidden="true">
+                      <BrandIcon variant="fillSm" />
+                    </span>
                     <b>{gentName}</b>
                     <span className={styles.badgeOrch}>Fil privé</span>
                   </div>
