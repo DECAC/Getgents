@@ -76,7 +76,16 @@ export function AssistantPanel({
    * cette prop plutôt qu'un assouplissement de la règle.
    */
   starters = false,
-}: { embedded?: boolean; starters?: boolean } = {}) {
+  /**
+   * La coquille fournit DEJA un en-tete portant le nom du gent.
+   *
+   * Sans cela le titre s'affichait deux fois de suite a l'ecran, et le panneau
+   * proposait un plein ecran et une fermeture devenus sans objet : la bascule
+   * « Conversation / Le gent » de la coquille assure desormais la navigation,
+   * et la conversation occupe toute la largeur par defaut.
+   */
+  sansEntete = false,
+}: { embedded?: boolean; starters?: boolean; sansEntete?: boolean } = {}) {
   const {
     currentEspace,
     activeConversation,
@@ -958,6 +967,7 @@ export function AssistantPanel({
         <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner" />
       )}
 
+      {!sansEntete && (
       <div className={styles.head}>
         <div className={styles.headIc}>{currentEspace.icon}</div>
         <div className={styles.headMeta}>
@@ -984,12 +994,13 @@ export function AssistantPanel({
           ✕
         </button>
       </div>
+      )}
 
       {/* Cet avis invite à « naviguer entre les onglets » : il n'a de sens que
           dans l'espace du créateur, qui en a. Embarqué — coquille de partage
           sur téléphone, visionneuse — il n'y a pas d'onglets, et il coûte une
           soixantaine de pixels pour dire quelque chose de faux. */}
-      {!embedded && (
+      {!embedded && !sansEntete && (
         <div className={styles.scope}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="3" width="7" height="7" rx="1.5" />

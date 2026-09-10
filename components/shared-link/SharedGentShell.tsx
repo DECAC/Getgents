@@ -205,7 +205,12 @@ function SharedGentBody({ token }: { token: string }) {
         {/* `embedded` sur écran étroit : la grille lui donne déjà toute la
             place, il ne doit pas se comporter en tiroir superposé. Sur grand
             écran il reste une colonne redimensionnable. */}
-        {chatOpen && <AssistantPanel starters={etroit || !voletOuvert} embedded={etroit || !voletOuvert} />}
+        {chatOpen && <AssistantPanel
+            starters={etroit || !voletOuvert}
+            embedded={etroit || !voletOuvert}
+            // L'en-tête de la page porte déjà le nom du gent.
+            sansEntete
+          />}
         {/* Le canevas n'est monté que s'il a une place : en volet à côté de la
             conversation, ou en pleine page sous l'onglet « Le gent ». */}
         {(!chatOpen || voletOuvert) && (
