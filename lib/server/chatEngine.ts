@@ -15,6 +15,7 @@
  * la session pour `/api/chat`, le jeton pour `/api/links/[token]/chat`.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { messageOutilInconnu, estUnMarqueur } from "@/lib/outilInconnu";
 import { McpClient } from "@/lib/server/mcp";
 import {
   buildDatasetRuntimeInstructions,
@@ -868,8 +869,19 @@ function toolLoopResponse(
             let resultText: string;
             let ok = true;
             if (!entry) {
-              resultText = `Outil inconnu : ${tc.function.name}`;
+              // Un retour d'erreur adresse a un modele est une CONSIGNE, pas
+              // un constat : « Outil inconnu » lui coutait un tour complet.
+              resultText = messageOutilInconnu(tc.function.name, Array.from(registry.keys()));
               ok = false;
+              console.log(
+                JSON.stringify({
+                  tag: "getgents:chat",
+                  event: "outil_inconnu",
+                  nom: tc.function.name,
+                  marqueur: estUnMarqueur(tc.function.name),
+                  model: body.model,
+                })
+              );
             } else if ((toolFailures.get(tc.function.name) ?? 0) >= 3) {
               resultText = `Outil ${tc.function.name} désactivé pour cette réponse après 3 échecs consécutifs. N'appelle plus cet outil : réponds à l'utilisateur avec les informations déjà obtenues, explique l'indisponibilité et propose une alternative.`;
               ok = false;
