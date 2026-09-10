@@ -1238,7 +1238,7 @@ export function BuilderProvider({
         if (cfg.objective) next.objective = cfg.objective;
         if (cfg.systemPrompt) next.systemPrompt = cfg.systemPrompt;
         if (cfg.webSearch !== undefined) next.webSearch = cfg.webSearch;
-        if (cfg.chatModelId || cfg.reasoningModelId) {
+        if (cfg.chatModelId) {
           // Upsert par capacité : un .map seul n'ajoutait rien si la ligne
           // manquait, et un id mal classé (reasoning dans chat) restait invisible
           // dans les filtres Conversation du configurateur Prompt.
@@ -1257,7 +1257,6 @@ export function BuilderProvider({
           };
           let assignments = next.modelAssignments;
           if (cfg.chatModelId) assignments = upsert(assignments, "chat", cfg.chatModelId);
-          if (cfg.reasoningModelId) assignments = upsert(assignments, "reasoning", cfg.reasoningModelId);
           next.modelAssignments = assignments;
         }
         if (cfg.connectors?.length) {

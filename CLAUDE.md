@@ -50,6 +50,15 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
 
 ## Décisions structurantes
 
+- **Le raisonnement n'est PAS configurable, et c'est délibéré.**
+  `supportsReasoningStream` l'active pour tout modèle `anthropic/claude*` ou
+  `openai/o*` — écrite comme garde d'erreur (l'envoyer à Mistral casse), elle
+  sert de politique. `reasoningModelId` a été RETIRÉ de l'interface plutôt que
+  branché : mesuré, le modèle ne raisonne que sur les questions qui le méritent
+  (0 s sur un tour simple, 6,6 s sur un tour complexe). Un réglage aurait coûté
+  un chantier pour un défaut que personne n'a. Ne pas le réintroduire sans
+  mesure contraire.
+
 - **Facturation LLM** : `lib/server/openRouterKey.ts` est le SEUL endroit qui
   lit `OPENROUTER_API_KEY`. Un `ContexteLlm` explicite est passé en paramètre,
   jamais un `AsyncLocalStorage` : un chemin oublié serait un bug de
@@ -121,8 +130,6 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
 
 ## Dette assumée, à traiter avant l'ouverture publique
 
-- `reasoningModelId` est configurable, recommandé par l'assistant, affiché —
-  et **jamais lu au moment de générer**. Le brancher, ou le retirer.
 - Environ 21 boutons textuels sous 40 px sur `/espace/[id]` (décision de
   densité, proposée et non tranchée).
 
@@ -145,6 +152,13 @@ strict (JSON dans un marqueur HTML), et un `bad_marker` rend le salon muet.
 ## Hébergement
 
 Vercel, plan **Pro** — les 300 s de `maxDuration` en dépendent (voir les pièges).
+
+**Deux avis de sécurité restent ouverts**, et ils exigent Next 16 — deux
+majeures d'écart. « DoS via Image Optimizer » ne vise que les applications
+**auto-hébergées** : sur Vercel l'optimiseur est celui de la plateforme, donc
+l'avis ne s'applique pas. **Il s'appliquerait sur Railway** — à traiter AVANT
+cette bascule, pas après. L'autre (postcss, XSS à la sérialisation CSS) arrive
+par Next et ne joue qu'à la construction, sur nos propres feuilles de style.
 
 **Railway est décidé pour plus tard**, et rien ne s'y oppose : l'audit ne
 trouve **aucun couplage à Vercel** — pas de `@vercel/*`, pas de `VERCEL_*`, pas

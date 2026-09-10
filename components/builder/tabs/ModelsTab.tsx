@@ -8,15 +8,32 @@ import type { ModelCapability, OpenRouterModel } from "@/lib/types/builder";
 import { avecModeleConfigure } from "@/lib/openRouterCatalog";
 import styles from "./ModelsTab.module.css";
 
-const CAPABILITY_META: Record<ModelCapability, { title: string; required: boolean }> = {
+const ORDER = ["chat", "image", "tts", "stt"] as const;
+/** Les capacites REELLEMENT proposees. Le catalogue peut en porter d'autres. */
+type CapaciteAffichee = (typeof ORDER)[number];
+
+const CAPABILITY_META: Record<CapaciteAffichee, { title: string; required: boolean }> = {
   chat: { title: "Conversation", required: true },
-  reasoning: { title: "Raisonnement approfondi", required: false },
   image: { title: "Génération d'image (Nanobanana recommandé — bon marché)", required: false },
   tts: { title: "Synthèse vocale (text-to-speech)", required: false },
   stt: { title: "Transcription vocale (speech-to-text)", required: false },
 };
 
-const ORDER: ModelCapability[] = ["chat", "reasoning", "image", "tts", "stt"];
+/*
+ * Plus d'emplacement « Raisonnement approfondi ».
+ *
+ * Il etait affiche, recommande par l'assistant, configurable — et JAMAIS lu
+ * au moment de generer. Le raisonnement est en realite decide par le modele
+ * de conversation lui-meme (voir `supportsReasoningStream`). Un reglage qui
+ * ne regle rien est une promesse non tenue, et l'un des deux termes de la
+ * dette notee dans CLAUDE.md : « le brancher, ou le retirer ».
+ *
+ * Retirer a ete choisi sur MESURE : le modele ne raisonne que sur les
+ * questions qui le meritent (0 s sur un tour simple, 6,6 s sur un tour
+ * complexe). Le reglage aurait donc coute un chantier pour un defaut que
+ * personne n'a.
+ */
+
 
 export function ModelsTab() {
   const { currentDraft, assignModel } = useBuilder();

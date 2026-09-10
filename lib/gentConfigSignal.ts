@@ -26,7 +26,6 @@ export interface GentConfigProposal {
   systemPrompt?: string;
   webSearch?: boolean;
   chatModelId?: string;
-  reasoningModelId?: string;
   connectors?: GentConfigConnector[];
   /**
    * Artefact figé « mini-app » : le champ `mission` est le « prompt figé »
@@ -42,8 +41,8 @@ export interface GentConfigProposal {
 
 export const GENT_CONFIG_PROMPT_INSTRUCTION =
   "Tu peux configurer le gent à la place du créateur, sous réserve de sa validation. Dès que tu proposes un prompt système, un nom, un objectif, un modèle, l'activation de la recherche web ou des connecteurs, termine ta réponse (sur sa propre ligne) par exactement un bloc " +
-  '<!--GENT_CONFIG: {"name":"…","objective":"…","systemPrompt":"…","webSearch":true,"chatModelId":"…","reasoningModelId":"…","connectors":[{"kind":"dataset","name":"…","url":"https://…"}]}--> ' +
-  "en n'incluant QUE les champs que tu proposes de changer (tous optionnels ; chatModelId/reasoningModelId doivent venir du catalogue de modèles ci-dessus ; kind parmi dataset/mcp/api-rest/prim/powens/gmail, URL réelles uniquement — \"prim\" est le connecteur intégré Île-de-France Mobilités (transports IDF temps réel), \"powens\" le connecteur intégré d'agrégation bancaire Powens en MODE SANDBOX et \"gmail\" le connecteur intégré Gmail (OAuth), url facultative pour ces trois-là). " +
+  '<!--GENT_CONFIG: {"name":"…","objective":"…","systemPrompt":"…","webSearch":true,"chatModelId":"…","connectors":[{"kind":"dataset","name":"…","url":"https://…"}]}--> ' +
+  "en n'incluant QUE les champs que tu proposes de changer (tous optionnels ; chatModelId doit venir du catalogue de modèles ci-dessus ; kind parmi dataset/mcp/api-rest/prim/powens/gmail, URL réelles uniquement — \"prim\" est le connecteur intégré Île-de-France Mobilités (transports IDF temps réel), \"powens\" le connecteur intégré d'agrégation bancaire Powens en MODE SANDBOX et \"gmail\" le connecteur intégré Gmail (OAuth), url facultative pour ces trois-là). " +
   "Pour un connecteur \"api-rest\" (n'importe quelle API REST à brancher toi-même, ex. SerpApi Google Flights), n'utilise PAS le champ url : fournis un objet restConfig complet, ainsi : " +
   '{"kind":"api-rest","name":"Nom lisible","restConfig":{"method":"GET","baseUrl":"https://serpapi.com/search","description":"À quoi sert l\'outil et quand l\'appeler","queryParams":[{"name":"engine","value":"google_flights"}],"auth":{"mode":"api-key","placement":"query","fieldName":"api_key","value":"env:SERPAPI_KEY"},"modelParams":[{"name":"departure_id","description":"Code IATA de l\'aéroport de départ","required":true,"example":"CDG"}],"responseHint":"Utilise le tableau best_flights"}}. ' +
   "Règles pour restConfig : method GET ou POST ; baseUrl est une URL réelle sans les paramètres ; queryParams sont les valeurs fixes toujours envoyées ; auth.mode \"api-key\" ou \"none\" et, pour une clé secrète, mets TOUJOURS value \"env:NOM_DE_VARIABLE\" (jamais une vraie clé inventée) ; modelParams sont les paramètres que le gent remplira à chaque appel d'après la conversation. " +
@@ -199,7 +198,6 @@ export function extractGentConfigSignal(raw: string): { text: string; config: Ge
   try {
     const p = JSON.parse(match[1]) as Record<string, unknown>;
     const chatModelId = resolveModelIdForCapability(p.chatModelId, "chat");
-    const reasoningModelId = resolveModelIdForCapability(p.reasoningModelId, "reasoning");
     const connectors = Array.isArray(p.connectors)
       ? p.connectors.map(validateConnector).filter((c): c is GentConfigConnector => c !== null).slice(0, 6)
       : undefined;
@@ -209,7 +207,6 @@ export function extractGentConfigSignal(raw: string): { text: string; config: Ge
       systemPrompt: str(p.systemPrompt, 8000),
       webSearch: typeof p.webSearch === "boolean" ? p.webSearch : undefined,
       chatModelId,
-      reasoningModelId,
       connectors: connectors?.length ? connectors : undefined,
       pinnedArtefact: validatePinnedArtefact(p.pinnedArtefact),
     };

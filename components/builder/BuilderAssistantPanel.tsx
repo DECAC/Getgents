@@ -221,7 +221,6 @@ export function BuilderAssistantPanel() {
               </li>
             )}
             {cfg.chatModelId && <li><b>Modèle conversationnel :</b> {model(cfg.chatModelId)}</li>}
-            {cfg.reasoningModelId && <li><b>Modèle de raisonnement :</b> {model(cfg.reasoningModelId)}</li>}
             {cfg.webSearch !== undefined && (
               <li><b>Recherche web :</b> {cfg.webSearch ? "activée" : "désactivée"}</li>
             )}

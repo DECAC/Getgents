@@ -227,7 +227,6 @@ export interface ConversationMessage {
     systemPrompt?: string;
     webSearch?: boolean;
     chatModelId?: string;
-    reasoningModelId?: string;
     connectors?: {
       kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens" | "gmail";
       name: string;
