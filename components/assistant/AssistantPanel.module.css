@@ -837,3 +837,25 @@
     z-index: auto;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Variante SANS FILETS — coquille de partage.
+ *
+ * L'ecran y est une seule zone de travail : l'en-tete, la conversation et le
+ * volet d'artefact appartiennent au meme plan. Chaque trait de separation y
+ * decoupait ce plan en trois boites empilees, et faisait ressembler une page
+ * a un assemblage. La hierarchie se lit tres bien sans eux — par les
+ * espacements, les tailles de texte et le relief tres bas du volet.
+ *
+ * Reserve a cette variante : dans le studio, le panneau FLOTTE au-dessus d'un
+ * espace de travail dont il doit se distinguer, et son filet a un sens.
+ * ------------------------------------------------------------------------- */
+
+.panelPlat {
+  border-right: none;
+  background: transparent;
+}
+.panelPlat .tabsRow,
+.panelPlat .tabs {
+  border-bottom: none;
+}

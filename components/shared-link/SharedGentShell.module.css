@@ -73,8 +73,12 @@
   align-items: center;
   gap: 14px;
   padding: 18px 28px;
-  border-bottom: 1px solid var(--line);
-  background: var(--card);
+  /* Ni filet ni surface propre sous le titre : l'écran est UNE zone de
+     travail. Le filet en faisait deux pages superposées ; une teinte
+     différente de la page aurait laissé la même coupure, en plus discret.
+     Tout partage donc le fond, et SEUL le volet garde une surface à lui —
+     c'est lui l'objet posé dessus. */
+  background: transparent;
 }
 
 .icon {
@@ -292,7 +296,8 @@
  */
 .bodyWithChat .main {
   margin: 14px 14px 14px 0;
-  border: 1px solid var(--line);
+  /* Plus de filet : SEULE l'ombre detache le volet. Un contour ferme le
+     dessine comme une boite rapportee ; l'ombre suffit a dire « pose ». */
   border-radius: var(--r);
   background: var(--card);
   box-shadow:
@@ -310,7 +315,6 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 18px;
-  border-bottom: 1px solid var(--line);
   background: var(--card);
 }
 

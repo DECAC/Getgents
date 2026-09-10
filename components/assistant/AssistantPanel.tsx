@@ -957,6 +957,9 @@ export function AssistantPanel({
         // style. Sans cette classe, un panneau embarqué sort de l'écran sur
         // téléphone.
         embedded ? styles.panelEmbedded : "",
+        // Même prop que le bandeau : la coquille qui fournit l'en-tête est
+        // aussi celle qui veut un écran d'un seul tenant.
+        sansEntete ? styles.panelPlat : "",
       ]
         .filter(Boolean)
         .join(" ")}
