@@ -23,10 +23,19 @@ describe("bloc frise", () => {
     });
   });
 
-  it("date et intitule sont obligatoires, le reste non", () => {
+  it("SEUL l'intitule est obligatoire", () => {
     const b = bloc([{ date: "2020", label: "Étape" }, { date: "2021" }, { label: "Sans date" }]);
-    expect(b.items).toHaveLength(1);
-    expect(b.items[0].body).toBeUndefined();
+    // « 2021 » sans intitule tombe ; « Sans date » reste.
+    expect(b.items.map((i) => i.label)).toEqual(["Étape", "Sans date"]);
+    expect(b.items[1].date).toBeUndefined();
+  });
+
+  // Regression : la consigne d'exactitude interdit d'inventer une annee. Le
+  // modele obeissait, omettait la date, et la frise entiere disparaissait.
+  it("une frise SANS AUCUNE date reste un bloc valable", () => {
+    const b = bloc([{ label: "Cegedim" }, { label: "Talentsoft" }, { label: "Pegasystems" }]);
+    expect(b.items).toHaveLength(3);
+    expect(b.items.every((i) => i.date === undefined)).toBe(true);
   });
 
   // Arbitrage : un etat absent ou farfelu ne doit pas vider la frise.

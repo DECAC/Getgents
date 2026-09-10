@@ -213,12 +213,15 @@ function TimelineBlock({ block }: { block: Extract<DashboardBlock, { type: "time
   return (
     <div className={styles.card}>
       {block.title && <h4 className={styles.cardTitle}>{block.title}</h4>}
-      <ol className={styles.frise}>
+      <ol className={[styles.frise, block.items.some((i) => i.date) ? "" : styles.friseSansDates].filter(Boolean).join(" ")}>
         {block.items.map((it, i) => {
-          const duree = dureeDeLaPlage(it.date, anneeCourante);
+          const duree = it.date ? dureeDeLaPlage(it.date, anneeCourante) : null;
           return (
             <li key={i} className={[styles.etape, styles[it.state]].filter(Boolean).join(" ")}>
-              <div className={styles.quand}>
+              {/* Etape non datee : la gouttiere disparait plutot que de rester
+                  vide, et le contenu regagne la place. Le rail, lui, ne bouge
+                  pas — c'est lui qui tient l'alignement. */}
+              <div className={[styles.quand, it.date ? "" : styles.sansDate].filter(Boolean).join(" ")}>
                 {it.date}
                 {duree && <span className={styles.duree}>{duree}</span>}
               </div>

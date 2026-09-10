@@ -863,7 +863,19 @@ function toolLoopResponse(
               // arguments malformés — l'outil recevra un objet vide
             }
 
-            sendStatus("tool_running", undefined, humanToolCallLabel(tc.function.name));
+            /**
+             * Outil INVENTÉ : rien ne part à l'écran.
+             *
+             * Le visiteur voyait « Le gent a utilisé une intégration MCP
+             * INVOKE ✕ L'outil `INVOKE` n'existe pas… » — un message écrit
+             * POUR LE MODÈLE, qui n'apprend rien à qui lit et fait douter du
+             * gent. La récupération est interne : elle doit le rester. Le
+             * journal (`event: outil_inconnu`) reste, lui, pour nous.
+             */
+            const inconnu = !entry;
+            if (!inconnu) {
+              sendStatus("tool_running", undefined, humanToolCallLabel(tc.function.name));
+            }
             sendToolEvent({ status: "running", call: tc.function.name, args });
 
             let resultText: string;
@@ -897,6 +909,7 @@ function toolLoopResponse(
             }
 
             if (!ok) toolFailures.set(tc.function.name, (toolFailures.get(tc.function.name) ?? 0) + 1);
+            if (!inconnu)
             sendToolEvent({
               status: "done",
               call: tc.function.name,

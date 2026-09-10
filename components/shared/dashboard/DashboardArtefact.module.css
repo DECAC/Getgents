@@ -450,6 +450,23 @@
   color: var(--blue);
 }
 
+/* Une seule etape non datee : sa gouttiere se vide, le rail reste aligne. */
+.sansDate {
+  padding-right: 0;
+}
+
+/*
+ * AUCUNE etape datee — cas courant d'un parcours dont on ignore les annees,
+ * et que la consigne d'exactitude interdit d'inventer. La gouttiere entiere
+ * disparait ; sans cela, 88 px de vide precedaient chaque intitule.
+ */
+.friseSansDates .etape {
+  grid-template-columns: 22px 1fr;
+}
+.friseSansDates .quand {
+  display: none;
+}
+
 .friseOmises {
   margin: 14px 0 0;
   padding-top: 12px;

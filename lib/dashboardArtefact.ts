@@ -31,7 +31,8 @@ export interface KvItem {
  */
 export type TimelineState = "done" | "current" | "todo" | "milestone";
 export interface TimelineItem {
-  date: string;
+  /** Optionnelle : une étape non datée reste une étape. */
+  date?: string;
   label: string;
   body?: string;
   state: TimelineState;
@@ -89,7 +90,7 @@ export const DASHBOARD_PROMPT_INSTRUCTION =
   '- {"type":"callout","tone":"warning","title":"Point d\'attention","body":"Texte en markdown"} — encadré (tone: info|success|warning|critical|neutral) ;\n' +
   '- {"type":"chart","variant":"bar","title":"...","xKey":"label","series":[{"key":"prix","label":"Prix au m²"}],"data":[{"label":"Bien","prix":4575},{"label":"Marché","prix":3800}]} — variant: bar|line|area|pie|donut|composed ; pour un graphe combiné utilise variant "composed" avec plusieurs series ayant chacune un "type" (bar/line) ;\n' +
   '- {"type":"table","columns":["Poste","Valeur"],"rows":[["...","..."]]} ;\n' +
-  '- {"type":"timeline","title":"Parcours","items":[{"date":"2018 — 2022","label":"Intitulé de l\'étape","body":"Une ou deux phrases.","state":"done","tag":"En poste","metric":"+40 clients"}]} — FRISE chronologique : à utiliser dès qu\'il s\'agit d\'un PARCOURS ordonné dans le temps (carrière, historique de projet, étapes d\'une procédure), là où une table ne montrerait que des lignes. state: done|current|todo|milestone. Les étapes sont rendues DANS L\'ORDRE FOURNI — classe-les toi-même. 12 au maximum ;\n' +
+  '- {"type":"timeline","title":"Parcours","items":[{"date":"2018 — 2022","label":"Intitulé de l\'étape","body":"Une ou deux phrases.","state":"done","tag":"En poste","metric":"+40 clients"}]} — FRISE chronologique : à utiliser dès qu\'il s\'agit d\'un PARCOURS ordonné dans le temps (carrière, historique de projet, étapes d\'une procédure), là où une table ne montrerait que des lignes. state: done|current|todo|milestone. \"date\" est FACULTATIVE : si tu ignores la date d\'une étape, OMETS-LA plutôt que d\'en inventer une — l\'étape reste affichée. Les étapes sont rendues DANS L\'ORDRE FOURNI — classe-les toi-même. 12 au maximum ;\n' +
   '- {"type":"text","body":"Paragraphe en markdown"}.\n' +
   "Combine plusieurs blocs (indicateurs + 2 graphiques côte à côte + tableau + encadrés) pour un rendu abouti. " +
   "Dans un graphe (y compris composé), n'associe QUE des séries d'échelle comparable : deux mesures d'ordres de grandeur très différents (ex. un nombre de ventes ~10 et un prix ~380 000) doivent aller dans DEUX graphiques séparés, jamais sur le même axe. " +
@@ -104,7 +105,7 @@ export const DASHBOARD_BLOCKS_SCHEMA =
   '- {"type":"callout","tone":"warning","title":"Point d\'attention","body":"Texte"} — tone: info|success|warning|critical|neutral ;\n' +
   '- {"type":"chart","variant":"bar","title":"...","xKey":"label","series":[{"key":"prix","label":"Prix au m²"}],"data":[{"label":"Bien","prix":4575},{"label":"Marché","prix":3800}]} ;\n' +
   '- {"type":"table","columns":["Poste","Valeur"],"rows":[["...","..."]]} ;\n' +
-  '- {"type":"timeline","title":"Parcours","items":[{"date":"2018 — 2022","label":"Intitulé de l\'étape","body":"Une ou deux phrases.","state":"done","tag":"En poste","metric":"+40 clients"}]} — FRISE chronologique : à utiliser dès qu\'il s\'agit d\'un PARCOURS ordonné dans le temps (carrière, historique de projet, étapes d\'une procédure), là où une table ne montrerait que des lignes. state: done|current|todo|milestone. Les étapes sont rendues DANS L\'ORDRE FOURNI — classe-les toi-même. 12 au maximum ;\n' +
+  '- {"type":"timeline","title":"Parcours","items":[{"date":"2018 — 2022","label":"Intitulé de l\'étape","body":"Une ou deux phrases.","state":"done","tag":"En poste","metric":"+40 clients"}]} — FRISE chronologique : à utiliser dès qu\'il s\'agit d\'un PARCOURS ordonné dans le temps (carrière, historique de projet, étapes d\'une procédure), là où une table ne montrerait que des lignes. state: done|current|todo|milestone. \"date\" est FACULTATIVE : si tu ignores la date d\'une étape, OMETS-LA plutôt que d\'en inventer une — l\'étape reste affichée. Les étapes sont rendues DANS L\'ORDRE FOURNI — classe-les toi-même. 12 au maximum ;\n' +
   '- {"type":"text","body":"Paragraphe en markdown"}.\n' +
   "Combine au minimum 3 blocs (stats ou heading + text ou kv + chart ou callout). Chaque bloc stats doit avoir label ET value sur chaque item.";
 
@@ -185,11 +186,17 @@ function parseBlock(raw: unknown): DashboardBlock | null {
         ? b.items
             .map((it): TimelineItem | null => {
               const o = it as Record<string, unknown>;
-              const date = str(o?.date, 40);
               const label = str(o?.label, 120);
-              if (!date || !label) return null;
+              // SEUL `label` est obligatoire. Exiger `date` contredisait notre
+              // propre consigne d'exactitude, qui interdit au modèle
+              // d'inventer une année : il obéissait, omettait la date, et
+              // l'étape disparaissait — jusqu'à vider la frise entière, qui
+              // n'était alors même plus rendue. Un parcours comporte
+              // légitimement des étapes non datées ; le rail les porte sans
+              // gouttière de date.
+              if (!label) return null;
               return {
-                date,
+                date: str(o?.date, 40),
                 label,
                 body: str(o.body, 400),
                 state: TIMELINE_STATES.includes(o.state as TimelineState)
