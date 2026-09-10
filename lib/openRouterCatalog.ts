@@ -32,14 +32,36 @@ function prixParMillion(v: unknown): number {
  */
 function capaciteDe(brut: Record<string, unknown>): ModelCapability {
   const archi = (brut.architecture ?? {}) as Record<string, unknown>;
-  const sorties = Array.isArray(archi.output_modalities)
-    ? (archi.output_modalities as unknown[]).map((m) => texte(m))
-    : [];
-  const modalite = texte(archi.modality) || texte(brut.modality);
+  const liste = (v: unknown): string[] =>
+    Array.isArray(v) ? (v as unknown[]).map((m) => texte(m)).filter(Boolean) : [];
 
-  if (sorties.includes("image") || /->\s*image/.test(modalite)) return "image";
-  if (sorties.includes("audio") || /->\s*audio/.test(modalite)) return "tts";
-  if (/audio\s*(\+|->)/.test(modalite) || sorties.includes("transcription")) return "stt";
+  const sorties = liste(archi.output_modalities);
+  const modalite = texte(archi.modality) || texte(brut.modality);
+  // « text+image+audio->text » → entrées « text, image, audio ».
+  const [avant = "", apres = ""] = modalite.split("->");
+  const entrees = liste(archi.input_modalities).length
+    ? liste(archi.input_modalities)
+    : avant.split("+").map((m) => m.trim()).filter(Boolean);
+
+  const sort = (m: string) => sorties.includes(m) || apres.includes(m);
+  const entre = (m: string) => entrees.includes(m);
+
+  // La SORTIE décide d'abord : c'est elle qui dit ce que le modèle produit.
+  if (sort("image")) return "image";
+  if (sort("audio")) return "tts";
+
+  /**
+   * La transcription se reconnaît à ce qu'elle ne sait faire QUE ça : de
+   * l'audio en entrée, et pas de texte. Whisper (« audio->text ») en est.
+   *
+   * Tester la seule PRÉSENCE d'audio en entrée — ce que faisait ce code —
+   * rangeait Gemini 2.5 Flash (« text+image+audio->text ») en transcription
+   * vocale. Introuvable en Conversation, alors qu'il y était éligible :
+   * accepter l'audio est un bonus, pas une spécialité.
+   */
+  if (entre("audio") && !entre("text")) return "stt";
+  if (sorties.includes("transcription")) return "stt";
+
   return "chat";
 }
 
