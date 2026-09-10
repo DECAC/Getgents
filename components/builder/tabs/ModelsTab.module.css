@@ -187,7 +187,9 @@
 .comboOption {
   width: 100%;
   display: flex;
-  align-items: center;
+  /* Le nom peut tenir sur deux lignes : les colonnes s'alignent en haut,
+     sinon le libellé long décalerait la pastille et la description. */
+  align-items: flex-start;
   gap: 8px;
   text-align: left;
   padding: 8px 10px;
@@ -204,12 +206,21 @@
   background: var(--sage-tint);
 }
 
+/*
+ * Le nom du modèle doit se lire ENTIER. Cette colonne était figée à 190 px,
+ * le libellé coupé par une ellipse : avec une clé personnelle, les noms
+ * viennent d'OpenRouter (« Google: Nano Banana Pro Preview ») et dépassaient
+ * tous. Or c'est la seule information qui permette de choisir.
+ *
+ * La colonne respire donc, avec un plancher pour que la description ne la
+ * comprime pas, et le libellé passe à la ligne au lieu d'être tronqué.
+ */
 .comboOptionMain {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 7px;
-  flex: none;
-  width: 190px;
+  gap: 3px 7px;
+  flex: 1 1 240px;
   min-width: 190px;
 }
 
@@ -217,9 +228,10 @@
   font-size: 12.5px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Plus d'ellipse : le nom s'enroule. `anywhere` coupe aussi un
+     identifiant sans espace, qui déborderait sinon de la colonne. */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .comboOptionProvider {
@@ -232,7 +244,8 @@
 }
 
 .comboOptionTagline {
-  flex: 1;
+  /* La description cède la place au nom : elle peut rester tronquée, lui non. */
+  flex: 1 1 160px;
   font-size: 11.5px;
   color: var(--muted);
   line-height: 1.3;

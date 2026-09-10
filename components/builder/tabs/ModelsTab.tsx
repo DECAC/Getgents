@@ -221,6 +221,10 @@ export function ModelsTab() {
                           <button
                             type="button"
                             key={model.id}
+                            // L'IDENTIFIANT est ce qui part réellement chez
+                            // OpenRouter, et il départage deux libellés
+                            // proches. Il ne prend aucune place à l'écran.
+                            title={`${model.label} — ${model.id}`}
                             className={[styles.comboOption, selected ? styles.comboOptionActive : ""]
                               .filter(Boolean)
                               .join(" ")}
