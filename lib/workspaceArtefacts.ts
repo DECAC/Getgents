@@ -1,4 +1,5 @@
 import type { AppBlock, AppModuleSpec, AppPreviewSpec } from "@/lib/appPreview";
+import { libelleOnglet } from "@/lib/libelleOnglet";
 import type { Artefact } from "@/lib/types";
 import { inferArtefactKind } from "@/lib/artefactKind";
 import { hasReportBody, reportSpecFromArtefact, reportSpecToAppBlocks, reportSpecToEmailHtml } from "@/lib/reportArtefact";
@@ -128,7 +129,7 @@ function artefactToStackedBlocks(artefact: Artefact): AppBlock[] {
   return blocks;
 }
 
-function artefactToModule(artefact: Artefact): AppModuleSpec {
+function artefactToModule(artefact: Artefact, themesExistants: readonly string[]): AppModuleSpec {
   const kind = inferArtefactKind(artefact);
   const size =
     kind === "dashboard" || kind === "map" || kind === "profile-summary"
@@ -139,7 +140,7 @@ function artefactToModule(artefact: Artefact): AppModuleSpec {
   return {
     id: keptArtefactModuleId(artefact.id),
     title: artefact.title,
-    theme: artefact.type,
+    theme: themeDeLArtefact(artefact, themesExistants),
     size,
     source: artefact.type,
     blocks: artefactToBlocks(artefact),
@@ -151,8 +152,24 @@ function artefactToModule(artefact: Artefact): AppModuleSpec {
  * devient une tuile, rangée dans un onglet au nom de son type (Rapport,
  * Checklist…). Les onglets studio restent en tête.
  */
+/**
+ * Onglet d'accueil d'un artefact.
+ *
+ * Regle : un onglet que le CREATEUR a lui-meme cree l'emporte. S'il a prevu
+ * « Mon profil », un artefact de ce type l'y rejoint plutot que d'ouvrir un
+ * onglet concurrent au nom voisin.
+ *
+ * Sinon, le CONTEXTE : « Parcours », et non « Tableau de bord ». La categorie
+ * ne dit rien de ce qu'on trouve dans l'onglet, et rangeait deux sujets sans
+ * rapport sous la meme etiquette des qu'ils partageaient une forme.
+ */
+function themeDeLArtefact(artefact: Artefact, themesExistants: readonly string[]): string {
+  if (themesExistants.includes(artefact.type)) return artefact.type;
+  return libelleOnglet(artefact.title, artefact.type);
+}
+
 export function withKeptArtefacts(spec: AppPreviewSpec, artefacts: Artefact[]): AppPreviewSpec {
-  const modules = artefacts.map(artefactToModule);
+  const modules = artefacts.map((a) => artefactToModule(a, spec.themes));
   if (!modules.length) return spec;
   const extraThemes: string[] = [];
   for (const m of modules) {

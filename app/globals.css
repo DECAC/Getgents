@@ -434,3 +434,43 @@ body.col-resizing {
     display: none !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Ascenseurs discrets
+ *
+ * Sous Windows, la barre de defilement par defaut est large et opaque : dans
+ * une carte d'artefact, elle pese autant que le contenu et coupe la lecture.
+ * macOS la masque au repos, ce qui rend le defaut invisible a qui developpe
+ * sur Mac — d'ou un ecart de rendu qu'aucune capture Mac ne revele.
+ *
+ * On la garde VISIBLE (la cacher priverait d'un reperage utile : ou l'on en
+ * est, et qu'il reste a lire) mais fine et sans piste opaque.
+ * ------------------------------------------------------------------------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+/* WebKit : `scrollbar-width` y est recent, ces regles couvrent le reste. */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+  /* La bordure transparente amincit le curseur sans reduire sa zone de
+     saisie : il reste attrapable a la souris. */
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--faint);
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}

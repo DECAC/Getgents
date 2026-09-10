@@ -37,24 +37,33 @@ const PREVIEW: AppPreviewSpec = {
 };
 
 describe("withKeptArtefacts", () => {
+  it("nomme l'onglet par ce qui distingue, quand le titre porte un sujet commun", () => {
+    const a = artef({ id: "a1", title: "Charles de Cassan — Parcours", type: "Tableau de bord" });
+    expect(withKeptArtefacts(PREVIEW, [a]).modules[1].theme).toBe("Parcours");
+  });
+
   it("laisse l'aperçu intact s'il n'y a aucun artefact", () => {
     expect(withKeptArtefacts(PREVIEW, [])).toEqual(PREVIEW);
   });
 
-  it("ajoute une tuile et un onglet au nom du type", () => {
+  it("ajoute une tuile et un onglet au nom du CONTENU, pas du type", () => {
+    // L'onglet s'appelait « Rapport » — la categorie. Elle ne dit rien de ce
+    // qu'on y trouve, et rangeait deux sujets sans rapport ensemble.
     const a = artef({ id: "a1", title: "Note de synthèse", type: "Rapport", body: "<p>Hello</p>" });
     const next = withKeptArtefacts(PREVIEW, [a]);
-    expect(next.themes).toEqual(["Mon profil", "Postes", "Rapport"]);
+    expect(next.themes).toEqual(["Mon profil", "Postes", "Note de synthèse"]);
     expect(next.modules).toHaveLength(2);
     expect(next.modules[1]).toMatchObject({
       id: keptArtefactModuleId("a1"),
       title: "Note de synthèse",
-      theme: "Rapport",
+      theme: "Note de synthèse",
     });
     expect(next.modules[0].id).toBe("mini-cv");
     expect(next.modules[1].blocks.some((b) => b.kind === "text" && "text" in b && b.text.includes("Hello"))).toBe(true);
   });
 
+  // L'onglet du createur l'emporte : il a prevu « Mon profil », l'artefact
+  // l'y rejoint au lieu d'ouvrir un onglet concurrent au nom voisin.
   it("réutilise un onglet studio si le type porte le même nom", () => {
     const a = artef({ id: "a1", title: "CV", type: "Mon profil" });
     const next = withKeptArtefacts(PREVIEW, [a]);
