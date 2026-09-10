@@ -72,18 +72,20 @@ function SharedGentBody({ token }: { token: string }) {
     return () => mq.removeEventListener("change", suivre);
   }, []);
 
-  // Sur téléphone, la conversation s'ouvre D'EMBLÉE.
-  //
-  // Le destinataire d'un lien vient pour parler au gent, pas pour lire un
-  // écran d'accueil. Sur grand écran l'accueil et la conversation cohabitent ;
-  // sur un téléphone ils se disputent la même hauteur, et l'accueil gagnait —
-  // il fallait repérer un bouton « Discuter » pour atteindre ce qu'on était
-  // venu chercher. Une seule fois : rouvrir de force après une fermeture
-  // volontaire empêcherait de revenir à l'accueil.
+  /**
+   * La conversation s'ouvre D'EMBLÉE, quelle que soit la taille de l'écran.
+   *
+   * Elle ne s'ouvrait que sur téléphone : sur grand écran, le visiteur
+   * atterrissait sur « Le gent » — un espace le plus souvent vide, puisque
+   * les artefacts naissent justement des échanges. On arrivait donc chez un
+   * gent par la seule page qui n'a rien à montrer, et il fallait comprendre
+   * qu'un onglet menait à ce qu'on venait chercher.
+   *
+   * Une seule fois, au montage : rouvrir de force après une fermeture
+   * volontaire empêcherait d'aller voir l'espace.
+   */
   useEffect(() => {
     if (miniAppMode) return;
-    if (typeof window === "undefined") return;
-    if (!window.matchMedia("(max-width: 860px)").matches) return;
     openAssistant();
     // Volontairement sans `assistantOpen` en dépendance : cet effet ne doit
     // s'exécuter qu'au montage.
