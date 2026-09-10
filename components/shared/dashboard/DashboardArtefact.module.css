@@ -272,3 +272,205 @@
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------------------------------
+ * Frise chronologique
+ *
+ * Rail VERTICAL — voir le commentaire de TimelineBlock : un bandeau horizontal
+ * se casse sous 400 px, et l'usage visé est majoritairement mobile. Ici, une
+ * seule forme de 320 à 900 px ; sous 560 px la date passe simplement au-dessus
+ * de l'intitulé, sans changer la structure.
+ * ------------------------------------------------------------------------- */
+
+.frise {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.etape {
+  display: grid;
+  grid-template-columns: 88px 22px 1fr;
+  align-items: start;
+  column-gap: 2px;
+}
+
+.quand {
+  font-family: "IBM Plex Mono", monospace;
+  /* Les dates s'alignent en colonne : on lit les INTERVALLES, pas seulement
+     les étiquettes. C'est le propre d'une frise. */
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-align: right;
+  padding-right: 14px;
+  padding-top: 1px;
+  line-height: 1.5;
+}
+.duree {
+  display: block;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.rail {
+  position: relative;
+  align-self: stretch;
+}
+.rail::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--line);
+}
+/* Le trait part du premier nœud et s'arrête au dernier : sans cela il dépasse
+   en haut et en bas, et la frise paraît coupée. */
+.etape:first-child .rail::before {
+  top: 9px;
+}
+.etape:last-child .rail::before {
+  bottom: auto;
+  height: 9px;
+}
+
+.noeud {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: var(--card);
+  border: 2px solid var(--line);
+}
+
+.friseContenu {
+  padding-left: 16px;
+  padding-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.etape:last-child .friseContenu {
+  padding-bottom: 0;
+}
+
+.friseEntete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+.intitule {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.friseCorps {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.puce {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}
+
+.mesure {
+  font-family: "IBM Plex Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--sage-700);
+}
+
+/* États : ils empruntent au SÉMANTIQUE, jamais à l'accent, qui reste
+   l'identité de la marque. */
+.done .noeud {
+  background: var(--success);
+  border-color: var(--success);
+}
+.done .puce {
+  background: var(--success-tint);
+  color: var(--success);
+}
+
+.current .noeud {
+  background: var(--card);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px var(--gold-tint);
+}
+.current .puce {
+  background: var(--gold-tint);
+  color: var(--gold);
+}
+.current .intitule {
+  color: var(--sage-700);
+}
+
+.todo .noeud {
+  background: var(--card);
+  border-color: var(--line);
+  border-style: dashed;
+}
+.todo .puce {
+  background: var(--line-soft);
+  color: var(--faint);
+}
+.todo .intitule,
+.todo .quand {
+  color: var(--muted);
+}
+
+.milestone .noeud {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+.milestone .puce {
+  background: var(--blue-tint);
+  color: var(--blue);
+}
+
+.friseOmises {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 12px;
+  color: var(--faint);
+}
+
+@media (max-width: 560px) {
+  .etape {
+    grid-template-columns: 22px 1fr;
+  }
+  .quand {
+    grid-column: 1 / -1;
+    text-align: left;
+    padding-right: 0;
+    padding-left: 38px;
+    margin-bottom: 2px;
+  }
+  .duree {
+    display: inline;
+    margin-left: 8px;
+  }
+}

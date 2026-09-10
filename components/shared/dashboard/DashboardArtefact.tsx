@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { dureeDeLaPlage } from "@/lib/friseDuree";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -195,6 +196,59 @@ function KvBlock({ block }: { block: Extract<DashboardBlock, { type: "kv" }> }) 
   );
 }
 
+/**
+ * Frise chronologique — rail VERTICAL, jamais un bandeau horizontal.
+ *
+ * Le bandeau est la forme qu'on imagine d'abord, et il se casse sous 400 px :
+ * intitulés chevauchés, ou défilement latéral sur une page qui ne défile
+ * jamais latéralement. L'usage visé est majoritairement mobile. Le rail garde
+ * la MÊME forme de 320 à 900 px — seule la date change de place. Un seul
+ * rendu à écrire, aucune bascule à déboguer.
+ */
+function TimelineBlock({ block }: { block: Extract<DashboardBlock, { type: "timeline" }> }) {
+  // L'année n'est lue qu'ici, au rendu : `dureeDeLaPlage` reste pure et
+  // testable, et ne change pas de résultat au 1er janvier.
+  const anneeCourante = new Date().getFullYear();
+
+  return (
+    <div className={styles.card}>
+      {block.title && <h4 className={styles.cardTitle}>{block.title}</h4>}
+      <ol className={styles.frise}>
+        {block.items.map((it, i) => {
+          const duree = dureeDeLaPlage(it.date, anneeCourante);
+          return (
+            <li key={i} className={[styles.etape, styles[it.state]].filter(Boolean).join(" ")}>
+              <div className={styles.quand}>
+                {it.date}
+                {duree && <span className={styles.duree}>{duree}</span>}
+              </div>
+              <div className={styles.rail} aria-hidden="true">
+                <span className={styles.noeud} />
+              </div>
+              <div className={styles.friseContenu}>
+                <div className={styles.friseEntete}>
+                  <span className={styles.intitule}>{it.label}</span>
+                  {it.tag && <span className={styles.puce}>{it.tag}</span>}
+                  {it.metric && <span className={styles.mesure}>{it.metric}</span>}
+                </div>
+                {it.body && <p className={styles.friseCorps}>{it.body}</p>}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      {/* Un état tronqué sans un mot est le piège déjà payé ici : on le dit. */}
+      {block.omises ? (
+        <p className={styles.friseOmises}>
+          {block.omises} étape{block.omises > 1 ? "s" : ""} supplémentaire
+          {block.omises > 1 ? "s" : ""} non affichée{block.omises > 1 ? "s" : ""} — la frise
+          en montre {block.items.length} au maximum.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function TableBlock({ block }: { block: Extract<DashboardBlock, { type: "table" }> }) {
   return (
     <div className={styles.card}>
@@ -231,6 +285,8 @@ function Block({ block }: { block: DashboardBlock }) {
       return <CalloutBlock block={block} />;
     case "kv":
       return <KvBlock block={block} />;
+    case "timeline":
+      return <TimelineBlock block={block} />;
     case "table":
       return <TableBlock block={block} />;
     case "chart":

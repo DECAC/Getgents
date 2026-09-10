@@ -25,6 +25,20 @@ export interface KvItem {
   label: string;
   value: string;
 }
+/**
+ * Une étape de frise. `state` colore le nœud ; absent, il vaut "done" —
+ * un modèle qui l'oublie produit ainsi une frise correcte, pas une frise vide.
+ */
+export type TimelineState = "done" | "current" | "todo" | "milestone";
+export interface TimelineItem {
+  date: string;
+  label: string;
+  body?: string;
+  state: TimelineState;
+  tag?: string;
+  metric?: string;
+}
+
 export interface ChartSeries {
   key: string;
   label: string;
@@ -38,6 +52,14 @@ export type DashboardBlock =
   | { type: "text"; width?: BlockWidth; body: string }
   | { type: "callout"; width?: BlockWidth; tone: CalloutTone; title?: string; body: string }
   | { type: "kv"; width?: BlockWidth; title?: string; items: KvItem[] }
+  | {
+      type: "timeline";
+      width?: BlockWidth;
+      title?: string;
+      items: TimelineItem[];
+      /** Étapes écartées par le plafond — annoncées, jamais coupées en silence. */
+      omises?: number;
+    }
   | { type: "table"; width?: BlockWidth; title?: string; columns: string[]; rows: string[][] }
   | {
       type: "chart";
@@ -67,6 +89,7 @@ export const DASHBOARD_PROMPT_INSTRUCTION =
   '- {"type":"callout","tone":"warning","title":"Point d\'attention","body":"Texte en markdown"} — encadré (tone: info|success|warning|critical|neutral) ;\n' +
   '- {"type":"chart","variant":"bar","title":"...","xKey":"label","series":[{"key":"prix","label":"Prix au m²"}],"data":[{"label":"Bien","prix":4575},{"label":"Marché","prix":3800}]} — variant: bar|line|area|pie|donut|composed ; pour un graphe combiné utilise variant "composed" avec plusieurs series ayant chacune un "type" (bar/line) ;\n' +
   '- {"type":"table","columns":["Poste","Valeur"],"rows":[["...","..."]]} ;\n' +
+  '- {"type":"timeline","title":"Parcours","items":[{"date":"2018 — 2022","label":"Intitulé de l\'étape","body":"Une ou deux phrases.","state":"done","tag":"En poste","metric":"+40 clients"}]} — FRISE chronologique : à utiliser dès qu\'il s\'agit d\'un PARCOURS ordonné dans le temps (carrière, historique de projet, étapes d\'une procédure), là où une table ne montrerait que des lignes. state: done|current|todo|milestone. Les étapes sont rendues DANS L\'ORDRE FOURNI — classe-les toi-même. 12 au maximum ;\n' +
   '- {"type":"text","body":"Paragraphe en markdown"}.\n' +
   "Combine plusieurs blocs (indicateurs + 2 graphiques côte à côte + tableau + encadrés) pour un rendu abouti. " +
   "Dans un graphe (y compris composé), n'associe QUE des séries d'échelle comparable : deux mesures d'ordres de grandeur très différents (ex. un nombre de ventes ~10 et un prix ~380 000) doivent aller dans DEUX graphiques séparés, jamais sur le même axe. " +
@@ -81,10 +104,19 @@ export const DASHBOARD_BLOCKS_SCHEMA =
   '- {"type":"callout","tone":"warning","title":"Point d\'attention","body":"Texte"} — tone: info|success|warning|critical|neutral ;\n' +
   '- {"type":"chart","variant":"bar","title":"...","xKey":"label","series":[{"key":"prix","label":"Prix au m²"}],"data":[{"label":"Bien","prix":4575},{"label":"Marché","prix":3800}]} ;\n' +
   '- {"type":"table","columns":["Poste","Valeur"],"rows":[["...","..."]]} ;\n' +
+  '- {"type":"timeline","title":"Parcours","items":[{"date":"2018 — 2022","label":"Intitulé de l\'étape","body":"Une ou deux phrases.","state":"done","tag":"En poste","metric":"+40 clients"}]} — FRISE chronologique : à utiliser dès qu\'il s\'agit d\'un PARCOURS ordonné dans le temps (carrière, historique de projet, étapes d\'une procédure), là où une table ne montrerait que des lignes. state: done|current|todo|milestone. Les étapes sont rendues DANS L\'ORDRE FOURNI — classe-les toi-même. 12 au maximum ;\n' +
   '- {"type":"text","body":"Paragraphe en markdown"}.\n' +
   "Combine au minimum 3 blocs (stats ou heading + text ou kv + chart ou callout). Chaque bloc stats doit avoir label ET value sur chaque item.";
 
 const TONES: CalloutTone[] = ["info", "success", "warning", "critical", "neutral"];
+const TIMELINE_STATES: TimelineState[] = ["done", "current", "todo", "milestone"];
+/**
+ * ARBITRAGE VALIDÉ : au-delà, un modèle bavard produit une frise illisible.
+ * Le surplus est ANNONCÉ (`omises`) plutôt que coupé en silence — un état
+ * tronqué sans un mot est le piège que ce projet a déjà payé plusieurs fois.
+ */
+export const TIMELINE_MAX_ITEMS = 12;
+
 const VARIANTS: ChartVariant[] = ["bar", "line", "area", "pie", "donut", "radial", "composed"];
 
 function str(v: unknown, max = 400): string | undefined {
@@ -147,6 +179,34 @@ function parseBlock(raw: unknown): DashboardBlock | null {
             .slice(0, 24)
         : [];
       return items.length ? { type: "kv", width: w, title: str(b.title, 90), items } : null;
+    }
+    case "timeline": {
+      const tous = Array.isArray(b.items)
+        ? b.items
+            .map((it): TimelineItem | null => {
+              const o = it as Record<string, unknown>;
+              const date = str(o?.date, 40);
+              const label = str(o?.label, 120);
+              if (!date || !label) return null;
+              return {
+                date,
+                label,
+                body: str(o.body, 400),
+                state: TIMELINE_STATES.includes(o.state as TimelineState)
+                  ? (o.state as TimelineState)
+                  : "done",
+                tag: str(o.tag, 24),
+                metric: str(o.metric, 32),
+              };
+            })
+            .filter((x): x is TimelineItem => x !== null)
+        : [];
+      if (!tous.length) return null;
+      // ARBITRAGE VALIDÉ : aucun tri. Un parcours se lit parfois du plus
+      // récent au plus ancien ; réordonner trahirait l'intention du créateur.
+      const items = tous.slice(0, TIMELINE_MAX_ITEMS);
+      const omises = tous.length - items.length;
+      return { type: "timeline", width: w, title: str(b.title, 90), items, ...(omises ? { omises } : {}) };
     }
     case "table": {
       const columns = Array.isArray(b.columns)
