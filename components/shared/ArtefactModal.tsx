@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTMLDoc } from "./SafeHTML";
 import { MiniBarChart } from "./MiniBarChart";
@@ -151,6 +151,18 @@ export function ArtefactModal() {
    * l'imprimante — conversation comprise. Elle est retirée après coup, y
    * compris si l'utilisateur annule (`afterprint` se déclenche aussi).
    */
+  /**
+   * « Recharger » RE-REND l'artefact tel qu'il est enregistre. Aucun appel au
+   * modele, donc aucun cout et aucune attente.
+   *
+   * Ce n'est pas une regeneration, et c'est voulu : un contenu different se
+   * demande DANS la conversation, ou l'on peut dire ce qu'on veut de plus.
+   * Ici, on repare un RENDU qui s'est mal passe — un graphique monte a largeur
+   * nulle, une carte qui n'a pas pris, une image en echec. Changer la cle
+   * remonte le sous-arbre, ce qui refait exactement ce travail-la.
+   */
+  const [cleRendu, setCleRendu] = useState(0);
+
   const imprimer = useCallback(() => {
     const corps = document.body;
     corps.classList.add("impressionArtefact");
@@ -245,7 +257,7 @@ export function ArtefactModal() {
         </div>
 
         <div className={styles.body}>
-          <ArtefactCorps artefact={artefact} interactif={!isVerdict} />
+          <ArtefactCorps key={cleRendu} artefact={artefact} interactif={!isVerdict} />
         </div>
 
         {isVerdict && pendingArtefactVerdict ? (
@@ -284,6 +296,14 @@ export function ArtefactModal() {
             */}
             <button type="button" className={styles.btnGhost} onClick={closeModal}>
               Fermer
+            </button>
+            <button
+              type="button"
+              className={styles.btnGhost}
+              onClick={() => setCleRendu((k) => k + 1)}
+              title="Réafficher l'artefact — utile si un graphique ou une carte s'est mal affiché"
+            >
+              Recharger
             </button>
             <button
               type="button"
