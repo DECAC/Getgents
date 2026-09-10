@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EspaceProvider, useEspace } from "@/lib/context/EspaceContext";
 import { WorkspaceCanvas } from "@/components/center/WorkspaceCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
@@ -8,6 +8,7 @@ import { ArtefactModal } from "@/components/shared/ArtefactModal";
 import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
 import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
 import { SignalerIncident } from "@/components/shared/SignalerIncident";
+import { aDesArtefacts, nombreDArtefacts, MESSAGE_ESPACE_VIDE } from "@/lib/espaceArtefacts";
 import type { Espace } from "@/lib/types";
 import styles from "./SharedGentShell.module.css";
 
@@ -71,6 +72,33 @@ function SharedGentBody({ token }: { token: string }) {
   // document (voir DocumentViewerModal) — ne pas la monter deux fois.
   const chatOpen = chatAvailable && assistantOpen && !documentViewerOpen;
 
+  /**
+   * Le volet d'artefact, à droite de la conversation.
+   *
+   * Par défaut FERMÉ : la conversation prend toute la largeur. L'agencement
+   * précédent réservait en permanence une colonne au canevas, qui restait
+   * vide tant que le gent n'avait rien produit — et à moitié vide ensuite,
+   * un seul module ne remplissant pas la moitié d'un écran.
+   *
+   * Il s'ouvre TOUT SEUL quand un artefact arrive : c'est le moment où il a
+   * quelque chose à montrer, et le seul où l'interrompre se justifie.
+   */
+  const [voletOuvert, setVoletOuvert] = useState(false);
+  const compte = nombreDArtefacts(currentEspace);
+  const comptePrecedent = useRef(compte);
+  useEffect(() => {
+    // On compare au compte PRÉCÉDENT, pas à zéro : rouvrir le volet à chaque
+    // rendu d'un espace déjà garni le rendrait impossible à fermer.
+    if (compte > comptePrecedent.current) setVoletOuvert(true);
+    comptePrecedent.current = compte;
+  }, [compte]);
+
+  const espaceGarni = aDesArtefacts(currentEspace);
+  // Deux colonnes seulement si la conversation ET le volet sont là. Sur écran
+  // étroit la feuille de style ramène à une colonne : le volet n'a pas la
+  // place, et « Le gent » reste le chemin vers le canevas.
+  const deuxColonnes = chatOpen && voletOuvert;
+
   return (
     <div className={styles.page}>
       <header className={styles.head}>
@@ -128,7 +156,11 @@ function SharedGentBody({ token }: { token: string }) {
         </div>
       </header>
 
-      <div className={[styles.body, chatOpen ? styles.bodyWithChat : ""].filter(Boolean).join(" ")}>
+      <div
+        className={[styles.body, deuxColonnes ? styles.bodyWithChat : "", chatOpen ? styles.bodyChat : ""]
+          .filter(Boolean)
+          .join(" ")}
+      >
         {/* `starters` : sur téléphone le canevas est masqué, et c'est lui qui
             porte d'ordinaire les questions d'amorce. Sans cela, le
             destinataire d'un lien arrivait sur un fil vide — rien à lire,
@@ -136,16 +168,48 @@ function SharedGentBody({ token }: { token: string }) {
         {/* `embedded` sur écran étroit : la grille lui donne déjà toute la
             place, il ne doit pas se comporter en tiroir superposé. Sur grand
             écran il reste une colonne redimensionnable. */}
-        {chatOpen && <AssistantPanel starters={etroit} embedded={etroit} />}
+        {chatOpen && <AssistantPanel starters={etroit || !voletOuvert} embedded={etroit || !voletOuvert} />}
+        {/* Le canevas n'est monté que s'il a une place : en volet à côté de la
+            conversation, ou en pleine page sous l'onglet « Le gent ». */}
+        {(!chatOpen || voletOuvert) && (
         <main className={styles.main}>
+          {chatOpen && (
+            <div className={styles.voletBarre}>
+              <span className={styles.voletTitre}>Ce que le gent a produit</span>
+              <button
+                type="button"
+                className={styles.voletFermer}
+                onClick={() => setVoletOuvert(false)}
+                // Fermer ne détruit rien : le canevas reste atteignable par
+                // « Le gent ». Le dire évite de faire hésiter le visiteur.
+                title="Fermer — vous le retrouverez dans « Le gent »"
+              >
+                Fermer
+              </button>
+            </div>
+          )}
           <div className={styles.mainInner}>
             {/* Même canvas que l'espace : aperçu d'application (avec déclencheurs
                 d'amorce tant que la conversation n'a pas commencé) ou ancien
                 canevas d'artefacts. Sans lui, un artefact accepté par le
                 destinataire était bien enregistré mais ne s'affichait nulle part. */}
-            <WorkspaceCanvas espace={currentEspace} />
+            {espaceGarni ? (
+              <WorkspaceCanvas espace={currentEspace} />
+            ) : (
+              /* Un espace vide sans un mot est un cul-de-sac : le visiteur
+                 n'a aucune raison d'y revenir. On explique la mécanique. */
+              <div className={styles.vide}>
+                <p className={styles.videTexte}>{MESSAGE_ESPACE_VIDE}</p>
+                {chatAvailable && !assistantOpen && (
+                  <button type="button" className={styles.videAction} onClick={openAssistant}>
+                    Ouvrir la conversation
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </main>
+        )}
       </div>
 
       <DocumentViewerModal />

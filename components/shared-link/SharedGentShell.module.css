@@ -31,12 +31,32 @@
   overflow: hidden;
   transition: grid-template-columns 0.2s;
 }
+/*
+ * Conversation SEULE : elle prend toute la largeur.
+ *
+ * L'agencement precedent reservait en permanence une colonne au canevas. Elle
+ * restait vide tant que le gent n'avait rien produit, et a moitie vide
+ * ensuite — un module unique ne remplit pas la moitie d'un ecran. La
+ * conversation, elle, avait toujours de quoi occuper la place.
+ */
+.bodyChat {
+  grid-template-columns: 1fr;
+}
+
+/*
+ * Conversation + volet d'artefact : moities EGALES.
+ *
+ * Pas `var(--assist)` ici : cette variable dimensionne une colonne laterale
+ * d'appoint dans le studio. Le volet n'est pas un appoint — il porte un
+ * tableau de bord ou un document, qui demandent autant de place que le fil.
+ */
 .bodyWithChat {
-  grid-template-columns: var(--assist, 380px) 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 @media (max-width: 860px) {
-  .bodyWithChat {
+  .bodyWithChat,
+  .bodyChat {
     grid-template-columns: 1fr;
   }
   /* Trop étroit pour deux colonnes : la conversation prend toute la place.
@@ -116,13 +136,17 @@
 .main {
   min-width: 0;
   overflow-y: auto;
-  padding: 24px 28px 48px;
+  /* Rembourrage DEPLACE sur .mainInner : la barre du volet est collante, et
+     un rembourrage porte ici l'aurait decalee du haut, laissant un blanc par
+     lequel le contenu aurait defile. */
+  padding: 0;
 }
 
 .mainInner {
   width: 100%;
   max-width: 1080px;
   margin: 0 auto;
+  padding: 24px 28px 48px;
 }
 
 
@@ -252,4 +276,83 @@
     padding: 8px 13px;
     font-size: 12.5px;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Volet d'artefact et espace vide
+ * ------------------------------------------------------------------------- */
+
+.voletBarre {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+
+.voletTitre {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.voletFermer {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: var(--r-pill);
+  /* 34 px de haut : sous le seuil confortable, mais c'est une commande
+     secondaire et l'en-tete est deja dense. A revoir avec les ~21 autres
+     boutons courts notes dans la dette. */
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.voletFermer:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.vide {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 40px 28px;
+  text-align: center;
+}
+
+.videTexte {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+  text-wrap: balance;
+}
+
+.videAction {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: var(--r-pill);
+  padding: 10px 20px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.videAction:hover {
+  background: var(--sage-tint);
+  border-color: var(--sage);
 }
