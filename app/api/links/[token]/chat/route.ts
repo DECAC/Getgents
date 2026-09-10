@@ -13,7 +13,7 @@ import { consommerPourVisiteur } from "@/lib/server/gentGuard";
 import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 import { notifierUsageInvite } from "@/lib/server/signalements";
 import { langueDeLEnTete } from "@/lib/langue";
-import { mesurerReponse, porteDuContenu, type InstantsReponse } from "@/lib/chatTiming";
+import { mesurerReponse, porteDuContenu, porteUnSigne, type InstantsReponse } from "@/lib/chatTiming";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -129,7 +129,13 @@ export async function POST(req: Request, { params }: Params) {
 
   const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
   const raisonnement = supportsReasoningStream(chatModelId);
-  const instants: InstantsReponse = { debut: debutRequete, enTetes: null, premierJeton: null, fin: null };
+  const instants: InstantsReponse = {
+    debut: debutRequete,
+    enTetes: null,
+    premierSigne: null,
+    premierJeton: null,
+    fin: null,
+  };
 
   const upstream = await chatResponseFor(
     {
@@ -239,8 +245,12 @@ export async function POST(req: Request, { params }: Params) {
       // On ne retient QUE le premier fragment portant du texte. Les
       // événements de statut et les pings de la boucle d'outils partent
       // immédiatement : les horodater mesurerait notre propre ping.
-      if (instants.premierJeton === null && porteDuContenu(decodeur.decode(value, { stream: true }))) {
-        instants.premierJeton = Date.now();
+      if (instants.premierJeton === null) {
+        const texte = decodeur.decode(value, { stream: true });
+        // Le SIGNE d'abord : le raisonnement diffusé s'affiche, donc le
+        // silence s'arrête là, même si la réponse se fait encore attendre.
+        if (instants.premierSigne === null && porteUnSigne(texte)) instants.premierSigne = Date.now();
+        if (porteDuContenu(texte)) instants.premierJeton = Date.now();
       }
       controller.enqueue(value);
     },

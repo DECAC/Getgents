@@ -31,6 +31,11 @@ export interface InstantsReponse {
    * `null` si aucun mot n'est jamais venu.
    */
   premierJeton: number | null;
+  /**
+   * Premier SIGNE de vie — raisonnement compris. C'est la fin du silence
+   * réel ; `premierJeton` reste la fin de l'attente d'une réponse.
+   */
+  premierSigne: number | null;
   /** Fin du flux. */
   fin: number | null;
 }
@@ -53,7 +58,9 @@ export interface MesureReponse extends ContexteReponse {
   event: "reponse_visiteur";
   /** Notre travail avant d'appeler le fournisseur : base, prompt, garde. */
   preparationMs: number | null;
-  /** Le silence perçu par le visiteur. LA valeur à regarder. */
+  /** Le silence REEL : plus rien ne bouge à l'écran jusque-là. */
+  premierSigneMs: number | null;
+  /** Le délai avant la réponse elle-même. L'écart avec le signe = raisonnement. */
   premierJetonMs: number | null;
   /** Durée totale, du début à la fin du flux. */
   totalMs: number | null;
@@ -68,6 +75,7 @@ export function mesurerReponse(i: InstantsReponse, ctx: ContexteReponse): Mesure
     event: "reponse_visiteur",
     ...ctx,
     preparationMs: delta(i.debut, i.enTetes),
+    premierSigneMs: delta(i.debut, i.premierSigne),
     // Mesuré depuis le DÉBUT de la requête, pas depuis l'appel au
     // fournisseur : c'est l'attente réelle du visiteur, notre préparation
     // comprise. La distinguer ensuite se fait avec `preparationMs`.
@@ -91,7 +99,36 @@ export function mesurerReponse(i: InstantsReponse, ctx: ContexteReponse): Mesure
  *
  * Fonction PURE — elle lit un texte, rien d'autre.
  */
+/**
+ * Le fragment porte-t-il un SIGNE DE VIE pour le visiteur ?
+ *
+ * Distinction vitale, revelee par une mesure a 31 secondes sur Sonnet 5 : le
+ * raisonnement est DIFFUSE et AFFICHE (« Raisonnement du modele »). Pendant
+ * ces secondes le visiteur voit quelque chose bouger — ce n'est pas un ecran
+ * muet, et le compter comme tel accuserait le mauvais coupable.
+ *
+ * `premierSigneMs` mesure donc le silence REEL, `premierJetonMs` le delai
+ * avant la reponse proprement dite. L'ecart entre les deux est le cout du
+ * raisonnement, et il se lit d'un coup d'oeil.
+ */
+export function porteUnSigne(fragment: string): boolean {
+  return lireDelta(fragment, (d) => {
+    if (typeof d.content === "string" && d.content.length > 0) return true;
+    const r = d.reasoning;
+    if (typeof r === "string" && r.length > 0) return true;
+    return typeof d.reasoning_content === "string" && d.reasoning_content.length > 0;
+  });
+}
+
 export function porteDuContenu(fragment: string): boolean {
+  return lireDelta(fragment, (d) => typeof d.content === "string" && d.content.length > 0);
+}
+
+/** Parcours commun des fragments SSE. Ne leve jamais. */
+function lireDelta(
+  fragment: string,
+  test: (delta: Record<string, unknown>) => boolean
+): boolean {
   for (const ligne of fragment.split("\n")) {
     const t = ligne.trim();
     if (!t.startsWith("data:")) continue;
@@ -104,11 +141,11 @@ export function porteDuContenu(fragment: string): boolean {
       // Fragment coupé au milieu d'un objet : le suivant le portera.
       continue;
     }
-    const choix = (json as { choices?: { delta?: { content?: unknown } }[] }).choices;
+    const choix = (json as { choices?: { delta?: Record<string, unknown> }[] }).choices;
     if (!Array.isArray(choix)) continue;
     for (const c of choix) {
-      const contenu = c?.delta?.content;
-      if (typeof contenu === "string" && contenu.length > 0) return true;
+      const delta = c?.delta;
+      if (delta && typeof delta === "object" && test(delta)) return true;
     }
   }
   return false;

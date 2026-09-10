@@ -1,4 +1,4 @@
-import { porteDuContenu } from "@/lib/chatTiming";
+import { porteDuContenu, porteUnSigne } from "@/lib/chatTiming";
 
 describe("porteDuContenu", () => {
   const sse = (o: unknown) => `data: ${JSON.stringify(o)}\n\n`;
@@ -39,5 +39,31 @@ describe("porteDuContenu", () => {
   it("trouve le texte quand plusieurs evenements arrivent dans le meme fragment", () => {
     const f = sse({ status_event: { phase: "thinking" } }) + sse({ choices: [{ delta: { content: "Salut" } }] });
     expect(porteDuContenu(f)).toBe(true);
+  });
+});
+
+describe("porteUnSigne — le silence REEL", () => {
+  const sse = (o: unknown) => `data: ${JSON.stringify(o)}\n\n`;
+
+  it("un raisonnement diffuse est un signe de vie", () => {
+    // Il s'affiche (« Raisonnement du modele ») : l'ecran n'est plus muet.
+    expect(porteUnSigne(sse({ choices: [{ delta: { reasoning: "je reflechis" } }] }))).toBe(true);
+    expect(porteUnSigne(sse({ choices: [{ delta: { reasoning_content: "idem" } }] }))).toBe(true);
+  });
+
+  it("mais ce n'est PAS la reponse", () => {
+    expect(porteDuContenu(sse({ choices: [{ delta: { reasoning: "je reflechis" } }] }))).toBe(false);
+  });
+
+  it("le contenu est un signe, evidemment", () => {
+    expect(porteUnSigne(sse({ choices: [{ delta: { content: "Bonjour" } }] }))).toBe(true);
+  });
+
+  it("un statut de plateforme n'en est pas un — il part avant tout appel", () => {
+    expect(porteUnSigne(sse({ status_event: { phase: "preparing" } }))).toBe(false);
+  });
+
+  it("un raisonnement vide ne compte pas", () => {
+    expect(porteUnSigne(sse({ choices: [{ delta: { reasoning: "" } }] }))).toBe(false);
   });
 });
