@@ -73,22 +73,16 @@ function SharedGentBody({ token }: { token: string }) {
   }, []);
 
   /**
-   * La conversation s'ouvre D'EMBLÉE, quelle que soit la taille de l'écran.
+   * La conversation est ouverte DES LE DEPART — voir `assistantOuvertAuDepart`
+   * sur le fournisseur. Un effet de rattrapage ferait sauter la page d'un
+   * onglet a l'autre au chargement.
    *
-   * Elle ne s'ouvrait que sur téléphone : sur grand écran, le visiteur
-   * atterrissait sur « Le gent » — un espace le plus souvent vide, puisque
-   * les artefacts naissent justement des échanges. On arrivait donc chez un
-   * gent par la seule page qui n'a rien à montrer, et il fallait comprendre
-   * qu'un onglet menait à ce qu'on venait chercher.
-   *
-   * Une seule fois, au montage : rouvrir de force après une fermeture
-   * volontaire empêcherait d'aller voir l'espace.
+   * En mode mini-application, le tableau de bord fait foi : la conversation y
+   * est refermee, une fois, sans que le saut se voie puisqu'on n'y arrive pas
+   * pour parler.
    */
   useEffect(() => {
-    if (miniAppMode) return;
-    openAssistant();
-    // Volontairement sans `assistantOpen` en dépendance : cet effet ne doit
-    // s'exécuter qu'au montage.
+    if (miniAppMode) closeAssistant();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [miniAppMode]);
   // Un gent en mode mini-application s'utilise par son tableau de bord : le
@@ -205,7 +199,12 @@ function SharedGentBody({ token }: { token: string }) {
       </header>
 
       <div
-        className={[styles.body, deuxColonnes ? styles.bodyWithChat : "", chatOpen ? styles.bodyChat : ""]
+        className={[
+          styles.body,
+          deuxColonnes ? styles.bodyWithChat : "",
+          deuxColonnes && voletLarge ? styles.bodyVoletLarge : "",
+          chatOpen ? styles.bodyChat : "",
+        ]
           .filter(Boolean)
           .join(" ")}
       >
@@ -323,7 +322,14 @@ function SharedGentBody({ token }: { token: string }) {
 
 export function SharedGentShell({ token, espace }: { token: string; espace: Espace }) {
   return (
-    <EspaceProvider initialId="shared" shareToken={token} initialEspaces={{ shared: espace }}>
+    <EspaceProvider
+      initialId="shared"
+      shareToken={token}
+      initialEspaces={{ shared: espace }}
+      // Dès le premier rendu : sans cela la page s'affiche une image sur
+      // « Le gent » avant de basculer, et le saut se voit.
+      assistantOuvertAuDepart
+    >
       <SharedGentBody token={token} />
     </EspaceProvider>
   );

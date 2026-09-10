@@ -455,7 +455,16 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                 className={[styles.card, isCompact ? styles.cardCompact : ""].filter(Boolean).join(" ")}
                 data-module-id={m.id}
                 style={{
-                  gridColumn: `span ${layout.cols}`,
+                  /*
+                   * SEUL module de l'onglet : il occupe toute la largeur.
+                   *
+                   * Depuis que l'affichage est par theme, un onglet ne porte
+                   * le plus souvent qu'un module — et sa largeur configuree le
+                   * laissait en colonne etroite au milieu d'un panneau vide.
+                   * L'etendue reste respectee des qu'il y a de quoi composer :
+                   * a plusieurs, les tailles relatives redisent quelque chose.
+                   */
+                  gridColumn: list.length === 1 ? "1 / -1" : `span ${layout.cols}`,
                   height: `${layout.height}px`,
                 }}
                 onClick={(e) => {

@@ -263,9 +263,19 @@ export function EspaceProvider({
   initialId,
   shareToken,
   initialEspaces,
+  assistantOuvertAuDepart = false,
 }: {
   children: ReactNode;
   initialId: string;
+  /**
+   * La conversation est-elle ouverte DES LE PREMIER RENDU ?
+   *
+   * L'ouvrir dans un effet apres le montage produisait un saut visible : la
+   * page s'affichait une image sur l'espace du gent, puis basculait sur la
+   * conversation. Une valeur initiale ne saute pas — il n'y a rien a corriger
+   * apres coup.
+   */
+  assistantOuvertAuDepart?: boolean;
   /**
    * Mode « lien de partage » : l'espace est fourni par le serveur (projection
    * publique), le localStorage et la synchro Supabase sont désactivés, et les
@@ -280,7 +290,7 @@ export function EspaceProvider({
   const [loadedFromStorage, setLoadedFromStorage] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>(0);
   const [railCollapsed, setRailCollapsed] = useState(false);
-  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(assistantOuvertAuDepart);
   const [asideCollapsed, setAsideCollapsed] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [modalArtefactId, setModalArtefactId] = useState<string | null>(null);
