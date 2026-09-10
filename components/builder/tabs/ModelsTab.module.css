@@ -112,12 +112,23 @@
   color: var(--faint);
 }
 
+/*
+ * Le panneau epousait la largeur du declencheur (`left: 0; right: 0`), soit
+ * ~385 px a partager entre le nom, le fournisseur et la description. Aucune
+ * negociation de flex ne rend un nom lisible dans cette place : c'est la
+ * largeur qui manque, pas la repartition.
+ *
+ * Il deborde donc vers la DROITE — jamais plus etroit que le declencheur,
+ * jamais plus large que l'ecran.
+ */
 .comboPanel {
   position: absolute;
   z-index: 40;
   top: calc(100% + 6px);
   left: 0;
-  right: 0;
+  right: auto;
+  min-width: 100%;
+  width: max(100%, min(600px, 88vw));
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -220,8 +231,10 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 3px 7px;
-  flex: 1 1 240px;
+  /* Prend ce que le nom demande, jusqu'à la moitié du panneau. */
+  flex: 0 1 auto;
   min-width: 190px;
+  max-width: 60%;
 }
 
 .comboOptionLabel {
@@ -244,8 +257,10 @@
 }
 
 .comboOptionTagline {
-  /* La description cède la place au nom : elle peut rester tronquée, lui non. */
-  flex: 1 1 160px;
+  /* La description cède TOUTE la place au nom : elle peut rester tronquée,
+     lui non. Base à 0 pour qu'elle n'en réclame aucune d'office. */
+  flex: 1 1 0;
+  min-width: 0;
   font-size: 11.5px;
   color: var(--muted);
   line-height: 1.3;
