@@ -113,22 +113,19 @@
 }
 
 /*
- * Le panneau epousait la largeur du declencheur (`left: 0; right: 0`), soit
- * ~385 px a partager entre le nom, le fournisseur et la description. Aucune
- * negociation de flex ne rend un nom lisible dans cette place : c'est la
- * largeur qui manque, pas la repartition.
- *
- * Il deborde donc vers la DROITE — jamais plus etroit que le declencheur,
- * jamais plus large que l'ecran.
+ * NE PAS elargir ce panneau au-dela du declencheur. `BuilderCenter` porte
+ * `overflow: hidden` et un `overflow-y: auto` — qui rend le debordement
+ * HORIZONTAL clippe. Un panneau plus large disparaissait donc a droite des
+ * que le panneau Assistant etait ouvert et retrecissait la colonne : le
+ * correctif marchait sur un gent et pas sur le suivant, sans rien qui le
+ * signale. La lisibilite du nom se gagne dans la MISE EN PAGE, ci-dessous.
  */
 .comboPanel {
   position: absolute;
   z-index: 40;
   top: calc(100% + 6px);
   left: 0;
-  right: auto;
-  min-width: 100%;
-  width: max(100%, min(600px, 88vw));
+  right: 0;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -198,8 +195,10 @@
 .comboOption {
   width: 100%;
   display: flex;
-  /* Le nom peut tenir sur deux lignes : les colonnes s'alignent en haut,
-     sinon le libellé long décalerait la pastille et la description. */
+  /* Deux rangees : le nom (et la pastille) en haut, la description en
+     dessous. Le nom dispose ainsi de TOUTE la largeur du panneau, quelle
+     qu'elle soit — au lieu de la disputer a une description secondaire. */
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 8px;
   text-align: left;
@@ -231,10 +230,8 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 3px 7px;
-  /* Prend ce que le nom demande, jusqu'à la moitié du panneau. */
-  flex: 0 1 auto;
-  min-width: 190px;
-  max-width: 60%;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .comboOptionLabel {
@@ -257,9 +254,11 @@
 }
 
 .comboOptionTagline {
-  /* La description cède TOUTE la place au nom : elle peut rester tronquée,
-     lui non. Base à 0 pour qu'elle n'en réclame aucune d'office. */
-  flex: 1 1 0;
+  /* Rangee du bas, sur toute la largeur. Elle peut rester tronquee, le nom
+     non. `order` la fait passer APRES la pastille de selection, qui reste
+     ainsi alignee avec le nom. */
+  order: 2;
+  flex: 1 1 100%;
   min-width: 0;
   font-size: 11.5px;
   color: var(--muted);
@@ -270,6 +269,7 @@
 }
 
 .comboCheck {
+  order: 1;
   flex: none;
   color: var(--sage);
 }
@@ -287,6 +287,7 @@
     min-width: 0;
   }
   .comboOptionTagline {
-    display: none;
+    /* Elle ne dispute plus la place au nom : inutile de la masquer. */
+    display: block;
   }
 }
