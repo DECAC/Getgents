@@ -400,3 +400,37 @@ body.col-resizing {
     min-height: 44px;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Impression d'un artefact — « Télécharger en PDF »
+ *
+ * On masque par `visibility` et non par `display` : le sous-arbre a imprimer
+ * est PROFONDEMENT imbrique dans la page, et `display: none` sur ses ancetres
+ * l'emporterait avec eux. `visibility` se re-declare, elle, sur les
+ * descendants — c'est ce qui permet d'isoler une branche sans la deplacer.
+ *
+ * Sans cette isolation, c'est la page entiere qui part a l'imprimante,
+ * conversation comprise.
+ * ------------------------------------------------------------------------- */
+@media print {
+  body.impressionArtefact * {
+    visibility: hidden;
+  }
+  body.impressionArtefact [data-impression="artefact"],
+  body.impressionArtefact [data-impression="artefact"] * {
+    visibility: visible;
+  }
+  body.impressionArtefact [data-impression="artefact"] {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    box-shadow: none;
+    border: none;
+  }
+  /* Les commandes n'ont aucun sens sur du papier. */
+  body.impressionArtefact [data-impression="artefact"] button {
+    display: none !important;
+  }
+}

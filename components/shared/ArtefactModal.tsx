@@ -140,6 +140,30 @@ export function ArtefactModal() {
 
   // Fermer sans choisir = Jeter : évite de laisser l'espace pollué ou
   // l'utilisateur coincé avec une popup sans décision.
+  /**
+   * Téléchargement PDF par l'impression du navigateur.
+   *
+   * Aucune dépendance ajoutée, et le résultat est un vrai PDF : la boîte
+   * d'impression propose « Enregistrer au format PDF » sur tous les systèmes.
+   * L'ancien bouton était un `alert("non implémenté")`.
+   *
+   * La classe pose l'isolation : sans elle, c'est la page ENTIÈRE qui part à
+   * l'imprimante — conversation comprise. Elle est retirée après coup, y
+   * compris si l'utilisateur annule (`afterprint` se déclenche aussi).
+   */
+  const imprimer = useCallback(() => {
+    const corps = document.body;
+    corps.classList.add("impressionArtefact");
+    const nettoyer = () => {
+      corps.classList.remove("impressionArtefact");
+      window.removeEventListener("afterprint", nettoyer);
+    };
+    window.addEventListener("afterprint", nettoyer);
+    window.print();
+    // Filet : certains navigateurs n'émettent pas `afterprint`.
+    window.setTimeout(nettoyer, 1000);
+  }, []);
+
   const dismissOrClose = useCallback(() => {
     if (pendingArtefactVerdict) {
       confirmArtefactProposal(pendingArtefactVerdict.proposalMessageId, "dismiss");
@@ -200,7 +224,12 @@ export function ArtefactModal() {
       aria-labelledby="modal-title"
       onClick={(e) => { if (e.target === e.currentTarget) dismissOrClose(); }}
     >
-      <div className={[styles.modal, isDashboard || isReport ? styles.modalWide : ""].filter(Boolean).join(" ")}>
+      <div
+        // Repère pour l'impression : seul ce sous-arbre reste visible quand le
+        // navigateur imprime — voir `@media print` dans globals.css.
+        data-impression="artefact"
+        className={[styles.modal, isDashboard || isReport ? styles.modalWide : ""].filter(Boolean).join(" ")}
+      >
         <div className={styles.head}>
           <ArtefactIcon icon={artefact.icon} className={styles.ti} />
           <div>
@@ -242,17 +271,27 @@ export function ArtefactModal() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z" />
               </svg>
-              Généré par Getgents · gabarit standard
+              Généré par Getgents
             </span>
-            <button className={styles.btnGhost} onClick={() => removeArtefact(artefact.id)}>
-              Retirer de l&apos;espace
+            {/*
+              Trois actions, pas davantage.
+              « Retirer de l'espace » est parti : fermer l'artefact depuis
+              l'espace du gent fait déjà exactement cela, et deux chemins vers
+              une suppression valent une suppression accidentelle.
+              « Mettre à jour » et l'ancien « Exporter en PDF » étaient des
+              `alert("non implémenté")` — un bouton qui ment est pire qu'un
+              bouton absent.
+            */}
+            <button type="button" className={styles.btnGhost} onClick={closeModal}>
+              Fermer
             </button>
-            <ArtefactWorkspaceActions artefact={artefact} showEnlarge={false} labeled />
-            <button className={styles.btnGhost} onClick={() => alert("Export PDF — non implémenté dans ce commit.")}>
-              Exporter en PDF
-            </button>
-            <button className={styles.btnPrim} onClick={() => alert("Mise à jour — non implémentée dans ce commit.")}>
-              Mettre à jour
+            <button
+              type="button"
+              className={styles.btnGhost}
+              onClick={imprimer}
+              title="Ouvre l'impression du navigateur — choisir « Enregistrer au format PDF »"
+            >
+              Télécharger en PDF
             </button>
           </div>
         )}

@@ -29,7 +29,19 @@
      l'a révélé. */
   grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
-  transition: grid-template-columns 0.2s;
+  /*
+   * La progression est ce qui rend la manipulation confortable : sans elle,
+   * les deux blocs sautent d'une largeur a l'autre et l'oeil perd ce qu'il
+   * suivait. La courbe part vite puis freine — le mouvement se lit comme un
+   * glissement, pas comme un basculement.
+   */
+  transition: grid-template-columns 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body {
+    transition: none;
+  }
 }
 /*
  * Conversation SEULE : elle prend toute la largeur.
@@ -52,6 +64,15 @@
  */
 .bodyWithChat {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/*
+ * Volet etendu vers la GAUCHE. La conversation reste ouverte et lisible —
+ * elle ne se replie pas, elle cede du terrain. En dessous de ~340 px un fil
+ * de discussion devient illisible : d'ou 30 %, et pas davantage.
+ */
+.bodyVoletLarge {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
 }
 
 @media (max-width: 860px) {

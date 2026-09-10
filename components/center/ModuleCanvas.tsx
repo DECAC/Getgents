@@ -175,7 +175,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
   // Toujours possible : sans modèle assigné, on retombe sur Nanobanana (défaut).
   const canGenerateImages = true;
 
-  const [viewMode, setViewMode] = useState<"modules" | "themes">("modules");
+
   const [activeViewTabId, setActiveViewTabId] = useState<string | null>(null);
   const [order, setOrder] = useState<string[]>([]);
   const [conf, setConf] = useState<Record<string, ModuleLayout>>({});
@@ -386,17 +386,6 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     resizeState.current = null;
   }
 
-  function collapseAllToList(list: ModuleDef[]) {
-    setConf((prev) => {
-      setSavedConf(prev);
-      const next = { ...prev };
-      list.forEach((m) => {
-        next[m.id] = { cols: GRID_COLUMNS, height: COMPACT_HEIGHT };
-      });
-      return next;
-    });
-  }
-
   function restoreSizes() {
     setConf(savedConf ?? {});
     setSavedConf(null);
@@ -430,12 +419,18 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     null;
   const activeViewTab = viewTabs.find((v) => v.id === resolvedActiveTabId) ?? null;
 
-  const visibleList =
-    viewMode === "modules"
-      ? modules
-      : activeViewTab
-        ? activeViewTab.moduleIds.map((id) => modules.find((m) => m.id === id)).filter((m): m is ModuleDef => !!m)
-        : [];
+  /**
+   * Toujours l'onglet thematique actif.
+   *
+   * La bascule « Vue modules / Vue par theme » demandait au visiteur de
+   * choisir entre deux presentations du meme contenu — un arbitrage qui
+   * n'appartient pas a celui qui vient lire, et qu'il refaisait a chaque
+   * visite. Les onglets thematiques suffisent a naviguer, et il n'existe plus
+   * de chemin vers l'autre mode.
+   */
+  const visibleList = activeViewTab
+    ? activeViewTab.moduleIds.map((id) => modules.find((m) => m.id === id)).filter((m): m is ModuleDef => !!m)
+    : [];
 
   const orderedVisible = orderList(visibleList);
   const allList = orderedVisible.length > 0 && orderedVisible.every((m) => getLayout(m.id).height <= COMPACT_HEIGHT);
@@ -565,30 +560,6 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     <div className={styles.wrap}>
       {pinned && <PinnedArtefactPanel pinned={pinned} />}
       <div className={styles.toolbar}>
-        <div className={styles.viewSwitch} role="tablist" aria-label="Style d'affichage">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={viewMode === "modules"}
-            className={[styles.viewSwitchBtn, viewMode === "modules" ? styles.viewSwitchBtnOn : ""]
-              .filter(Boolean)
-              .join(" ")}
-            onClick={() => setViewMode("modules")}
-          >
-            Vue modules
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={viewMode === "themes"}
-            className={[styles.viewSwitchBtn, viewMode === "themes" ? styles.viewSwitchBtnOn : ""]
-              .filter(Boolean)
-              .join(" ")}
-            onClick={() => setViewMode("themes")}
-          >
-            Vue par thème
-          </button>
-        </div>
         <span className={styles.toolbarCount}>
           {orderedVisible.length} module{orderedVisible.length > 1 ? "s" : ""}
         </span>
@@ -603,24 +574,11 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
               Rétablir
             </button>
           )}
-          <button
-            type="button"
-            className={[styles.toolbarBtn, styles.toolbarBtnPrimary, allList ? styles.toolbarBtnDisabled : ""]
-              .filter(Boolean)
-              .join(" ")}
-            onClick={() => collapseAllToList(orderedVisible)}
-            disabled={allList}
-            title="Afficher tous les modules en vue liste compacte"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-            </svg>
-            Tout réduire
-          </button>
+
         </div>
       </div>
 
-      {viewMode === "themes" && (
+      {(
         <div className={styles.viewTabs} role="tablist" aria-label="Onglets thématiques">
           {viewTabs.map((vt) => (
             <div

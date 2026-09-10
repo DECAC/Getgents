@@ -111,6 +111,15 @@ function SharedGentBody({ token }: { token: string }) {
    */
   const [voletOuvert, setVoletOuvert] = useState(false);
 
+  /**
+   * Le volet peut s'etendre VERS LA GAUCHE, en gardant la conversation
+   * ouverte. Deux largeurs seulement — moities egales, ou volet large — parce
+   * qu'une poignee de redimensionnement demande de la precision a la souris
+   * pour un reglage qu'on ne fait qu'une fois. Un clic suffit, et l'on revient
+   * d'un clic.
+   */
+  const [voletLarge, setVoletLarge] = useState(false);
+
   // Un artefact qui attend une décision ouvre le volet : c'est exactement le
   // moment où il a quelque chose à montrer.
   useEffect(() => {
@@ -252,6 +261,17 @@ function SharedGentBody({ token }: { token: string }) {
                     </button>
                   </>
                 ) : (
+                  <>
+                    <button
+                      type="button"
+                      className={styles.voletIcone}
+                      onClick={() => setVoletLarge((v) => !v)}
+                      title={voletLarge ? "Réduire l'espace du gent" : "Étendre l'espace du gent"}
+                      aria-label={voletLarge ? "Réduire l'espace du gent" : "Étendre l'espace du gent"}
+                      aria-pressed={voletLarge}
+                    >
+                      {voletLarge ? "⇥" : "⇤"}
+                    </button>
                   <button
                     type="button"
                     className={styles.voletFermer}
@@ -262,6 +282,7 @@ function SharedGentBody({ token }: { token: string }) {
                   >
                     Fermer
                   </button>
+                  </>
                 )}
               </div>
             </div>

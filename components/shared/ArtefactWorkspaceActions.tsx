@@ -3,8 +3,6 @@
 import { useState } from "react";
 import type { Artefact } from "@/lib/types";
 import { useEspace } from "@/lib/context/EspaceContext";
-import { ARTEFACT_KIND_META, inferArtefactKind, type WorkspaceArtefactKind } from "@/lib/artefactKind";
-import { convertibleKinds } from "@/lib/artefactConversion";
 import { ShareArtefactDialog } from "./ShareArtefactDialog";
 import styles from "./ArtefactWorkspaceActions.module.css";
 
@@ -18,13 +16,16 @@ export function ArtefactWorkspaceActions({
   /** Boutons avec libellé (modale / tuile aperçu) plutôt que seules icônes. */
   labeled?: boolean;
 }) {
-  const { openArtefactModal, changeArtefactKind } = useEspace();
+  /**
+   * Plus de changement de TYPE.
+   *
+   * Le selecteur demandait au lecteur de decider si un contenu etait un
+   * « tableau de bord » ou un « resume de profil ». Ce n'est ni sa question ni
+   * sa competence : le gent a produit une forme, elle vaut telle quelle. Le
+   * proposer invitait a rendre illisible ce qui marchait.
+   */
+  const { openArtefactModal } = useEspace();
   const [shareOpen, setShareOpen] = useState(false);
-  const kind = inferArtefactKind(artefact);
-  // Seuls les types réellement atteignables depuis ce contenu : proposer
-  // « Carte » à un rapport sans coordonnées ne pouvait mener qu'à un
-  // changement d'étiquette sans effet.
-  const kinds = Array.from(new Set([kind, ...convertibleKinds(artefact)]));
 
   return (
     <>
@@ -41,21 +42,6 @@ export function ArtefactWorkspaceActions({
             {labeled ? "Agrandir" : null}
           </button>
         ) : null}
-        <label className={styles.typeWrap} title="Modifier le type d'artefact">
-          {labeled ? <span className={styles.typeLabel}>Type</span> : null}
-          <select
-            className={styles.select}
-            value={kind}
-            aria-label="Modifier le type d'artefact"
-            onChange={(e) => changeArtefactKind(artefact.id, e.target.value as WorkspaceArtefactKind)}
-          >
-            {kinds.map((k) => (
-              <option key={k} value={k}>
-                {ARTEFACT_KIND_META[k].type}
-              </option>
-            ))}
-          </select>
-        </label>
         <button
           type="button"
           className={labeled ? styles.btn : styles.iconBtn}
