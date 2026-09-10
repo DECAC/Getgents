@@ -93,6 +93,22 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
 
 ## Pièges déjà payés
 
+- **Le plan Vercel n'est pas un détail de facturation, c'est une contrainte de
+  code.** Un passage Pro → Hobby a bloqué les déploiements une heure, sans
+  erreur lisible : Hobby plafonne les fonctions à **60 s** alors que **11
+  routes déclarent `maxDuration = 300`**, et n'autorise qu'un cron **quotidien**
+  là où `vercel.json` en demande un horaire. Symptôme trompeur : le dépôt est à
+  jour, le build passe en local, et l'ancien bundle continue d'être servi — on
+  débogue alors du code déjà corrigé. **Vérifier l'état du déploiement AVANT de
+  conclure qu'un correctif ne marche pas.** Le tell le moins cher : un attribut
+  ajouté dans le même commit (ici un `title`) absent du HTML rendu.
+- **Les modèles OpenRouter préfixés `~` sont des ALIAS de redirection**
+  (`~z-ai/glm-flash-latest`, `~deepseek/deepseek-v4-flash-latest` — 13 entrées,
+  `tokenizer: "Router"`, « always redirects to the latest model »). Mesuré :
+  ~24 s avant le premier jeton, **identiques sur deux moteurs sans rapport**,
+  sans outil ni recherche — la signature d'une couche partagée, pas du modèle.
+  Préférer l'identifiant concret (`deepseek/deepseek-v4-flash`).
+
 - **Un verrou sans expiration est une panne en attente.** `orchestrating` est
   resté bloqué à `true` après une fonction tuée par un déploiement, rendant un
   salon muet définitivement. Expiration à 3 minutes depuis la migration 015.
@@ -125,6 +141,21 @@ au prix du référencement multilingue, qui est un vrai renoncement à assumer.
 L'orchestrateur du salon n'a PAS reçu la consigne : son format de sortie est
 strict (JSON dans un marqueur HTML), et un `bad_marker` rend le salon muet.
 À traiter séparément, journaux sous les yeux.
+
+## Hébergement
+
+Vercel, plan **Pro** — les 300 s de `maxDuration` en dépendent (voir les pièges).
+
+**Railway est décidé pour plus tard**, et rien ne s'y oppose : l'audit ne
+trouve **aucun couplage à Vercel** — pas de `@vercel/*`, pas de `VERCEL_*`, pas
+d'API propriétaire. C'est un Next.js standard (`next build && next start`).
+Motif : l'application passe son temps à ATTENDRE un modèle (24 s d'attente pour
+0,1 s de calcul) ; un process Node permanent n'a pas de `maxDuration`, quand une
+plateforme à fonctions facture et plafonne cette attente. À prévoir alors : les
+variables (dont `SECRET_BOX_KEY`), le cron de `vercel.json` vers
+`/api/routines/run`, et le DNS. Ce qu'on perd — préversions par branche et CDN
+mondial — n'est pas utilisé ici : la boucle de test passe par la production, et
+le réseau pèse 100 ms face à 24 s de modèle.
 
 ## Le dépôt GitHub
 
