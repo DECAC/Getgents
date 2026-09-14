@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/server/supabase";
+import { getSupabaseAdmin, missingSupabaseEnvVars } from "@/lib/server/supabase";
 import { diffusedEspace } from "@/lib/server/gentVersions";
 import { espaceForPublicLink } from "@/lib/espaceApiPayload";
 import type { Espace } from "@/lib/types";
@@ -25,9 +25,39 @@ export interface GentPublic {
   publieLe: string | null;
 }
 
+/**
+ * Trace d'une lecture qui n'a rien rendu.
+ *
+ * Les quatre causes d'un 404 produisaient le MEME ecran, sans distinction :
+ * configuration serveur absente, slug inconnu, gent non public, ligne sans
+ * contenu — et, la plus traitre, une ERREUR d'acces Supabase, qu'un
+ * `if (error || !data)` confondait avec « rien trouve ». Une cle de service
+ * revoquee donnait donc exactement le meme resultat qu'une adresse qui
+ * n'existe pas, et rien ne permettait de les separer depuis l'exterieur.
+ *
+ * Le slug est ecrit — il est dans l'URL publique, il n'a rien de secret. Le
+ * message d'erreur du fournisseur aussi : il nomme la cause reelle.
+ */
+function tracerAbsence(slug: string, raison: string, detail?: string) {
+  console.warn(
+    JSON.stringify({
+      tag: "getgents:public",
+      event: "gent_introuvable",
+      slug,
+      raison,
+      ...(detail ? { detail: detail.slice(0, 200) } : {}),
+    })
+  );
+}
+
 export async function lireGentPublic(slug: string): Promise<GentPublic | null> {
   const supabase = getSupabaseAdmin();
-  if (!supabase) return null;
+  if (!supabase) {
+    // Ce cas fait tomber TOUS les gents publics a la fois, pas un seul :
+    // nommer les variables absentes evite de chercher du cote des donnees.
+    tracerAbsence(slug, "supabase_non_configure", missingSupabaseEnvVars().join(", "));
+    return null;
+  }
 
   const { data, error } = await supabase
     .from("published_gents")
@@ -35,12 +65,24 @@ export async function lireGentPublic(slug: string): Promise<GentPublic | null> {
     .eq("public_slug", slug)
     .eq("visibility", "public")
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    // La distinction qui manquait : une cle revoquee, un schema change ou un
+    // reseau coupe ne sont PAS « aucun resultat ».
+    tracerAbsence(slug, "erreur_supabase", error.message);
+    return null;
+  }
+  if (!data) {
+    tracerAbsence(slug, "aucune_ligne_publique");
+    return null;
+  }
 
   // Version DIFFUSÉE, jamais la version de travail : le visiteur ne doit pas
   // tomber sur un prompt à moitié réécrit parce que le créateur teste.
   const diffuse = diffusedEspace(data as { espace: Espace; diffused?: Espace | null });
-  if (!diffuse) return null;
+  if (!diffuse) {
+    tracerAbsence(slug, "ligne_sans_contenu");
+    return null;
+  }
 
   return {
     id: data.id as string,
