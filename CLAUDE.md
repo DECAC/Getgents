@@ -118,6 +118,18 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   sans outil ni recherche — la signature d'une couche partagée, pas du modèle.
   Préférer l'identifiant concret (`deepseek/deepseek-v4-flash`).
 
+- **Un gent public en 404 avec des données intactes = `SUPABASE_SERVICE_ROLE_KEY`
+  absente ou périmée sur Vercel.** Vécu : la ligne `published_gents` était
+  correcte (slug, `visibility = public`, versions renseignées) et la page
+  tombait quand même. `lireGentPublic` confondait une ERREUR d'accès avec
+  « rien trouvé » — même 404, aucune trace. Depuis, `event: gent_introuvable`
+  nomme la cause (`supabase_non_configure` / `erreur_supabase` /
+  `aucune_ligne_publique` / `ligne_sans_contenu`) : **lire ce journal AVANT
+  d'interroger la base.** Deux rappels qui vont avec : la clé de service a été
+  renouvelée après la faille d'exfiltration du prototype — la régénérer côté
+  Supabase sans la reporter sur Vercel reproduit exactement ce symptôme ; et
+  `NEXT_PUBLIC_SUPABASE_URL` est figée À LA CONSTRUCTION, donc toute correction
+  exige un REDÉPLOIEMENT, pas un redémarrage.
 - **Un verrou sans expiration est une panne en attente.** `orchestrating` est
   resté bloqué à `true` après une fonction tuée par un déploiement, rendant un
   salon muet définitivement. Expiration à 3 minutes depuis la migration 015.
