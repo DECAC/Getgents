@@ -8,40 +8,78 @@ import type {
   ConversationThread,
   ConversationMessage,
   Artefact,
+  ArtefactProposal,
   ThemeTab,
   ThemeTabProposalAction,
+  PendingArtefactVerdict,
   PinnedRun,
   UserFile,
+  DocumentViewerSpec,
 } from "@/lib/types";
-import { sessionContextNote } from "@/lib/sessionContext";
 import { ESPACES as INITIAL_ESPACES } from "@/lib/mock-data/espaces";
 import {
   formatConversationStartedAt,
   getActiveConversation,
   newConversationId,
 } from "@/lib/conversationUtils";
-import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
-import { extractArtefactSignal, ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
-import { extractThemeTabSignal, describeModulesForPrompt, THEME_TAB_PROMPT_INSTRUCTION } from "@/lib/themeTabSignal";
-import { extractGeolocRequest, GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
-import { extractProfileSignal, profileContextNote, PROFILE_PROMPT_INSTRUCTION } from "@/lib/profileSignal";
+import { extractQuestions, extractFollowups } from "@/lib/suggestions";
+import { extractArtefactSignal } from "@/lib/artefactSignal";
+import { ARTEFACT_KIND_META, type WorkspaceArtefactKind } from "@/lib/artefactKind";
+import { convertArtefactToKind } from "@/lib/artefactConversion";
+import {
+  extractThemeTabSignal,
+  themeActionWithArtefact,
+  upsertArtefactThemeTab,
+} from "@/lib/themeTabSignal";
+import { extractGeolocRequest } from "@/lib/geolocSignal";
+import { extractProfileSignal } from "@/lib/profileSignal";
+import { extractImageSignal, IMAGES_THEME_LABEL, type ImageProposal } from "@/lib/imageSignal";
+import { resolveImageModelId } from "@/lib/imageModels";
+import { materializeProfileMedia } from "@/lib/profileSummaryArtefact";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import {
   espaceForPinnedRefresh,
+  espaceForStarters,
   formatApiNetworkError,
 } from "@/lib/espaceApiPayload";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
+import { supportsReasoningStream } from "@/lib/openRouterReasoning";
 import { buildJumpFormPrompt } from "@/lib/jumpFormSignal";
+import { buildGentSystemPrompt } from "@/lib/gentRuntimePrompt";
 
-const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
-  report: { type: "Rapport", icon: "📄" },
-  checklist: { type: "Checklist", icon: "✅" },
-  chart: { type: "Graphique", icon: "📊" },
-  visual: { type: "Aperçu visuel", icon: "🖼️" },
-  map: { type: "Carte", icon: "🗺️" },
-  dashboard: { type: "Tableau de bord", icon: "📈" },
-};
+function artefactFromProposal(sig: ArtefactProposal, id: string): Artefact {
+  const meta = ARTEFACT_KIND_META[sig.kind] ?? { type: "Artefact", icon: "📄" };
+  const profileSummary = sig.profileSummary
+    ? { ...sig.profileSummary, media: materializeProfileMedia(sig.profileSummary.media) }
+    : undefined;
+  return {
+    id,
+    title: sig.title,
+    type: meta.type,
+    icon: meta.icon,
+    kind: sig.kind,
+    date: "à l'instant",
+    body: sig.body ? renderMarkdown(sig.body) : undefined,
+    chartData: sig.chartData,
+    checklistItems: sig.items?.map((label) => ({ label, checked: false })),
+    mapPoints: sig.mapPoints,
+    dashboard: sig.dashboard,
+    profileSummary,
+  };
+}
+
+/** Ajoute le module à la rubrique « Images » (créée si besoin). */
+function upsertImagesThemeTab(themeTabs: ThemeTab[], moduleId: string): ThemeTab[] {
+  const existing = themeTabs.find((t) => t.label === IMAGES_THEME_LABEL);
+  if (existing) {
+    if (existing.moduleIds.includes(moduleId)) return themeTabs;
+    return themeTabs.map((t) =>
+      t.id === existing.id ? { ...t, moduleIds: [...t.moduleIds, moduleId] } : t
+    );
+  }
+  return [...themeTabs, { id: `theme-images-${Date.now()}`, label: IMAGES_THEME_LABEL, moduleIds: [moduleId] }];
+}
 
 /** Applique une action de thème (create/rename/delete) — un module n'appartient qu'à un seul onglet thématique à la fois. */
 function applyThemeTabAction(themeTabs: ThemeTab[], action: ThemeTabProposalAction): ThemeTab[] {
@@ -108,6 +146,27 @@ interface EspaceContextValue {
   selectedDay: number | null;
   modalArtefactId: string | null;
   modalResvId: string | null;
+  /**
+   * Artefact tout juste généré, affiché en popup avant d'être ajouté à
+   * l'espace — null tant qu'aucun verdict (Garder / Jeter) n'est en attente.
+   */
+  pendingArtefactVerdict: PendingArtefactVerdict | null;
+  /**
+   * Une coquille dote-t-elle l'ecran d'un VOLET capable d'accueillir un
+   * artefact en attente de verdict ? Si oui, la fenetre plein ecran ne
+   * s'ouvre pas pour lui — c'est le volet qui l'affiche et porte la decision.
+   * Faux par defaut : un ecran sans volet garde l'ancien chemin.
+   */
+  verdictEnVolet: boolean;
+  declarerVoletVerdict: (present: boolean) => void;
+  /**
+   * Emplacement PROPRE à la visionneuse, distinct de `modalArtefactId` : les
+   * deux doivent pouvoir coexister. Un artefact ouvert depuis la conversation
+   * pendant la lecture se superpose à la visionneuse au lieu de la remplacer —
+   * le lecteur ne perd jamais sa page.
+   */
+  viewerArtefactId: string | null;
+  documentViewerOpen: boolean;
   currentEspace: Espace;
   activeConversation: ConversationThread;
 
@@ -121,10 +180,22 @@ interface EspaceContextValue {
   openArtefactModal: (id: string) => void;
   openResvModal: (id: string) => void;
   closeModal: () => void;
+  /** Ferme la visionneuse sans toucher à un éventuel artefact ouvert par-dessus. */
+  closeDocumentViewer: () => void;
   updateMemory: (text: string) => void;
   sendMessage: (text: string) => void;
   /** Envoie une demande composée à partir d'un formulaire jump (voir jumpFormSignal). */
   submitJumpForm: (values: Record<string, string>) => void;
+  /** Déploie la conversation et envoie la question d'amorce cliquée. */
+  runStarter: (question: string) => void;
+  /** Génère les déclencheurs si l'espace est encore vierge (appel unique). */
+  ensureStarters: () => void;
+  /**
+   * Vrai une fois l'hydratation terminée (cache local + synchronisation
+   * serveur). Toute écriture d'espace faite avant serait écrasée par la
+   * synchronisation qui se termine ensuite.
+   */
+  storageReady: boolean;
   isThinking: boolean;
   /** Libellé de la phase en cours (réflexion, outil, rédaction…). */
   thinkingStatus: string | null;
@@ -137,6 +208,8 @@ interface EspaceContextValue {
   /** Réponse de l'utilisateur à une demande de position émise par le gent dans le fil. */
   confirmGeoRequest: (messageId: string, decision: "share" | "deny") => void;
   removeArtefact: (artefactId: string) => void;
+  /** Change le type d'un artefact gardé et le range dans l'onglet thématique correspondant. */
+  changeArtefactKind: (artefactId: string, kind: WorkspaceArtefactKind) => void;
   /** Ouvre l'artefact pointé par un message ; s'il a été retiré de l'espace entre-temps, le recrée depuis la proposition d'origine (toujours conservée dans le message) avant de l'ouvrir. */
   viewArtefact: (messageId: string) => void;
   /** Artefact figé « mini-app » : rafraîchit ses données côté serveur. */
@@ -152,6 +225,13 @@ interface EspaceContextValue {
   pinnedError: string | null;
   confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss") => void;
   confirmThemeProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
+  /**
+   * Autorise ou refuse une illustration proposée (génération IA ou photo web).
+   * La génération / l'ajout à la rubrique Images n'ont lieu qu'après « generate ».
+   */
+  confirmImageProposal: (messageId: string, decision: "generate" | "dismiss") => void;
+  /** Autorise la génération d'un média en attente dans un résumé de profil. */
+  generateProfileSummaryMedia: (artefactId: string, mediaId: string) => void;
   /** Valide ou ignore le profil utilisateur proposé par le gent. */
   confirmProfileProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
   toggleChecklistItem: (artefactId: string, itemIndex: number) => void;
@@ -172,6 +252,8 @@ interface EspaceContextValue {
   /** Ajoute un document à la session (texte déjà extrait côté navigateur). */
   addFile: (file: UserFile) => void;
   removeFile: (fileId: string) => void;
+  /** Ouvre un document en visionneuse pleine page (sommaire + pagination). */
+  addDocumentArtefact: (spec: DocumentViewerSpec) => void;
 }
 
 const EspaceContext = createContext<EspaceContextValue | null>(null);
@@ -181,9 +263,19 @@ export function EspaceProvider({
   initialId,
   shareToken,
   initialEspaces,
+  assistantOuvertAuDepart = false,
 }: {
   children: ReactNode;
   initialId: string;
+  /**
+   * La conversation est-elle ouverte DES LE PREMIER RENDU ?
+   *
+   * L'ouvrir dans un effet apres le montage produisait un saut visible : la
+   * page s'affichait une image sur l'espace du gent, puis basculait sur la
+   * conversation. Une valeur initiale ne saute pas — il n'y a rien a corriger
+   * apres coup.
+   */
+  assistantOuvertAuDepart?: boolean;
   /**
    * Mode « lien de partage » : l'espace est fourni par le serveur (projection
    * publique), le localStorage et la synchro Supabase sont désactivés, et les
@@ -198,11 +290,15 @@ export function EspaceProvider({
   const [loadedFromStorage, setLoadedFromStorage] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>(0);
   const [railCollapsed, setRailCollapsed] = useState(false);
-  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(assistantOuvertAuDepart);
   const [asideCollapsed, setAsideCollapsed] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [modalArtefactId, setModalArtefactId] = useState<string | null>(null);
   const [modalResvId, setModalResvId] = useState<string | null>(null);
+  const [pendingArtefactVerdict, setPendingArtefactVerdict] = useState<PendingArtefactVerdict | null>(null);
+  const [verdictEnVolet, setVerdictEnVolet] = useState(false);
+  const declarerVoletVerdict = useCallback((present: boolean) => setVerdictEnVolet(present), []);
+  const [viewerArtefactId, setViewerArtefactId] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
   const [storageReady, setStorageReady] = useState(false);
@@ -218,6 +314,9 @@ export function EspaceProvider({
   // déclenché depuis un callback navigateur, ex. géolocalisation) : les
   // updaters setEspaces ne sont pas garantis d'être exécutés immédiatement.
   const espacesRef = useRef(espaces);
+  // Un seul appel de génération des déclencheurs par gent et par session, même
+  // si l'espace se remonte plusieurs fois (changement d'onglet, re-render).
+  const startersRequestedRef = useRef<Set<string>>(new Set());
   espacesRef.current = espaces;
   const streamAbortRef = useRef<AbortController | null>(null);
 
@@ -263,7 +362,7 @@ export function EspaceProvider({
     syncPublishedGentsFromRemote()
       .then((merged) => {
         if (cancelled) return;
-        if (merged && Object.keys(merged).length) {
+        if (merged && merged !== "unauthorized" && Object.keys(merged).length) {
           setEspaces((prev) => ({ ...prev, ...merged }));
         }
       })
@@ -327,16 +426,65 @@ export function EspaceProvider({
     setAssistantOpen(false);
   }, []);
 
+  /**
+   * Génère les déclencheurs à la première ouverture d'un espace encore vierge,
+   * puis les persiste : c'est un appel unique par gent, pas à chaque visite.
+   * Silencieux en cas d'échec — l'espace retombe sur son état vide d'origine.
+   */
+  const ensureStarters = useCallback(async () => {
+    const id = currentIdRef.current;
+    const espace = espacesRef.current[id];
+    if (!espace || espace.pinnedArtefact?.enabled) return;
+    if (espace.starters?.length) return;
+    if (startersRequestedRef.current.has(id)) return;
+    startersRequestedRef.current.add(id);
+
+    try {
+      // Par le lien : le serveur relit la version diffusée et met le résultat
+      // en cache dessus, donc un seul appel au modèle par gent quel que soit
+      // le nombre de visiteurs. Le créateur, lui, envoie sa configuration
+      // courante — elle n'est pas encore en base tant qu'il n'a pas diffusé.
+      const res = shareToken
+        ? await fetch(`/api/links/${encodeURIComponent(shareToken)}/starters`, { method: "POST" })
+        : await fetch("/api/starters", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ espace: espaceForStarters(espace) }),
+          });
+      if (!res.ok) return;
+      const data = (await res.json()) as { starters?: string[] };
+      if (!data.starters?.length) return;
+      setEspaces((prev) => {
+        const e = prev[id];
+        if (!e) return prev;
+        return { ...prev, [id]: { ...e, starters: data.starters, startersGeneratedAt: new Date().toISOString() } };
+      });
+    } catch {
+      // Réseau indisponible : pas de déclencheurs, l'espace reste utilisable.
+    }
+  }, [shareToken]);
+
   const toggleAsideCollapsed = useCallback(() => setAsideCollapsed((v) => !v), []);
 
   const selectDay = useCallback((day: number | null) => {
     setSelectedDay((prev) => (prev === day ? null : day));
   }, []);
 
+  // Un artefact « document » va dans l'emplacement visionneuse, les autres
+  // dans la carte modale classique : c'est ce qui permet d'ouvrir un rapport
+  // généré en cours de lecture SANS fermer le document qu'on est en train de
+  // lire (l'artefact se superpose, la visionneuse reste dessous).
   const openArtefactModal = useCallback((id: string) => {
+    const espace = espacesRef.current[currentIdRef.current];
+    if (espace?.artefacts.find((a) => a.id === id)?.document) {
+      setViewerArtefactId(id);
+      return;
+    }
     setModalArtefactId(id);
     setModalResvId(null);
   }, []);
+
+  const closeDocumentViewer = useCallback(() => setViewerArtefactId(null), []);
 
   const openResvModal = useCallback((id: string) => {
     setModalResvId(id);
@@ -347,6 +495,19 @@ export function EspaceProvider({
     setModalArtefactId(null);
     setModalResvId(null);
   }, []);
+
+  // Type « visionneuse » : l'espace s'ouvre directement sur le document fixé
+  // par le créateur, une fois par visite — pas un chat vide qu'il faudrait
+  // penser à quitter pour lire, ni un choix entre les deux.
+  const visionneuseAutoOpenedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!currentEspace?.visionneuse?.enabled) return;
+    if (visionneuseAutoOpenedRef.current.has(currentId)) return;
+    const hasDoc = currentEspace.artefacts.some((a) => a.id === "visionneuse-doc");
+    if (!hasDoc) return;
+    visionneuseAutoOpenedRef.current.add(currentId);
+    setViewerArtefactId("visionneuse-doc");
+  }, [currentEspace, currentId]);
 
   const updateMemory = useCallback((text: string) => {
     setEspaces((prev) => {
@@ -371,6 +532,58 @@ export function EspaceProvider({
     });
   }, [currentId]);
 
+  /**
+   * Ouvre un document en visionneuse pleine page. Contrairement aux autres
+   * artefacts, celui-ci n'est jamais proposé par le modèle (son contenu peut
+   * atteindre des centaines de milliers de caractères, hors de portée d'un
+   * bloc de signal) : le créateur — ou l'utilisateur — le dépose directement
+   * depuis le composer, et l'artefact est créé côté client, immédiatement.
+   *
+   * Le texte rejoint aussi `files` (borné par sessionContextNote) pour que
+   * l'assistant puisse en discuter et proposer d'autres artefacts à l'appui
+   * de la lecture — mêmes règles que n'importe quel document joint.
+   */
+  const addDocumentArtefact = useCallback(
+    (spec: DocumentViewerSpec) => {
+      const id = currentIdRef.current;
+      const artefactId = `doc-${Date.now()}`;
+      const fileId = `file-${Date.now()}`;
+      setEspaces((prev) => {
+        const e = prev[id];
+        const artefact = {
+          id: artefactId,
+          title: spec.sourceName,
+          type: "Visionneuse de document",
+          icon: "📖",
+          date: nowTime(),
+          document: spec,
+        };
+        const file = {
+          id: fileId,
+          name: spec.sourceName,
+          size: `${spec.pageCount} page${spec.pageCount > 1 ? "s" : ""}`,
+          date: "Visionneuse",
+          text: spec.pages.join("\n\n"),
+          truncated: spec.truncated,
+        };
+        return {
+          ...prev,
+          [id]: {
+            ...e,
+            artefacts: [...e.artefacts, artefact],
+            files: [file, ...e.files.filter((f) => f.id !== fileId)],
+          },
+        };
+      });
+      // Emplacement visionneuse visé DIRECTEMENT : passer par
+      // openArtefactModal relirait espacesRef, qui ne contient pas encore
+      // l'artefact tout juste créé (la mise à jour d'état n'a pas eu lieu) —
+      // le document s'ouvrait alors dans la carte modale générique, vide.
+      setViewerArtefactId(artefactId);
+    },
+    []
+  );
+
   const sendMessage = useCallback((text: string) => {
     if (streamAbortRef.current) return; // une génération est déjà en cours
     const id = currentIdRef.current;
@@ -387,6 +600,7 @@ export function EspaceProvider({
     const datasets = espace.datasets;
     const prim = espace.prim;
     const powens = espace.powens;
+    const gmail = espace.gmail;
     const restApis = espace.restApis;
     const webSearch = espace.webSearch;
     const thread = espace.conversations.find((t) => t.id === threadId);
@@ -397,43 +611,23 @@ export function EspaceProvider({
         content: (m.text ?? "").replace(/<[^>]+>/g, ""),
       }));
 
-    const basePrompt =
-      espace.systemPrompt?.trim() || `Tu es l'assistant IA de Getgents pour l'espace "${espace.name}".`;
-    // Mémoire + documents téléversés : même contexte que celui fourni à
-    // l'artefact figé, pour que les deux modes voient la même chose.
-    const memoryNote = sessionContextNote(espace);
-    // Le modèle n'a pas d'horloge : sans cette note, il invente l'heure
-    // courante (ex. « dans 2 min (14:35) » alors qu'il est 11h01).
-    const timeNote = `\n\nDate et heure actuelles : ${new Date().toLocaleString("fr-FR", {
-      timeZone: "Europe/Paris",
-      dateStyle: "full",
-      timeStyle: "short",
-    })} (heure de Paris). Utilise exclusivement cette horloge pour toute heure, durée d'attente ou délai que tu annonces.`;
-    // Garde-fou anti-hallucination : sans source réelle, interdiction de
-    // présenter des données comme du temps réel.
-    const hasRealSource =
-      !!espace.datasets?.length ||
-      !!espace.mcpServers?.length ||
-      !!espace.webSearch ||
-      !!espace.prim ||
-      !!espace.powens ||
-      !!espace.restApis?.length;
-    const honestyNote = hasRealSource
-      ? ""
-      : "\n\nIMPORTANT : tu n'as accès à AUCUNE source de données temps réel (aucun connecteur actif, recherche web désactivée). Ne présente jamais d'horaires, de prix, de disponibilités ou de passages comme des données réelles ou « en temps réel » — tu ne peux pas les connaître. Dis-le clairement à l'utilisateur, donne au mieux des indications générales explicitement marquées comme non vérifiées, et suggère au créateur du gent de connecter une source de données réelle.";
-    const positionNote = position
-      ? `\n\nPosition de l'utilisateur (partagée avec son consentement) : latitude ${position.lat}, longitude ${position.lon}.`
-      : "";
-    const geolocNote = espace.prim ? `\n\n${GEOLOC_PROMPT_INSTRUCTION}` : "";
-    const profileNote = espace.profile ? `\n\n${profileContextNote(espace.profile)}` : "";
-    const systemPrompt =
-      `${basePrompt}${timeNote}${honestyNote}${memoryNote}${positionNote}${geolocNote}${profileNote}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}\n\n${ARTEFACT_PROMPT_INSTRUCTION}` +
-      `\n\n${THEME_TAB_PROMPT_INSTRUCTION}\n\n${describeModulesForPrompt(espace)}\n\n${PROFILE_PROMPT_INSTRUCTION}`;
+    // Assemblage partagé avec le chemin « lien de partage » : un même gent
+    // doit se comporter à l'identique en Preview et chez un destinataire.
+    const systemPrompt = buildGentSystemPrompt(espace, { variant: "espace", position });
     const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
 
     setEspaces((prev) => {
       const e = prev[id];
-      const conversations = e.conversations.map((t) =>
+      // Le fil actif peut ne pas exister encore : la projection publique d'un
+      // lien de partage ne transmet aucune conversation (celles du créateur ne
+      // regardent pas le destinataire) et n'annonce qu'un identifiant. Sans
+      // cette création, tous les `map` sur conversations étaient des no-op :
+      // ni la question ni la réponse n'étaient jamais stockées, et l'échange
+      // restait muet.
+      const base = e.conversations.some((t) => t.id === threadId)
+        ? e.conversations
+        : [...e.conversations, { id: threadId, startedAt: formatConversationStartedAt(), messages: [] }];
+      const conversations = base.map((t) =>
         t.id === threadId ? { ...t, messages: [...t.messages, userMsg, agentPlaceholder] } : t
       );
       return { ...prev, [id]: { ...e, conversations } };
@@ -487,11 +681,13 @@ export function EspaceProvider({
         model: chatModelId,
         messages: [{ role: "system", content: systemPrompt }, ...history],
         max_tokens: CHAT_MAX_TOKENS.espace,
-        reasoning: { enabled: true },
+        ...(supportsReasoningStream(chatModelId) ? { reasoning: { enabled: true } } : {}),
         mcpServers,
         datasets,
         prim,
         powens,
+        gmail,
+        gentId: id,
         restApis,
         webSearch,
       },
@@ -511,7 +707,9 @@ export function EspaceProvider({
             ? "PRIM"
             : call.startsWith("powens_")
               ? "Powens"
-              : call.startsWith("dataset_")
+              : call.startsWith("gmail_")
+                ? "Gmail"
+                : call.startsWith("dataset_")
                 ? "Dataset"
                 : call.startsWith("rest_")
                   ? "API REST"
@@ -528,15 +726,18 @@ export function EspaceProvider({
     )
       .then(({ text: fullRaw, reasoning, truncated }) => {
         const afterQuestions = extractQuestions(fullRaw);
-        const afterArtefact = extractArtefactSignal(afterQuestions.text);
+        const afterFollowups = extractFollowups(afterQuestions.text);
+        const afterArtefact = extractArtefactSignal(afterFollowups.text);
         const afterTheme = extractThemeTabSignal(afterArtefact.text);
         const afterGeo = extractGeolocRequest(afterTheme.text);
         const afterProfile = extractProfileSignal(afterGeo.text);
+        const afterImage = extractImageSignal(afterProfile.text);
         const finalHtml =
-          renderMarkdown(afterProfile.text) +
+          renderMarkdown(afterImage.text) +
           (truncated
             ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — écrivez « continue » pour obtenir la suite, ou demandez une version plus courte.</em></p>'
             : "");
+        const followups = afterFollowups.followups;
 
         // Profil proposé par le gent (onboarding, CV joint) : carte de
         // validation dans le fil — jamais appliqué sans accord explicite.
@@ -591,6 +792,9 @@ export function EspaceProvider({
         if (afterArtefact.artefact) {
           const sig = afterArtefact.artefact;
           const proposalId = `prop-${Date.now()}`;
+          const attachedTheme = afterTheme.themeAction ?? undefined;
+          // Prévisualisation seulement : l'artefact n'entre dans l'espace qu'au Garder.
+          const preview = artefactFromProposal(sig, `pending-${proposalId}`);
           setEspaces((p) => {
             const e = p[id];
             const convs = e.conversations.map((t) => {
@@ -602,6 +806,7 @@ export function EspaceProvider({
                   ...msgs[lastIdx],
                   text: finalHtml,
                   questions: afterQuestions.questions,
+                  followups,
                   reasoning: reasoning || undefined,
                 };
               msgs.push({
@@ -609,12 +814,17 @@ export function EspaceProvider({
                 role: "artef-proposal" as const,
                 proposal: sig,
                 proposalStatus: "pending" as const,
+                themeProposal: attachedTheme,
+                themeProposalStatus: attachedTheme ? ("pending" as const) : undefined,
                 t: nowTime(),
               });
               return { ...t, messages: msgs };
             });
             return { ...p, [id]: { ...e, conversations: convs } };
           });
+          setModalArtefactId(null);
+          setModalResvId(null);
+          setPendingArtefactVerdict({ proposalMessageId: proposalId, preview });
         } else if (afterTheme.themeAction) {
           const action = afterTheme.themeAction;
           const proposalId = `theme-prop-${Date.now()}`;
@@ -629,6 +839,7 @@ export function EspaceProvider({
                   ...msgs[lastIdx],
                   text: finalHtml,
                   questions: afterQuestions.questions,
+                  followups,
                   reasoning: reasoning || undefined,
                 };
               msgs.push({
@@ -647,11 +858,44 @@ export function EspaceProvider({
             ...m,
             text: finalHtml,
             questions: afterQuestions.questions,
+            followups,
             reasoning: reasoning || undefined,
           }));
         }
+        // Illustration proposée : carte d'autorisation dans le fil — jamais
+        // de génération ni d'affichage sans accord explicite (coût modèle).
+        function pushImageProposalIfAny() {
+          const proposal = afterImage.image;
+          if (!proposal) return;
+          // Les propositions generate restent affichées même sans modèle
+          // assigné : à l'autorisation on retombe sur Nanobanana (défaut).
+          const imgMsgId = `img-${Date.now()}`;
+          setEspaces((p) => {
+            const e = p[id];
+            const convs = e.conversations.map((t) =>
+              t.id === threadId
+                ? {
+                    ...t,
+                    messages: [
+                      ...t.messages,
+                      {
+                        id: imgMsgId,
+                        role: "image-proposal" as const,
+                        imageProposal: proposal,
+                        imageProposalStatus: "pending" as const,
+                        t: nowTime(),
+                      },
+                    ],
+                  }
+                : t
+            );
+            return { ...p, [id]: { ...e, conversations: convs } };
+          });
+        }
+
         pushGeoRequestIfAny();
         pushProfileProposalIfAny();
+        pushImageProposalIfAny();
       })
       .catch((err: Error) => {
         if (err?.name === "AbortError") {
@@ -675,6 +919,18 @@ export function EspaceProvider({
         setThinkingStatus(null);
       });
   }, [shareToken]);
+
+  /**
+   * Clic sur un déclencheur : la conversation se déploie et la question part
+   * aussitôt — l'utilisateur voit le gent répondre sans avoir eu à rédiger.
+   */
+  const runStarter = useCallback(
+    (question: string) => {
+      openAssistant();
+      sendMessage(question);
+    },
+    [openAssistant, sendMessage]
+  );
 
   // Compose une demande à partir d'un formulaire jump puis l'envoie au gent.
   const submitJumpForm = useCallback(
@@ -775,21 +1031,8 @@ export function EspaceProvider({
 
       // L'artefact a été retiré de l'espace entre-temps : la proposition
       // d'origine reste dans le message, on la recrée à l'identique.
-      const sig = targetMsg.proposal;
-      const meta = ARTEFACT_KIND_META[sig.kind] ?? { type: "Artefact", icon: "📄" };
       const newArtefactId = `artef-${Date.now()}`;
-      const newArtefact: Artefact = {
-        id: newArtefactId,
-        title: sig.title,
-        type: meta.type,
-        icon: meta.icon,
-        date: "à l'instant",
-        body: sig.body ? renderMarkdown(sig.body) : undefined,
-        chartData: sig.chartData,
-        checklistItems: sig.items?.map((label) => ({ label, checked: false })),
-        mapPoints: sig.mapPoints,
-        dashboard: sig.dashboard,
-      };
+      const newArtefact = artefactFromProposal(targetMsg.proposal, newArtefactId);
 
       setEspaces((prev) => {
         const cur = prev[id];
@@ -918,8 +1161,217 @@ export function EspaceProvider({
     }
   }, [shareToken]);
 
+  /**
+   * Ajoute une illustration autorisée à l'espace (artefact + rubrique Images)
+   * et met à jour le message de proposition.
+   */
+  function commitImageArtefact(
+    messageId: string,
+    proposal: ImageProposal,
+    imageUrl: string,
+    source: "generated" | "web"
+  ) {
+    const id = currentIdRef.current;
+    const artefactId = `artef-${Date.now()}`;
+    const moduleId = `artef-${artefactId}`;
+    const meta = ARTEFACT_KIND_META.image;
+    const newArtefact: Artefact = {
+      id: artefactId,
+      title: proposal.title,
+      type: meta.type,
+      icon: meta.icon,
+      date: "à l'instant",
+      imageUrl,
+      kind: "image",
+      imageCaption: proposal.caption,
+      imageSource: source,
+      body: proposal.caption ? `<p>${proposal.caption.replace(/</g, "&lt;")}</p>` : undefined,
+    };
+
+    setEspaces((prev) => {
+      const espace = prev[id];
+      const conversations = espace.conversations.map((t) => ({
+        ...t,
+        messages: t.messages.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                imageProposalStatus: "added" as const,
+                imageUrl,
+                imageStatus: "done" as const,
+                ref: artefactId,
+              }
+            : m
+        ),
+      }));
+      return {
+        ...prev,
+        [id]: {
+          ...espace,
+          artefacts: [newArtefact, ...espace.artefacts],
+          themeTabs: upsertImagesThemeTab(espace.themeTabs ?? [], moduleId),
+          conversations,
+        },
+      };
+    });
+  }
+
+  const confirmImageProposal = useCallback((messageId: string, decision: "generate" | "dismiss") => {
+    const id = currentIdRef.current;
+    const espace = espacesRef.current[id];
+    if (!espace) return;
+    let proposal: ImageProposal | undefined;
+    for (const t of espace.conversations) {
+      const found = t.messages.find((m) => m.id === messageId);
+      if (found?.imageProposal) {
+        proposal = found.imageProposal;
+        break;
+      }
+    }
+    if (!proposal) return;
+
+    if (decision === "dismiss") {
+      setEspaces((prev) => {
+        const e = prev[id];
+        return {
+          ...prev,
+          [id]: {
+            ...e,
+            conversations: e.conversations.map((t) => ({
+              ...t,
+              messages: t.messages.map((m) =>
+                m.id === messageId ? { ...m, imageProposalStatus: "dismissed" as const } : m
+              ),
+            })),
+          },
+        };
+      });
+      return;
+    }
+
+    // Photo web : pas d'appel modèle, affichage immédiat après autorisation.
+    if (proposal.kind === "web" && proposal.url) {
+      commitImageArtefact(messageId, proposal, proposal.url, "web");
+      return;
+    }
+
+    if (proposal.kind !== "generate" || !proposal.prompt) {
+      setEspaces((prev) => {
+        const e = prev[id];
+        return {
+          ...prev,
+          [id]: {
+            ...e,
+            conversations: e.conversations.map((t) => ({
+              ...t,
+              messages: t.messages.map((m) =>
+                m.id === messageId
+                  ? {
+                      ...m,
+                      imageProposalStatus: "error" as const,
+                      text: "Proposition d'image invalide (prompt manquant).",
+                    }
+                  : m
+              ),
+            })),
+          },
+        };
+      });
+      return;
+    }
+
+    // Résout l'ancien slug nanobanana et retombe sur le modèle bon marché
+    // si le gent n'a pas de modèle image assigné.
+    const modelId = resolveImageModelId(espace.imageModelId);
+
+    setEspaces((prev) => {
+      const e = prev[id];
+      return {
+        ...prev,
+        [id]: {
+          ...e,
+          conversations: e.conversations.map((t) => ({
+            ...t,
+            messages: t.messages.map((m) =>
+              m.id === messageId
+                ? {
+                    ...m,
+                    imageProposalStatus: "generating" as const,
+                    imageStatus: "pending" as const,
+                    text: undefined,
+                  }
+                : m
+            ),
+          })),
+        },
+      };
+    });
+
+    const prompt = proposal.prompt;
+    fetch("/api/image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, modelId }),
+    })
+      .then(async (r) => {
+        const data = (await r.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
+        if (data.imageUrl) {
+          commitImageArtefact(messageId, proposal!, data.imageUrl, "generated");
+          return;
+        }
+        const detail = data.error || `erreur HTTP ${r.status}`;
+        setEspaces((prev) => {
+          const e = prev[id];
+          return {
+            ...prev,
+            [id]: {
+              ...e,
+              conversations: e.conversations.map((t) => ({
+                ...t,
+                messages: t.messages.map((m) =>
+                  m.id === messageId
+                    ? {
+                        ...m,
+                        imageProposalStatus: "error" as const,
+                        imageStatus: "error" as const,
+                        text: detail,
+                      }
+                    : m
+                ),
+              })),
+            },
+          };
+        });
+      })
+      .catch((err: Error) => {
+        setEspaces((prev) => {
+          const e = prev[id];
+          return {
+            ...prev,
+            [id]: {
+              ...e,
+              conversations: e.conversations.map((t) => ({
+                ...t,
+                messages: t.messages.map((m) =>
+                  m.id === messageId
+                    ? {
+                        ...m,
+                        imageProposalStatus: "error" as const,
+                        imageStatus: "error" as const,
+                        text: err.message || "erreur réseau",
+                      }
+                    : m
+                ),
+              })),
+            },
+          };
+        });
+      });
+  }, []);
+
   const confirmArtefactProposal = useCallback((proposalId: string, decision: "add" | "dismiss") => {
     const id = currentIdRef.current;
+    let keptDocumentId: string | undefined;
     setEspaces((prev) => {
       const espace = prev[id];
       let targetMsg: ConversationMessage | undefined;
@@ -933,26 +1385,28 @@ export function EspaceProvider({
         }
       }
       if (!targetMsg?.proposal) return prev;
+      if (targetMsg.proposalStatus && targetMsg.proposalStatus !== "pending") return prev;
 
       let artefacts = espace.artefacts;
+      let themeTabs = espace.themeTabs ?? [];
       let newArtefactId: string | undefined;
       if (decision === "add") {
-        const sig = targetMsg.proposal;
-        const meta = ARTEFACT_KIND_META[sig.kind] ?? { type: "Artefact", icon: "📄" };
         newArtefactId = `artef-${Date.now()}`;
-        const newArtefact: Artefact = {
-          id: newArtefactId,
-          title: sig.title,
-          type: meta.type,
-          icon: meta.icon,
-          date: "à l'instant",
-          body: sig.body ? renderMarkdown(sig.body) : undefined,
-          chartData: sig.chartData,
-          checklistItems: sig.items?.map((label) => ({ label, checked: false })),
-          mapPoints: sig.mapPoints,
-          dashboard: sig.dashboard,
-        };
+        const newArtefact = artefactFromProposal(targetMsg.proposal, newArtefactId);
         artefacts = [newArtefact, ...espace.artefacts];
+        if (newArtefact.document) keptDocumentId = newArtefact.id;
+        // Rangé tout seul dans un onglet de son type (Rapport, Checklist…).
+        // Si le même tour proposait aussi un THEME_TAB, on l'applique ici
+        // (sans carte de confirmation) et on y greffe le nouvel artefact.
+        if (targetMsg.themeProposal) {
+          const action = themeActionWithArtefact(targetMsg.themeProposal, newArtefactId);
+          themeTabs = applyThemeTabAction(themeTabs, action);
+          if (action.action !== "create") {
+            themeTabs = upsertArtefactThemeTab(themeTabs, newArtefact);
+          }
+        } else {
+          themeTabs = upsertArtefactThemeTab(themeTabs, newArtefact);
+        }
       }
 
       const conversations = espace.conversations.map((t) =>
@@ -964,6 +1418,11 @@ export function EspaceProvider({
                   ? {
                       ...m,
                       proposalStatus: decision === "add" ? ("added" as const) : ("dismissed" as const),
+                      themeProposalStatus: m.themeProposal
+                        ? decision === "add"
+                          ? ("applied" as const)
+                          : ("dismissed" as const)
+                        : m.themeProposalStatus,
                       ref: newArtefactId,
                     }
                   : m
@@ -972,8 +1431,116 @@ export function EspaceProvider({
           : t
       );
 
-      return { ...prev, [id]: { ...espace, artefacts, conversations } };
+      return { ...prev, [id]: { ...espace, artefacts, themeTabs, conversations } };
     });
+    setPendingArtefactVerdict((p) => (p?.proposalMessageId === proposalId ? null : p));
+    if (keptDocumentId) setViewerArtefactId(keptDocumentId);
+  }, []);
+
+  const changeArtefactKind = useCallback((artefactId: string, kind: WorkspaceArtefactKind) => {
+    const id = currentIdRef.current;
+    setEspaces((prev) => {
+      const espace = prev[id];
+      if (!espace) return prev;
+      const current = espace.artefacts.find((a) => a.id === artefactId);
+      if (!current) return prev;
+      const updated = convertArtefactToKind(current, kind);
+      const artefacts = espace.artefacts.map((a) => (a.id === artefactId ? updated : a));
+      const themeTabs = upsertArtefactThemeTab(espace.themeTabs ?? [], updated);
+      return { ...prev, [id]: { ...espace, artefacts, themeTabs } };
+    });
+  }, []);
+
+  const generateProfileSummaryMedia = useCallback((artefactId: string, mediaId: string) => {
+    const id = currentIdRef.current;
+    const espace = espacesRef.current[id];
+    if (!espace) return;
+    const artefact = espace.artefacts.find((a) => a.id === artefactId);
+    const media = artefact?.profileSummary?.media?.find((m) => m.id === mediaId);
+    if (!media || media.kind !== "generate" || !media.prompt) return;
+    if (media.status === "generating" || media.status === "ready") return;
+
+    const modelId = resolveImageModelId(espace.imageModelId);
+    const prompt = media.prompt;
+
+    setEspaces((prev) => {
+      const e = prev[id];
+      return {
+        ...prev,
+        [id]: {
+          ...e,
+          artefacts: e.artefacts.map((a) => {
+            if (a.id !== artefactId || !a.profileSummary?.media) return a;
+            return {
+              ...a,
+              profileSummary: {
+                ...a.profileSummary,
+                media: a.profileSummary.media.map((m) =>
+                  m.id === mediaId ? { ...m, status: "generating" as const } : m
+                ),
+              },
+            };
+          }),
+        },
+      };
+    });
+
+    fetch("/api/image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, modelId }),
+    })
+      .then((r) => r.json())
+      .then((data: { imageUrl?: string }) => {
+        setEspaces((prev) => {
+          const e = prev[id];
+          return {
+            ...prev,
+            [id]: {
+              ...e,
+              artefacts: e.artefacts.map((a) => {
+                if (a.id !== artefactId || !a.profileSummary?.media) return a;
+                return {
+                  ...a,
+                  profileSummary: {
+                    ...a.profileSummary,
+                    media: a.profileSummary.media.map((m) =>
+                      m.id === mediaId
+                        ? data.imageUrl
+                          ? { ...m, imageUrl: data.imageUrl, status: "ready" as const }
+                          : { ...m, status: "error" as const }
+                        : m
+                    ),
+                  },
+                };
+              }),
+            },
+          };
+        });
+      })
+      .catch(() => {
+        setEspaces((prev) => {
+          const e = prev[id];
+          return {
+            ...prev,
+            [id]: {
+              ...e,
+              artefacts: e.artefacts.map((a) => {
+                if (a.id !== artefactId || !a.profileSummary?.media) return a;
+                return {
+                  ...a,
+                  profileSummary: {
+                    ...a.profileSummary,
+                    media: a.profileSummary.media.map((m) =>
+                      m.id === mediaId ? { ...m, status: "error" as const } : m
+                    ),
+                  },
+                };
+              }),
+            },
+          };
+        });
+      });
   }, []);
 
   const confirmThemeProposal = useCallback((proposalId: string, decision: "apply" | "dismiss") => {
@@ -1188,6 +1755,11 @@ export function EspaceProvider({
         selectedDay,
         modalArtefactId,
         modalResvId,
+        pendingArtefactVerdict,
+        verdictEnVolet,
+        declarerVoletVerdict,
+        viewerArtefactId,
+        documentViewerOpen: !!viewerArtefactId,
         currentEspace,
         activeConversation,
         switchEspace,
@@ -1200,9 +1772,13 @@ export function EspaceProvider({
         openArtefactModal,
         openResvModal,
         closeModal,
+        closeDocumentViewer,
         updateMemory,
         sendMessage,
         submitJumpForm,
+        runStarter,
+        ensureStarters,
+        storageReady,
         isThinking,
         thinkingStatus,
         stopGeneration,
@@ -1211,6 +1787,7 @@ export function EspaceProvider({
         requestGeolocation,
         confirmGeoRequest,
         removeArtefact,
+        changeArtefactKind,
         viewArtefact,
         refreshPinnedArtefact,
         resetPinnedArtefact,
@@ -1221,8 +1798,11 @@ export function EspaceProvider({
         miniAppMode: !!currentEspace.pinnedArtefact?.enabled,
         addFile,
         removeFile,
+        addDocumentArtefact,
         confirmArtefactProposal,
         confirmThemeProposal,
+        confirmImageProposal,
+        generateProfileSummaryMedia,
         confirmProfileProposal,
         toggleChecklistItem,
         startNewConversation,

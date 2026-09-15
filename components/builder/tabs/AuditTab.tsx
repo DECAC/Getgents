@@ -6,11 +6,10 @@ import { readPublishedGents } from "@/lib/publishedGents";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { describeMessage, buildEspaceReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
-import { appAccessHeaders } from "@/lib/appAccess";
-import { AppAccessPrompt } from "@/components/shared/AppAccessPrompt";
 import { describeShareLink, type ShareLink, type ShareLinkStats } from "@/lib/shareLink";
 import type { Espace, ConversationThread } from "@/lib/types";
 import styles from "./AuditTab.module.css";
+import { SessionExpiree } from "@/components/shared/SessionExpiree";
 
 function formatWhen(iso?: string): string {
   if (!iso) return "—";
@@ -67,7 +66,7 @@ export function AuditTab() {
     setLinksNeedAccessKey(false);
     fetch(`/api/links?gentId=${encodeURIComponent(currentDraft.id)}`, {
       cache: "no-store",
-      headers: appAccessHeaders(),
+      credentials: "include",
     })
       .then((res) => {
         if (res.status === 401) {
@@ -226,7 +225,7 @@ export function AuditTab() {
         Les liens personnalisés émis pour ce gent et ce que chaque cible en a fait.
       </p>
       {linksNeedAccessKey ? (
-        <AppAccessPrompt onSaved={loadLinks} />
+        <SessionExpiree />
       ) : links.length === 0 ? (
         <div className={styles.empty}>
           Aucun lien émis (onglet Diffusion). Le partage exige la persistance serveur.

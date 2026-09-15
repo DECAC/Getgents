@@ -3,11 +3,13 @@
 // fixe et des entrées de l'utilisateur (LinkedIn, CV…). Seules les données
 // changent d'une génération à l'autre ; la nature du rendu reste un dashboard.
 import type { Espace, PinnedArtefact, PinnedRun } from "@/lib/types";
+import type { ContexteLlm } from "@/lib/server/openRouterKey";
 import { parseDashboard, DASHBOARD_BLOCKS_SCHEMA, type DashboardSpec } from "@/lib/dashboardArtefact";
 import { profileContextNote } from "@/lib/profileSignal";
 import { sessionContextNote } from "@/lib/sessionContext";
 import { extractLlmMessageText } from "@/lib/server/llmMessageText";
 import { extractJsonFromHtmlMarker } from "@/lib/server/markerJson";
+import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 /** Modèle fiable pour la structure JSON du dashboard (indépendamment du modèle chat du gent). */
@@ -51,6 +53,7 @@ function withRun(pinned: PinnedArtefact, run: PinnedRun): PinnedArtefact {
  */
 export async function refreshPinnedArtefact(
   espace: Espace,
+  ctx: ContexteLlm,
   source: PinnedRun["source"] = "espace"
 ): Promise<PinnedRefreshResult> {
   const pinned = espace.pinnedArtefact;
@@ -74,7 +77,7 @@ export async function refreshPinnedArtefact(
     return { ok, note, pinned: withRun(next ?? pinned, run), run };
   };
 
-  const key = process.env.OPENROUTER_API_KEY;
+  const key = ctx.cle;
   if (!key) return finish(false, "clé API absente", { attempts: 0 }, { ...pinned, generatedAt: stamp });
 
   const inputsBlock = pinned.inputs.length
@@ -111,11 +114,49 @@ export async function refreshPinnedArtefact(
   const userContent = `${pinned.mission}${inputsBlock}`;
   const model = espace.chatModelId ?? PINNED_MODEL_FALLBACK;
 
+  /**
+   * Trace d'UN appel. La generation d'artefact etait la seule voie sans
+   * journal : `durationMs` existait, mais range dans l'historique du run, donc
+   * invisible dans les journaux Vercel — impossible d'y distinguer un modele
+   * lent d'une recherche web ou d'une seconde tentative.
+   *
+   * Aucun contenu n'est ecrit : des longueurs, des durees, des statuts.
+   */
+  const tracerAppel = (
+    tentative: number,
+    modeleAppele: string,
+    web: boolean,
+    debut: number,
+    resultat: PinnedCall,
+    produitUnTableau: boolean
+  ) => {
+    console.log(
+      JSON.stringify({
+        tag: "getgents:artefact",
+        event: "appel",
+        source,
+        tentative,
+        model: modeleAppele,
+        webSearch: web,
+        dureeMs: Date.now() - debut,
+        httpStatus: resultat.httpStatus ?? null,
+        totalTokens: resultat.totalTokens ?? null,
+        reponseChars: resultat.text?.length ?? 0,
+        // LA question : l'appel a-t-il produit un tableau exploitable ? Un
+        // appel long qui echoue au format coute une seconde tentative.
+        tableau: produitUnTableau,
+        erreur: resultat.errorNote ?? null,
+      })
+    );
+  };
+
   let attempts = 1;
   let usedModel = model;
+  const debut1 = Date.now();
   let call = await callPinnedModel(key, model, systemPrompt, userContent, espace.webSearch);
   let raw = call.text;
   let dashboard = raw ? extractPinnedDashboard(raw) : null;
+  tracerAppel(1, model, !!espace.webSearch, debut1, call, !!dashboard);
 
   // 2e tentative : modèle de repli + consigne plus stricte (structure JSON souvent
   // ratée par les modèles reasoning ou avec recherche web).
@@ -124,6 +165,7 @@ export async function refreshPinnedArtefact(
   if (!dashboard && Date.now() - startedAt < PINNED_RETRY_BUDGET_MS) {
     const retryModel = model === PINNED_MODEL_FALLBACK ? model : PINNED_MODEL_FALLBACK;
     attempts = 2;
+    const debut2 = Date.now();
     const retry = await callPinnedModel(
       key,
       retryModel,
@@ -141,6 +183,8 @@ export async function refreshPinnedArtefact(
       usedModel = retryModel;
       dashboard = extractPinnedDashboard(retry.text);
     }
+    // La 2e tentative coupe la recherche web — d'ou `false`.
+    tracerAppel(2, retryModel, false, debut2, retry, !!dashboard);
   } else if (!dashboard) {
     // On conserve le diagnostic du 1er appel ; on signale juste qu'on n'a pas retenté.
     if (call.errorNote) {
@@ -149,6 +193,23 @@ export async function refreshPinnedArtefact(
   }
 
   const metrics = { attempts, model: usedModel, httpStatus: call.httpStatus, totalTokens: call.totalTokens };
+
+  // Bilan du tour. `totalMs` est ce que le visiteur a REELLEMENT attendu,
+  // preparation et tentatives comprises.
+  console.log(
+    JSON.stringify({
+      tag: "getgents:artefact",
+      event: "generation",
+      source,
+      ok: !!dashboard,
+      attempts,
+      model: usedModel,
+      webSearch: !!espace.webSearch,
+      systemChars: systemPrompt.length,
+      blocs: dashboard?.blocks.length ?? 0,
+      totalMs: Date.now() - startedAt,
+    })
+  );
 
   if (!raw?.trim()) {
     // On remonte la cause réelle (401, 429, timeout…) au lieu du générique
@@ -183,7 +244,7 @@ async function callPinnedModel(
   try {
     const res = await fetch(OPENROUTER_API, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: enTetesOpenRouter(key),
       body: JSON.stringify({
         model,
         messages: [

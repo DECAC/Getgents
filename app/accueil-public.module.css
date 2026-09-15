@@ -1,0 +1,69 @@
+/* Accueil pour visiteur non connecté. Volontairement sobre : c'est une porte
+   d'entrée de prototype, pas une page de vente. */
+
+/* `globals.css` pose `overflow: hidden` sur html et body : l'app est un shell
+   plein écran dont chaque zone défile pour son compte. Un écran-document doit
+   donc porter SA propre zone de défilement, sinon ce qui dépasse la fenêtre
+   est inatteignable — `min-height: 100vh` ne faisait que garantir le
+   débordement. */
+.page {
+  height: 100%;
+  overflow-y: auto;
+  display: grid;
+  justify-items: center;
+  /* `safe` : dès que le contenu dépasse, on cale en haut au lieu de centrer.
+     Un centrage strict pousse la moitié du contenu au-dessus de la zone de
+     défilement, où rien ne peut aller la chercher. */
+  align-content: safe center;
+  padding: 40px 24px;
+  background: var(--bg);
+}
+
+.hero {
+  max-width: 560px;
+  text-align: center;
+}
+
+/* Marque : wordmark Getgents (voir BrandWordmark). */
+.titre {
+  font-size: clamp(28px, 5vw, 40px);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  text-wrap: balance;
+  margin: 0 0 16px;
+}
+
+.lede {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 auto 30px;
+  max-width: 46ch;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.primaire,
+.secondaire {
+  padding: 11px 22px;
+  border-radius: var(--r-pill);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.primaire {
+  background: var(--sage);
+  color: #fff;
+}
+
+.secondaire {
+  border: 1px solid var(--line);
+  color: var(--ink);
+  background: var(--card);
+}

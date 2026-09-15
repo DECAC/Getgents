@@ -1,5 +1,9 @@
-import { ESPACES } from "@/lib/mock-data/espaces";
 import { EspaceShell } from "@/components/shell/EspaceShell";
+
+// Page privée : elle dépend des cookies de session, donc ne peut plus être
+// pré-générée. Laisser un generateStaticParams ici servirait la même page à
+// tout le monde, ou ferait échouer le build.
+export const dynamic = "force-dynamic";
 
 interface Props {
   params: { espaceId: string };
@@ -12,6 +16,3 @@ export default function EspacePage({ params }: Props) {
   return <EspaceShell initialId={params.espaceId} />;
 }
 
-export function generateStaticParams() {
-  return Object.keys(ESPACES).map((id) => ({ espaceId: id }));
-}

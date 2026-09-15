@@ -2,36 +2,77 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
-import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine, NotificationChannel } from "@/lib/types";
-import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, MODEL_CATALOG, BUILDER_ASSISTANT_MODEL_ID } from "@/lib/mock-data/builder";
-import { extractQuestions, SUGGESTIONS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
+import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine, NotificationChannel, Espace } from "@/lib/types";
+import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, BUILDER_ASSISTANT_MODEL_ID, BUILDER_FAST_MODEL_ID } from "@/lib/mock-data/builder";
+import { supportsReasoningStream } from "@/lib/openRouterReasoning";
+import { extractQuestions, recoverQuestionsFromChoiceList, stripVisibleChoiceList } from "@/lib/suggestions";
 import {
-  CONNECTOR_PROMPT_INSTRUCTION,
-  CONNECTOR_DISCOVERY_INSTRUCTION,
-  REST_API_MANUAL_INSTRUCTION,
   extractConnectorSignal,
   extractConnectorSuggestions,
   detectConnectorInText,
   type ConnectorProposal,
 } from "@/lib/connectorSignal";
-import { GENT_CONFIG_PROMPT_INSTRUCTION, extractGentConfigSignal, type GentConfigProposal } from "@/lib/gentConfigSignal";
-import { JUMP_FORM_PROMPT_INSTRUCTION, extractJumpFormSignal } from "@/lib/jumpFormSignal";
-import { writePublishedGent, draftToEspace, patchPublishedGentName, readPublishedGents } from "@/lib/publishedGents";
+import { extractGentConfigSignal, type GentConfigProposal } from "@/lib/gentConfigSignal";
+import { extractJumpFormSignal } from "@/lib/jumpFormSignal";
+import {
+  extractAppPreviewSignal,
+  mergeAppPreview,
+  buildAppPreviewSystemPrompt,
+  buildAppPreviewEvolveSystemPrompt,
+} from "@/lib/appPreview";
+import {
+  buildBuilderSystemPrompt,
+  frameBuilderObjectiveMessage,
+  isBuilderObjectiveSeedTurn,
+} from "@/lib/builderAssistantPrompt";
+import {
+  buildCadrageFollowUpMessage,
+  buildCadrageSystemPrompt,
+  type CadrageAction,
+  type CadragePending,
+} from "@/lib/cadrage";
+import {
+  writePublishedGent,
+  flushPublishedGent,
+  draftToEspace,
+  patchPublishedGentName,
+  patchPublishedGentIcon,
+  readPublishedGents,
+  mergeVisionneuseArtefact,
+} from "@/lib/publishedGents";
 import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
-import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel } from "@/lib/streamChat";
+import { streamChatCompletion, defaultStatusLabel } from "@/lib/streamChat";
+import { builderTurnBudget, BUILDER_FIRST_TOKEN_DEADLINE_MS } from "@/lib/builderLatency";
+import { attributionPublique } from "@/lib/nomAffiche";
 import {
   DRAFTS_STORAGE_KEY,
+  clearStoredPendingBuilderMessage,
   freshDraftFromTemplate,
   createDraftId,
   draftsForPersistence,
   mergeStoredDrafts,
+  readStoredDrafts,
   seedDrafts,
   syncDraftsFromRemote,
   pushRemoteDraft,
+  writeStoredDrafts,
 } from "@/lib/builderDraftStorage";
 
-export type BuilderTab = "prompt" | "connectors" | "artefacts" | "diffusion" | "audit";
+export type BuilderTab =
+  | "accueil"
+  | "mesgents"
+  | "conversationnel"
+  | "miniapp"
+  | "visionneuse"
+  | "collaboratif"
+  | "apercu"
+  | "prompt"
+  | "connectors"
+  | "knowledge"
+  | "audit"
+  | "diffusion"
+  | "marketing";
 
 interface BuilderContextValue {
   drafts: GentDraftsMap;
@@ -39,16 +80,23 @@ interface BuilderContextValue {
   currentDraft: GentDraft;
   activeTab: BuilderTab;
   railCollapsed: boolean;
+  /** Panneau assistant entièrement réduit (clic sur la poignée). */
+  assistantCollapsed: boolean;
 
   switchDraft: (id: string) => void;
   switchTab: (tab: BuilderTab) => void;
   toggleRail: () => void;
+  toggleAssistant: () => void;
   createDraft: () => string;
 
   updateObjective: (text: string) => void;
   updateSystemPrompt: (text: string) => void;
   updateName: (text: string) => void;
-  publishDraft: () => void;
+  /** Change l'emblème (emoji) du gent — bandeau, liste, rail utilisateur. */
+  updateIcon: (icon: string) => void;
+  publishDraft: () => Promise<{ ok: boolean; status: number; error?: string }>;
+  /** Écrit la version de travail (Preview) sans toucher à la version diffusée. */
+  syncWorkingVersion: () => void;
 
   assignModel: (capability: ModelCapability, modelId: string | null) => void;
 
@@ -67,14 +115,44 @@ interface BuilderContextValue {
   removeToolInstance: (instanceId: string) => void;
 
   toggleWebSearch: () => void;
+  /** Active ou non le téléchargement de fichiers côté lecteur, et son formulaire. */
+  /** Attribution propre à ce gent, sous « Propulsé par ». */
+  updatePropulsePar: (valeur: string) => void;
+  /** Questions d'amorce écrites par le créateur. Liste vide = génération auto. */
+  updateStarters: (valeurs: string[]) => void;
+  /** Nom affiché du compte, attribution par défaut. Vide si non renseigné. */
+  nomCompte: string;
+  updateFileDownload: (patch: {
+    fileDownloadEnabled?: boolean;
+    fileDownloadFormEnabled?: boolean;
+    /** Documents retenus. `undefined` laisse la sélection en place. */
+    fileDownloadSelection?: string[];
+  }) => void;
   /** Modifie la routine planifiée du brouillon (patch partiel). */
   updateRoutine: (patch: Partial<Routine>) => void;
   /** Modifie le canal de diffusion du brouillon (patch partiel). */
   updateChannel: (patch: Partial<NotificationChannel>) => void;
   /** Modifie l'artefact figé « mini-app » du brouillon (patch partiel). */
   updatePinnedArtefact: (patch: Partial<import("@/lib/types").PinnedArtefact>) => void;
+  /** Modifie la configuration du gent « visionneuse » du brouillon (patch partiel). */
+  updateVisionneuse: (patch: Partial<import("@/lib/types").VisionneuseConfig>) => void;
+  /** Modifie la configuration du gent « collaboratif » du brouillon (patch partiel). */
+  updateCollab: (patch: Partial<import("@/lib/types").CollabConfig>) => void;
+  /** Efface l'aperçu d'application pour repartir d'une page blanche. */
+  clearAppPreview: () => void;
 
-  sendBuilderMessage: (text: string) => void;
+  sendBuilderMessage: (
+    text: string,
+    opts?: {
+      knowledgeFile?: { name: string; text: string; truncated?: boolean };
+      mode?: "apercu" | "apercu-ask" | "cadrage";
+      cadrageAction?: CadrageAction;
+    }
+  ) => void;
+  /** Bascule le mode « fais-moi confiance » persistant du gent courant. */
+  toggleAutoPilot: () => void;
+  /** Vrai quand une question de cadrage attend la réponse du créateur. */
+  cadragePending: boolean;
   /** Vide le fil courant pour démarrer un nouvel échange avec l'assistant. */
   startNewBuilderConversation: () => void;
   applyBuilderSuggestion: (suggestion: string) => void;
@@ -146,42 +224,71 @@ function pinnedConfigChanged(
   return shape(fresh) !== shape(existing);
 }
 
-const MODEL_CAPABILITY_LABEL: Record<string, string> = {
-  chat: "Conversation",
-  reasoning: "Raisonnement approfondi",
-  image: "Génération d'image",
-  tts: "Synthèse vocale",
-  stt: "Transcription vocale",
-};
-
-const MODEL_CATALOG_SUMMARY = MODEL_CATALOG.map(
-  (m) =>
-    `- id="${m.id}" [${MODEL_CAPABILITY_LABEL[m.capability] ?? m.capability}] ${m.label} (${m.provider}) — ${m.tagline} (env. $${m.pricing.input}/$${m.pricing.output} par 1M tokens en entrée/sortie)`
-).join("\n");
-
-const MODEL_RECOMMENDATION_INSTRUCTION =
-  `Voici le catalogue des modèles disponibles pour ce gent (une seule clé API OpenRouter donne accès à tous) :\n${MODEL_CATALOG_SUMMARY}\n\n` +
-  "L'assistant du builder utilise toujours Kimi K3 (Moonshot AI) pour vous guider — le modèle « chat » ci-dessous concerne le gent une fois publié. " +
-  "Dès que l'objectif ou les instructions données par le créateur laissent deviner un besoin particulier (raisonnement complexe, génération d'image, restitution vocale, budget serré, gros volume de texte...), recommande explicitement, capacité par capacité, le ou les modèles les plus adaptés parmi cette liste, en une phrase de justification, et propose leur assignation via le bloc GENT_CONFIG en recopiant EXACTEMENT les id=\"…\" du catalogue (ex. chatModelId=\"anthropic/claude-sonnet-5\", reasoningModelId=\"deepseek/deepseek-r1\") — jamais le seul libellé.";
-
 const BUILDER_ASSISTANT_REPLIES = [
   "Bien noté. J'ai reformulé ce point dans un langage plus directif pour le modèle — regardez le prompt mis à jour.",
   "Pour cet objectif, je recommande un modèle de raisonnement en plus du modèle de conversation : voulez-vous que je l'active dans la section Modèles du Prompt ?",
   "Cela ressemble à une action engageante (compte tiers). Pensez à ajouter le connecteur correspondant et à documenter l'invariant de confirmation dans le prompt.",
 ];
 
-export function BuilderProvider({ children, initialId }: { children: ReactNode; initialId: string }) {
+export function BuilderProvider({
+  children,
+  initialId,
+  initialTab,
+}: {
+  children: ReactNode;
+  initialId: string;
+  initialTab?: BuilderTab;
+}) {
   const [drafts, setDrafts] = useState<GentDraftsMap>(() => seedDrafts(initialId));
   const [currentId, setCurrentId] = useState(initialId);
-  const [activeTab, setActiveTab] = useState<BuilderTab>("prompt");
+  const [activeTab, setActiveTab] = useState<BuilderTab>(initialTab ?? "accueil");
   const [railCollapsed, setRailCollapsed] = useState(false);
+  const [assistantCollapsed, setAssistantCollapsed] = useState(false);
   const [replyCursor, setReplyCursor] = useState(0);
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
   const currentIdRef = useRef(currentId);
+  // Miroir des brouillons pour les callbacks qui doivent lire l'état courant
+  // sans se re-créer à chaque frappe (syncWorkingVersion, appelé par Preview).
+  const draftsRef = useRef(drafts);
+  useEffect(() => {
+    draftsRef.current = drafts;
+  }, [drafts]);
   currentIdRef.current = currentId;
   const [storageReady, setStorageReady] = useState(false);
   const streamAbortRef = useRef<AbortController | null>(null);
+  /**
+   * Génération mise en attente pendant que le créateur répond à la question de
+   * cadrage. Généralise l'ancien drapeau booléen dédié à l'aperçu : le prochain
+   * message libre rejoue la génération correspondante, quelle qu'elle soit.
+   */
+  const cadragePendingRef = useRef<CadragePending | null>(null);
+  // Miroir réactif du ref : l'interface s'en sert pour n'afficher l'option
+  // « Fais-moi confiance » que sur une vraie question de cadrage.
+  const [cadragePending, setCadragePending] = useState(false);
+  const prevInitialIdRef = useRef(initialId);
+
+  // Changement de gent via l'URL (/builder/[gentId]) : le Provider n'est pas
+  // remonté par Next.js, donc currentId doit suivre initialId — sinon
+  // l'assistant affiche encore la conversation du gent précédent.
+  useEffect(() => {
+    if (prevInitialIdRef.current === initialId) return;
+    prevInitialIdRef.current = initialId;
+
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = null;
+    setIsThinking(false);
+    setThinkingStatus(null);
+    setReplyCursor(0);
+    setCurrentId(initialId);
+    setActiveTab(initialTab ?? "accueil");
+    setDrafts((prev) => {
+      if (prev[initialId]) return prev;
+      const stored = readStoredDrafts();
+      if (stored[initialId]) return { ...prev, [initialId]: stored[initialId] };
+      return { ...prev, [initialId]: freshDraftFromTemplate(initialId) };
+    });
+  }, [initialId, initialTab]);
 
   const stopGeneration = useCallback(() => {
     streamAbortRef.current?.abort();
@@ -196,7 +303,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     let cancelled = false;
     syncDraftsFromRemote()
       .then((merged) => {
-        if (cancelled || !merged || !Object.keys(merged).length) return;
+        if (cancelled || merged === "unauthorized" || !merged || !Object.keys(merged).length) return;
         setDrafts((prev) => ({ ...prev, ...merged }));
       })
       .finally(() => {
@@ -228,23 +335,72 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     }
   }, [drafts, storageReady]);
 
-  const currentDraft = drafts[currentId];
+  /**
+   * Nom affiché du compte, attribution par défaut des gents diffusés.
+   * Chargé une fois : il ne change pas en cours de session, et le relire à
+   * chaque diffusion ajouterait un aller-retour sur le geste le plus sensible
+   * du studio.
+   */
+  const [nomCompte, setNomCompte] = useState("");
+  useEffect(() => {
+    let annule = false;
+    fetch("/api/compte/nom", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { nom?: string } | null) => {
+        if (!annule && typeof d?.nom === "string") setNomCompte(d.nom);
+      })
+      .catch(() => {
+        // Sans nom de compte, seule l'attribution propre au gent s'applique.
+        // C'est une dégradation acceptable : on n'invente pas d'auteur.
+      });
+    return () => {
+      annule = true;
+    };
+  }, []);
+
+  const currentDraft = drafts[currentId] ?? freshDraftFromTemplate(currentId);
 
   const switchDraft = useCallback((id: string) => {
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = null;
+    setIsThinking(false);
+    setThinkingStatus(null);
+    setReplyCursor(0);
     setCurrentId(id);
-    setActiveTab("prompt");
+    setDrafts((prev) => {
+      if (prev[id]) return prev;
+      const stored = readStoredDrafts();
+      if (stored[id]) return { ...prev, [id]: stored[id] };
+      return { ...prev, [id]: freshDraftFromTemplate(id) };
+    });
+    setActiveTab("accueil");
   }, []);
 
   const switchTab = useCallback((tab: BuilderTab) => setActiveTab(tab), []);
 
   const toggleRail = useCallback(() => setRailCollapsed((v) => !v), []);
 
+  const toggleAssistant = useCallback(() => setAssistantCollapsed((v) => !v), []);
+
   const createDraft = useCallback((): string => {
     const id = createDraftId();
+    const draft = freshDraftFromTemplate(id);
     setDrafts((prev) => ({
       ...prev,
-      [id]: freshDraftFromTemplate(id),
+      [id]: draft,
     }));
+    const stored = readStoredDrafts();
+    stored[id] = draft;
+    writeStoredDrafts(stored);
+    pushRemoteDraft(id, draft);
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = null;
+    setIsThinking(false);
+    setThinkingStatus(null);
+    setReplyCursor(0);
+    setCurrentId(id);
+    prevInitialIdRef.current = id;
+    setActiveTab("accueil");
     return id;
   }, []);
 
@@ -266,61 +422,113 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     });
   }, [currentId]);
 
-  const publishDraft = useCallback(() => {
+  const updateIcon = useCallback((icon: string) => {
     setDrafts((prev) => {
-      const draft = { ...prev[currentId], status: "published" as const, updatedAt: "à l'instant" };
-      const published: GentDraft = { ...draft, publishedSnapshot: draftContentSnapshot(draft) };
-      const fresh = draftToEspace(published);
-      // Re-publication : la config (prompt, connecteurs, routine…) est
-      // remplacée, mais l'activité utilisateur déjà persistée (conversations,
-      // artefacts, profil, mémoire, historique de routine) est préservée.
-      const existing = readPublishedGents()[currentId];
-      const espace = existing
-        ? {
-            ...fresh,
-            version: (existing.version ?? 1) + 1,
-            conversations: existing.conversations?.length ? existing.conversations : fresh.conversations,
-            activeConversationId: existing.conversations?.length
-              ? existing.activeConversationId
-              : fresh.activeConversationId,
-            artefacts: existing.artefacts ?? fresh.artefacts,
-            themeTabs: existing.themeTabs,
-            memory: existing.memory || fresh.memory,
-            profile: existing.profile,
-            routine: fresh.routine
-              ? { ...fresh.routine, lastRunAt: existing.routine?.lastRunAt, lastRunNote: existing.routine?.lastRunNote }
-              : undefined,
-            channel: fresh.channel
-              ? { ...fresh.channel, lastDeliveryNote: existing.channel?.lastDeliveryNote }
-              : undefined,
-            // Artefact figé : quand la mission ou les entrées ont changé, le
-            // rendu précédent a été produit par une configuration obsolète —
-            // on repart d'une ardoise vierge pour que la nouvelle version soit
-            // réellement testable. Sinon (republication sans changement, ex.
-            // renommage) on conserve les données déjà générées.
-            pinnedArtefact: fresh.pinnedArtefact
-              ? pinnedConfigChanged(fresh.pinnedArtefact, existing.pinnedArtefact)
-                ? { ...fresh.pinnedArtefact, runs: existing.pinnedArtefact?.runs }
-                : {
-                    ...fresh.pinnedArtefact,
-                    dashboard: existing.pinnedArtefact?.dashboard,
-                    generatedAt: existing.pinnedArtefact?.generatedAt,
-                    runs: existing.pinnedArtefact?.runs,
-                    inputs: fresh.pinnedArtefact.inputs.map((i) => ({
-                      ...i,
-                      value: existing.pinnedArtefact?.inputs.find((e) => e.id === i.id)?.value ?? i.value,
-                    })),
-                  }
-              : undefined,
-          }
-        : fresh;
-      // Envoi immédiat (pas de débounce) : « Preview » est une navigation
-      // pleine page qui annulerait un push différé, et l'espace rechargerait
-      // alors la version précédente depuis le serveur.
-      writePublishedGent(currentId, espace, true);
-      return { ...prev, [currentId]: published };
+      const draft = { ...prev[currentId], icon, updatedAt: "à l'instant" };
+      if (draft.status === "published") {
+        patchPublishedGentIcon(currentId, icon);
+      }
+      return { ...prev, [currentId]: draft };
     });
   }, [currentId]);
+
+  /**
+   * Fabrique l'espace à partir du brouillon courant, en préservant l'activité
+   * utilisateur déjà persistée (conversations, artefacts, profil, mémoire,
+   * historique de routine) : seule la CONFIGURATION est remplacée.
+   */
+  const buildEspaceFromDraft = useCallback(
+    (draft: GentDraft): Espace => {
+      const fresh = draftToEspace(draft);
+      const existing = readPublishedGents()[currentId];
+      if (!existing) return fresh;
+      return {
+        ...fresh,
+        version: (existing.version ?? 1) + 1,
+        conversations: existing.conversations?.length ? existing.conversations : fresh.conversations,
+        activeConversationId: existing.conversations?.length
+          ? existing.activeConversationId
+          : fresh.activeConversationId,
+        // Les artefacts appartiennent à l'utilisateur : republier ne doit pas
+        // effacer son travail. Le document d'un gent « visionneuse » fait
+        // exception — il relève de la CONFIGURATION du gent, pas de l'usage.
+        // Sans cette fusion, attacher un document à un gent existant restait
+        // sans effet : l'artefact fraîchement produit était écrasé par la
+        // liste d'artefacts d'avant, et la visionneuse n'avait rien à ouvrir.
+        artefacts: mergeVisionneuseArtefact(existing.artefacts ?? fresh.artefacts, fresh.artefacts),
+        themeTabs: existing.themeTabs,
+        memory: existing.memory || fresh.memory,
+        profile: existing.profile,
+        routine: fresh.routine
+          ? { ...fresh.routine, lastRunAt: existing.routine?.lastRunAt, lastRunNote: existing.routine?.lastRunNote }
+          : undefined,
+        channel: fresh.channel
+          ? { ...fresh.channel, lastDeliveryNote: existing.channel?.lastDeliveryNote }
+          : undefined,
+        // Artefact figé : quand la mission ou les entrées ont changé, le
+        // rendu précédent a été produit par une configuration obsolète — on
+        // repart d'une ardoise vierge pour que la nouvelle version soit
+        // réellement testable. Sinon (renommage…) on conserve le généré.
+        pinnedArtefact: fresh.pinnedArtefact
+          ? pinnedConfigChanged(fresh.pinnedArtefact, existing.pinnedArtefact)
+            ? { ...fresh.pinnedArtefact, runs: existing.pinnedArtefact?.runs }
+            : {
+                ...fresh.pinnedArtefact,
+                dashboard: existing.pinnedArtefact?.dashboard,
+                generatedAt: existing.pinnedArtefact?.generatedAt,
+                runs: existing.pinnedArtefact?.runs,
+                inputs: fresh.pinnedArtefact.inputs.map((i) => ({
+                  ...i,
+                  value: existing.pinnedArtefact?.inputs.find((e) => e.id === i.id)?.value ?? i.value,
+                })),
+              }
+          : undefined,
+      };
+    },
+    [currentId]
+  );
+
+  /**
+   * Version de TRAVAIL : écrite avant chaque Preview, sans toucher au statut
+   * ni à la version diffusée. C'est ce qui garantit que Preview part toujours
+   * de la configuration à l'instant — une nouvelle entrée de mini-app, un
+   * prompt modifié — au lieu de recharger la dernière version publiée.
+   */
+  const syncWorkingVersion = useCallback(() => {
+    const draft = draftsRef.current[currentId];
+    if (!draft) return;
+    // Envoi immédiat (pas de débounce) : Preview ouvre un nouvel onglet, et un
+    // push différé serait annulé ou arriverait après le chargement de l'espace.
+    writePublishedGent(currentId, buildEspaceFromDraft(draft), true);
+  }, [currentId, buildEspaceFromDraft]);
+
+  /**
+   * Diffusion : fige la version que verront les destinataires sur les canaux
+   * (lien de partage, iframe, WhatsApp, routine). Distincte de la version de
+   * travail — c'est le seul geste qui change ce que voient les utilisateurs.
+   * Attend la réponse du serveur pour que « Publier sur le web » sache si
+   * la ligne existe vraiment en base.
+   */
+  const publishDraft = useCallback(async () => {
+    const draft = draftsRef.current[currentId];
+    if (!draft) return { ok: false, status: 0, error: "missing_draft" };
+    const published: GentDraft = {
+      ...draft,
+      status: "published",
+      updatedAt: "à l'instant",
+      publishedSnapshot: draftContentSnapshot(draft),
+    };
+    setDrafts((prev) => ({ ...prev, [currentId]: published }));
+    // L'attribution « Propulsé par » est FIGÉE ici, à la diffusion — le moment
+    // où le gent devient visible. La résoudre au rendu obligerait chaque
+    // visiteur d'une page publique à interroger le compte du propriétaire pour
+    // un nom qui ne change quasiment jamais. Contrepartie assumée, annoncée
+    // dans l'écran : renommer son compte n'agit sur les gents déjà diffusés
+    // qu'à la rediffusion.
+    const attribution = attributionPublique(published.propulsePar, nomCompte);
+    const espace = { ...buildEspaceFromDraft(published), propulsePar: attribution ?? undefined };
+    return flushPublishedGent(currentId, espace, true);
+  }, [currentId, buildEspaceFromDraft, nomCompte]);
 
   const assignModel = useCallback((capability: ModelCapability, modelId: string | null) => {
     setDrafts((prev) => {
@@ -416,6 +624,71 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     }));
   }, [currentId]);
 
+  const updatePropulsePar = useCallback((valeur: string) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: { ...prev[currentId], propulsePar: valeur, updatedAt: "à l'instant" },
+    }));
+  }, [currentId]);
+
+  const updateStarters = useCallback((valeurs: string[]) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: {
+        ...prev[currentId],
+        // Les lignes VIDES SONT CONSERVÉES dans le brouillon. Les filtrer ici
+        // rendait le champ impossible à remplir : « Ajouter » créait une ligne
+        // vide, aussitôt supprimée par ce même filtre — et effacer un champ
+        // pour le retaper faisait disparaître sa ligne sous le curseur.
+        // Le brouillon est un travail en cours ; c'est `draftToEspace` qui
+        // nettoie au moment de la diffusion.
+        starters: valeurs,
+        updatedAt: "à l'instant",
+      },
+    }));
+  }, [currentId]);
+
+  const updateFileDownload = useCallback(
+    (patch: {
+      fileDownloadEnabled?: boolean;
+      fileDownloadFormEnabled?: boolean;
+      fileDownloadSelection?: string[];
+    }) => {
+      setDrafts((prev) => {
+        const draft = prev[currentId];
+        const fileDownloadEnabled = patch.fileDownloadEnabled ?? !!draft.fileDownloadEnabled;
+        return {
+          ...prev,
+          [currentId]: {
+            ...draft,
+            fileDownloadEnabled,
+            fileDownloadFormEnabled: fileDownloadEnabled
+              ? (patch.fileDownloadFormEnabled ?? !!draft.fileDownloadFormEnabled)
+              : draft.fileDownloadFormEnabled,
+            // La sélection SURVIT à l'extinction du téléchargement : on la
+            // retrouve telle quelle en réactivant. L'effacer punirait un
+            // aller-retour sur l'interrupteur.
+            fileDownloadSelection: patch.fileDownloadSelection ?? draft.fileDownloadSelection,
+            updatedAt: "à l'instant",
+          },
+        };
+      });
+    },
+    [currentId]
+  );
+
+  /**
+   * Mode « fais-moi confiance » persistant. Volontairement absent de
+   * draftContentSnapshot : c'est une préférence d'atelier, pas du contenu — la
+   * compter comme une modification rallumerait le bouton Diffuser à tort.
+   */
+  const toggleAutoPilot = useCallback(() => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: { ...prev[currentId], autoPilot: !prev[currentId].autoPilot },
+    }));
+  }, [currentId]);
+
   // Artefact figé « mini-app » : patch partiel fusionné sur la config du brouillon.
   const updatePinnedArtefact = useCallback(
     (patch: Partial<import("@/lib/types").PinnedArtefact>) => {
@@ -434,6 +707,60 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     },
     [currentId]
   );
+
+  // Type de gent « visionneuse » : patch partiel fusionné sur la config du brouillon.
+  const updateVisionneuse = useCallback(
+    (patch: Partial<import("@/lib/types").VisionneuseConfig>) => {
+      setDrafts((prev) => {
+        const current = prev[currentId].visionneuse ?? { enabled: false, instructions: "" };
+        return {
+          ...prev,
+          [currentId]: { ...prev[currentId], visionneuse: { ...current, ...patch }, updatedAt: "à l'instant" },
+        };
+      });
+    },
+    [currentId]
+  );
+
+  // Type de gent « collaboratif » : patch partiel ; les sous-objets (cadre,
+  // relances, propositions, confidentialité) sont fusionnés pour qu'un champ
+  // isolé (ex. budget) n'efface pas le reste.
+  const updateCollab = useCallback(
+    (patch: Partial<import("@/lib/types").CollabConfig>) => {
+      setDrafts((prev) => {
+        const current = prev[currentId].collab ?? { enabled: false };
+        return {
+          ...prev,
+          [currentId]: {
+            ...prev[currentId],
+            collab: {
+              ...current,
+              ...patch,
+              cadre: patch.cadre ? { ...current.cadre, ...patch.cadre } : current.cadre,
+              relances: patch.relances ? { ...current.relances, ...patch.relances } : current.relances,
+              propositions: patch.propositions
+                ? { ...current.propositions, ...patch.propositions }
+                : current.propositions,
+              confidentialite: patch.confidentialite
+                ? { ...current.confidentialite, ...patch.confidentialite }
+                : current.confidentialite,
+              // questions : remplacement entier si fourni (édition de liste).
+              questions: patch.questions !== undefined ? patch.questions : current.questions,
+            },
+            updatedAt: "à l'instant",
+          },
+        };
+      });
+    },
+    [currentId]
+  );
+
+  const clearAppPreview = useCallback(() => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: { ...prev[currentId], appPreview: undefined, appPreviewFreshIds: undefined },
+    }));
+  }, [currentId]);
 
   // Canal de diffusion : patch partiel fusionné sur le canal du brouillon.
   const updateChannel = useCallback(
@@ -473,48 +800,128 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
     [currentId]
   );
 
-  const sendBuilderMessage = useCallback((text: string) => {
+  const sendBuilderMessage = useCallback((
+    text: string,
+    opts?: {
+      knowledgeFile?: { name: string; text: string; truncated?: boolean };
+      mode?: "apercu" | "apercu-ask" | "cadrage";
+      cadrageAction?: CadrageAction;
+    }
+  ) => {
     if (streamAbortRef.current) return; // une génération est déjà en cours
     const id = currentIdRef.current;
+
+    // « apercu-ask » est conservé comme alias de l'ancien mécanisme : il devient
+    // simplement le cadrage de l'action « faire évoluer l'aperçu ».
+    const cadrageTurn = opts?.mode === "cadrage" || opts?.mode === "apercu-ask";
+    const cadrageAction: CadrageAction | undefined = cadrageTurn
+      ? opts?.cadrageAction ?? "apercu-evolve"
+      : undefined;
+
+    // Message libre alors qu'un cadrage attend sa réponse : on rejoue la
+    // génération mise en attente, enrichie du choix du créateur.
+    const pending = cadragePendingRef.current;
+    const followCadrage = !cadrageTurn && !opts?.mode && !!pending;
+    const followedAction = followCadrage ? pending!.action : undefined;
+
+    const previewTurn =
+      opts?.mode === "apercu" || followedAction === "apercu" || followedAction === "apercu-evolve";
+    // Ancien nom conservé là où la logique est identique (garde-fous, affichage).
+    const askTurn = cadrageTurn;
+    cadragePendingRef.current = cadrageTurn && cadrageAction ? { action: cadrageAction, request: text } : null;
     const userMsg = { role: "user" as const, text: `<p>${text.replace(/</g, "&lt;")}</p>`, t: "à l'instant" };
     const agentPlaceholder = { role: "agent" as const, text: "", t: "à l'instant" };
 
-    // L'updater doit rester pur (pas d'effet de bord dedans, sinon React peut
-    // l'appeler deux fois en StrictMode/dev) : on capture juste ce qu'il faut
-    // pour l'appel API dans ces variables, le streaming se fait après, en dehors.
-    let history: { role: string; content: string }[] = [];
-    let systemPrompt = "";
-    let chatModelId = BUILDER_ASSISTANT_MODEL_ID;
-    let existingConnectorUrls: string[] = [];
+    // Tout ce qui part à l'API est calculé ICI, avant toute mise à jour d'état.
+    //
+    // Ces valeurs étaient auparavant capturées DEPUIS l'updater de setDrafts,
+    // puis relues juste après. Or React n'évalue l'updater immédiatement que
+    // tant qu'aucune autre mise à jour n'est en attente sur le composant :
+    // dès qu'il y en avait une (un simple changement d'onglet suffit), la
+    // requête partait avec un prompt système VIDE. On lit donc draftsRef, qui
+    // reflète l'état courant, et setDrafts ne sert plus qu'à valider.
+    const draft = draftsRef.current[id];
+    if (!draft) return;
+
+    const knowledgeFile = opts?.knowledgeFile;
+    const knowledgeSource = knowledgeFile
+      ? {
+          id: `know-${Date.now()}`,
+          kind: "file" as const,
+          label: knowledgeFile.name,
+          meta: `${knowledgeFile.text.length.toLocaleString("fr-FR")} caractères · ajouté à l'instant${
+            knowledgeFile.truncated ? " · tronqué" : ""
+          }`,
+          text: knowledgeFile.text,
+          truncated: knowledgeFile.truncated,
+        }
+      : null;
+    const nextDraft = knowledgeSource
+      ? { ...draft, knowledgeSources: [...draft.knowledgeSources, knowledgeSource] }
+      : draft;
+
+    const existingConnectorUrls = nextDraft.connectors.map((c) => c.detail ?? "").filter(Boolean);
+    // Un fichier de connaissance n'est pas un objectif : ne pas le cadrer
+    // comme « mission du gent » ni l'écrire dans le champ Objectif.
+    // Idem pour le bouton Aperçu : ce n'est pas une mission à configurer.
+    const seedObjective = !knowledgeFile && !previewTurn && !askTurn && isBuilderObjectiveSeedTurn(nextDraft);
+
+    const systemPrompt =
+      cadrageTurn && cadrageAction
+        ? buildCadrageSystemPrompt(nextDraft, cadrageAction)
+        : previewTurn
+          ? buildAppPreviewSystemPrompt(nextDraft)
+          : buildBuilderSystemPrompt(nextDraft);
+
+    // Texte envoyé au modèle : sur le 1er tour d'objectif, on cadre explicitement
+    // (sinon une phrase comme « analyse DPE… » est traitée comme une question métier).
+    let apiUserContent = text;
+    if (seedObjective) {
+      apiUserContent = frameBuilderObjectiveMessage(text);
+    } else if (followCadrage && pending) {
+      // La requête d'origine est rejouée telle quelle, augmentée du choix du
+      // créateur (ou d'un blanc-seing s'il a répondu « Fais-moi confiance »).
+      apiUserContent = buildCadrageFollowUpMessage(pending, text);
+    }
+
+    const history = previewTurn || askTurn
+      ? []
+      : nextDraft.builderConversation
+          .filter((m) => m.role === "agent" || m.role === "user")
+          .map((m) => ({
+            role: m.role === "agent" ? "assistant" : "user",
+            content: (m.text ?? "").replace(/<[^>]+>/g, ""),
+          }));
+
+    // Poser une question est une tâche courte au format contraint : un modèle
+    // rapide et bon marché suffit, et c'est ce qui garde l'atelier réactif.
+    // La génération, elle, reste sur le modèle de l'assistant.
+    const turnKind = cadrageTurn ? "cadrage" : previewTurn ? "apercu" : "conversation";
 
     setDrafts((prev) => {
-      const draft = prev[id];
-      existingConnectorUrls = draft.connectors.map((c) => c.detail ?? "").filter(Boolean);
-      const connectorsNote = draft.connectors.length
-        ? `\n\nConnecteurs déjà configurés : ${draft.connectors.map((c) => `${c.name}${c.detail ? ` (${c.detail})` : ""}`).join(", ")}.`
-        : "";
-      systemPrompt = `${
-        draft.systemPrompt
-          ? `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Voici son prompt système actuel :\n\n${draft.systemPrompt}\n\nAide le créateur à améliorer ce prompt et la configuration du gent.`
-          : `Tu es un assistant expert en design de gents IA. Le gent en cours s'appelle "${draft.name}". Objectif : ${draft.objective || "non défini"}. Aide le créateur à rédiger un prompt système efficace.`
-      }${connectorsNote}\n\n${MODEL_RECOMMENDATION_INSTRUCTION}\n\n${GENT_CONFIG_PROMPT_INSTRUCTION}\n\n${CONNECTOR_PROMPT_INSTRUCTION}\n\n${CONNECTOR_DISCOVERY_INSTRUCTION}\n\n${REST_API_MANUAL_INSTRUCTION}\n\n${JUMP_FORM_PROMPT_INSTRUCTION}\n\n${SUGGESTIONS_PROMPT_INSTRUCTION}`;
-      history = draft.builderConversation
-        .filter((m) => m.role === "agent" || m.role === "user")
-        .map((m) => ({
-          role: m.role === "agent" ? "assistant" : "user",
-          content: (m.text ?? "").replace(/<[^>]+>/g, ""),
-        }));
-      chatModelId = BUILDER_ASSISTANT_MODEL_ID;
-
-      const builderConversation = [...draft.builderConversation, userMsg, agentPlaceholder];
-      return { ...prev, [id]: { ...draft, builderConversation } };
+      const d = prev[id];
+      if (!d) return prev;
+      const withKnowledge = knowledgeSource
+        ? { ...d, knowledgeSources: [...d.knowledgeSources, knowledgeSource] }
+        : d;
+      const objective =
+        seedObjective && !(withKnowledge.objective ?? "").trim()
+          ? text.trim().slice(0, 240)
+          : withKnowledge.objective;
+      return {
+        ...prev,
+        [id]: {
+          ...withKnowledge,
+          objective,
+          builderConversation: [...withKnowledge.builderConversation, userMsg, agentPlaceholder],
+        },
+      };
     });
+
+    setCadragePending(!!cadragePendingRef.current);
 
     setIsThinking(true);
     setThinkingStatus(defaultStatusLabel("preparing"));
-
-    const controller = new AbortController();
-    streamAbortRef.current = controller;
 
     function updateLastMessage(updater: (m: ConversationMessage) => ConversationMessage) {
       setDrafts((p) => {
@@ -527,131 +934,251 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
       });
     }
 
-    streamChatCompletion(
-      {
-        model: chatModelId,
-        messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: text }],
-        // Les réponses du builder embarquent souvent un prompt système complet
-        // + un bloc GENT_CONFIG : un plafond trop bas tronquait les propositions.
-        max_tokens: CHAT_MAX_TOKENS.builder,
-        reasoning: { enabled: true },
-        // Recherche web en tâche de fond : l'assistant s'en sert pour
-        // découvrir des connecteurs candidats (datasets, MCP, API).
-        webSearch: true,
-      },
-      (fullSoFar, reasoningSoFar) => {
-        const displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
-        updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw), reasoning: reasoningSoFar || undefined }));
-      },
-      undefined,
-      (status) => setThinkingStatus(status.label),
-      "/api/chat",
-      controller.signal
-    )
-      .then(({ text: fullRaw, truncated, reasoning }) => {
-        const afterConfig = extractGentConfigSignal(fullRaw);
-        const afterSuggestions = extractConnectorSuggestions(afterConfig.text);
-        const afterConnector = extractConnectorSignal(afterSuggestions.text);
-        const afterJumpForm = extractJumpFormSignal(afterConnector.text);
-        const { text: reply, questions } = extractQuestions(afterJumpForm.text);
-        const truncationNote = truncated
-          ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — demandez « continue » ou reformulez plus court ; une proposition de configuration incomplète ne doit pas être appliquée.</em></p>'
-          : "";
-        updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply) + truncationNote, questions, reasoning: reasoning || undefined }));
-
-        // Configuration complète proposée : carte « Appliquer la configuration ».
-        if (afterConfig.config) {
-          const config = afterConfig.config;
-          setDrafts((p) => {
-            const d = p[id];
-            const msg = {
-              id: `config-${Date.now()}`,
-              role: "config-proposal" as const,
-              configProposal: config,
-              configProposalStatus: "pending" as const,
-              t: "à l'instant",
-            };
-            return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
-          });
-        }
-
-        // Formulaire jump proposé : carte « Ajouter ce formulaire ».
-        if (afterJumpForm.form) {
-          const form = afterJumpForm.form;
-          setDrafts((p) => {
-            const d = p[id];
-            const msg = {
-              id: `jumpform-${Date.now()}`,
-              role: "jump-form-proposal" as const,
-              jumpFormProposal: form,
-              jumpFormProposalStatus: "pending" as const,
-              t: "à l'instant",
-            };
-            return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
-          });
-        }
-
-        // Connecteurs candidats découverts par recherche web : liste de
-        // sélection à valider par le créateur. Ignorée si une configuration
-        // complète a été proposée dans le même message (elle prime).
-        const suggestions = afterConfig.config
-          ? []
-          : afterSuggestions.suggestions.filter((s) => !existingConnectorUrls.includes(s.url));
-        if (suggestions.length) {
-          setDrafts((p) => {
-            const d = p[id];
-            const msg = {
-              id: `connlist-${Date.now()}`,
-              role: "connector-proposal" as const,
-              connectorSuggestions: suggestions,
-              connectorSuggestionsStatus: "pending" as const,
-              t: "à l'instant",
-            };
-            return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
-          });
-        }
-
-        // Proposition de connecteur unique : signal du modèle, ou détection
-        // déterministe de secours sur le message du créateur (URL de dataset).
-        let proposal: ConnectorProposal | null = afterConnector.connector ?? detectConnectorInText(text);
-        if (afterConfig.config) proposal = null;
-        if (proposal && existingConnectorUrls.includes(proposal.url)) proposal = null;
-        if (proposal && suggestions.some((s) => s.url === proposal!.url)) proposal = null;
-        if (proposal) {
-          const finalProposal = proposal;
-          setDrafts((p) => {
-            const d = p[id];
-            const msg = {
-              id: `conn-${Date.now()}`,
-              role: "connector-proposal" as const,
-              connectorProposal: finalProposal,
-              connectorProposalStatus: "pending" as const,
-              t: "à l'instant",
-            };
-            return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
-          });
-        }
-      })
-      .catch((err: Error) => {
-        if (err?.name === "AbortError") {
-          updateLastMessage((m) => ({
-            ...m,
-            text: (m.text?.trim() ? m.text : "") + "<p><em>Génération interrompue.</em></p>",
-          }));
-          return;
-        }
-        updateLastMessage(() => ({
-          role: "agent" as const,
-          text: `<p>Erreur de connexion au service IA${err?.message ? ` : ${err.message}` : ""}.</p>`,
-          t: "à l'instant",
-        }));
-      })
-      .finally(() => {
-        if (streamAbortRef.current === controller) streamAbortRef.current = null;
-        setIsThinking(false);
-        setThinkingStatus(null);
+    let lastLiveKey = "";
+    function applyLivePreview(raw: string) {
+      const live = extractAppPreviewSignal(raw);
+      if (!live.preview) return;
+      const incoming = live.preview;
+      const key = incoming.modules.map((m) => `${m.id}:${m.blocks.length}`).join("|");
+      if (key === lastLiveKey) return;
+      lastLiveKey = key;
+      const replace = live.replace;
+      setDrafts((p) => {
+        const d = p[id];
+        return {
+          ...p,
+          [id]: {
+            ...d,
+            appPreview: mergeAppPreview(d.appPreview, incoming, replace),
+            appPreviewFreshIds: incoming.modules.map((m) => m.id),
+          },
+        };
       });
+    }
+
+    /**
+     * Un tour, avec sa promesse de délai : si RIEN de visible n'est arrivé au
+     * bout de `BUILDER_FIRST_TOKEN_DEADLINE_MS`, on abandonne et on rejoue
+     * une fois en mode dégradé (modèle rapide, sans réflexion ni recherche).
+     * Le créateur voit ainsi toujours une première proposition, plutôt qu'un
+     * indicateur qui tourne indéfiniment.
+     */
+    function launch(degraded: boolean) {
+      const budget = builderTurnBudget(turnKind, { userText: apiUserContent, seedObjective, degraded });
+      // Le modèle rapide sert au cadrage — et au rejeu, où le délai prime.
+      const chatModelId = cadrageTurn || degraded ? BUILDER_FAST_MODEL_ID : BUILDER_ASSISTANT_MODEL_ID;
+
+      const controller = new AbortController();
+      streamAbortRef.current = controller;
+
+      let sawContent = false;
+      let retrying = false;
+      let deadline: ReturnType<typeof setTimeout> | undefined;
+
+      streamChatCompletion(
+        {
+          model: chatModelId,
+          messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: apiUserContent }],
+          // Les réponses du builder embarquent souvent un prompt système complet
+          // + un bloc GENT_CONFIG : un plafond trop bas tronquait les propositions.
+          // L'aperçu est un JSON court : un plafond plus bas évite que le modèle
+          // parte dans une dissertation et n'atteigne jamais le bloc.
+          max_tokens: budget.maxTokens,
+          ...(budget.reasoning && supportsReasoningStream(chatModelId) ? { reasoning: { enabled: true } } : {}),
+          // Recherche web : utile pour découvrir des connecteurs, inutile
+          // partout ailleurs — et elle s'exécute AVANT la génération, donc
+          // chaque tour la payait en attente pure.
+          webSearch: budget.webSearch,
+        },
+        (fullSoFar, reasoningSoFar) => {
+          if (!sawContent && fullSoFar.trim()) {
+            sawContent = true;
+            clearTimeout(deadline);
+          }
+          let displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
+          if (askTurn) displayRaw = stripVisibleChoiceList(displayRaw);
+          updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw), reasoning: reasoningSoFar || undefined }));
+          if (previewTurn) applyLivePreview(fullSoFar);
+        },
+        undefined,
+        (status) => setThinkingStatus(status.label),
+        "/api/chat",
+        controller.signal
+      )
+        .then(({ text: fullRaw, truncated, reasoning }) => {
+          const afterQuestions = extractQuestions(fullRaw);
+          let questions = afterQuestions.questions;
+          const afterConfig = extractGentConfigSignal(afterQuestions.text);
+          const afterPreview = extractAppPreviewSignal(afterConfig.text);
+          const afterSuggestions = extractConnectorSuggestions(afterPreview.text);
+          const afterConnector = extractConnectorSignal(afterSuggestions.text);
+          const afterJumpForm = extractJumpFormSignal(afterConnector.text);
+          let reply = afterJumpForm.text;
+          if (askTurn && !questions.length) {
+            const recovered = recoverQuestionsFromChoiceList(reply);
+            reply = recovered.text;
+            questions = recovered.questions;
+          } else if (questions.length) {
+            reply = stripVisibleChoiceList(reply, questions.flatMap((q) => q.options));
+          }
+          const previewApplied = !!afterPreview.preview && !askTurn;
+          if (previewApplied && (reply.startsWith("{") || reply.startsWith("```") || !reply.trim())) {
+            const p = afterPreview.preview!;
+            reply = `Aperçu généré : ${p.themes.join(" · ")} (${p.modules.length} module${p.modules.length > 1 ? "s" : ""}).`;
+          }
+          const truncationNote =
+            truncated && !previewApplied
+              ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — cliquez à nouveau sur « Générer l’aperçu » ou demandez une version plus courte.</em></p>'
+              : "";
+          updateLastMessage((m) => ({ ...m, text: renderMarkdown(reply) + truncationNote, questions, reasoning: reasoning || undefined }));
+
+          // Configuration complète proposée : carte « Appliquer la configuration ».
+          // Un tour « aperçu » ne doit pas aussi reconfigurer le gent.
+          if (afterConfig.config && !previewTurn && !askTurn) {
+            const config = afterConfig.config;
+            setDrafts((p) => {
+              const d = p[id];
+              const msg = {
+                id: `config-${Date.now()}`,
+                role: "config-proposal" as const,
+                configProposal: config,
+                configProposalStatus: "pending" as const,
+                t: "à l'instant",
+              };
+              return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+            });
+          }
+
+          // Aperçu d'application : appliqué immédiatement (c'est une maquette à
+          // données simulées, rien de destructif à valider) pour que l'onglet
+          // Aperçu se dessine sous les yeux du créateur au fil de l'échange.
+          if (afterPreview.preview && !askTurn) {
+            const incoming = afterPreview.preview;
+            const replace = afterPreview.replace;
+            setDrafts((p) => {
+              const d = p[id];
+              return {
+                ...p,
+                [id]: {
+                  ...d,
+                  appPreview: mergeAppPreview(d.appPreview, incoming, replace),
+                  appPreviewFreshIds: incoming.modules.map((m) => m.id),
+                },
+              };
+            });
+          }
+
+          // Formulaire jump proposé : carte « Ajouter ce formulaire ».
+          if (afterJumpForm.form && !previewTurn && !askTurn) {
+            const form = afterJumpForm.form;
+            setDrafts((p) => {
+              const d = p[id];
+              const msg = {
+                id: `jumpform-${Date.now()}`,
+                role: "jump-form-proposal" as const,
+                jumpFormProposal: form,
+                jumpFormProposalStatus: "pending" as const,
+                t: "à l'instant",
+              };
+              return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+            });
+          }
+
+          // Connecteurs candidats découverts par recherche web : liste de
+          // sélection à valider par le créateur. Ignorée si une configuration
+          // complète a été proposée dans le même message (elle prime).
+          const suggestions =
+            afterConfig.config || previewTurn || askTurn
+              ? []
+              : afterSuggestions.suggestions.filter((s) => !existingConnectorUrls.includes(s.url));
+          if (suggestions.length) {
+            setDrafts((p) => {
+              const d = p[id];
+              const msg = {
+                id: `connlist-${Date.now()}`,
+                role: "connector-proposal" as const,
+                connectorSuggestions: suggestions,
+                connectorSuggestionsStatus: "pending" as const,
+                t: "à l'instant",
+              };
+              return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+            });
+          }
+
+          // Proposition de connecteur unique : signal du modèle, ou détection
+          // déterministe de secours sur le message du créateur (URL de dataset).
+          let proposal: ConnectorProposal | null = afterConnector.connector ?? detectConnectorInText(text);
+          if (afterConfig.config || previewTurn || askTurn) proposal = null;
+          if (proposal && existingConnectorUrls.includes(proposal.url)) proposal = null;
+          if (proposal && suggestions.some((s) => s.url === proposal!.url)) proposal = null;
+          if (proposal) {
+            const finalProposal = proposal;
+            setDrafts((p) => {
+              const d = p[id];
+              const msg = {
+                id: `conn-${Date.now()}`,
+                role: "connector-proposal" as const,
+                connectorProposal: finalProposal,
+                connectorProposalStatus: "pending" as const,
+                t: "à l'instant",
+              };
+              return { ...p, [id]: { ...d, builderConversation: [...d.builderConversation, msg] } };
+            });
+          }
+        })
+        .catch((err: Error) => {
+          // Abandon provoqué par le délai : le rejeu prend le relais, on ne
+          // signale surtout pas une « génération interrompue » au créateur.
+          if (retrying) return;
+          if (err?.name === "AbortError") {
+            updateLastMessage((m) => ({
+              ...m,
+              text: (m.text?.trim() ? m.text : "") + "<p><em>Génération interrompue.</em></p>",
+            }));
+            return;
+          }
+          updateLastMessage(() => ({
+            role: "agent" as const,
+            text: `<p>Erreur de connexion au service IA${err?.message ? ` : ${err.message}` : ""}.</p>`,
+            t: "à l'instant",
+          }));
+        })
+        .finally(() => {
+          clearTimeout(deadline);
+          if (retrying) return;
+          if (streamAbortRef.current === controller) streamAbortRef.current = null;
+          setIsThinking(false);
+          setThinkingStatus(null);
+        });
+
+      if (!degraded) {
+        deadline = setTimeout(() => {
+          if (sawContent) return;
+          retrying = true;
+          controller.abort();
+          launch(true);
+        }, BUILDER_FIRST_TOKEN_DEADLINE_MS);
+      }
+    }
+
+    launch(false);
   }, []);
+
+  // Le créateur a décrit le rôle de son gent sur l'accueil du studio : cette
+  // description est rejouée ici, une seule fois, pour que l'assistant reprenne
+  // l'échange au lieu de redemander ce qui vient d'être écrit. On attend
+  // l'hydratation du stockage, sinon on jouerait le gabarit vierge — la
+  // description ne vit que dans le cache local à cet instant.
+  const seededDraftsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!storageReady) return;
+    const pending = drafts[currentId]?.pendingBuilderMessage?.trim();
+    if (!pending || seededDraftsRef.current.has(currentId)) return;
+    seededDraftsRef.current.add(currentId);
+    clearStoredPendingBuilderMessage(currentId);
+    setDrafts((prev) => ({ ...prev, [currentId]: { ...prev[currentId], pendingBuilderMessage: undefined } }));
+    sendBuilderMessage(pending);
+  }, [drafts, currentId, storageReady, sendBuilderMessage]);
 
   const startNewBuilderConversation = useCallback(() => {
     streamAbortRef.current?.abort();
@@ -711,7 +1238,7 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         if (cfg.objective) next.objective = cfg.objective;
         if (cfg.systemPrompt) next.systemPrompt = cfg.systemPrompt;
         if (cfg.webSearch !== undefined) next.webSearch = cfg.webSearch;
-        if (cfg.chatModelId || cfg.reasoningModelId) {
+        if (cfg.chatModelId) {
           // Upsert par capacité : un .map seul n'ajoutait rien si la ligne
           // manquait, et un id mal classé (reasoning dans chat) restait invisible
           // dans les filtres Conversation du configurateur Prompt.
@@ -730,7 +1257,6 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
           };
           let assignments = next.modelAssignments;
           if (cfg.chatModelId) assignments = upsert(assignments, "chat", cfg.chatModelId);
-          if (cfg.reasoningModelId) assignments = upsert(assignments, "reasoning", cfg.reasoningModelId);
           next.modelAssignments = assignments;
         }
         if (cfg.connectors?.length) {
@@ -856,14 +1382,21 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         currentDraft,
         activeTab,
         railCollapsed,
+        assistantCollapsed,
         switchDraft,
         switchTab,
         toggleRail,
+        toggleAssistant,
         createDraft,
+        updatePropulsePar,
+        updateStarters,
+        nomCompte,
         updateObjective,
         updateSystemPrompt,
         updateName,
+        updateIcon,
         publishDraft,
+        syncWorkingVersion,
         assignModel,
         addKnowledgeSource,
         removeKnowledgeSource,
@@ -872,10 +1405,16 @@ export function BuilderProvider({ children, initialId }: { children: ReactNode; 
         updateToolInstance,
         removeToolInstance,
         toggleWebSearch,
+        updateFileDownload,
         updateRoutine,
         updateChannel,
         updatePinnedArtefact,
+        updateVisionneuse,
+        updateCollab,
+        clearAppPreview,
         sendBuilderMessage,
+        toggleAutoPilot,
+        cadragePending,
         startNewBuilderConversation,
         applyBuilderSuggestion,
         confirmConnectorProposal,

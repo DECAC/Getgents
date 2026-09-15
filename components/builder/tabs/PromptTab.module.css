@@ -14,7 +14,7 @@
 }
 
 .title {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 15px;
   margin: 0 0 3px;
   letter-spacing: -0.01em;
@@ -41,8 +41,14 @@
 }
 .promptArea:focus {
   outline: none;
-  border-color: var(--plum);
-  box-shadow: 0 0 0 3px var(--plum-tint);
+  border-color: var(--sage);
+  box-shadow: 0 0 0 3px var(--sage-tint);
+}
+
+.promptArea::placeholder,
+.routineMission::placeholder {
+  font-style: italic;
+  color: var(--faint);
 }
 
 .footRow {
@@ -69,7 +75,7 @@
 .tip svg {
   flex: none;
   margin-top: 2px;
-  color: var(--plum);
+  color: var(--sage);
 }
 
 /* ---------- Connaissances ---------- */
@@ -132,8 +138,8 @@
   color: var(--faint);
 }
 .knowRemove:hover {
-  background: var(--plum-tint);
-  color: var(--plum);
+  background: var(--sage-tint);
+  color: var(--sage);
 }
 
 .knowAddRow {
@@ -157,9 +163,9 @@
   white-space: nowrap;
 }
 .knowAddBtn:hover {
-  border-color: var(--plum);
-  color: var(--plum);
-  background: var(--plum-tint);
+  border-color: var(--sage);
+  color: var(--sage);
+  background: var(--sage-tint);
 }
 
 .hiddenFileInput {
@@ -183,8 +189,8 @@
 }
 .urlInput:focus {
   outline: none;
-  border-color: var(--plum);
-  box-shadow: 0 0 0 3px var(--plum-tint);
+  border-color: var(--sage);
+  box-shadow: 0 0 0 3px var(--sage-tint);
 }
 
 /* ---------- En-tête de section sans encadré (ex. Modèles) ---------- */
@@ -279,7 +285,7 @@
 }
 .routineMission:focus {
   outline: none;
-  border-color: var(--plum);
+  border-color: var(--sage);
 }
 
 .routineFoot {
@@ -324,9 +330,219 @@
   padding: 8px 11px;
 }
 
+.capabilityHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.capabilityHead .sub {
+  margin-bottom: 0;
+}
+
+.capabilityIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--sage-tint);
+  color: var(--sage-700);
+  margin-top: 1px;
+}
+
+.subOption {
+  margin-top: 14px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.subOptionTitle {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 3px;
+}
+
+.subOption .sub {
+  margin-bottom: 0;
+}
+
 /* État de lecture/erreur pendant l'extraction d'un document de connaissance. */
 .knowBusy {
   font-size: 11.5px;
   color: var(--muted);
   margin-bottom: 8px;
+}
+
+
+/* ── Sélection des documents téléchargeables ─────────────────────────────── */
+.docList {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.docItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.docItem:hover {
+  background: var(--bg);
+}
+
+.docItem input {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  accent-color: var(--blue);
+}
+
+/* Un nom de fichier peut être long : il se coupe plutôt que d'élargir la
+   colonne, qui pousserait la page à défiler latéralement. */
+.docNom {
+  font-size: 13px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.docAvertissement {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--plum);
+}
+
+/* Au doigt, chaque ligne est une cible à part entière. */
+@media (pointer: coarse) {
+  .docItem {
+    min-height: 44px;
+  }
+  .docItem input {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+
+/* Champ d'attribution « Propulsé par ». */
+.champ {
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.champ:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+/* iOS zoome sur tout champ sous 16 px : on le neutralise au toucher. */
+@media (pointer: coarse) {
+  .champ {
+    font-size: 16px;
+    min-height: 44px;
+  }
+}
+
+
+/* ── Questions d'amorce ──────────────────────────────────────────────────── */
+.amorceList {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.amorceItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Le champ occupe la place restante ; le bouton de retrait garde la sienne. */
+.amorceItem .champ {
+  margin-top: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.amorceRetirer {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.amorceRetirer:hover {
+  color: var(--plum);
+  border-color: var(--plum);
+}
+
+.amorceActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.amorceAjouter {
+  padding: 9px 15px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.amorceAjouter:hover {
+  border-color: var(--ink);
+}
+
+.amorceAjouter:disabled {
+  color: var(--muted);
+  border-color: var(--line);
+}
+
+.amorceErreur {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--plum);
+}
+
+/* Au doigt : cibles de 44 px, et pas de zoom iOS sous 16 px. */
+@media (pointer: coarse) {
+  .amorceRetirer,
+  .amorceAjouter {
+    min-height: 44px;
+  }
+  .amorceRetirer {
+    width: 44px;
+  }
 }

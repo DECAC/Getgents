@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<body>
+<iframe id="f" src="proposition-2-tableau-mission.html" style="width:1440px;height:900px;border:0"></iframe>
+<pre id="out">mesure en cours…</pre>
+<script>
+  const f = document.getElementById('f');
+  f.onload = () => {
+    const w = f.contentWindow, d = f.contentDocument;
+    const board = d.querySelector('.board');
+    const r = {
+      innerWidth: w.innerWidth,
+      innerHeight: w.innerHeight,
+      boardScrollH: board.scrollHeight,
+      boardClientH: board.clientHeight,
+      scrollEcart: board.scrollHeight - board.clientHeight,
+      optionsCols: w.getComputedStyle(d.querySelector('.options')).gridTemplateColumns,
+      missionCols: w.getComputedStyle(d.querySelector('.mission')).gridTemplateColumns,
+      gridCols: w.getComputedStyle(d.querySelector('.grid')).gridTemplateColumns,
+      dockVisible: !d.getElementById('dock').classList.contains('hidden'),
+      mrowCols: w.getComputedStyle(d.querySelector('.mrow:not(.mhead)')).gridTemplateColumns
+    };
+    document.getElementById('out').textContent = JSON.stringify(r, null, 1);
+    document.title = 'MESURE_OK';
+  };
+</script>

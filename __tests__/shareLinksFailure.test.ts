@@ -3,10 +3,14 @@ import { withoutSessionContext } from "@/lib/espaceApiPayload";
 import type { Espace, UserFile } from "@/lib/types";
 
 describe("diagnostic des échecs de liens de partage", () => {
+  // Le détail des variables citées dépend de l'environnement : il est vérifié
+  // plus bas, dans le bloc qui contrôle process.env. Ici on ne teste que le
+  // contrat stable — statut 503 et diagnostic actionnable.
   it("nomme Supabase non configuré", () => {
     const r = describeShareLinksFailure(new Error("supabase_not_configured"));
     expect(r.status).toBe(503);
-    expect(r.hint).toContain("NEXT_PUBLIC_SUPABASE_URL");
+    expect(r.error).toBe("supabase_not_configured");
+    expect(r.hint).toContain("REDÉPLOYEZ");
   });
 
   it("détecte une table absente via le code Postgres 42P01", () => {

@@ -1,5 +1,5 @@
 @import "../styles/tokens.css";
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 
 *,
 *::before,
@@ -20,7 +20,7 @@ body {
 }
 
 body {
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Sora", system-ui, sans-serif;
   background: var(--bg);
   color: var(--ink);
   font-size: 14px;
@@ -47,6 +47,21 @@ textarea {
 ::-moz-selection {
   background: var(--sage);
   color: #fff;
+}
+
+/* Placeholders en italique sur tout le site — ils indiquent des exemples,
+   pas des valeurs imposées. */
+::placeholder {
+  font-style: italic;
+  color: var(--faint);
+}
+::-webkit-input-placeholder {
+  font-style: italic;
+  color: var(--faint);
+}
+::-moz-placeholder {
+  font-style: italic;
+  color: var(--faint);
 }
 
 :focus-visible {
@@ -94,7 +109,7 @@ body.col-resizing {
 .gendoc h2,
 .gendoc h3,
 .gendoc h4 {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   letter-spacing: -0.015em;
   line-height: 1.25;
   margin: 22px 0 10px;
@@ -327,4 +342,135 @@ body.col-resizing {
 .gendoc .check.ok span {
   color: var(--muted);
   text-decoration: line-through;
+}
+
+/* Voile du tiroir de navigation sur petit écran (lib/context/NavMobileContext).
+   Global parce qu'il couvre la page entière, au-dessus de tous les shells. */
+.nav-mobile-voile {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(21, 33, 43, 0.42);
+  animation: nav-mobile-voile-apparait 0.18s ease-out;
+}
+
+@keyframes nav-mobile-voile-apparait {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (min-width: 861px) {
+  /* Au-dessus du point de rupture le rail est permanent : un voile n'aurait
+     rien à masquer, et il bloquerait la page si un état restait ouvert. */
+  .nav-mobile-voile {
+    display: none;
+  }
+}
+
+/* ——— Plancher de 16 px sur les champs de saisie ———
+   Safari sur iOS ZOOME la page dès qu'on touche un champ dont la police fait
+   moins de 16 px. L'utilisateur tape, la mise en page saute, et il doit pincer
+   pour revenir : le défaut d'ergonomie mobile le plus courant, présent ici sur
+   tous les formulaires — inscription comprise, donc dès le premier contact.
+
+   `pointer: coarse` plutôt qu'une largeur : le zoom dépend de l'appareil, pas
+   de la taille de la fenêtre. Une fenêtre de bureau étroite garde donc sa
+   typographie, et une tablette est couverte quelle que soit son orientation.
+
+   `!important` est ici délibéré, et c'est le seul du projet. Les tailles sont
+   posées par des modules CSS dont les sélecteurs de classe l'emportent sur un
+   sélecteur d'élément ; sans lui, la règle ne s'appliquerait nulle part. La
+   contourner demanderait de retoucher chaque module — et d'y penser à chaque
+   nouveau champ. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* Le texte agrandi ne tient plus dans une hauteur calibrée pour 12 ou 13 px :
+     mesuré, il manquait un pixel et les jambages étaient coupés. Le plancher
+     de 44 px règle le rognage ET la taille de cible tactile — c'est la hauteur
+     sous laquelle un doigt rate un champ. Les cases à cocher en sont exclues :
+     leur boîte est carrée, on les traitera autrement. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select {
+    min-height: 44px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Impression d'un artefact — « Télécharger en PDF »
+ *
+ * On masque par `visibility` et non par `display` : le sous-arbre a imprimer
+ * est PROFONDEMENT imbrique dans la page, et `display: none` sur ses ancetres
+ * l'emporterait avec eux. `visibility` se re-declare, elle, sur les
+ * descendants — c'est ce qui permet d'isoler une branche sans la deplacer.
+ *
+ * Sans cette isolation, c'est la page entiere qui part a l'imprimante,
+ * conversation comprise.
+ * ------------------------------------------------------------------------- */
+@media print {
+  body.impressionArtefact * {
+    visibility: hidden;
+  }
+  body.impressionArtefact [data-impression="artefact"],
+  body.impressionArtefact [data-impression="artefact"] * {
+    visibility: visible;
+  }
+  body.impressionArtefact [data-impression="artefact"] {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    box-shadow: none;
+    border: none;
+  }
+  /* Les commandes n'ont aucun sens sur du papier. */
+  body.impressionArtefact [data-impression="artefact"] button {
+    display: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Ascenseurs discrets
+ *
+ * Sous Windows, la barre de defilement par defaut est large et opaque : dans
+ * une carte d'artefact, elle pese autant que le contenu et coupe la lecture.
+ * macOS la masque au repos, ce qui rend le defaut invisible a qui developpe
+ * sur Mac — d'ou un ecart de rendu qu'aucune capture Mac ne revele.
+ *
+ * On la garde VISIBLE (la cacher priverait d'un reperage utile : ou l'on en
+ * est, et qu'il reste a lire) mais fine et sans piste opaque.
+ * ------------------------------------------------------------------------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+/* WebKit : `scrollbar-width` y est recent, ces regles couvrent le reste. */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+  /* La bordure transparente amincit le curseur sans reduire sa zone de
+     saisie : il reste attrapable a la souris. */
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--faint);
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }

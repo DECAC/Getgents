@@ -1,21 +1,31 @@
-import type { Espace, EspacesMap, Tool, UserFile, RestApiConnector } from "@/lib/types";
+import type { Espace, EspacesMap, Tool, UserFile, RestApiConnector, DocumentViewerSpec } from "@/lib/types";
+import { documentsBudgetFor } from "@/lib/sessionContext";
 import type { GentDraft, KnowledgeSource } from "@/lib/types/builder";
 import { CONNECTOR_TOOL_TYPES } from "@/lib/mock-data/builder";
 import { formatConversationStartedAt, newConversationId } from "@/lib/conversationUtils";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
-import { appAccessHeaders } from "@/lib/appAccess";
+import { apiFetchInit, signalerSessionExpiree } from "@/lib/apiFetch";
+import { cacheKey } from "@/lib/session/currentUser";
+import { MAX_CHARS as DOC_MAX_CHARS } from "@/lib/extractDocumentText";
+import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
+import { resolveImageModelId } from "@/lib/imageModels";
+import { downloadableDocumentsFromDraft } from "@/lib/fileDownload";
+import { normaliserNomAffiche } from "@/lib/nomAffiche";
 
 // Persistance des gents publiés : la source de vérité est Supabase (via les
 // routes /api/gents), le localStorage n'est plus qu'un cache local pour un
 // affichage instantané et un mode dégradé. Si Supabase n'est pas configuré
 // (variables d'env absentes → l'API répond 503), on retombe silencieusement
 // sur le comportement maquette d'origine : localStorage seul.
-const STORAGE_KEY = "getgents:published-gents";
+// Base de la clé : la clé RÉELLE porte l'identifiant du compte (voir
+// lib/storageScope.ts). Sans cloisonnement, le compte suivant sur une machine
+// partagée lisait les gents du précédent avant même le premier appel serveur.
+const STORAGE_BASE = "getgents:published-gents";
 
 export function readPublishedGents(): EspacesMap {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(cacheKey(STORAGE_BASE));
     return raw ? (JSON.parse(raw) as EspacesMap) : {};
   } catch {
     return {};
@@ -24,7 +34,7 @@ export function readPublishedGents(): EspacesMap {
 
 function writeLocalCache(gents: EspacesMap): void {
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(gents));
+    window.localStorage.setItem(cacheKey(STORAGE_BASE), JSON.stringify(gents));
   } catch {
     // localStorage indisponible (navigation privée, quota dépassé…).
   }
@@ -38,20 +48,43 @@ let remoteAvailable: boolean | null = null;
 const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const PUSH_DEBOUNCE_MS = 1500;
 
+/**
+ * Annule les envois différés en attente.
+ *
+ * Le push est débouncé de 1,5 s. À la déconnexion, un envoi programmé juste
+ * avant partirait APRÈS que les cookies ont changé — avec la session du compte
+ * suivant, et donc dans SES données. C'est le genre de fuite qui ne se voit
+ * qu'une fois arrivée.
+ */
+export function cancelPendingPushes(): void {
+  pushTimers.forEach((timer) => clearTimeout(timer));
+  pushTimers.clear();
+}
+
+
 /** À appeler quand la clé APP_ACCESS_SECRET est (re)saisie — relance les syncs. */
 export function resetPublishedRemoteAvailability(): void {
   remoteAvailable = null;
 }
 
-/** Récupère les gents publiés depuis le serveur — null si indisponible. */
-export async function fetchRemoteGents(): Promise<EspacesMap | null> {
+/** Récupère les gents publiés depuis le serveur — null si indisponible, 'unauthorized' si 401. */
+export async function fetchRemoteGents(): Promise<EspacesMap | null | "unauthorized"> {
   if (remoteAvailable === false) return null;
   try {
-    const res = await fetch("/api/gents", { cache: "no-store", headers: appAccessHeaders() });
-    if (res.status === 503 || res.status === 401) {
-      // 503 : Supabase non configuré. 401 : secret d'accès absent ou invalide
-      // (ouvrir l'app une fois avec ?key=… pour l'enregistrer). Dans les deux
-      // cas on cesse d'interroger le serveur et le cache local prend le relais.
+    const res = await fetch("/api/gents", {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (res.status === 401) {
+      // La session a expiré : plus rien à saisir, il faut se reconnecter.
+      // L'événement laisse l'interface décider — ce module ne connaît ni le
+      // routeur ni l'écran à afficher.
+      remoteAvailable = false;
+      signalerSessionExpiree();
+      return "unauthorized";
+    }
+    if (res.status === 503) {
+      // Supabase non configuré — cache local uniquement.
       remoteAvailable = false;
       return null;
     }
@@ -64,18 +97,30 @@ export async function fetchRemoteGents(): Promise<EspacesMap | null> {
   }
 }
 
-function sendRemoteGent(id: string, espace: Espace): Promise<void> {
+function sendRemoteGent(id: string, espace: Espace, diffuse = false): Promise<void> {
   return fetch(`/api/gents/${encodeURIComponent(id)}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json", ...appAccessHeaders() },
-    body: JSON.stringify({ espace }),
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ espace, ...(diffuse ? { diffuse: true } : {}) }),
     // Survit à une navigation immédiate (clic sur « Preview » juste après la
     // publication) : sans ça la requête est annulée par le déchargement.
     keepalive: true,
   })
-    .then((res) => {
+    .then(async (res) => {
       if (res.status === 503 || res.status === 401) remoteAvailable = false;
       else if (res.ok) remoteAvailable = true;
+      else if (diffuse) {
+        // Une diffusion qui échoue en silence est le pire cas : le créateur
+        // croit son gent à jour alors que ses destinataires lisent toujours
+        // l'ancienne version. Cause la plus fréquente : la migration 004
+        // (colonne `diffused`) pas encore exécutée sur la base.
+        const detail = await res.text().catch(() => "");
+        console.error(
+          `[Getgents] Diffusion refusée par le serveur (${res.status}). La version diffusée n'a PAS été mise à jour.`,
+          detail.slice(0, 300)
+        );
+      }
     })
     .catch(() => {
       // Réseau indisponible : le cache localStorage garde la donnée, le
@@ -83,8 +128,63 @@ function sendRemoteGent(id: string, espace: Espace): Promise<void> {
     });
 }
 
-function pushRemoteGent(id: string, espace: Espace, immediate = false): void {
-  if (remoteAvailable === false) return;
+/**
+ * Pousse TOUT DE SUITE un gent vers le serveur et attend le résultat.
+ * Utilisé par « Diffuser » / « Publier sur le web » : ces gestes ne doivent
+ * jamais être avalés par le drapeau `remoteAvailable === false` (qui coupe
+ * sinon les envois en silence après un 401/503 antérieur).
+ */
+export async function flushPublishedGent(
+  id: string,
+  espace?: Espace,
+  diffuse = true
+): Promise<{ ok: boolean; status: number; error?: string }> {
+  if (typeof window === "undefined") return { ok: false, status: 0, error: "unavailable" };
+
+  const payload = espace
+    ? { ...espace, workingUpdatedAt: new Date().toISOString() }
+    : readPublishedGents()[id];
+  if (!payload) return { ok: false, status: 0, error: "missing_local" };
+
+  // Toujours réessayer sur une action explicite de l'utilisateur.
+  remoteAvailable = null;
+
+  const current = readPublishedGents();
+  current[id] = payload;
+  writeLocalCache(current);
+
+  try {
+    const res = await fetch(`/api/gents/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ espace: payload, ...(diffuse ? { diffuse: true } : {}) }),
+      // Pas de keepalive ici : on attend la réponse pour la remonter à l'UI.
+    });
+    if (res.status === 503 || res.status === 401) remoteAvailable = false;
+    else if (res.ok) remoteAvailable = true;
+
+    if (res.ok) return { ok: true, status: res.status };
+
+    let error = `http_${res.status}`;
+    try {
+      const data = (await res.json()) as { error?: string };
+      if (data.error) error = data.error;
+    } catch {
+      // corps non-JSON
+    }
+    return { ok: false, status: res.status, error };
+  } catch {
+    return { ok: false, status: 0, error: "network" };
+  }
+}
+
+function pushRemoteGent(id: string, espace: Espace, immediate = false, diffuse = false): void {
+  // Après un 401/503, on arrête les syncs de fond — mais PAS les envois
+  // immédiats (Preview / Diffuser) : l'utilisateur a cliqué exprès.
+  if (remoteAvailable === false && !immediate) return;
+  if (immediate) remoteAvailable = null;
+
   const pending = pushTimers.get(id);
   if (pending) clearTimeout(pending);
 
@@ -94,7 +194,7 @@ function pushRemoteGent(id: string, espace: Espace, immediate = false): void {
   // version précédente depuis le serveur et écrasait la nouvelle.
   if (immediate) {
     pushTimers.delete(id);
-    void sendRemoteGent(id, espace);
+    void sendRemoteGent(id, espace, diffuse);
     return;
   }
 
@@ -104,17 +204,37 @@ function pushRemoteGent(id: string, espace: Espace, immediate = false): void {
     id,
     setTimeout(() => {
       pushTimers.delete(id);
-      void sendRemoteGent(id, espace);
+      void sendRemoteGent(id, espace, diffuse);
     }, PUSH_DEBOUNCE_MS)
   );
 }
 
-export function writePublishedGent(id: string, espace: Espace, immediate = false): void {
+/**
+ * `diffuse` fige en plus la version servie aux destinataires (liens de
+ * partage, iframe, WhatsApp, routines). Sans lui, on n'écrit que la version
+ * de travail : le créateur peut donc tester en Preview sans rien changer
+ * pour les utilisateurs déjà en place.
+ */
+export function writePublishedGent(id: string, espace: Espace, immediate = false, diffuse = false): void {
   if (typeof window === "undefined") return;
+  // Estampillé à chaque écriture : c'est ce qui permet à l'hydratation de
+  // savoir que la version de travail locale est plus fraîche que celle du
+  // serveur, même quand le compteur `version` est reparti de 1.
+  const stamped: Espace = { ...espace, workingUpdatedAt: new Date().toISOString() };
   const current = readPublishedGents();
-  current[id] = espace;
+  current[id] = stamped;
   writeLocalCache(current);
-  pushRemoteGent(id, espace, immediate);
+  pushRemoteGent(id, stamped, immediate, diffuse);
+}
+
+/** Vrai si la version de travail locale a été écrite après celle du serveur. */
+export function localIsFresher(local: Espace | undefined, remote: Espace): boolean {
+  if (!local) return false;
+  const l = Date.parse(local.workingUpdatedAt ?? "");
+  const r = Date.parse(remote.workingUpdatedAt ?? "");
+  if (Number.isFinite(l) && (!Number.isFinite(r) || l > r)) return true;
+  // Espaces antérieurs à l'horodatage : on retombe sur le compteur de version.
+  return (local.version ?? 1) > (remote.version ?? 1);
 }
 
 /**
@@ -122,8 +242,9 @@ export function writePublishedGent(id: string, espace: Espace, immediate = false
  * le cache local, met le cache à jour, et renvoie la map fusionnée — ou null si
  * le distant est indisponible (le cache local reste alors la seule source).
  */
-export async function syncPublishedGentsFromRemote(): Promise<EspacesMap | null> {
+export async function syncPublishedGentsFromRemote(): Promise<EspacesMap | null | "unauthorized"> {
   const remote = await fetchRemoteGents();
+  if (remote === "unauthorized") return "unauthorized";
   if (remote === null) return null;
 
   const local = readPublishedGents();
@@ -132,11 +253,11 @@ export async function syncPublishedGentsFromRemote(): Promise<EspacesMap | null>
 
   for (const [id, remoteEspace] of Object.entries(remote)) {
     const localEspace = local[id];
-    // Le distant fait autorité, SAUF s'il est en retard d'une publication : une
-    // version locale plus récente signifie que le push n'a pas encore abouti.
-    // Sans ce garde-fou, republier puis ouvrir l'espace aussitôt ramenait la
-    // configuration précédente (nouveaux champs d'entrée invisibles).
-    if (localEspace && (localEspace.version ?? 1) > (remoteEspace.version ?? 1)) {
+    // Le distant fait autorité, SAUF s'il est en retard d'une écriture locale :
+    // le push n'a alors pas encore abouti. Sans ce garde-fou, ouvrir l'espace
+    // juste après « Preview » ramenait la configuration précédente — le
+    // document tout juste attaché à une visionneuse restait invisible.
+    if (localIsFresher(localEspace, remoteEspace)) {
       stale.push(id);
       continue;
     }
@@ -176,7 +297,7 @@ export async function deletePublishedGent(id: string): Promise<{ ok: boolean; er
   try {
     const res = await fetch(`/api/gents/${encodeURIComponent(id)}`, {
       method: "DELETE",
-      headers: appAccessHeaders(),
+      credentials: "include",
     });
     if (res.status === 503 || res.status === 401) {
       remoteAvailable = false;
@@ -201,13 +322,87 @@ export function patchPublishedGentName(id: string, name: string): void {
   writePublishedGent(id, { ...existing, name, gent: name });
 }
 
+/** Idem pour l'emblème : le rail du Gent' space le reflète sans rediffusion. */
+export function patchPublishedGentIcon(id: string, icon: string): void {
+  if (typeof window === "undefined") return;
+  const existing = readPublishedGents()[id];
+  if (!existing) return;
+  writePublishedGent(id, { ...existing, icon });
+}
+
 /**
  * Total de caractères de base de connaissance injectés dans le prompt système.
- * Chaque document est déjà borné par `extractDocumentText` (15 000 caractères
- * pour un PDF/Word, 60 000 pour un CSV), mais plusieurs documents combinés
- * pourraient alourdir excessivement un prompt figé pour toujours.
+ * Aligné sur un dossier d'environ 100 pages (voir `MAX_CHARS` d'extraction) :
+ * un unique document au plafond d'extraction doit tenir intégralement, sans
+ * être écarté « faute de place » à la publication. Au-delà (plusieurs gros
+ * fichiers), les suivants sont listés en référence seule.
  */
-const KNOWLEDGE_BASE_BUDGET = 45_000;
+export const KNOWLEDGE_BASE_BUDGET = DOC_MAX_CHARS;
+
+/** Identifiant de l'artefact portant le document d'un gent « visionneuse ». */
+export const VISIONNEUSE_ARTEFACT_ID = "visionneuse-doc";
+
+/**
+ * Réinjecte le document de la visionneuse dans les artefacts conservés d'un
+ * espace déjà existant (voir buildEspaceFromDraft).
+ *
+ * Les artefacts d'un espace sont le travail de son utilisateur : republier un
+ * gent les préserve. Mais le document d'un gent « visionneuse » est défini par
+ * le CRÉATEUR — le remplacer par la liste d'artefacts d'avant revenait à
+ * ignorer purement et simplement tout document attaché à un gent DÉJÀ
+ * existant, qui restait alors intestable en Preview. On repart donc des
+ * artefacts de l'utilisateur, on retire l'éventuel document périmé, et on
+ * remet celui de la configuration courante — absent s'il a été retiré ou si le
+ * type visionneuse a été désactivé.
+ */
+export function mergeVisionneuseArtefact(kept: Espace["artefacts"], fresh: Espace["artefacts"]): Espace["artefacts"] {
+  const freshDoc = fresh.find((a) => a.id === VISIONNEUSE_ARTEFACT_ID);
+  const withoutDoc = kept.filter((a) => a.id !== VISIONNEUSE_ARTEFACT_ID);
+  return freshDoc ? [freshDoc, ...withoutDoc] : withoutDoc;
+}
+
+/**
+ * Texte intégral du document d'un gent « visionneuse », paginé, injecté dans le
+ * prompt système à la publication.
+ *
+ * Il passe par le prompt et non par les fichiers de session parce que ces
+ * derniers appartiennent à l'utilisateur : ils sont retirés des espaces servis
+ * par lien de partage. Le document du créateur, lui, fait partie de la
+ * définition du gent — sans ça, le destinataire d'une visionneuse diffusée
+ * lisait un document que le gent, lui, n'avait jamais vu.
+ *
+ * Les marqueurs de page permettent au gent de situer ses réponses (« page 42 »)
+ * sur la même pagination que celle affichée au lecteur.
+ */
+function visionneuseDocumentBlock(doc: DocumentViewerSpec, chatModelId?: string): string {
+  const budget = documentsBudgetFor(chatModelId);
+  const kept: string[] = [];
+  let used = 0;
+  let cut = false;
+
+  for (let i = 0; i < doc.pages.length; i++) {
+    const marked = `[Page ${i + 1}]\n${doc.pages[i]}`;
+    if (used + marked.length > budget) {
+      cut = true;
+      break;
+    }
+    used += marked.length;
+    kept.push(marked);
+  }
+
+  const head =
+    `\n\nTEXTE INTÉGRAL DU DOCUMENT « ${doc.sourceName} » — c'est TA source primaire, ` +
+    "cite-la plutôt que tes connaissances générales, et situe tes réponses par numéro de page :\n";
+
+  if (!kept.length) return "";
+  if (!cut) return `${head}${kept.join("\n\n")}`;
+
+  return (
+    `${head}${kept.join("\n\n")}` +
+    `\n\n[Le document continue au-delà de la page ${kept.length} : cette partie dépasse ce que tu peux recevoir. ` +
+    "Si la question porte sur une page ultérieure, dis-le franchement au lecteur au lieu d'improviser.]"
+  );
+}
 
 /**
  * Injecte le CONTENU des sources de connaissance déclarées par le créateur,
@@ -258,6 +453,20 @@ function knowledgeBaseBlock(sources: KnowledgeSource[]): string {
   return block;
 }
 
+/**
+ * Amorces prêtes à partir : sans blancs ni doublons, et bornées.
+ *
+ * `undefined` plutôt qu'un tableau vide — c'est la valeur qui rend la main à
+ * la génération automatique, et un `[]` la bloquerait en laissant le gent
+ * sans aucune bulle.
+ */
+function nettoyerAmorces(brut: string[] | undefined): string[] | undefined {
+  const propres = Array.from(
+    new Set((brut ?? []).map((a) => a.trim()).filter(Boolean))
+  ).slice(0, 8);
+  return propres.length ? propres : undefined;
+}
+
 export function draftToEspace(draft: GentDraft): Espace {
   // Le modèle d'outils du builder (8 types génériques configurables : MCP,
   // API REST, connecteur personnalisé…) ne porte plus de catégorie
@@ -284,19 +493,64 @@ export function draftToEspace(draft: GentDraft): Espace {
     date: "Base de connaissance",
   }));
 
-  let systemPrompt = draft.systemPrompt.trim();
-  systemPrompt += knowledgeBaseBlock(draft.knowledgeSources);
+  // Type « visionneuse » : le document fixé par le créateur nourrit aussi la
+  // conversation (même mécanisme que les fichiers joints — voir
+  // sessionContext.ts) et devient un artefact d'accueil pour que l'espace
+  // s'ouvre directement dessus (voir EspaceContext, visionneuseMode).
+  const chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? undefined;
+
+  const visionneuseDoc = draft.visionneuse?.enabled ? draft.visionneuse.document : undefined;
+  if (visionneuseDoc) {
+    // Listé sans son texte : le contenu part dans le prompt système (bloc
+    // ci-dessous) et non par `files`. Les fichiers de session appartiennent à
+    // l'utilisateur — ils sont retirés des espaces servis par lien de partage,
+    // et le destinataire d'une visionneuse diffusée se serait retrouvé face à
+    // un gent incapable de citer le document qu'il est en train de lire.
+    files.push({
+      id: "visionneuse-doc-file",
+      name: visionneuseDoc.sourceName,
+      size: `${visionneuseDoc.pageCount} page${visionneuseDoc.pageCount > 1 ? "s" : ""}`,
+      date: "Visionneuse",
+    });
+  }
+
+  // Blocs ajoutés par la plateforme (base de connaissance, formats d'artefact,
+  // modes d'emploi des connecteurs). Ils sont accumulés ICI puis placés AVANT
+  // le prompt du créateur : empilés après lui, comme auparavant, ils
+  // occupaient la dernière position — celle que le modèle lit comme faisant
+  // autorité — et son style (longueur, ton) passait au second plan derrière
+  // des consignes purement techniques.
+  const platformBlocks: string[] = [];
+  platformBlocks.push(knowledgeBaseBlock(draft.knowledgeSources));
+
+  if (visionneuseDoc) {
+    const instructions = draft.visionneuse?.instructions?.trim();
+    platformBlocks.push(
+      `Ce gent est une VISIONNEUSE DE DOCUMENT : l'utilisateur lit « ${visionneuseDoc.sourceName} » (${visionneuseDoc.pageCount} pages) ouvert en pleine page à côté de la conversation. ` +
+        "Ton rôle est d'accompagner cette lecture — résume, explique, répond sur le contenu réel du document (reproduit intégralement plus bas), et propose un artefact (rapport, graphique, image) quand ça aide à mieux comprendre une section. " +
+        "Ne propose jamais d'ouvrir un AUTRE document : celui-ci est fixé par le créateur. " +
+        "IMPORTANT — quand tu viens de produire un artefact, ne demande pas au lecteur d'aller le consulter tout de suite : il est en pleine lecture. Termine simplement ta réponse en lui indiquant qu'il le retrouvera dans son espace de travail lorsqu'il quittera la visionneuse." +
+        (instructions ? `\n\nConsignes du créateur : ${instructions}` : "")
+    );
+    platformBlocks.push(visionneuseDocumentBlock(visionneuseDoc, chatModelId));
+  }
 
   // Tous les artefacts (rapport, checklist, graphique, aperçu visuel, carte) sont éligibles
   // pour tous les gents — pas de configuration côté créateur. Le modèle décide seul, au fil de
   // la conversation, quand un artefact concret apporte de la valeur (voir ARTEFACT_PROMPT_INSTRUCTION,
   // toujours injectée côté chat dans EspaceContext).
-  systemPrompt +=
-    "\n\nGénère des artefacts (rapport, checklist, graphique, aperçu visuel, carte) automatiquement et intelligemment, uniquement quand le contenu de la conversation s'y prête — n'attends jamais qu'on te le demande explicitement, et ne les propose pas non plus systématiquement hors de propos. " +
-    "L'utilisateur décide s'il ajoute chaque proposition à son espace de travail.";
+  platformBlocks.push(
+    "Génère des artefacts (rapport, checklist, graphique, aperçu visuel, carte, image, résumé de profil) automatiquement et intelligemment, uniquement quand le contenu de la conversation s'y prête — n'attends jamais qu'on te le demande explicitement, et ne les propose pas non plus systématiquement hors de propos. " +
+      "L'utilisateur décide s'il ajoute chaque proposition à son espace de travail. " +
+      "Pour les illustrations (générées ou photos web), demande toujours son autorisation avant production."
+  );
 
   const threadId = newConversationId();
-  const chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? undefined;
+  // Les consignes IMAGE sont injectées à l'exécution (buildGentSystemPrompt)
+  // selon imageModelId / webSearch — pas bakées dans le prompt système.
+  // resolveImageModelId corrige l'ancien slug google/nanobanana à la publication.
+  const rawImageModelId = draft.modelAssignments.find((a) => a.capability === "image")?.modelId ?? undefined;
+  const imageModelId = rawImageModelId ? resolveImageModelId(rawImageModelId) : undefined;
 
   // Les connecteurs MCP dont le détail est une URL deviennent de vrais
   // serveurs d'outils côté chat (transport Streamable HTTP, ex. datagouv).
@@ -305,14 +559,16 @@ export function draftToEspace(draft: GentDraft): Espace {
     .map((c) => ({ name: c.name, url: c.detail as string }));
 
   if (draft.webSearch) {
-    systemPrompt +=
-      "\n\nLa recherche web est activée pour cet espace : tes réponses peuvent s'appuyer sur des résultats web récents. Cite tes sources quand tu utilises une information issue du web.";
+    platformBlocks.push(
+      "La recherche web est activée pour cet espace : tes réponses peuvent s'appuyer sur des résultats web récents. Cite tes sources quand tu utilises une information issue du web."
+    );
   }
 
   if (mcpServers.length) {
-    systemPrompt +=
-      `\n\nTu disposes d'outils temps réel via ${mcpServers.length > 1 ? "les serveurs MCP" : "le serveur MCP"} ${mcpServers.map((s) => s.name).join(", ")}. ` +
-      "Utilise-les dès que la question porte sur des données qu'ils couvrent, plutôt que de répondre de mémoire, et cite la source des données obtenues.";
+    platformBlocks.push(
+      `Tu disposes d'outils temps réel via ${mcpServers.length > 1 ? "les serveurs MCP" : "le serveur MCP"} ${mcpServers.map((s) => s.name).join(", ")}. ` +
+        "Utilise-les dès que la question porte sur des données qu'ils couvrent, plutôt que de répondre de mémoire, et cite la source des données obtenues."
+    );
   }
 
   // Les connecteurs « dataset » deviennent des outils de recherche par
@@ -322,22 +578,24 @@ export function draftToEspace(draft: GentDraft): Espace {
     .map((c) => ({ name: c.name, url: c.detail as string }));
 
   if (datasets.length) {
-    systemPrompt +=
-      `\n\nTu disposes d'outils sur des jeux de données ouvertes : ${datasets.map((d) => d.name).join(", ")}. ` +
+    platformBlocks.push(
+      `Tu disposes d'outils sur des jeux de données ouvertes : ${datasets.map((d) => d.name).join(", ")}. ` +
       "Deux modes selon le dataset : (1) géolocalisé — recherche par proximité GPS, demande la position via GEOLOC_REQUEST si besoin ; " +
       "(2) tabulaire (ex. DVF transactions immobilières) — interroge par filtres (code INSEE commune, département, type de bien, surface, prix) sans demander la géolocalisation. " +
       "Pour une commune, utilise le code INSEE à 5 chiffres (pas le code postal). " +
       "Pour les datasets géolocalisés, rends chaque adresse cliquable : <a href=\"geo:LAT,LON\" data-address=\"ADRESSE\">ADRESSE</a>. " +
-      "Propose un artefact carte quand plusieurs lieux géolocalisés sont pertinents.";
+        "Propose un artefact carte quand plusieurs lieux géolocalisés sont pertinents."
+    );
   }
 
   // Connecteur IDFM PRIM : deux outils transit temps réel côté serveur.
   const prim = draft.connectors.some((c) => c.toolKind === "prim");
   if (prim) {
-    systemPrompt +=
-      "\n\nTu disposes des outils temps réel Île-de-France Mobilités (PRIM) : prim_stops_nearby(lat, lon) pour trouver les arrêts autour d'une position, puis prim_next_departures(stop_id) pour les prochains passages. " +
+    platformBlocks.push(
+      "Tu disposes des outils temps réel Île-de-France Mobilités (PRIM) : prim_stops_nearby(lat, lon) pour trouver les arrêts autour d'une position, puis prim_next_departures(stop_id) pour les prochains passages. " +
       "Pour guider vers un transport : obtiens d'abord une position (géolocalisation consentie ou lieu précis fourni), appelle prim_stops_nearby, confirme le nom de l'arrêt retenu, puis appelle prim_next_departures avec son stop_id. " +
-      "Présente chaque passage : « Ligne [X] → [direction] : HH:MM » en précisant si l'horaire est temps réel ou théorique (champ temps_reel). N'invente jamais un horaire.";
+        "Présente chaque passage : « Ligne [X] → [direction] : HH:MM » en précisant si l'horaire est temps réel ou théorique (champ temps_reel). N'invente jamais un horaire."
+    );
   }
 
   // Connecteurs API REST personnalisés : appels HTTP réels côté serveur, avec
@@ -354,27 +612,52 @@ export function draftToEspace(draft: GentDraft): Espace {
         return `« ${r.name} » — ${r.config.description}${paramNote}`;
       })
       .join(" ; ");
-    systemPrompt +=
-      `\n\nTu disposes de connecteurs API REST configurés par le créateur : ${listed}. ` +
+    platformBlocks.push(
+      `Tu disposes de connecteurs API REST configurés par le créateur : ${listed}. ` +
       "Appelle l'outil correspondant dès que la question relève de son domaine, en renseignant ses paramètres à partir de la demande de l'utilisateur (demande les informations manquantes avant d'appeler). " +
       "Renseigne CHAQUE paramètre avec une valeur normalisée et valide pour l'API — un nom de ville ou de région seul, un code, une date au format attendu — et NE recopie JAMAIS mot pour mot une phrase de l'utilisateur (ex. « toute la France avec télétravail » n'est pas une localisation valide : utilise une ville précise, ou laisse le paramètre optionnel vide pour une recherche nationale). " +
       "Si un appel échoue, LIS le message d'erreur (il indique l'URL réellement appelée et le motif) : corrige la valeur des paramètres fautifs ou retire les paramètres optionnels douteux AVANT de réessayer — ne relance jamais deux fois le même appel à l'identique. " +
-      "Fonde ta réponse uniquement sur les données réellement renvoyées par l'API — n'invente jamais un résultat. Si l'appel échoue durablement, explique-le clairement.";
+        "Fonde ta réponse uniquement sur les données réellement renvoyées par l'API — n'invente jamais un résultat. Si l'appel échoue durablement, explique-le clairement."
+    );
   }
 
   // Connecteur Powens (sandbox) : comptes & transactions bancaires de test.
   const powens = draft.connectors.some((c) => c.toolKind === "powens");
   if (powens) {
-    systemPrompt +=
-      "\n\nTu disposes des outils bancaires Powens (MODE SANDBOX — données de test, jamais de vraies données) : powens_accounts() pour lister les comptes et soldes, powens_transactions(min_date?, limit?) pour l'historique de transactions. " +
+    platformBlocks.push(
+      "Tu disposes des outils bancaires Powens (MODE SANDBOX — données de test, jamais de vraies données) : powens_accounts() pour lister les comptes et soldes, powens_transactions(min_date?, limit?) pour l'historique de transactions. " +
       "Analyse uniquement les données renvoyées par ces outils — n'invente jamais une transaction ni un montant. Masque tout identifiant de compte sensible (ex. FR76****1234). " +
-      "Si les outils renvoient une erreur de configuration ou zéro compte, explique que le créateur doit configurer les variables POWENS_* côté serveur puis lier une banque sandbox via l'onglet Connecteurs.";
+        "Si les outils renvoient une erreur de configuration ou zéro compte, explique que le créateur doit configurer les variables POWENS_* côté serveur puis lier une banque sandbox via l'onglet Connecteurs."
+    );
   }
+
+  const gmail = draft.connectors.some((c) => c.toolKind === "gmail");
+  if (gmail) {
+    platformBlocks.push(GMAIL_PROMPT_INSTRUCTION);
+  }
+
+  // Le prompt du créateur FERME le message : c'est sa consigne qui gouverne.
+  const systemPrompt = [...platformBlocks.map((b) => b.trim()).filter(Boolean), draft.systemPrompt.trim()]
+    .filter(Boolean)
+    .join("\n\n");
 
   return {
     icon: draft.icon,
     name: draft.name,
     gent: draft.name,
+    // Le nom du compte n'est pas connu ici (module partagé avec le serveur) :
+    // il est appliqué à la diffusion, dans BuilderContext. En aperçu, seule
+    // l'attribution propre au gent apparaît — ce qui est exact, c'est bien la
+    // seule chose décidée à ce stade.
+    propulsePar: normaliserNomAffiche(draft.propulsePar) || undefined,
+    // Les amorces du créateur priment. `ensureStarters` ne génère que si le
+    // champ est vide : les fournir ici suffit à empêcher toute génération, et
+    // à remplacer celles qu'un ancien passage avait mémorisées.
+    //
+    // C'EST ICI qu'on retire les lignes vides, pas dans le brouillon : une
+    // amorce blanche deviendrait une bulle cliquable sans texte, alors qu'un
+    // champ vide en cours de saisie est parfaitement normal.
+    starters: nettoyerAmorces(draft.starters),
     version: 1,
     status: "live",
     statusLabel: "Actif",
@@ -388,18 +671,40 @@ export function draftToEspace(draft: GentDraft): Espace {
     conversations: [{ id: threadId, startedAt: formatConversationStartedAt(), messages: [] }],
     activeConversationId: threadId,
     files,
-    artefacts: [],
+    artefacts: visionneuseDoc
+      ? [
+          {
+            id: "visionneuse-doc",
+            title: visionneuseDoc.sourceName,
+            type: "Visionneuse de document",
+            icon: "📖",
+            date: "Document du gent",
+            document: visionneuseDoc,
+          },
+        ]
+      : [],
     systemPrompt,
     chatModelId,
+    imageModelId,
     mcpServers: mcpServers.length ? mcpServers : undefined,
     datasets: datasets.length ? datasets : undefined,
     prim: prim || undefined,
     powens: powens || undefined,
+    gmail: gmail || undefined,
     restApis: restApis.length ? restApis : undefined,
     jumpForm: draft.jumpForm,
     routine: draft.routine,
     channel: draft.channel,
     pinnedArtefact: draft.pinnedArtefact,
+    visionneuse: draft.visionneuse,
+    collab: draft.collab?.enabled ? draft.collab : undefined,
     webSearch: draft.webSearch || undefined,
+    appPreview: draft.appPreview?.modules.length ? draft.appPreview : undefined,
+    fileDownloadEnabled: draft.fileDownloadEnabled || undefined,
+    fileDownloadFormEnabled:
+      draft.fileDownloadEnabled && draft.fileDownloadFormEnabled ? true : undefined,
+    downloadableDocuments: draft.fileDownloadEnabled
+      ? downloadableDocumentsFromDraft(draft)
+      : undefined,
   };
 }

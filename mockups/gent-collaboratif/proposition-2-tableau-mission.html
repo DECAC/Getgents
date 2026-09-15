@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gustave · Tableau de mission — Team building d'octobre</title>
+<style>
+  /* Tokens repris de styles/tokens.css (piste « Chaleureux grand public ») */
+  :root{
+    --ink:#2a1f19; --muted:#73665f; --faint:#a2958f;
+    --bg:#fbf3ed; --card:#fffdf9; --line:#eadbd3; --line-soft:#f3e9e3;
+    --sage:#e65d76; --sage-700:#c73758; --sage-tint:#ffdee2;
+    --gold:#dca331; --gold-tint:#fde4bb;
+    --plum:#d64651; --plum-tint:#ffdbda;
+    --success:#57a45b; --success-tint:#d4f1d4;
+    --blue:#4f7cc9; --blue-700:#3a5fa3; --blue-tint:#dbe7fb;
+    --r:18px; --r-pill:999px;
+    --shadow:0 1px 2px rgba(42,31,25,.05), 0 10px 28px rgba(42,31,25,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; height:100vh; overflow:hidden;
+    background:var(--bg); color:var(--ink);
+    font:14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{letter-spacing:-.01em}
+  button{font:inherit; cursor:pointer}
+
+  /* ---------- Barre supérieure ---------- */
+  .topbar{
+    height:58px; flex:none; display:flex; align-items:center; gap:14px;
+    padding:0 24px; background:var(--card); border-bottom:1px solid var(--line);
+  }
+  .gentFace{
+    width:38px; height:38px; border-radius:13px; flex:none;
+    background:linear-gradient(135deg, var(--blue-tint), #fff);
+    border:1px solid var(--line);
+    display:grid; place-items:center; font-size:20px;
+  }
+  .topbar h1{font-size:16px; margin:0; font-weight:700}
+  .topbar .sub{font-size:12px; color:var(--muted); margin-top:1px}
+  .topActions{margin-left:auto; display:flex; align-items:center; gap:10px}
+  .pill{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:6px 12px; border-radius:var(--r-pill);
+    font-size:12.5px; font-weight:600; border:1px solid transparent;
+  }
+  .pill .dot{width:7px; height:7px; border-radius:50%; background:currentColor}
+  .pill.status{background:var(--gold-tint); color:#8a6410; border-color:#f0d49a}
+  .pill.status .dot{background:var(--gold); animation:pulse 1.8s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .pill.ghost{background:var(--card); border-color:var(--line); color:var(--muted)}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 15px; border-radius:10px; font-size:13px; font-weight:600;
+    background:var(--sage); color:#fff; border:1px solid var(--sage);
+  }
+  .btn:hover{filter:brightness(1.05)}
+
+  /* ---------- Structure ---------- */
+  .layout{flex:1; min-height:0; display:flex; height:calc(100vh - 58px)}
+  .board{flex:1; min-width:0; overflow-y:auto; padding:16px 24px 20px}
+  .boardInner{max-width:1120px; margin:0 auto; display:flex; flex-direction:column; gap:13px}
+  .card{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--r); box-shadow:var(--shadow);
+  }
+  .cardHead{display:flex; align-items:center; gap:10px; padding:12px 18px 0}
+  .cardHead h2{font-size:14px; margin:0; font-weight:700}
+  .cardHead .hint{font-size:12px; color:var(--faint)}
+  .cardHead .spacer{flex:1}
+  .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:11.5px; font-weight:600; padding:4px 10px;
+    border-radius:var(--r-pill); background:var(--line-soft); color:var(--muted);
+  }
+
+  /* ---------- Carte mission ---------- */
+  .mission{padding:13px 18px 11px; display:grid; grid-template-columns:1.35fr 1fr 1fr 1fr 1.3fr}
+  .mission .cell{padding:0 16px; border-left:1px solid var(--line-soft)}
+  .mission .cell:first-child{border-left:0; padding-left:0}
+  .kLabel{font-size:10.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--faint)}
+  .kValue{font-size:13.5px; font-weight:650; margin-top:4px}
+  .kValue small{display:block; font-size:11px; font-weight:500; color:var(--muted); margin-top:1px}
+  .progressRow{display:flex; align-items:baseline; gap:8px; margin-top:4px}
+  .progressRow b{font-size:14.5px}
+  .progressRow span{font-size:11px; color:var(--muted)}
+  .bar{height:7px; border-radius:99px; background:var(--line-soft); overflow:hidden; margin-top:7px}
+  .bar i{display:block; height:100%; border-radius:99px; background:var(--sage)}
+  .bar.blue i{background:var(--blue)}
+
+  /* ---------- Propositions (pleine largeur) ---------- */
+  .options{display:grid; grid-template-columns:repeat(3,1fr); gap:15px; padding:12px 16px 13px}
+  .opt{
+    border:1px solid var(--line); border-radius:14px; padding:12px 15px 11px;
+    display:grid; grid-template-columns:auto 1fr auto; gap:4px 12px; align-items:start;
+    background:#fff; position:relative; transition:border-color .15s, box-shadow .15s;
+  }
+  .opt:hover{border-color:var(--blue); box-shadow:0 6px 18px rgba(79,124,201,.12)}
+  .opt.lead{border-color:var(--sage)}
+  .opt.lead::after{
+    content:"En tête"; position:absolute; top:-9px; right:14px;
+    background:var(--sage); color:#fff; font-size:10.5px; font-weight:700;
+    padding:3px 9px; border-radius:99px; letter-spacing:.02em;
+  }
+  .optIcon{width:38px; height:38px; grid-row:span 2; border-radius:11px; display:grid; place-items:center; font-size:19px; background:var(--line-soft)}
+  .optName{font-size:13.5px; font-weight:700; line-height:1.25}
+  .optPlace{font-size:11.5px; color:var(--muted); margin-top:2px}
+  .optPrice{font-size:17px; font-weight:750; text-align:right; white-space:nowrap}
+  .optPrice small{display:block; font-size:10.5px; font-weight:650; color:var(--success); margin-top:2px}
+  .optMeta{grid-column:1 / -1; font-size:11.5px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:3px}
+  .optMeta b{color:var(--ink); font-weight:600}
+  .verified{
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:10.5px; font-weight:700; color:var(--success); white-space:nowrap;
+    background:var(--success-tint); padding:3px 9px; border-radius:99px;
+  }
+  .votes{grid-column:1 / -1; display:flex; align-items:center; gap:10px; padding-top:8px; border-top:1px dashed var(--line)}
+  .votes .bar{flex:1; margin:0}
+  .voteLine{display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--muted); white-space:nowrap}
+  .avatars{display:inline-flex}
+  .avatars i{
+    width:20px; height:20px; border-radius:50%; font-style:normal;
+    display:grid; place-items:center; font-size:9.5px; font-weight:700; color:#fff;
+    border:2px solid #fff; margin-left:-6px;
+  }
+  .avatars i:first-child{margin-left:0}
+  .optionsFoot{padding:0 18px 12px; font-size:11.5px; color:var(--muted); display:flex; align-items:center; gap:8px}
+  .optionsFoot b{color:var(--ink)}
+
+  /* ---------- Grille secondaire ---------- */
+  .grid{display:grid; grid-template-columns:minmax(0,1.62fr) minmax(300px,1fr); gap:13px; align-items:start}
+
+  /* ---------- Collecte (matrice) ---------- */
+  .matrix{padding:6px 10px 2px}
+  .mrow{
+    display:grid; align-items:center; gap:6px;
+    grid-template-columns:126px 112px repeat(4,42px) 1fr 1fr;
+    padding:5px 10px; border-radius:11px; font-size:12px;
+  }
+  .mrow:not(.mhead):hover{background:var(--bg)}
+  .mrow + .mrow{border-top:1px solid var(--line-soft)}
+  .mhead{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); border-top:0 !important; padding-top:3px}
+  .who{display:flex; align-items:center; gap:8px; font-weight:650; min-width:0}
+  .who i{
+    width:24px; height:24px; flex:none; border-radius:50%; font-style:normal;
+    display:grid; place-items:center; font-size:10.5px; font-weight:700; color:#fff;
+  }
+  .st{display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:650; padding:3px 9px; border-radius:99px; width:fit-content; white-space:nowrap}
+  .st .dot{width:6px; height:6px; border-radius:50%; background:currentColor}
+  .st.ok{background:var(--success-tint); color:#2f6b33}
+  .st.warn{background:var(--gold-tint); color:#8a6410}
+  .st.idle{background:var(--line-soft); color:var(--faint)}
+  .day{display:grid; place-items:center}
+  .day .yes{
+    width:20px; height:20px; border-radius:50%; display:grid; place-items:center;
+    background:var(--success-tint); color:var(--success);
+  }
+  .day .no{width:20px; height:20px; border-radius:50%; border:1.5px dashed var(--line); display:block}
+  .tag{font-size:11px; color:var(--muted); background:var(--line-soft); border-radius:8px; padding:2px 8px; width:fit-content; white-space:nowrap}
+  .tag.none{background:none; color:var(--faint)}
+  .insight{
+    margin:8px 12px 11px; padding:8px 13px; border-radius:12px;
+    background:var(--blue-tint); color:var(--blue-700);
+    font-size:12px; display:flex; gap:9px; align-items:flex-start; line-height:1.4;
+  }
+  .insight b{font-weight:700}
+  .relance{
+    font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:99px;
+    background:var(--card); border:1px solid var(--line); color:var(--muted);
+  }
+  .relance:hover{border-color:var(--sage); color:var(--sage-700)}
+  .relance.done{border-color:var(--success); color:var(--success); background:var(--success-tint); cursor:default}
+
+  /* ---------- Activité du gent ---------- */
+  .feed{padding:9px 16px 4px}
+  .ev{display:grid; grid-template-columns:46px 14px 1fr; gap:9px; padding:6px 0}
+  .ev .t{font-size:10.5px; color:var(--faint); font-weight:600; text-align:right; padding-top:2px; white-space:nowrap}
+  .ev .rail{position:relative; display:flex; justify-content:center}
+  .ev .rail::before{content:""; position:absolute; top:15px; bottom:-13px; width:2px; background:var(--line-soft)}
+  .ev:last-child .rail::before{display:none}
+  .ev .rail i{width:10px; height:10px; border-radius:50%; margin-top:3px; border:2px solid var(--card); z-index:1}
+  .ev p{margin:0; font-size:12px; line-height:1.35}
+  .ev p small{display:block; color:var(--muted); font-size:11px; margin-top:1px}
+  .c-sage{background:var(--sage)} .c-blue{background:var(--blue)}
+  .c-gold{background:var(--gold)} .c-ok{background:var(--success)} .c-faint{background:var(--faint)}
+  .next{
+    margin:9px 14px 13px; padding:10px 13px; border-radius:13px;
+    background:var(--gold-tint); border:1px solid #f0d49a;
+    display:flex; gap:10px; align-items:center;
+  }
+  .next .ic{width:28px; height:28px; flex:none; border-radius:9px; background:#fff; display:grid; place-items:center; color:var(--gold)}
+  .next p{margin:0; font-size:11px; flex:1; line-height:1.35}
+  .next p b{font-size:11.5px}
+  .next button{flex:none; font-size:10.5px; font-weight:700; padding:5px 10px; border-radius:8px; border:1px solid #e3c384; background:#fff; color:#8a6410}
+  .next button:hover{background:var(--gold-tint)}
+
+  /* ---------- Dock conversation ---------- */
+  .dock{
+    width:320px; flex:none; background:var(--card); border-left:1px solid var(--line);
+    display:flex; flex-direction:column; min-height:0;
+  }
+  .dock.hidden{display:none}
+  .dockHead{padding:12px 14px 9px; border-bottom:1px solid var(--line-soft)}
+  .dockTop{display:flex; align-items:center; gap:9px}
+  .dockTop h2{font-size:13.5px; margin:0; font-weight:700}
+  .dockTop .chip{margin-left:auto}
+  .iconBtn{
+    width:28px; height:28px; border-radius:8px; border:1px solid var(--line);
+    background:var(--card); color:var(--muted); display:grid; place-items:center;
+  }
+  .iconBtn:hover{background:var(--line-soft)}
+  .tabs{display:flex; gap:6px; margin-top:10px}
+  .tab{
+    flex:1; font-size:11.5px; font-weight:650; padding:6px; border-radius:9px;
+    border:1px solid var(--line); background:var(--card); color:var(--muted);
+    display:flex; align-items:center; justify-content:center; gap:5px;
+  }
+  .tab.active{background:var(--blue-tint); border-color:var(--blue-tint); color:var(--blue-700)}
+  .tab:hover:not(.active){background:var(--line-soft)}
+  .msgs{flex:1; overflow-y:auto; padding:12px 13px; display:flex; flex-direction:column; gap:11px}
+  .msg{display:flex; gap:9px}
+  .msg .av{width:27px; height:27px; flex:none; border-radius:50%; display:grid; place-items:center; font-size:10.5px; font-weight:700; color:#fff}
+  .msg .av.gent{font-size:14px; background:var(--blue-tint); border:1px solid var(--line)}
+  .bubble{min-width:0}
+  .bubble .who2{font-size:10.5px; color:var(--faint); margin-bottom:3px}
+  .bubble .who2 b{color:var(--muted); font-weight:650}
+  .bubble .txt{
+    background:var(--line-soft); border-radius:4px 13px 13px 13px;
+    padding:7px 11px; font-size:12px; width:fit-content; max-width:100%;
+  }
+  .msg.mine .txt{background:var(--blue-tint)}
+  .sysNote{
+    align-self:center; font-size:10px; color:var(--faint); background:var(--bg);
+    border:1px solid var(--line-soft); padding:3px 10px; border-radius:99px; text-align:center;
+  }
+  .privateBanner{
+    margin:10px 13px 0; padding:7px 11px; border-radius:11px;
+    background:var(--sage-tint); color:var(--sage-700);
+    font-size:10.5px; font-weight:650; display:flex; align-items:center; gap:7px;
+  }
+  .dockFoot{padding:10px 13px; border-top:1px solid var(--line-soft); display:flex; gap:8px}
+  .dockFoot input{
+    flex:1; min-width:0; font:inherit; font-size:12px; padding:8px 12px;
+    border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink);
+  }
+  .dockFoot input:focus{outline:2px solid var(--blue-tint); border-color:var(--blue)}
+  .send{
+    width:36px; flex:none; border-radius:10px; border:1px solid var(--blue);
+    background:var(--blue); color:#fff; display:grid; place-items:center;
+  }
+  .send:hover{background:var(--blue-700)}
+  .pane{display:none; flex:1; min-height:0; flex-direction:column}
+  .pane.active{display:flex}
+
+  /* Bouton flottant quand le dock est fermé */
+  .dockOpen{
+    position:fixed; right:18px; bottom:18px; z-index:5;
+    display:none; align-items:center; gap:8px;
+    padding:11px 17px; border-radius:99px; border:1px solid var(--blue);
+    background:var(--blue); color:#fff; font-size:13px; font-weight:650;
+    box-shadow:0 10px 26px rgba(79,124,201,.35);
+  }
+  .dockOpen.show{display:inline-flex}
+
+  .watermark{
+    position:fixed; left:16px; bottom:12px; z-index:5;
+    font-size:10.5px; color:var(--faint); background:var(--card);
+    border:1px solid var(--line-soft); padding:4px 10px; border-radius:99px;
+  }
+  ::-webkit-scrollbar{width:10px; height:10px}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:99px; border:2px solid var(--bg)}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+
+<!-- ============ BARRE SUPÉRIEURE ============ -->
+<header class="topbar">
+  <div class="gentFace">🧭</div>
+  <div>
+    <h1>Team building d'octobre</h1>
+    <div class="sub">Gustave · gent collaboratif orchestrateur — créé par Claire D. (RH)</div>
+  </div>
+  <div class="topActions">
+    <span class="pill ghost">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="5.5" cy="5" r="2.4"/><circle cx="11" cy="6.2" r="1.9"/><path d="M1.8 12.6c.5-2 2-3.1 3.7-3.1s3.2 1.1 3.7 3.1M9.7 9.9c1.4.2 2.5 1.2 2.9 2.7"/></svg>
+      8 participants
+    </span>
+    <span class="pill status"><span class="dot"></span>Collecte en cours</span>
+    <button class="btn" id="chatToggle">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 10.2c0 .8-.7 1.5-1.5 1.5H4.6L2 13.3V3.5c0-.8.7-1.5 1.5-1.5h9c.8 0 1.5.7 1.5 1.5v6.7z"/></svg>
+      Salon
+    </button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- ============ TABLEAU DE MISSION ============ -->
+  <main class="board">
+    <div class="boardInner">
+
+      <!-- Carte mission -->
+      <section class="card mission">
+        <div class="cell">
+          <div class="kLabel">Objectif</div>
+          <div class="kValue">Journée de cohésion — équipe Studio<small>Activité + déjeuner, retour en soirée</small></div>
+        </div>
+        <div class="cell">
+          <div class="kLabel">Budget</div>
+          <div class="kValue">150 € / pers.<small>max, transport inclus</small></div>
+        </div>
+        <div class="cell">
+          <div class="kLabel">Lieu</div>
+          <div class="kValue">&lt; 1 h de Paris<small>porte à porte</small></div>
+        </div>
+        <div class="cell">
+          <div class="kLabel">Fenêtre</div>
+          <div class="kValue">Octobre 2026<small>un samedi</small></div>
+        </div>
+        <div class="cell">
+          <div class="kLabel">Progression</div>
+          <div class="progressRow"><b>5/8</b><span>disponibilités collectées</span></div>
+          <div class="bar"><i style="width:62.5%"></i></div>
+        </div>
+      </section>
+
+      <!-- Propositions vérifiées -->
+      <section class="card">
+        <div class="cardHead">
+          <h2>Propositions vérifiées</h2>
+          <span class="hint">— vérification web : prix à jour, trajets, météo du 17 oct.</span>
+          <span class="spacer"></span>
+          <span class="chip">Sondage ouvert · 5 votants</span>
+        </div>
+        <div class="options">
+
+          <article class="opt lead">
+            <div class="optIcon">🌳</div>
+            <div>
+              <div class="optName">Accrobranche + déjeuner</div>
+              <div class="optPlace">Forêt de Fontainebleau (77)</div>
+            </div>
+            <div class="optPrice">95 €<small>/ pers. — sous budget</small></div>
+            <div class="optMeta">
+              <span><b>55 min</b> de Paris · train + navette</span>
+              <span>Météo sam. 17 : <b>15 °C, éclaircies</b></span>
+            </div>
+            <div class="votes">
+              <span class="verified">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg>
+                Vérifié sur le web il y a 2 h
+              </span>
+            </div>
+            <div class="votes" style="border-top:0; padding-top:0">
+              <span class="voteLine">
+                <span class="avatars">
+                  <i style="background:#e65d76">C</i><i style="background:#4f7cc9">M</i><i style="background:#dca331">H</i>
+                </span>
+                <span><b>3 voix</b> · Chloé, Mehdi, Hugo</span>
+              </span>
+              <div class="bar blue"><i style="width:60%"></i></div>
+            </div>
+          </article>
+
+          <article class="opt">
+            <div class="optIcon">⛵</div>
+            <div>
+              <div class="optName">Journée voile + pique-nique</div>
+              <div class="optPlace">Base nautique de Vaires-Torcy (77)</div>
+            </div>
+            <div class="optPrice">120 €<small>/ pers. — sous budget</small></div>
+            <div class="optMeta">
+              <span><b>35 min</b> de Paris · RER A + bus</span>
+              <span>Sam. 17 : <b>vent 18 km/h, 14 °C</b> · plan B intérieur</span>
+            </div>
+            <div class="votes">
+              <span class="verified">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg>
+                Vérifié sur le web il y a 2 h
+              </span>
+            </div>
+            <div class="votes" style="border-top:0; padding-top:0">
+              <span class="voteLine">
+                <span class="avatars"><i style="background:#57a45b">S</i></span>
+                <span><b>1 voix</b> · Sarah</span>
+              </span>
+              <div class="bar blue"><i style="width:20%"></i></div>
+            </div>
+          </article>
+
+          <article class="opt">
+            <div class="optIcon">🧩</div>
+            <div>
+              <div class="optName">Escape game + brunch</div>
+              <div class="optPlace">Versailles (78)</div>
+            </div>
+            <div class="optPrice">78 €<small>/ pers. — sous budget</small></div>
+            <div class="optMeta">
+              <span><b>30 min</b> de Paris · RER C</span>
+              <span><b>100 % intérieur</b> — météo sans impact</span>
+            </div>
+            <div class="votes">
+              <span class="verified">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg>
+                Vérifié sur le web il y a 2 h
+              </span>
+            </div>
+            <div class="votes" style="border-top:0; padding-top:0">
+              <span class="voteLine">
+                <span class="avatars"><i style="background:#8b6cc9">A</i></span>
+                <span><b>1 voix</b> · Alice</span>
+              </span>
+              <div class="bar blue"><i style="width:20%"></i></div>
+            </div>
+          </article>
+
+        </div>
+        <div class="optionsFoot">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.6V8l2.2 1.6"/></svg>
+          <span>Sondage ouvert jusqu'à <b>jeudi 18 h</b> — Gustave relancera les abstentionnistes en privé avant la clôture.</span>
+        </div>
+      </section>
+
+      <div class="grid">
+        <!-- Collecte : matrice participants × infos -->
+        <section class="card">
+          <div class="cardHead">
+            <h2>Collecte</h2>
+            <span class="hint">— réponses recueillies en privé, agrégées ici</span>
+            <span class="spacer"></span>
+            <span class="chip">5 reçues · 2 relancées · 1 en attente</span>
+          </div>
+          <div class="matrix">
+            <div class="mrow mhead">
+              <span>Participant</span><span>Statut</span>
+              <span class="day">3</span><span class="day">10</span><span class="day">17</span><span class="day">24</span>
+              <span>Préférence</span><span>Régime</span>
+            </div>
+
+            <div class="mrow">
+              <span class="who"><i style="background:#e65d76">C</i>Chloé</span>
+              <span class="st ok"><span class="dot"></span>Reçu</span>
+              <span class="day"><span class="no"></span></span><span class="day"><span class="yes"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg></span></span><span class="day"><span class="yes"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg></span></span><span class="day"><span class="yes"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg></span></span>
+              <span class="tag">Plein air</span><span class="tag">Végétarien</span>
+            </div>
+            <div class="mrow">
+              <span class="who"><i style="background:#4f7cc9">M</i>Mehdi</span>
+              <span class="st ok"><span class="dot"></span>Reçu</span>
+              <span class="day"><span class="yes"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg></span></span><span class="day"><span class="yes"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg></span></span><span class="day"><span class="no"></span></span><span class="day"><span class="no"></span></span>
+              <span class="tag">Aventure</span><span class="tag">Sans porc</span>
+            </div>
+            <div class="mrow">
+              <span class="who"><i style="background:#8b6cc9">A</i>Alice</span>
+              <span class="st ok"><span class="dot"></span>Reçu</span>
+              <span class="day"><span class="no"></span></span><span class="day"><span class="yes"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg></span></span><span class="day"><span class="yes"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg></span></span><span class="day"><span class="no"></span></span>
+              <span class="tag">Détente</span><span class="tag">Sans gluten</span>
+            </div>
+            <div class="mrow">
+              <span class="who"><i style="background:#dca331">H</i>Hugo</span>
+              <span class="st ok"><span class="dot"></span>Reçu</span>
+              <span class="day"><span class="no"></span></span><span class="day"><span class="no"></span></span><span class="day"><span class="yes"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg></span></span><span class="day"><span class="yes"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg></span></span>
+              <span class="tag">Aventure</span><span class="tag">Aucun</span>
+            </div>
+            <div class="mrow">
+              <span class="who"><i style="background:#57a45b">S</i>Sarah</span>
+              <span class="st ok"><span class="dot"></span>Reçu</span>
+              <span class="day"><span class="yes"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg></span></span><span class="day"><span class="no"></span></span><span class="day"><span class="yes"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5l3.4 3.2L13.5 4.5"/></svg></span></span><span class="day"><span class="no"></span></span>
+              <span class="tag">Détente</span><span class="tag">Aucun</span>
+            </div>
+            <div class="mrow">
+              <span class="who"><i style="background:#c0653f">K</i>Karim</span>
+              <span class="st warn"><span class="dot"></span>Relancé ×3</span>
+              <span class="day"><span class="no"></span></span><span class="day"><span class="no"></span></span><span class="day"><span class="no"></span></span><span class="day"><span class="no"></span></span>
+              <span class="tag none">—</span>
+              <button class="relance" onclick="relancer(this)">Relancer</button>
+            </div>
+            <div class="mrow">
+              <span class="who"><i style="background:#3f9aa0">L</i>Léa</span>
+              <span class="st warn"><span class="dot"></span>Relancé ×1</span>
+              <span class="day"><span class="no"></span></span><span class="day"><span class="no"></span></span><span class="day"><span class="no"></span></span><span class="day"><span class="no"></span></span>
+              <span class="tag none">—</span>
+              <button class="relance" onclick="relancer(this)">Relancer</button>
+            </div>
+            <div class="mrow">
+              <span class="who"><i style="background:#96604f">T</i>Thomas</span>
+              <span class="st idle"><span class="dot"></span>En attente</span>
+              <span class="day"><span class="no"></span></span><span class="day"><span class="no"></span></span><span class="day"><span class="no"></span></span><span class="day"><span class="no"></span></span>
+              <span class="tag none">—</span>
+              <button class="relance" onclick="relancer(this)">Relancer</button>
+            </div>
+          </div>
+          <div class="insight">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><path d="M8 1.8a4.2 4.2 0 0 0-2.4 7.6c.6.5 1 1.2 1 1.9h2.8c0-.7.4-1.4 1-1.9A4.2 4.2 0 0 0 8 1.8zM6.7 13.4h2.6"/></svg>
+            <span>Lecture de Gustave : <b>sam. 17 oct.</b> est la date la plus compatible (4 réponses sur 5) — régimes à prévoir : <b>1 végétarien, 1 sans porc, 1 sans gluten</b>.</span>
+          </div>
+        </section>
+
+        <!-- Activité du gent -->
+        <aside>
+          <section class="card">
+            <div class="cardHead">
+              <h2>Activité du gent</h2>
+              <span class="spacer"></span>
+              <span class="chip">Aujourd'hui</span>
+            </div>
+            <div class="feed">
+              <div class="ev">
+                <span class="t">09:42</span><span class="rail"><i class="c-sage"></i></span>
+                <p>a publié le sondage dans le salon commun<small>« Quelle option préférez-vous ? » — vote ouvert à tous</small></p>
+              </div>
+              <div class="ev">
+                <span class="t">09:15</span><span class="rail"><i class="c-blue"></i></span>
+                <p>a vérifié 3 options sur le web<small>Prix à jour, trajets &lt; 1 h, météo du sam. 17 oct.</small></p>
+              </div>
+              <div class="ev">
+                <span class="t">09:02</span><span class="rail"><i class="c-gold"></i></span>
+                <p>a relancé Karim en privé<small>3ᵉ relance automatique — conversation 1:1</small></p>
+              </div>
+              <div class="ev">
+                <span class="t">08:31</span><span class="rail"><i class="c-ok"></i></span>
+                <p>a reçu les disponibilités de Sarah<small>sam. 3 et sam. 17 oct. — collecte passée à 5/8</small></p>
+              </div>
+              <div class="ev">
+                <span class="t">Hier</span><span class="rail"><i class="c-ok"></i></span>
+                <p>a reçu les réponses de Chloé, Mehdi, Alice et Hugo<small>Dispos, préférences et régimes complets — 4/8</small></p>
+              </div>
+              <div class="ev">
+                <span class="t">Lun.</span><span class="rail"><i class="c-faint"></i></span>
+                <p>a envoyé les invitations aux 8 participants<small>Lien de partage — prénom seul demandé à l'arrivée</small></p>
+              </div>
+            </div>
+            <div class="next">
+              <span class="ic">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8.8" r="5.6"/><path d="M8 5.8v3l2 1.4M6.4 1.8h3.2"/></svg>
+              </span>
+              <p><b>Prochaine action automatique</b><br>Relance de Thomas à 18 h, puis rappel de clôture du sondage demain.</p>
+              <button onclick="this.textContent='Noté ✓';this.disabled=true;this.style.opacity=.55">Modifier</button>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ============ DOCK CONVERSATION (rétractable, ouvert par défaut) ============ -->
+  <aside class="dock" id="dock">
+    <div class="dockHead">
+      <div class="dockTop">
+        <h2>Le salon</h2>
+        <span class="chip">9 membres</span>
+        <button class="iconBtn" id="dockClose" title="Replier le salon" aria-label="Replier le salon">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 2.5l5 5.5-5 5.5"/></svg>
+        </button>
+      </div>
+      <div class="tabs">
+        <button class="tab active" id="tabSalon" onclick="switchPane('salon')">Salon commun</button>
+        <button class="tab" id="tabPrive" onclick="switchPane('prive')">
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="10" height="6.5" rx="1.6"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>
+          Privés · 3
+        </button>
+      </div>
+    </div>
+
+    <!-- Salon commun -->
+    <div class="pane active" id="paneSalon">
+      <div class="msgs">
+        <span class="sysNote">Salon visible par tous les participants</span>
+        <div class="msg">
+          <span class="av gent">🧭</span>
+          <div class="bubble">
+            <div class="who2"><b>Gustave · orchestrateur</b> — 09:42</div>
+            <div class="txt">Sondage publié ✅ J'ai vérifié 3 options ce matin : toutes sous le budget de 150 € et à moins d'1 h de Paris. Votez sur le tableau — je relance les indécis en privé.</div>
+          </div>
+        </div>
+        <div class="msg">
+          <span class="av" style="background:#e65d76">C</span>
+          <div class="bubble">
+            <div class="who2"><b>Chloé</b> — 09:47</div>
+            <div class="txt">L'accrobranche me tente énormément 🌳 et Fontainebleau en octobre, c'est magnifique.</div>
+          </div>
+        </div>
+        <div class="msg">
+          <span class="av" style="background:#4f7cc9">M</span>
+          <div class="bubble">
+            <div class="who2"><b>Mehdi</b> — 09:51</div>
+            <div class="txt">+1 ! Et à 95 €, il reste de la marge pour un bon déjeuner.</div>
+          </div>
+        </div>
+        <div class="msg">
+          <span class="av" style="background:#57a45b">S</span>
+          <div class="bubble">
+            <div class="who2"><b>Sarah</b> — 10:03</div>
+            <div class="txt">Team voile perso ⛵ mais je suivrai le vote !</div>
+          </div>
+        </div>
+        <div class="msg">
+          <span class="av" style="background:#dca331">H</span>
+          <div class="bubble">
+            <div class="who2"><b>Hugo</b> — 10:12</div>
+            <div class="txt">Pareil que Chloé. Le 17 octobre c'est parfait pour moi.</div>
+          </div>
+        </div>
+        <div class="msg">
+          <span class="av gent">🧭</span>
+          <div class="bubble">
+            <div class="who2"><b>Gustave · orchestrateur</b> — 10:15</div>
+            <div class="txt">Noté 🧭 Il manque encore Karim, Léa et Thomas : je les ai relancés en privé, leurs réponses resteront entre nous.</div>
+          </div>
+        </div>
+      </div>
+      <div class="dockFoot">
+        <input type="text" placeholder="Écrire dans le salon…" aria-label="Écrire dans le salon">
+        <button class="send" title="Envoyer" aria-label="Envoyer">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 1.5L7.3 8.7M14.5 1.5L10 14.5l-2.7-5.8L1.5 6l13-4.5z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Conversations privées (1:1) -->
+    <div class="pane" id="panePrive">
+      <div class="privateBanner">
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="7" width="10" height="6.5" rx="1.6"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>
+        Conversation privée — visible par Karim uniquement
+      </div>
+      <div class="msgs">
+        <div class="msg">
+          <span class="av gent">🧭</span>
+          <div class="bubble">
+            <div class="who2"><b>Gustave</b> — lun. 08:02</div>
+            <div class="txt">Salut Karim 👋 Pour le team building d'octobre : quels samedis te conviennent (3, 10, 17, 24) ? Et un régime alimentaire à prévoir ?</div>
+          </div>
+        </div>
+        <div class="msg mine">
+          <span class="av" style="background:#c0653f">K</span>
+          <div class="bubble">
+            <div class="who2"><b>Karim</b> — lun. 12:41</div>
+            <div class="txt">Salut Gustave ! Je regarde ça ce soir, promis 🙏</div>
+          </div>
+        </div>
+        <div class="msg">
+          <span class="av gent">🧭</span>
+          <div class="bubble">
+            <div class="who2"><b>Gustave</b> — hier 18:30</div>
+            <div class="txt">Petit rappel amical 😊 Deux minutes suffisent.</div>
+          </div>
+        </div>
+        <div class="msg">
+          <span class="av gent">🧭</span>
+          <div class="bubble">
+            <div class="who2"><b>Gustave</b> — 09:02</div>
+            <div class="txt">Dernière relance automatique — après, je passe en mode insistant 😄</div>
+          </div>
+        </div>
+        <span class="sysNote">Léa et Thomas : relances programmées</span>
+      </div>
+      <div class="dockFoot">
+        <input type="text" placeholder="Répondre à Karim…" aria-label="Répondre à Karim">
+        <button class="send" title="Envoyer" aria-label="Envoyer">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 1.5L7.3 8.7M14.5 1.5L10 14.5l-2.7-5.8L1.5 6l13-4.5z"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <button class="dockOpen" id="dockOpen">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 10.2c0 .8-.7 1.5-1.5 1.5H4.6L2 13.3V3.5c0-.8.7-1.5 1.5-1.5h9c.8 0 1.5.7 1.5 1.5v6.7z"/></svg>
+    Ouvrir le salon
+  </button>
+</div>
+
+<span class="watermark">Maquette — gent collaboratif orchestrateur · proposition « Tableau de mission »</span>
+
+<script>
+  var dock = document.getElementById('dock');
+  var dockOpen = document.getElementById('dockOpen');
+
+  function setDock(open) {
+    dock.classList.toggle('hidden', !open);
+    dockOpen.classList.toggle('show', !open);
+  }
+  document.getElementById('dockClose').addEventListener('click', function(){ setDock(false); });
+  document.getElementById('chatToggle').addEventListener('click', function(){ setDock(dock.classList.contains('hidden')); });
+  dockOpen.addEventListener('click', function(){ setDock(true); });
+
+  function switchPane(name) {
+    document.getElementById('paneSalon').classList.toggle('active', name === 'salon');
+    document.getElementById('panePrive').classList.toggle('active', name === 'prive');
+    document.getElementById('tabSalon').classList.toggle('active', name === 'salon');
+    document.getElementById('tabPrive').classList.toggle('active', name === 'prive');
+  }
+
+  function relancer(btn) {
+    btn.textContent = 'Relancé ✓';
+    btn.classList.add('done');
+    btn.disabled = true;
+  }
+</script>
+</body>
+</html>

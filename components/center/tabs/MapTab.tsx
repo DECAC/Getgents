@@ -34,10 +34,10 @@ export function MapTab({ map }: { map: EspaceMap }) {
             <path d="M368,158 l10,-16 10,16 z" />
             <path d="M390,150 l11,-18 11,18 z" />
           </g>
-          <text x="350" y="178" fontFamily="Inter" fontSize="11" fill="#8FA088" fontWeight="500">
+          <text x="350" y="178" fontFamily="Sora" fontSize="11" fill="#8FA088" fontWeight="500">
             Alpes
           </text>
-          <text x="585" y="385" fontFamily="Inter" fontSize="12" fill="#7C9696" fontStyle="italic">
+          <text x="585" y="385" fontFamily="Sora" fontSize="12" fill="#7C9696" fontStyle="italic">
             Mer Méditerranée
           </text>
           <path
@@ -76,7 +76,7 @@ export function MapTab({ map }: { map: EspaceMap }) {
                   x={stop.x}
                   y={stop.y - 22}
                   textAnchor="middle"
-                  fontFamily="Inter"
+                  fontFamily="Sora"
                   fontSize="12"
                   fontWeight="600"
                   fill="var(--ink)"

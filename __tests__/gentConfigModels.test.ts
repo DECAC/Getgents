@@ -18,19 +18,30 @@ describe("resolveModelIdForCapability", () => {
 });
 
 describe("extractGentConfigSignal — modèles", () => {
-  it("extrait chat + reasoning avec ids valides", () => {
-    const raw =
-      'Voici. <!--GENT_CONFIG: {"chatModelId":"anthropic/claude-sonnet-5","reasoningModelId":"deepseek/deepseek-r1"}-->';
+  it("extrait le modèle de conversation", () => {
+    const raw = 'Voici. <!--GENT_CONFIG: {"chatModelId":"anthropic/claude-sonnet-5"}-->';
     const { config } = extractGentConfigSignal(raw);
     expect(config?.chatModelId).toBe("anthropic/claude-sonnet-5");
-    expect(config?.reasoningModelId).toBe("deepseek/deepseek-r1");
   });
 
-  it("résout les libellés vers les ids catalogue", () => {
-    const raw = '<!--GENT_CONFIG: {"chatModelId":"Mistral Large","reasoningModelId":"o4-mini"}-->';
+  it("résout un libellé vers l'id catalogue", () => {
+    const raw = '<!--GENT_CONFIG: {"chatModelId":"Mistral Large"}-->';
     const { config } = extractGentConfigSignal(raw);
     expect(config?.chatModelId).toBe("mistralai/mistral-large");
-    expect(config?.reasoningModelId).toBe("openai/o4-mini");
+  });
+
+  /**
+   * `reasoningModelId` a ete RETIRE : il etait affiche, recommande et
+   * configurable, mais jamais lu au moment de generer. Un assistant entraine
+   * sur d'anciens exemples peut encore l'emettre — le champ doit alors etre
+   * ignore en silence, jamais faire echouer l'extraction du reste.
+   */
+  it("ignore un reasoningModelId hérité sans perdre le reste", () => {
+    const raw =
+      '<!--GENT_CONFIG: {"chatModelId":"anthropic/claude-sonnet-5","reasoningModelId":"deepseek/deepseek-r1"}-->';
+    const { config } = extractGentConfigSignal(raw);
+    expect(config?.chatModelId).toBe("anthropic/claude-sonnet-5");
+    expect((config as Record<string, unknown> | null)?.reasoningModelId).toBeUndefined();
   });
 
   it("ignore un reasoning collé dans chatModelId", () => {

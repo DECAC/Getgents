@@ -20,3 +20,20 @@ export async function deleteGentEverywhere(id: string): Promise<DeleteGentResult
   if (!publishedResult.ok) return publishedResult;
   return { ok: true };
 }
+
+/** Texte de confirmation pour une suppression d'un ou plusieurs gents. */
+export function confirmDeleteGentsMessage(names: string[]): string {
+  const cleaned = names.map((n) => n.trim() || "ce gent");
+  if (cleaned.length <= 1) {
+    const name = cleaned[0] ?? "ce gent";
+    return `Supprimer définitivement « ${name} » ? Cette action est irréversible : le brouillon, le gent publié et ses liens de partage seront effacés.`;
+  }
+  const shown = cleaned.slice(0, 8);
+  const rest = cleaned.length - shown.length;
+  const list = shown.map((n) => `« ${n} »`).join(", ");
+  const extra = rest > 0 ? ` et ${rest} autre${rest > 1 ? "s" : ""}` : "";
+  return (
+    `Supprimer définitivement ${cleaned.length} gents (${list}${extra}) ? ` +
+    "Cette action est irréversible : brouillons, versions publiées et liens de partage seront effacés."
+  );
+}

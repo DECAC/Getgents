@@ -1,4 +1,15 @@
-import { compactDelimited, parseDelimitedLine } from "@/lib/extractDocumentText";
+import { compactDelimited, parseDelimitedLine, MAX_CHARS, MAX_CHARS_TABULAR } from "@/lib/extractDocumentText";
+
+describe("plafonds d'extraction (~100 pages)", () => {
+  it("autorise un dossier narratif d'environ 100 pages", () => {
+    // ~3 000 car./page × 100 pages
+    expect(MAX_CHARS).toBeGreaterThanOrEqual(300_000);
+  });
+
+  it("laisse davantage de marge aux tableurs qu'aux PDF/Word", () => {
+    expect(MAX_CHARS_TABULAR).toBeGreaterThanOrEqual(MAX_CHARS);
+  });
+});
 
 describe("découpage d'une ligne délimitée", () => {
   it("respecte les guillemets encadrant une virgule", () => {

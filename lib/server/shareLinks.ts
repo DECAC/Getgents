@@ -101,6 +101,8 @@ function toShareLink(row: ShareLinkRow): ShareLink {
 
 export interface CreateShareLinkInput {
   gentId: string;
+  /** Compte qui ouvre le lien — le propriétaire du gent, vérifié par la route. */
+  ownerId?: string;
   targetLabel: string;
   expiresAt?: string | null;
   allowChat?: boolean;
@@ -115,6 +117,7 @@ export async function createShareLink(input: CreateShareLinkInput): Promise<Shar
   const row = {
     token: generateToken(),
     gent_id: input.gentId,
+    owner_id: input.ownerId ?? null,
     target_label: input.targetLabel,
     expires_at: input.expiresAt ?? null,
     allow_chat: input.allowChat ?? true,
@@ -239,4 +242,50 @@ export async function statsForTokens(tokens: string[]): Promise<Record<string, S
     s.lastEventAt = row.at;
   }
   return out;
+}
+
+/**
+ * Lien invité d'un destinataire donné, s'il en existe un vivant.
+ *
+ * Le partage nominatif en LECTURE crée un lien au nom de l'invité plutôt que
+ * d'exiger un compte : personne ne devrait avoir à s'inscrire pour consulter
+ * un gent qu'on lui a envoyé. Le libellé porte l'adresse, ce qui suffit à
+ * retrouver le lien plus tard — pour ne pas en empiler un nouveau à chaque
+ * repartage, et pour le révoquer avec l'invitation.
+ */
+export async function lienInvitePour(gentId: string, label: string): Promise<ShareLink | null> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) throw new Error("supabase_not_configured");
+  const { data, error } = await supabase
+    .from("share_links")
+    .select("*")
+    .eq("gent_id", gentId)
+    .eq("target_label", label)
+    .is("revoked_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) raise(error);
+  const ligne = (data ?? [])[0];
+  return ligne ? toShareLink(ligne as ShareLinkRow) : null;
+}
+
+/**
+ * Coupe tous les liens ouverts au nom d'un destinataire.
+ *
+ * Appelé quand on révoque son invitation : retirer l'accès en base tout en
+ * laissant vivre le lien qu'on lui a envoyé ne retirerait rien du tout.
+ * Renvoie le nombre de liens coupés, pour que l'appelant puisse le journaliser.
+ */
+export async function revoquerLiensPourDestinataire(gentId: string, label: string): Promise<number> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) throw new Error("supabase_not_configured");
+  const { data, error } = await supabase
+    .from("share_links")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("gent_id", gentId)
+    .eq("target_label", label)
+    .is("revoked_at", null)
+    .select("token");
+  if (error) raise(error);
+  return (data ?? []).length;
 }

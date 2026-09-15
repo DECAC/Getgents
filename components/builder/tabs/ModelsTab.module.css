@@ -15,7 +15,7 @@
 }
 
 .groupTitle {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 14.5px;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -50,7 +50,7 @@
   cursor: pointer;
 }
 .comboTrigger:hover {
-  border-color: var(--plum);
+  border-color: var(--sage);
 }
 
 .comboPlaceholder {
@@ -70,19 +70,19 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--plum-tint);
+  background: var(--sage-tint);
   border-radius: 20px;
   padding: 3px 6px 3px 10px;
   font-size: 11.5px;
 }
 
 .chipCap {
-  color: var(--plum);
+  color: var(--sage);
   font-weight: 600;
 }
 .chipCap::after {
   content: " · ";
-  color: var(--plum);
+  color: var(--sage);
   opacity: 0.5;
 }
 
@@ -97,13 +97,13 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  color: var(--plum);
+  color: var(--sage);
   font-size: 13px;
   line-height: 1;
   cursor: pointer;
 }
 .chipRemove:hover {
-  background: var(--plum);
+  background: var(--sage);
   color: #fff;
 }
 
@@ -112,6 +112,14 @@
   color: var(--faint);
 }
 
+/*
+ * NE PAS elargir ce panneau au-dela du declencheur. `BuilderCenter` porte
+ * `overflow: hidden` et un `overflow-y: auto` — qui rend le debordement
+ * HORIZONTAL clippe. Un panneau plus large disparaissait donc a droite des
+ * que le panneau Assistant etait ouvert et retrecissait la colonne : le
+ * correctif marchait sur un gent et pas sur le suivant, sans rien qui le
+ * signale. La lisibilite du nom se gagne dans la MISE EN PAGE, ci-dessous.
+ */
 .comboPanel {
   position: absolute;
   z-index: 40;
@@ -187,7 +195,11 @@
 .comboOption {
   width: 100%;
   display: flex;
-  align-items: center;
+  /* Deux rangees : le nom (et la pastille) en haut, la description en
+     dessous. Le nom dispose ainsi de TOUTE la largeur du panneau, quelle
+     qu'elle soit — au lieu de la disputer a une description secondaire. */
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 8px;
   text-align: left;
   padding: 8px 10px;
@@ -198,28 +210,38 @@
   background: var(--bg);
 }
 .comboOptionActive {
-  background: var(--plum-tint);
+  background: var(--sage-tint);
 }
 .comboOptionActive:hover {
-  background: var(--plum-tint);
+  background: var(--sage-tint);
 }
 
+/*
+ * Le nom du modèle doit se lire ENTIER. Cette colonne était figée à 190 px,
+ * le libellé coupé par une ellipse : avec une clé personnelle, les noms
+ * viennent d'OpenRouter (« Google: Nano Banana Pro Preview ») et dépassaient
+ * tous. Or c'est la seule information qui permette de choisir.
+ *
+ * La colonne respire donc, avec un plancher pour que la description ne la
+ * comprime pas, et le libellé passe à la ligne au lieu d'être tronqué.
+ */
 .comboOptionMain {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 7px;
-  flex: none;
-  width: 190px;
-  min-width: 190px;
+  gap: 3px 7px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .comboOptionLabel {
   font-size: 12.5px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Plus d'ellipse : le nom s'enroule. `anywhere` coupe aussi un
+     identifiant sans espace, qui déborderait sinon de la colonne. */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .comboOptionProvider {
@@ -232,7 +254,12 @@
 }
 
 .comboOptionTagline {
-  flex: 1;
+  /* Rangee du bas, sur toute la largeur. Elle peut rester tronquee, le nom
+     non. `order` la fait passer APRES la pastille de selection, qui reste
+     ainsi alignee avec le nom. */
+  order: 2;
+  flex: 1 1 100%;
+  min-width: 0;
   font-size: 11.5px;
   color: var(--muted);
   line-height: 1.3;
@@ -242,8 +269,9 @@
 }
 
 .comboCheck {
+  order: 1;
   flex: none;
-  color: var(--plum);
+  color: var(--sage);
 }
 
 .comboEmpty {
@@ -259,6 +287,7 @@
     min-width: 0;
   }
   .comboOptionTagline {
-    display: none;
+    /* Elle ne dispute plus la place au nom : inutile de la masquer. */
+    display: block;
   }
 }

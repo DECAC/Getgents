@@ -1,0 +1,111 @@
+.wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 6px;
+  border-radius: var(--r);
+  text-align: left;
+}
+.btn:hover {
+  background: var(--bg);
+}
+
+.mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--sage-tint);
+  display: grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+}
+
+.wordmarkSlot {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.wordmarkSlot img {
+  max-width: 100%;
+}
+
+.menuMark {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--sage-tint);
+  display: grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+}
+
+.chevron {
+  flex: none;
+  color: var(--muted);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% - 2px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 12px 28px rgba(42, 31, 25, 0.13);
+  padding: 5px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.menuItem:hover {
+  background: var(--sage-tint);
+}
+
+.menuItemBlue {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--blue-700);
+}
+.menuItemBlue:hover {
+  background: var(--blue-tint);
+}
+
+.menuLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.menuSub {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 1px;
+}

@@ -5,23 +5,17 @@
 // (artefact + messages de conversation) directement dans l'espace en base.
 import type { Espace, Routine, Artefact, ConversationMessage } from "@/lib/types";
 export { isRoutineDue } from "@/lib/routineSchedule";
-import { extractArtefactSignal } from "@/lib/artefactSignal";
-import { ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
+import { extractArtefactSignal, ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
+import { ARTEFACT_KIND_META } from "@/lib/artefactKind";
 import { profileContextNote } from "@/lib/profileSignal";
+import { materializeProfileMedia } from "@/lib/profileSummaryArtefact";
 import { renderMarkdown } from "@/lib/markdown";
 import { sendWhatsAppText, sendWhatsAppTemplate } from "@/lib/server/whatsapp";
 import { sendBrevoEmail } from "@/lib/server/brevo";
+import type { ContexteLlm } from "@/lib/server/openRouterKey";
+import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
-
-const ARTEFACT_KIND_META: Record<string, { type: string; icon: string }> = {
-  report: { type: "Rapport", icon: "📄" },
-  checklist: { type: "Checklist", icon: "✅" },
-  chart: { type: "Graphique", icon: "📊" },
-  visual: { type: "Aperçu visuel", icon: "🖼️" },
-  map: { type: "Carte", icon: "🗺️" },
-  dashboard: { type: "Tableau de bord", icon: "📈" },
-};
 
 function nowTimeParis(): string {
   return new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
@@ -77,14 +71,19 @@ export interface RoutineRunResult {
  * Exécute la mission de la routine pour un gent et renvoie l'espace mis à
  * jour (artefact + messages + trace de run) — l'appelant persiste.
  */
-export async function runRoutine(espace: Espace, routine: Routine, gentId = ""): Promise<RoutineRunResult> {
-  const key = process.env.OPENROUTER_API_KEY;
+export async function runRoutine(
+  espace: Espace,
+  routine: Routine,
+  ctx: ContexteLlm,
+  gentId = ""
+): Promise<RoutineRunResult> {
+  const key = ctx.cle;
   const stamp = new Date().toISOString();
   if (!key) {
     return {
       ok: false,
-      note: "OPENROUTER_API_KEY absente côté serveur",
-      espace: { ...espace, routine: { ...routine, lastRunAt: stamp, lastRunNote: "échec : clé API absente" } },
+      note: "aucune clé OpenRouter disponible pour ce gent",
+      espace: { ...espace, routine: { ...routine, lastRunAt: stamp, lastRunNote: "échec : aucune clé OpenRouter disponible" } },
     };
   }
 
@@ -106,7 +105,7 @@ export async function runRoutine(espace: Espace, routine: Routine, gentId = ""):
   try {
     const res = await fetch(OPENROUTER_API, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: enTetesOpenRouter(key),
       body: JSON.stringify({
         model: espace.chatModelId ?? "anthropic/claude-sonnet-5",
         messages: [
@@ -167,6 +166,9 @@ export async function runRoutine(espace: Espace, routine: Routine, gentId = ""):
       checklistItems: sig.items?.map((label) => ({ label, checked: false })),
       mapPoints: sig.mapPoints,
       dashboard: sig.dashboard,
+      profileSummary: sig.profileSummary
+        ? { ...sig.profileSummary, media: materializeProfileMedia(sig.profileSummary.media) }
+        : undefined,
     };
     artefacts = [artefact, ...espace.artefacts];
     newMessages.push({ role: "artef-new", ref: artefactId, icon: meta.icon, title: sig.title, t });

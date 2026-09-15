@@ -1,11 +1,21 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
+import { sousTitreDuGent } from "@/lib/enteteGent";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
+import { FollowupChips } from "@/components/shared/FollowupChips";
 import { JumpFormCard } from "@/components/shared/JumpFormCard";
-import { extractDocumentText, type ExtractedDoc } from "@/lib/extractDocumentText";
+import { extractDocumentText } from "@/lib/extractDocumentText";
+import { extractVideoFrames } from "@/lib/extractVideoFrames";
+import {
+  type ChatAttachment,
+  formatVideoDuration,
+  isVideoAttachment,
+  isVideoFile,
+} from "@/lib/chatAttachment";
+import { extractDocumentForViewer } from "@/lib/documentViewer";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { MapAppModal, type MapDestination } from "@/components/shared/MapAppModal";
 import type { ConversationMessage, Espace } from "@/lib/types";
@@ -13,7 +23,9 @@ import { setAssistWidthFromPointer } from "@/lib/assistResize";
 import { threadPreview, threadLastActivity } from "@/lib/conversationUtils";
 import { buildEspaceReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
-import { ThinkingIndicator } from "@/components/shared/ThinkingIndicator";
+import { StarterBubbles } from "@/components/center/StarterBubbles";
+import { shouldShowConversationStarters } from "@/lib/starterSignal";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./AssistantPanel.module.css";
 
 const PROPOSAL_KIND_LABEL: Record<string, string> = {
@@ -23,6 +35,8 @@ const PROPOSAL_KIND_LABEL: Record<string, string> = {
   visual: "Aperçu visuel",
   map: "Carte",
   dashboard: "Tableau de bord",
+  "profile-summary": "Résumé de profil",
+  image: "Image",
 };
 
 /** Titre lisible d'un module (même convention d'id que ModuleCanvas.tsx : tab-<id>, map, artef-<id>). */
@@ -43,7 +57,36 @@ function themeTabLabel(espace: Espace, tabId: string): string {
   return espace.themeTabs?.find((t) => t.id === tabId)?.label ?? "cet onglet";
 }
 
-export function AssistantPanel() {
+/**
+ * `embedded` : le panneau est monté dans un conteneur qui gère lui-même sa
+ * largeur (la visionneuse de document), et non dans la grille de l'espace.
+ * La poignée de redimensionnement pilote une variable CSS de cette grille :
+ * hors d'elle, c'est un contrôle mort — on ne l'affiche pas.
+ */
+export function AssistantPanel({
+  embedded = false,
+  /**
+   * Force l'affichage des questions d'amorce sur un fil vide.
+   *
+   * `shouldShowConversationStarters` les réserve aux gents dotés d'un aperçu
+   * d'application. Ailleurs, elles vivent dans le canevas — qui les affiche
+   * déjà, et les montrer deux fois serait redondant. Mais la coquille de
+   * partage MASQUE ce canevas sur téléphone pour laisser toute la place à la
+   * conversation : le fil s'ouvrait alors vide, sans rien à quoi se
+   * raccrocher. C'est un fait de MISE EN PAGE, pas une propriété du gent, d'où
+   * cette prop plutôt qu'un assouplissement de la règle.
+   */
+  starters = false,
+  /**
+   * La coquille fournit DEJA un en-tete portant le nom du gent.
+   *
+   * Sans cela le titre s'affichait deux fois de suite a l'ecran, et le panneau
+   * proposait un plein ecran et une fermeture devenus sans objet : la bascule
+   * « Conversation / Le gent » de la coquille assure desormais la navigation,
+   * et la conversation occupe toute la largeur par defaut.
+   */
+  sansEntete = false,
+}: { embedded?: boolean; starters?: boolean; sansEntete?: boolean } = {}) {
   const {
     currentEspace,
     activeConversation,
@@ -55,6 +98,7 @@ export function AssistantPanel() {
     submitJumpForm,
     confirmArtefactProposal,
     confirmThemeProposal,
+    confirmImageProposal,
     confirmProfileProposal,
     startNewConversation,
     switchConversation,
@@ -64,15 +108,20 @@ export function AssistantPanel() {
     geoStatus,
     confirmGeoRequest,
     shareMode,
+    addDocumentArtefact,
   } = useEspace();
 
   const [cdView, setCdView] = useState<"chat" | "hist">("chat");
   const [jumpFormOpen, setJumpFormOpen] = useState(false);
   const [composerText, setComposerText] = useState("");
-  const [attachment, setAttachment] = useState<ExtractedDoc | null>(null);
+  const [attachment, setAttachment] = useState<ChatAttachment | null>(null);
   const [attaching, setAttaching] = useState(false);
+  const [attachStatus, setAttachStatus] = useState<string | null>(null);
   const [attachError, setAttachError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const viewerInputRef = useRef<HTMLInputElement>(null);
+  const [viewerLoading, setViewerLoading] = useState(false);
+  const [viewerError, setViewerError] = useState<string | null>(null);
   const [expandedReasoning, setExpandedReasoning] = useState<Record<number, boolean>>({});
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [mapDestination, setMapDestination] = useState<MapDestination | null>(null);
@@ -132,40 +181,110 @@ export function AssistantPanel() {
     };
   }, []);
 
-  const handleSend = useCallback(() => {
-    if (isThinking) return;
+  const handleSend = useCallback(async () => {
+    if (isThinking || attaching) return;
     const txt = composerText.trim();
     if (!txt && !attachment) return;
     const parts: string[] = [];
+
     if (attachment) {
-      parts.push(
-        `Document joint « ${attachment.name} » :\n"""\n${attachment.text}\n"""` +
-          (attachment.truncated ? "\n(document tronqué)" : "")
-      );
+      if (isVideoAttachment(attachment)) {
+        setAttaching(true);
+        setAttachStatus("Analyse de la vidéo par vision…");
+        setAttachError(null);
+        try {
+          const res = await fetch("/api/video/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              frames: attachment.frames.map((f) => f.dataUrl),
+              frameTimesSec: attachment.frames.map((f) => f.timeSec),
+              durationSec: attachment.durationSec,
+              name: attachment.name,
+              question: txt || undefined,
+            }),
+          });
+          const data = (await res.json()) as { analysis?: string; error?: string };
+          if (!res.ok || !data.analysis) {
+            throw new Error(data.error || "Analyse vidéo impossible.");
+          }
+          parts.push(
+            `Vidéo jointe « ${attachment.name} » (${formatVideoDuration(attachment.durationSec)}, ${attachment.frames.length} images analysées) :\n"""\n${data.analysis}\n"""`
+          );
+          if (txt) parts.push(txt);
+        } catch (err) {
+          setAttachError((err as Error).message || "Impossible d'analyser cette vidéo.");
+          setAttaching(false);
+          setAttachStatus(null);
+          return;
+        } finally {
+          setAttaching(false);
+          setAttachStatus(null);
+        }
+      } else {
+        parts.push(
+          `Document joint « ${attachment.name} » :\n"""\n${attachment.text}\n"""` +
+            (attachment.truncated ? "\n(document tronqué)" : "")
+        );
+        if (txt) parts.push(txt);
+      }
+    } else if (txt) {
+      parts.push(txt);
     }
-    if (txt) parts.push(txt);
+
     sendMessage(parts.join("\n\n"));
     setComposerText("");
     setAttachment(null);
     setAttachError(null);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
-  }, [composerText, attachment, sendMessage, isThinking]);
+  }, [composerText, attachment, sendMessage, isThinking, attaching]);
 
   const handleFilePick = useCallback(async (file: File | undefined) => {
     if (!file) return;
     setAttachError(null);
     setAttaching(true);
+    setAttachStatus(isVideoFile(file) ? "Extraction des images de la vidéo…" : "Lecture du document…");
     try {
-      const doc = await extractDocumentText(file);
-      setAttachment(doc);
+      if (isVideoFile(file)) {
+        const video = await extractVideoFrames(file);
+        setAttachment(video);
+      } else {
+        const doc = await extractDocumentText(file);
+        setAttachment(doc);
+      }
     } catch (err) {
       setAttachment(null);
-      setAttachError((err as Error).message || "Impossible de lire ce document.");
+      setAttachError((err as Error).message || "Impossible de lire ce fichier.");
     } finally {
       setAttaching(false);
+      setAttachStatus(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, []);
+
+  // Ouvre un document en pleine page plutôt que de le joindre à un message :
+  // extraction intégrale (pas la limite de 15k caractères de la pièce
+  // jointe conversationnelle), pagination et sommaire, artefact créé sans
+  // passer par une proposition du modèle — un document de plusieurs
+  // centaines de pages n'a de toute façon aucun moyen de tenir dans un bloc
+  // de signal.
+  const handleViewerFilePick = useCallback(
+    async (file: File | undefined) => {
+      if (!file) return;
+      setViewerError(null);
+      setViewerLoading(true);
+      try {
+        const spec = await extractDocumentForViewer(file);
+        addDocumentArtefact(spec);
+      } catch (err) {
+        setViewerError((err as Error).message || "Impossible d'ouvrir ce document.");
+      } finally {
+        setViewerLoading(false);
+        if (viewerInputRef.current) viewerInputRef.current.value = "";
+      }
+    },
+    [addDocumentArtefact]
+  );
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -243,12 +362,10 @@ export function AssistantPanel() {
   }, []);
 
   function isReasoningOpen(i: number): boolean {
-    const m = activeConversation.messages[i];
     if (i in expandedReasoning) return expandedReasoning[i];
-    // Ouvert automatiquement pendant que le modèle réfléchit et n'a pas
-    // encore commencé à répondre — se referme dès que le texte arrive,
-    // sauf si l'utilisateur l'a déjà déplié/replié manuellement.
-    return isThinking && i === lastAgentIndex && !m?.text;
+    // Replié par défaut, y compris pendant la réflexion : seul un clic de
+    // l'utilisateur (via toggleReasoning) l'ouvre.
+    return false;
   }
 
   function renderReasoning(m: ConversationMessage, i: number) {
@@ -272,7 +389,7 @@ export function AssistantPanel() {
         </button>
         {open && (
           <div className={styles.reasoningBox}>
-            {m.reasoning || (live ? "Le modèle analyse votre demande…" : "")}
+            {m.reasoning || (live ? "Le gent prépare sa réponse…" : "")}
           </div>
         )}
       </>
@@ -326,7 +443,7 @@ export function AssistantPanel() {
           <button key={i} className={styles.artefPointer} onClick={() => viewArtefact(m.id ?? "")}>
             <div className={[styles.pic, styles.picSent].join(" ")}>✓</div>
             <div className={styles.ptext}>
-              <div className={styles.ptitle}>Ajouté à votre espace — {p.title}</div>
+              <div className={styles.ptitle}>Gardé dans l&apos;espace — {p.title}</div>
             </div>
             <div className={styles.plink}>
               Voir
@@ -340,7 +457,7 @@ export function AssistantPanel() {
       if (m.proposalStatus === "dismissed") {
         return (
           <div key={i} className={styles.proposalDismissed}>
-            Proposition ignorée — {p.title}
+            Jeté — {p.title}
           </div>
         );
       }
@@ -353,6 +470,18 @@ export function AssistantPanel() {
           {p.dashboard && (
             <div className={styles.proposalBody}>
               Tableau de bord de {p.dashboard.blocks.length} élément{p.dashboard.blocks.length > 1 ? "s" : ""} (indicateurs, graphiques, tableaux) — s&apos;affiche en plein espace.
+            </div>
+          )}
+          {p.profileSummary && (
+            <div className={styles.proposalBody}>
+              <b>{p.profileSummary.name}</b>
+              {p.profileSummary.headline ? ` — ${p.profileSummary.headline}` : ""}
+              {p.profileSummary.summary
+                ? ` · ${p.profileSummary.summary.slice(0, 140)}${p.profileSummary.summary.length > 140 ? "…" : ""}`
+                : ""}
+              {p.profileSummary.media?.length
+                ? ` · ${p.profileSummary.media.length} illustration${p.profileSummary.media.length > 1 ? "s" : ""} (web / à générer)`
+                : ""}
             </div>
           )}
           {p.chartData && <MiniBarChart data={p.chartData} />}
@@ -368,7 +497,7 @@ export function AssistantPanel() {
               {p.items.length > 6 && <li>… et {p.items.length - 6} de plus</li>}
             </ul>
           )}
-          {p.body && !p.items && !p.chartData && (
+          {p.body && !p.items && !p.chartData && !p.profileSummary && (
             <div className={styles.proposalBody}>{p.body.slice(0, 200)}{p.body.length > 200 ? "…" : ""}</div>
           )}
           <div className={styles.proposalActions}>
@@ -377,14 +506,14 @@ export function AssistantPanel() {
               className={styles.proposalAddBtn}
               onClick={() => confirmArtefactProposal(m.id ?? "", "add")}
             >
-              Ajouter à mon espace
+              Garder dans l&apos;espace
             </button>
             <button
               type="button"
               className={styles.proposalDismissBtn}
               onClick={() => confirmArtefactProposal(m.id ?? "", "dismiss")}
             >
-              Ignorer
+              Jeter
             </button>
           </div>
         </div>
@@ -436,6 +565,115 @@ export function AssistantPanel() {
               type="button"
               className={styles.proposalDismissBtn}
               onClick={() => confirmGeoRequest(m.id ?? "", "deny")}
+            >
+              Refuser
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (m.role === "image-proposal" && m.imageProposal) {
+      const prop = m.imageProposal;
+      const isGenerate = prop.kind === "generate";
+      if (m.imageProposalStatus === "added") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            ✓ {isGenerate ? "Illustration générée" : "Photo ajoutée"} — « {prop.title} »
+            {m.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={m.imageUrl}
+                alt={prop.title}
+                style={{ maxWidth: "100%", borderRadius: 12, marginTop: 8, display: "block" }}
+              />
+            )}
+            {m.ref && (
+              <button type="button" className={styles.proposalDismissBtn} style={{ marginTop: 8 }} onClick={() => openArtefactModal(m.ref!)}>
+                Voir dans Images
+              </button>
+            )}
+          </div>
+        );
+      }
+      if (m.imageProposalStatus === "dismissed") {
+        return (
+          <div key={i} className={styles.proposalDismissed}>
+            Illustration refusée — « {prop.title} »
+          </div>
+        );
+      }
+      if (m.imageProposalStatus === "error") {
+        return (
+          <div key={i} className={styles.proposalCard}>
+            <div className={styles.proposalHead}>
+              <span className={styles.proposalKind}>🖼️ Image</span>
+              <span className={styles.proposalTitle}>Échec — « {prop.title} »</span>
+            </div>
+            <div className={styles.proposalBody}>
+              {m.text?.trim()
+                ? m.text
+                : "Impossible de produire l'illustration. Réessayez ; si ça persiste, vérifiez le modèle image du gent (Nanobanana)."}
+            </div>
+            <div className={styles.proposalActions}>
+              <button
+                type="button"
+                className={styles.proposalAddBtn}
+                onClick={() => confirmImageProposal(m.id ?? "", "generate")}
+              >
+                Réessayer
+              </button>
+              <button
+                type="button"
+                className={styles.proposalDismissBtn}
+                onClick={() => confirmImageProposal(m.id ?? "", "dismiss")}
+              >
+                Abandonner
+              </button>
+            </div>
+          </div>
+        );
+      }
+      if (m.imageProposalStatus === "generating") {
+        return (
+          <div key={i} className={styles.proposalCard}>
+            <div className={styles.proposalHead}>
+              <span className={styles.proposalKind}>🖼️ Image</span>
+              <span className={styles.proposalTitle}>Génération en cours…</span>
+            </div>
+            <div className={styles.proposalBody}>« {prop.title} » — cela peut prendre quelques secondes.</div>
+          </div>
+        );
+      }
+      return (
+        <div key={i} className={styles.proposalCard}>
+          <div className={styles.proposalHead}>
+            <span className={styles.proposalKind}>🖼️ Image</span>
+            <span className={styles.proposalTitle}>{prop.title}</span>
+          </div>
+          <div className={styles.proposalBody}>
+            {isGenerate
+              ? "Le gent propose de générer une illustration pour éclairer ce propos. La génération n'a lieu qu'avec votre autorisation (modèle économique)."
+              : "Le gent propose d'afficher une photo trouvée sur le web pour illustrer ce propos."}
+            {prop.caption ? ` Légende : ${prop.caption}` : ""}
+            {!isGenerate && prop.url ? (
+              <div style={{ marginTop: 6, fontSize: 11, color: "var(--faint)", wordBreak: "break-all" }}>
+                {prop.url}
+              </div>
+            ) : null}
+          </div>
+          <div className={styles.proposalActions}>
+            <button
+              type="button"
+              className={styles.proposalAddBtn}
+              onClick={() => confirmImageProposal(m.id ?? "", "generate")}
+            >
+              {isGenerate ? "Autoriser la génération" : "Afficher la photo"}
+            </button>
+            <button
+              type="button"
+              className={styles.proposalDismissBtn}
+              onClick={() => confirmImageProposal(m.id ?? "", "dismiss")}
             >
               Refuser
             </button>
@@ -642,10 +880,23 @@ export function AssistantPanel() {
           {isAgent && renderReasoning(m, i)}
           <div className={styles.bubble}>
             <SafeHTML html={m.text ?? ""} />
+            {m.imageStatus === "pending" && (
+              <div className={styles.proposalBody}>🎨 Génération de l'image…</div>
+            )}
+            {m.imageUrl && (
+              <img
+                src={m.imageUrl}
+                alt="Image générée"
+                style={{ maxWidth: "100%", borderRadius: 12, marginTop: 8, display: "block" }}
+              />
+            )}
             <div className={styles.t}>{m.t}</div>
           </div>
           {isAgent && isLastMessage && !!m.questions?.length && (
             <QuickReplyQuestions questions={m.questions} onSubmit={sendMessage} />
+          )}
+          {isAgent && isLastMessage && !!m.followups?.length && (
+            <FollowupChips followups={m.followups} onPick={sendMessage} />
           )}
         </div>
       </div>
@@ -700,17 +951,37 @@ export function AssistantPanel() {
 
   return (
     <section
-      className={[styles.panel, fullscreen ? styles.panelFullscreen : ""].filter(Boolean).join(" ")}
+      className={[
+        styles.panel,
+        fullscreen ? styles.panelFullscreen : "",
+        // Annule le tiroir mobile : voir `.panelEmbedded` dans la feuille de
+        // style. Sans cette classe, un panneau embarqué sort de l'écran sur
+        // téléphone.
+        embedded ? styles.panelEmbedded : "",
+        // Même prop que le bandeau : la coquille qui fournit l'en-tête est
+        // aussi celle qui veut un écran d'un seul tenant.
+        sansEntete ? styles.panelPlat : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-label="Assistant"
       aria-modal="false"
     >
-      {!fullscreen && <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner" />}
+      {!fullscreen && !embedded && (
+        <div className={styles.resizeHandle} ref={handleRef} title="Glisser pour redimensionner" />
+      )}
 
+      {!sansEntete && (
       <div className={styles.head}>
-        <div className={styles.headIc}>{currentEspace.icon}</div>
+        <div className={styles.headIc} aria-hidden="true">
+          <BrandIcon variant="fillSm" />
+        </div>
         <div className={styles.headMeta}>
           <h3 className={styles.headTitle}>{currentEspace.gent}</h3>
-          <div className={styles.headSub}>{currentEspace.name}</div>
+          {/* Meme regle que l'en-tete de la coquille : pas de doublon. */}
+          {sousTitreDuGent(currentEspace.gent, currentEspace.name) && (
+            <div className={styles.headSub}>{sousTitreDuGent(currentEspace.gent, currentEspace.name)}</div>
+          )}
         </div>
         {/* Le rapport est un outil du créateur : jamais proposé au destinataire d'un lien de partage. */}
         {!shareMode && (
@@ -729,16 +1000,23 @@ export function AssistantPanel() {
           ✕
         </button>
       </div>
+      )}
 
-      <div className={styles.scope}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="3" y="3" width="7" height="7" rx="1.5" />
-          <rect x="14" y="3" width="7" height="7" rx="1.5" />
-          <rect x="3" y="14" width="7" height="7" rx="1.5" />
-          <rect x="14" y="14" width="7" height="7" rx="1.5" />
-        </svg>
-        <span>L'assistant couvre tout le gent — naviguez librement entre les onglets pendant que vous échangez.</span>
-      </div>
+      {/* Cet avis invite à « naviguer entre les onglets » : il n'a de sens que
+          dans l'espace du créateur, qui en a. Embarqué — coquille de partage
+          sur téléphone, visionneuse — il n'y a pas d'onglets, et il coûte une
+          soixantaine de pixels pour dire quelque chose de faux. */}
+      {!embedded && !sansEntete && (
+        <div className={styles.scope}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" />
+            <rect x="14" y="3" width="7" height="7" rx="1.5" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" />
+            <rect x="14" y="14" width="7" height="7" rx="1.5" />
+          </svg>
+          <span>L'assistant couvre tout le gent — naviguez librement entre les onglets pendant que vous échangez.</span>
+        </div>
+      )}
 
       <div className={styles.tabsRow}>
         <div className={styles.tabs}>
@@ -775,17 +1053,17 @@ export function AssistantPanel() {
           renderHist()
         ) : (
           <>
-            {activeConversation.messages.length
-              ? activeConversation.messages.map((m, i) => renderMessage(m, i))
-              : !currentEspace.jumpForm && (
-                  <div className={styles.empty}>
-                    Nouvel échange — écrivez votre premier message. Le contenu du gent (itinéraire, réservations…) reste
-                    inchangé.
-                  </div>
-                )}
-            {isThinking && cdView === "chat" && (
-              <ThinkingIndicator label={thinkingStatus ?? "Réflexion en cours…"} />
-            )}
+            {activeConversation.messages.length ? (
+              activeConversation.messages.map((m, i) => renderMessage(m, i))
+            ) : starters ||
+              shouldShowConversationStarters(currentEspace, activeConversation.messages.length) ? (
+              <StarterBubbles espace={currentEspace} variant="compact" />
+            ) : !currentEspace.jumpForm ? (
+              <div className={styles.empty}>
+                Nouvel échange — écrivez votre premier message. Le contenu du gent (itinéraire, réservations…) reste
+                inchangé.
+              </div>
+            ) : null}
             {currentEspace.jumpForm && (activeConversation.messages.length === 0 || jumpFormOpen) && (
               <div className={styles.jumpFormWrap}>
                 <JumpFormCard
@@ -815,27 +1093,36 @@ export function AssistantPanel() {
 
       {cdView === "chat" && (
         <div className={styles.composerWrap}>
-          {attaching && (
+          {attaching && attachStatus && (
             <div className={styles.attachLoading}>
-              <span aria-hidden="true">⏳</span> Lecture du document…
+              <span aria-hidden="true">⏳</span> {attachStatus}
             </div>
           )}
           {attachError && <div className={styles.attachError}>{attachError}</div>}
+          {viewerLoading && (
+            <div className={styles.attachLoading}>
+              <span aria-hidden="true">⏳</span> Ouverture du document (extraction complète)…
+            </div>
+          )}
+          {viewerError && <div className={styles.attachError}>{viewerError}</div>}
           {attachment && !attaching && (
             <div className={styles.attachChip}>
               <span className={styles.attachChipIcon} aria-hidden="true">📎</span>
               <div className={styles.attachChipBody}>
                 <div className={styles.attachChipName}>{attachment.name}</div>
                 <div className={styles.attachChipMeta}>
-                  {attachment.text.length.toLocaleString("fr-FR")} caractères
-                  {attachment.truncated ? " (tronqué)" : ""} · joint au prochain message
+                  {isVideoAttachment(attachment)
+                    ? `${formatVideoDuration(attachment.durationSec)} · ${attachment.frames.length} images · analyse au prochain envoi`
+                    : `${attachment.text.length.toLocaleString("fr-FR")} caractères${
+                        attachment.truncated ? " (tronqué)" : ""
+                      } · joint au prochain message`}
                 </div>
               </div>
               <button
                 type="button"
                 className={styles.attachChipRemove}
                 onClick={() => setAttachment(null)}
-                aria-label="Retirer le document"
+                aria-label="Retirer la pièce jointe"
               >
                 ✕
               </button>
@@ -844,16 +1131,23 @@ export function AssistantPanel() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.docx,.txt,.md,.csv,.tsv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv"
+            accept=".pdf,.docx,.txt,.md,.csv,.tsv,.mp4,.webm,.mov,.m4v,.ogv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg"
             style={{ display: "none" }}
             onChange={(e) => handleFilePick(e.target.files?.[0])}
+          />
+          <input
+            ref={viewerInputRef}
+            type="file"
+            accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+            style={{ display: "none" }}
+            onChange={(e) => handleViewerFilePick(e.target.files?.[0])}
           />
           <div className={[styles.composer, !composerText.trim() ? styles.composerOff : ""].join(" ")}>
             <button
               type="button"
               className={styles.attachBtn}
               aria-label="Joindre un document (PDF, Word, texte)"
-              title="Joindre un document (PDF, Word, texte)"
+              title="Joindre un document au message"
               disabled={attaching}
               onClick={() => fileInputRef.current?.click()}
             >
@@ -861,11 +1155,30 @@ export function AssistantPanel() {
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
               </svg>
             </button>
+            <button
+              type="button"
+              className={styles.attachBtn}
+              aria-label="Ouvrir un document en visionneuse pleine page"
+              title="Ouvrir en visionneuse (lecture immersive, document entier)"
+              disabled={viewerLoading}
+              onClick={() => viewerInputRef.current?.click()}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
+                <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H19v3H6.5A2.5 2.5 0 0 1 4 20.5z" />
+              </svg>
+            </button>
             <textarea
               ref={textareaRef}
               className={styles.composerTextarea}
               rows={1}
-              placeholder={attachment ? "Ajouter un message (facultatif)…" : "Écrire à votre assistant…"}
+              placeholder={
+                attachment
+                  ? isVideoAttachment(attachment)
+                    ? "Question sur la vidéo (facultatif)…"
+                    : "Ajouter un message (facultatif)…"
+                  : "Écrire à votre assistant…"
+              }
               aria-label="Votre message"
               value={composerText}
               onChange={handleTextareaChange}
@@ -888,7 +1201,7 @@ export function AssistantPanel() {
                 type="button"
                 className={styles.sendBtn}
                 aria-label="Envoyer"
-                disabled={!composerText.trim() && !attachment}
+                disabled={attaching || (!composerText.trim() && !attachment)}
                 onClick={handleSend}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

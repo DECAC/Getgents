@@ -17,7 +17,7 @@
   padding: 12px 14px;
 }
 .statN {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -28,7 +28,7 @@
   margin-top: 1px;
 }
 .statPending .statN { color: var(--gold); }
-.statSent .statN { color: var(--plum); }
+.statSent .statN { color: var(--sage); }
 .statDone .statN { color: var(--sage-700); }
 
 .list {
@@ -55,7 +55,7 @@
   flex: none;
 }
 .icPending { background: var(--gold-tint); }
-.icSent { background: var(--plum-tint); }
+.icSent { background: var(--sage-tint); }
 .icDone { background: var(--sage-tint); }
 .icCancelled { background: #f1f2f4; }
 
@@ -86,7 +86,7 @@
   white-space: nowrap;
 }
 .statusPending { background: var(--gold-tint); color: var(--gold); }
-.statusSent { background: var(--plum-tint); color: var(--plum); }
+.statusSent { background: var(--sage-tint); color: var(--sage); }
 .statusConfirmed { background: var(--sage-tint); color: var(--sage-700); }
 .statusCancelled { background: #f1f2f4; color: var(--muted); }
 

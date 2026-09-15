@@ -1,4 +1,6 @@
 import type { Espace } from "@/lib/types";
+import { formatConversationStartedAt } from "@/lib/conversationUtils";
+import { downloadableDocumentsForReader } from "@/lib/fileDownload";
 
 /**
  * Espace minimal pour les appels serveur (preview artefact, run routine) :
@@ -19,6 +21,12 @@ export function espaceForPinnedRefresh(espace: Espace, inputs?: Record<string, s
     icon: espace.icon,
     name: espace.name,
     gent: espace.gent,
+    // L'attribution « Propulsé par » est un LIVRABLE PUBLIC du gent, au même
+    // titre que son nom. Absente de cette liste blanche, elle était retirée de
+    // tout lien de diffusion : le créateur la voyait en aperçu et jamais en
+    // ligne, ce qui donne exactement l'impression que la rediffusion ne prend
+    // pas les modifications.
+    propulsePar: espace.propulsePar,
     version: espace.version,
     status: espace.status,
     statusLabel: espace.statusLabel,
@@ -72,10 +80,22 @@ export function espaceForPinnedRefresh(espace: Espace, inputs?: Record<string, s
  */
 export function espaceForPublicLink(espace: Espace): Espace {
   const pinned = espace.pinnedArtefact;
+  // Type « visionneuse » : le document fixé par le créateur est un
+  // livrable public du gent (comme starters/jumpForm), pas une donnée
+  // personnelle du créateur — le destinataire doit pouvoir l'ouvrir.
+  const visionneuseDoc = espace.visionneuse?.enabled
+    ? espace.artefacts.find((a) => a.id === "visionneuse-doc")
+    : undefined;
   return {
     icon: espace.icon,
     name: espace.name,
     gent: espace.gent,
+    // L'attribution « Propulsé par » est un LIVRABLE PUBLIC du gent, au même
+    // titre que son nom. Absente de cette liste blanche, elle était retirée de
+    // tout lien de diffusion : le créateur la voyait en aperçu et jamais en
+    // ligne, ce qui donne exactement l'impression que la rediffusion ne prend
+    // pas les modifications.
+    propulsePar: espace.propulsePar,
     version: espace.version,
     status: espace.status,
     statusLabel: espace.statusLabel,
@@ -86,11 +106,31 @@ export function espaceForPublicLink(espace: Espace): Espace {
     tabs: [],
     map: null,
     memory: "",
-    conversations: [],
+    // Fil vierge, mais bien PRÉSENT : les conversations du créateur ne
+    // regardent pas le destinataire, en revanche un espace qui annonce un
+    // `activeConversationId` sans le fil correspondant rend la conversation
+    // muette (rien à quoi rattacher les messages).
+    conversations: [{ id: "shared", startedAt: formatConversationStartedAt(), messages: [] }],
     activeConversationId: "shared",
     files: [],
-    artefacts: [],
+    artefacts: visionneuseDoc ? [visionneuseDoc] : [],
+    visionneuse: espace.visionneuse?.enabled ? { enabled: true } : undefined,
+    // Gent collaboratif : la mission, le cadre et les questions sont écrits
+    // POUR les participants — ils passent tels quels. Aucun secret n'y vit.
+    collab: espace.collab?.enabled ? espace.collab : undefined,
     jumpForm: espace.jumpForm,
+    // Les déclencheurs décrivent les usages du gent, pas l'activité de son
+    // créateur : ils sont donc transmis tels quels au destinataire, à qui ils
+    // servent encore plus qu'à lui (il découvre le gent).
+    starters: espace.starters,
+    fileDownloadEnabled: espace.fileDownloadEnabled,
+    fileDownloadFormEnabled: espace.fileDownloadFormEnabled,
+    downloadableDocuments: espace.fileDownloadEnabled
+      ? downloadableDocumentsForReader(espace)
+      : undefined,
+    // Application à blocs du studio : données simulées choisies par le
+    // créateur, pas l'historique personnel — le destinataire voit la même app.
+    appPreview: espace.appPreview,
     pinnedArtefact: pinned
       ? {
           enabled: pinned.enabled,
@@ -117,6 +157,68 @@ export function espaceForPublicLink(espace: Espace): Espace {
  */
 export function withoutSessionContext(espace: Espace): Espace {
   return { ...espace, memory: "", files: [] };
+}
+
+/**
+ * Charge utile pour générer les déclencheurs : uniquement ce qui décrit les
+ * CAPACITÉS du gent. Ni conversations, ni artefacts, ni mémoire — la question
+ * posée au modèle est « que sait faire ce gent ? », pas « qu'a fait cet
+ * utilisateur ? », et l'espace complet ferait une requête inutilement lourde.
+ */
+export function espaceForStarters(espace: Espace): Espace {
+  return {
+    icon: espace.icon,
+    name: espace.name,
+    gent: espace.gent,
+    // L'attribution « Propulsé par » est un LIVRABLE PUBLIC du gent, au même
+    // titre que son nom. Absente de cette liste blanche, elle était retirée de
+    // tout lien de diffusion : le créateur la voyait en aperçu et jamais en
+    // ligne, ce qui donne exactement l'impression que la rediffusion ne prend
+    // pas les modifications.
+    propulsePar: espace.propulsePar,
+    version: espace.version,
+    status: espace.status,
+    statusLabel: espace.statusLabel,
+    sensitive: espace.sensitive,
+    metrics: [],
+    integrations: [],
+    tools: [],
+    tabs: [],
+    map: null,
+    memory: "",
+    conversations: [],
+    activeConversationId: espace.activeConversationId,
+    // Seuls les NOMS des documents comptent ici : ils situent les thèmes
+    // couverts, sans transmettre leur contenu intégral.
+    files: (espace.files ?? []).map((f) => ({ ...f, text: undefined })),
+    artefacts: [],
+    systemPrompt: espace.systemPrompt,
+    chatModelId: espace.chatModelId,
+    webSearch: espace.webSearch,
+    datasets: espace.datasets,
+    mcpServers: espace.mcpServers,
+    restApis: espace.restApis,
+    prim: espace.prim,
+    powens: espace.powens,
+    routine: espace.routine,
+    pinnedArtefact: espace.pinnedArtefact,
+    // Onglets et titres seulement : assez pour coller les amorces à l'aperçu,
+    // sans envoyer les données simulées de chaque bloc.
+    appPreview: espace.appPreview?.modules.length
+      ? {
+          appName: espace.appPreview.appName,
+          themes: espace.appPreview.themes,
+          modules: espace.appPreview.modules.map((m) => ({
+            id: m.id,
+            title: m.title,
+            theme: m.theme,
+            size: m.size,
+            source: m.source,
+            blocks: [{ kind: "heading" as const, text: m.title }],
+          })),
+        }
+      : undefined,
+  };
 }
 
 /** Coquille légère pour exécuter une routine : le fil actif est vide, le serveur n'y ajoute que les nouveaux messages. */

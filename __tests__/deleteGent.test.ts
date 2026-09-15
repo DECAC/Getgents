@@ -1,4 +1,4 @@
-import { deleteGentEverywhere } from "@/lib/deleteGent";
+import { confirmDeleteGentsMessage, deleteGentEverywhere } from "@/lib/deleteGent";
 import { deletePublishedGent } from "@/lib/publishedGents";
 import { deleteRemoteDraft } from "@/lib/builderDraftStorage";
 
@@ -56,5 +56,19 @@ describe("suppression d'un gent partout où il peut exister", () => {
     await deleteGentEverywhere("g1");
     // Le second appel démarre avant que le premier (plus lent) ne se termine.
     expect(order.indexOf("published-start")).toBeLessThan(order.indexOf("draft-end"));
+  });
+});
+
+describe("message de confirmation de suppression", () => {
+  it("nomme un seul gent", () => {
+    expect(confirmDeleteGentsMessage(["Compagnon IA"])).toContain("« Compagnon IA »");
+    expect(confirmDeleteGentsMessage(["Compagnon IA"])).not.toContain("gents (");
+  });
+
+  it("compte plusieurs gents et liste les premiers noms", () => {
+    const msg = confirmDeleteGentsMessage(["A", "B", "C"]);
+    expect(msg).toContain("3 gents");
+    expect(msg).toContain("« A »");
+    expect(msg).toContain("« C »");
   });
 });

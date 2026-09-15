@@ -33,7 +33,7 @@
   gap: 13px;
   /* Bandeau teinté : donne immédiatement une identité visuelle à l'artefact */
   background:
-    radial-gradient(90% 140% at 0% 0%, var(--plum-tint) 0%, transparent 55%),
+    radial-gradient(90% 140% at 0% 0%, var(--sage-tint) 0%, transparent 55%),
     radial-gradient(80% 140% at 100% 0%, var(--sage-tint) 0%, transparent 50%),
     var(--card);
 }
@@ -41,7 +41,7 @@
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--gold-tint), var(--plum-tint));
+  background: linear-gradient(135deg, var(--gold-tint), var(--sage-tint));
   color: var(--gold);
   display: grid;
   place-items: center;
@@ -54,7 +54,7 @@
   height: 20px;
 }
 .title {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 18px;
   font-weight: 700;
   margin: 0;
@@ -76,8 +76,8 @@
   letter-spacing: 0.05em;
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--plum-tint);
-  color: var(--plum);
+  background: var(--sage-tint);
+  color: var(--sage);
 }
 .closeBtn {
   margin-left: auto;
@@ -105,6 +105,10 @@
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
+}
+.footVerdict {
+  justify-content: flex-end;
 }
 .footLabel {
   font-size: 11px;
@@ -135,6 +139,40 @@
 }
 .btnGhost:hover {
   background: var(--bg);
+}
+
+.shareLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.shareInput {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  resize: vertical;
+  background: var(--bg);
+  color: var(--ink);
+}
+.shareHint {
+  font-size: 12px;
+  color: var(--faint);
+  margin: 8px 0 14px;
+}
+.shareConfirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.shareError {
+  color: #b42318;
+  font-size: 13px;
+  margin-top: 12px;
 }
 
 /* Visual grid for artefacts */

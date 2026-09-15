@@ -1,9 +1,17 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { EspaceProvider, useEspace } from "@/lib/context/EspaceContext";
-import { PinnedArtefactPanel } from "@/components/center/PinnedArtefactPanel";
+import { WorkspaceCanvas } from "@/components/center/WorkspaceCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
+import { ArtefactModal, ArtefactCorps } from "@/components/shared/ArtefactModal";
+import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
+import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
+import { SignalerIncident } from "@/components/shared/SignalerIncident";
+import { aDesArtefacts, nombreDArtefacts, MESSAGE_ESPACE_VIDE } from "@/lib/espaceArtefacts";
+import { sousTitreDuGent } from "@/lib/enteteGent";
 import type { Espace } from "@/lib/types";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./SharedGentShell.module.css";
 
 /**
@@ -11,51 +19,321 @@ import styles from "./SharedGentShell.module.css";
  * pleine page, sans rail de navigation, sans aside et sans lien vers le studio.
  * Le destinataire dispose de l'artefact figé (avec ses boutons d'action) et du
  * module conversationnel — rien d'autre.
+ *
+ * L'agencement reprend délibérément celui de l'espace : conversation à gauche,
+ * espace de travail à droite, et les mêmes déclencheurs d'amorce tant que
+ * la conversation n'a pas commencé (sur un canevas vierge, ou en bandeau
+ * sous l'aperçu d'application).
+ * Une mise en page propre au partage désorientait — le destinataire découvrait
+ * une interface que le créateur n'avait jamais vue en Preview.
  */
-function SharedGentBody() {
-  const { currentEspace, assistantOpen, openAssistant, miniAppMode } = useEspace();
-  const pinned = currentEspace.pinnedArtefact;
+function SharedGentBody({ token }: { token: string }) {
+  const {
+    currentEspace,
+    assistantOpen,
+    openAssistant,
+    closeAssistant,
+    miniAppMode,
+    documentViewerOpen,
+    pendingArtefactVerdict,
+    confirmArtefactProposal,
+    declarerVoletVerdict,
+  } = useEspace();
+
+  /**
+   * Cette coquille a un volet : un artefact en attente de verdict s'y affiche,
+   * et la fenêtre plein écran ne s'ouvre plus toute seule pour lui.
+   *
+   * « Agrandir » rend la main à la fenêtre le temps d'une lecture — c'est le
+   * même drapeau, relâché volontairement. Un aperçu n'existant pas encore
+   * dans l'espace, `openArtefactModal` ne saurait pas le retrouver.
+   */
+  const [agrandi, setAgrandi] = useState(false);
+  useEffect(() => {
+    declarerVoletVerdict(!agrandi);
+    return () => declarerVoletVerdict(false);
+  }, [declarerVoletVerdict, agrandi]);
+
+  /**
+   * Écran étroit : le canevas est masqué par la feuille de style, et c'est lui
+   * qui porte d'ordinaire les questions d'amorce. La conversation doit alors
+   * les reprendre — sans quoi le fil s'ouvre vide.
+   *
+   * Suivi en direct plutôt que lu une fois : une rotation d'appareil fait
+   * passer d'un régime à l'autre, et un état figé au montage afficherait les
+   * questions en double sur grand écran, ou pas du tout après rotation.
+   */
+  const [etroit, setEtroit] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 860px)");
+    const suivre = () => setEtroit(mq.matches);
+    suivre();
+    mq.addEventListener("change", suivre);
+    return () => mq.removeEventListener("change", suivre);
+  }, []);
+
+  /**
+   * La conversation est ouverte DES LE DEPART — voir `assistantOuvertAuDepart`
+   * sur le fournisseur. Un effet de rattrapage ferait sauter la page d'un
+   * onglet a l'autre au chargement.
+   *
+   * En mode mini-application, le tableau de bord fait foi : la conversation y
+   * est refermee, une fois, sans que le saut se voie puisqu'on n'y arrive pas
+   * pour parler.
+   */
+  useEffect(() => {
+    if (miniAppMode) closeAssistant();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [miniAppMode]);
   // Un gent en mode mini-application s'utilise par son tableau de bord : le
   // destinataire n'a pas non plus accès à la conversation.
   const chatAvailable = !miniAppMode;
+  // Visionneuse ouverte : la conversation y est déjà rendue, à droite du
+  // document (voir DocumentViewerModal) — ne pas la monter deux fois.
+  const chatOpen = chatAvailable && assistantOpen && !documentViewerOpen;
+
+  /**
+   * Le volet d'artefact, à droite de la conversation.
+   *
+   * Par défaut FERMÉ : la conversation prend toute la largeur. L'agencement
+   * précédent réservait en permanence une colonne au canevas, qui restait
+   * vide tant que le gent n'avait rien produit — et à moitié vide ensuite,
+   * un seul module ne remplissant pas la moitié d'un écran.
+   *
+   * Il s'ouvre TOUT SEUL quand un artefact arrive : c'est le moment où il a
+   * quelque chose à montrer, et le seul où l'interrompre se justifie.
+   */
+  const [voletOuvert, setVoletOuvert] = useState(false);
+
+  /**
+   * Le volet peut s'etendre VERS LA GAUCHE, en gardant la conversation
+   * ouverte. Deux largeurs seulement — moities egales, ou volet large — parce
+   * qu'une poignee de redimensionnement demande de la precision a la souris
+   * pour un reglage qu'on ne fait qu'une fois. Un clic suffit, et l'on revient
+   * d'un clic.
+   */
+  const [voletLarge, setVoletLarge] = useState(false);
+
+  // Un artefact qui attend une décision ouvre le volet : c'est exactement le
+  // moment où il a quelque chose à montrer.
+  useEffect(() => {
+    if (pendingArtefactVerdict) setVoletOuvert(true);
+    // Verdict rendu : l'agrandissement n'a plus d'objet.
+    else setAgrandi(false);
+  }, [pendingArtefactVerdict]);
+  const compte = nombreDArtefacts(currentEspace);
+  const comptePrecedent = useRef(compte);
+  useEffect(() => {
+    // On compare au compte PRÉCÉDENT, pas à zéro : rouvrir le volet à chaque
+    // rendu d'un espace déjà garni le rendrait impossible à fermer.
+    if (compte > comptePrecedent.current) setVoletOuvert(true);
+    comptePrecedent.current = compte;
+  }, [compte]);
+
+  const espaceGarni = aDesArtefacts(currentEspace);
+  const sousTitre = sousTitreDuGent(currentEspace.gent, currentEspace.name);
+  // Deux colonnes seulement si la conversation ET le volet sont là. Sur écran
+  // étroit la feuille de style ramène à une colonne : le volet n'a pas la
+  // place, et « Le gent » reste le chemin vers le canevas.
+  const deuxColonnes = chatOpen && voletOuvert;
+  // L'aperçu ne prend la place du canevas que si le volet est effectivement
+  // visible : sinon la décision serait demandée dans un écran qu'on ne voit pas.
+  const apercu = voletOuvert ? pendingArtefactVerdict : null;
 
   return (
     <div className={styles.page}>
       <header className={styles.head}>
-        <span className={styles.icon}>{currentEspace.icon}</span>
+        <span className={styles.icon} aria-hidden="true">
+          <BrandIcon variant="fill" />
+        </span>
         <div className={styles.headMeta}>
           <h1 className={styles.title}>{currentEspace.gent}</h1>
-          <div className={styles.sub}>{currentEspace.name}</div>
+          <div className={styles.sub}>
+            {/* Tu seulement s'il repete le titre — voir `sousTitreDuGent`. */}
+            {sousTitre && <span className={styles.subObjectif}>{sousTitre}</span>}
+            {/* L'attribution vit ICI, et non seulement dans `CenterHeader` :
+                cet en-tête est le seul que voient les destinataires d'un lien
+                et les visiteurs d'un gent public — c'est-à-dire exactement le
+                public à qui cette mention s'adresse. Elle n'apparaît que si
+                elle a une valeur : « Propulsé par » suivi du nom du gent, déjà
+                écrit au-dessus, ne dirait rien. */}
+            {currentEspace.propulsePar?.trim() && (
+              <span className={styles.subAuteur}>
+                Propulsé par <b>{currentEspace.propulsePar}</b>
+              </span>
+            )}
+          </div>
         </div>
-        {chatAvailable && !assistantOpen && (
-          <button type="button" className={styles.chatBtn} onClick={openAssistant}>
-            💬 Discuter
-          </button>
-        )}
+        <div className={styles.headActions}>
+          {/* Bascule permanente entre la conversation et l'espace du gent.
+              Sur téléphone la conversation occupe tout l'écran, et le canevas
+              — artefacts, documents, tableau de bord — disparaissait sans
+              qu'aucun chemin n'y ramène. On ne pouvait plus ni télécharger, ni
+              voir ce que le gent avait produit : il fallait deviner qu'un
+              bouton de fermeture, dans l'en-tête du panneau, faisait office de
+              retour. Ces deux segments disent où l'on est et où l'on peut
+              aller, à tout instant. */}
+          {chatAvailable && (
+            <div className={styles.bascule} role="tablist" aria-label="Affichage">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={assistantOpen}
+                className={assistantOpen ? styles.basculeOn : undefined}
+                onClick={openAssistant}
+              >
+                Conversation
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!assistantOpen}
+                className={!assistantOpen ? styles.basculeOn : undefined}
+                onClick={closeAssistant}
+              >
+                Le gent
+              </button>
+            </div>
+          )}
+          <FileDownloadControl variant="shared" />
+          <SignalerIncident token={token} />
+        </div>
       </header>
 
-      <main className={styles.main}>
-        {pinned?.enabled ? (
-          <PinnedArtefactPanel pinned={pinned} />
-        ) : (
-          <div className={styles.empty}>
-            <p>Ce gent s&apos;utilise en conversation — ouvrez le chat pour commencer.</p>
-            <button type="button" className={styles.chatBtn} onClick={openAssistant}>
-              💬 Discuter
-            </button>
+      <div
+        className={[
+          styles.body,
+          deuxColonnes ? styles.bodyWithChat : "",
+          deuxColonnes && voletLarge ? styles.bodyVoletLarge : "",
+          chatOpen ? styles.bodyChat : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {/* `starters` : sur téléphone le canevas est masqué, et c'est lui qui
+            porte d'ordinaire les questions d'amorce. Sans cela, le
+            destinataire d'un lien arrivait sur un fil vide — rien à lire,
+            rien à toucher, aucune idée de ce qu'on peut demander. */}
+        {/* `embedded` sur écran étroit : la grille lui donne déjà toute la
+            place, il ne doit pas se comporter en tiroir superposé. Sur grand
+            écran il reste une colonne redimensionnable. */}
+        {chatOpen && <AssistantPanel
+            starters={etroit || !voletOuvert}
+            embedded={etroit || !voletOuvert}
+            // L'en-tête de la page porte déjà le nom du gent.
+            sansEntete
+          />}
+        {/* Le canevas n'est monté que s'il a une place : en volet à côté de la
+            conversation, ou en pleine page sous l'onglet « Le gent ». */}
+        {(!chatOpen || voletOuvert) && (
+        <main className={styles.main}>
+          {chatOpen && (
+            <div className={styles.voletBarre}>
+              <span className={styles.voletTitre}>
+                {apercu ? apercu.preview.title : "Ce que le gent a produit"}
+              </span>
+              <div className={styles.voletActions}>
+                {apercu ? (
+                  <>
+                    {/* Agrandir : la fenêtre plein écran reste accessible,
+                        elle n'est simplement plus imposée. */}
+                    <button
+                      type="button"
+                      className={styles.voletIcone}
+                      onClick={() => setAgrandi(true)}
+                      title="Agrandir dans la fenêtre"
+                      aria-label="Agrandir dans la fenêtre"
+                    >
+                      ⤢
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.voletJeter}
+                      onClick={() => confirmArtefactProposal(apercu.proposalMessageId, "dismiss")}
+                    >
+                      Jeter
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.voletGarder}
+                      onClick={() => confirmArtefactProposal(apercu.proposalMessageId, "add")}
+                    >
+                      Garder dans l&apos;espace
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className={styles.voletIcone}
+                      onClick={() => setVoletLarge((v) => !v)}
+                      title={voletLarge ? "Réduire l'espace du gent" : "Étendre l'espace du gent"}
+                      aria-label={voletLarge ? "Réduire l'espace du gent" : "Étendre l'espace du gent"}
+                      aria-pressed={voletLarge}
+                    >
+                      {voletLarge ? "⇥" : "⇤"}
+                    </button>
+                  <button
+                    type="button"
+                    className={styles.voletFermer}
+                    onClick={() => setVoletOuvert(false)}
+                    // Fermer ne détruit rien : le canevas reste atteignable
+                    // par « Le gent ». Le dire évite de faire hésiter.
+                    title="Fermer — vous le retrouverez dans « Le gent »"
+                  >
+                    Fermer
+                  </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          <div className={styles.mainInner}>
+            {/* Même canvas que l'espace : aperçu d'application (avec déclencheurs
+                d'amorce tant que la conversation n'a pas commencé) ou ancien
+                canevas d'artefacts. Sans lui, un artefact accepté par le
+                destinataire était bien enregistré mais ne s'affichait nulle part. */}
+            {apercu ? (
+              /* Aperçu en attente : le MÊME rendu que la fenêtre, par le
+                 composant partagé — ce qu'on garde doit être ce qu'on a vu. */
+              <ArtefactCorps artefact={apercu.preview} interactif={false} />
+            ) : espaceGarni ? (
+              <WorkspaceCanvas espace={currentEspace} />
+            ) : (
+              /* Un espace vide sans un mot est un cul-de-sac : le visiteur
+                 n'a aucune raison d'y revenir. On explique la mécanique. */
+              <div className={styles.vide}>
+                <p className={styles.videTexte}>{MESSAGE_ESPACE_VIDE}</p>
+                {chatAvailable && !assistantOpen && (
+                  <button type="button" className={styles.videAction} onClick={openAssistant}>
+                    Ouvrir la conversation
+                  </button>
+                )}
+              </div>
+            )}
           </div>
+        </main>
         )}
-      </main>
+      </div>
 
-      {chatAvailable && assistantOpen && <AssistantPanel />}
+      <DocumentViewerModal />
+      <ArtefactModal />
     </div>
   );
 }
 
 export function SharedGentShell({ token, espace }: { token: string; espace: Espace }) {
   return (
-    <EspaceProvider initialId="shared" shareToken={token} initialEspaces={{ shared: espace }}>
-      <SharedGentBody />
+    <EspaceProvider
+      initialId="shared"
+      shareToken={token}
+      initialEspaces={{ shared: espace }}
+      // Dès le premier rendu : sans cela la page s'affiche une image sur
+      // « Le gent » avant de basculer, et le saut se voit.
+      assistantOuvertAuDepart
+    >
+      <SharedGentBody token={token} />
     </EspaceProvider>
   );
 }

@@ -1,52 +1,340 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useBuilder } from "@/lib/context/BuilderContext";
+import { useBuilder, type BuilderTab } from "@/lib/context/BuilderContext";
+import { allocateNewDraft, allocateEventManagerDraft, listVisibleDrafts } from "@/lib/builderDraftStorage";
+import { hasCustomName, isDirtySincePublish } from "@/lib/builderSnapshot";
+import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
+import { useNavMobile } from "@/lib/context/NavMobileContext";
 import styles from "./BuilderRail.module.css";
+import { MenuCompte } from "@/components/compte/MenuCompte";
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Brouillon",
-  review: "En revue",
-  published: "Publié",
+/** Entrées du menu « Créer » : chaque clic ouvre un NOUVEAU brouillon sur l'onglet cible. */
+const CREATE_TABS: BuilderTab[] = [
+  "conversationnel",
+  "miniapp",
+  "visionneuse",
+  "collaboratif",
+  "apercu",
+];
+
+interface NavEntry {
+  id: BuilderTab;
+  label: string;
+  icon: JSX.Element;
+  blue?: boolean;
+}
+
+interface NavSection {
+  title?: string;
+  entries: NavEntry[];
+}
+
+const ICON = {
+  accueil: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" />
+    </svg>
+  ),
+  mesgents: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="7.5" height="7.5" rx="2" />
+      <rect x="13.5" y="3" width="7.5" height="7.5" rx="2" />
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="2" />
+      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" />
+    </svg>
+  ),
+  conversationnel: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-4.6A8.4 8.4 0 1 1 21 11.5z" />
+    </svg>
+  ),
+  miniapp: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="4" y="3" width="16" height="18" rx="2.5" />
+      <path d="M8 8h8M8 12h5M8 16h8" />
+    </svg>
+  ),
+  visionneuse: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v18H6.5A2.5 2.5 0 0 1 4 18.5z" />
+      <path d="M8 8h7M8 12h7M8 16h4" />
+    </svg>
+  ),
+  collaboratif: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="9" cy="8" r="3" />
+      <circle cx="16" cy="9" r="2.5" />
+      <path d="M3.5 18.5c.8-3 2.8-4.5 5.5-4.5s4.7 1.5 5.5 4.5" />
+      <path d="M13 18.5c.5-2 1.8-3.2 3.5-3.2 1.4 0 2.5.8 3 2.2" />
+    </svg>
+  ),
+  apercu: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="4" width="18" height="16" rx="2.5" />
+      <path d="M3 9h18M8 4v5" />
+    </svg>
+  ),
+  connectors: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 7H7a5 5 0 0 0 0 10h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8" />
+    </svg>
+  ),
+  knowledge: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
+      <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H19v3H6.5A2.5 2.5 0 0 1 4 20.5z" />
+    </svg>
+  ),
+  audit: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3M8 11h6M11 8v6" />
+    </svg>
+  ),
+  diffusion: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" />
+    </svg>
+  ),
+  prompt: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 5h16M4 10h16M4 15h10" />
+      <path d="M15.5 20.5 21 15l-2-2-5.5 5.5-.5 2.5z" />
+    </svg>
+  ),
+  marketing: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 10v4a2 2 0 0 0 2 2h3l7 4V4l-7 4H6a2 2 0 0 0-2 2z" />
+      <path d="M16 9.5a3.5 3.5 0 0 1 0 5" />
+    </svg>
+  ),
 };
 
-const STATUS_CLASS: Record<string, string> = {
-  draft: styles.statusDraft,
-  review: styles.statusReview,
-  published: styles.statusPublished,
-};
+const NAV: NavSection[] = [
+  { entries: [{ id: "accueil", label: "Accueil", icon: ICON.accueil }] },
+  { entries: [{ id: "mesgents", label: "Mes gents", icon: ICON.mesgents, blue: true }] },
+  {
+    title: "Créer",
+    entries: [
+      { id: "conversationnel", label: "Gent Conversationnel", icon: ICON.conversationnel },
+      { id: "miniapp", label: "Mini App", icon: ICON.miniapp },
+      { id: "visionneuse", label: "Visionneuse", icon: ICON.visionneuse },
+      { id: "collaboratif", label: "Event Manager", icon: ICON.collaboratif },
+    ],
+  },
+  {
+    // « Contexte » ne disait pas ce qu'on y fait. Ces entrées sont les réglages
+    // du gent, valables quel que soit son type — d'où le titre, et d'où
+    // l'arrivée du prompt, qui était introuvable derrière « Gent
+    // Conversationnel ».
+    title: "Configuration du gent",
+    entries: [
+      { id: "prompt", label: "Prompt & Modèle", icon: ICON.prompt },
+      { id: "connectors", label: "Connecteurs", icon: ICON.connectors },
+      { id: "knowledge", label: "Connaissances", icon: ICON.knowledge },
+    ],
+  },
+  {
+    title: "Monitor",
+    entries: [
+      { id: "audit", label: "Audit", icon: ICON.audit },
+      { id: "diffusion", label: "Diffusion", icon: ICON.diffusion },
+      { id: "marketing", label: "Marketing", icon: ICON.marketing },
+    ],
+  },
+];
 
-export function BuilderRail() {
-  const { drafts, currentId, switchDraft, createDraft, railCollapsed, toggleRail } = useBuilder();
+function firstDraftId(): string | null {
+  return listVisibleDrafts()[0]?.id ?? null;
+}
+
+/** Rail studio au niveau liste — sans gent ouvert ni bouton Diffuser. */
+function BuilderRailList() {
   const router = useRouter();
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  const activeTab: BuilderTab = "mesgents";
 
-  function handleSwitch(id: string) {
-    switchDraft(id);
-    router.push(`/builder/${id}`);
+  function handleNav(tab: BuilderTab) {
+    if (tab === "mesgents") {
+      router.push("/builder/mesgents");
+      return;
+    }
+    if (tab === "accueil") {
+      // L'accueil du studio est devenu l'accueil de Getgents : même écran,
+      // nouvelle adresse. Renvoyer ici vers /builder ferait atterrir sur la
+      // liste « Mes gents », que l'entrée juste en dessous atteint déjà.
+      router.push("/accueil");
+      return;
+    }
+    // Ici — et ICI SEULEMENT — le menu « Créer » crée. On est sur la liste des
+    // gents ou l'accueil : il n'y a pas de gent courant dont ces entrées
+    // pourraient être une facette, donc en ouvrir un neuf est le seul sens
+    // possible. Depuis un gent ouvert, elles changent d'onglet (voir
+    // BuilderRailGent) — c'est là que la création à la volée était insupportable.
+    if (CREATE_TABS.includes(tab)) {
+      const id = tab === "collaboratif" ? allocateEventManagerDraft() : allocateNewDraft();
+      router.push(`/builder/${id}?tab=${tab}`);
+      return;
+    }
+    const id = firstDraftId();
+    if (!id) {
+      router.push("/builder");
+      return;
+    }
+    router.push(`/builder/${id}?tab=${tab}`);
   }
 
-  function handleCreate() {
-    const id = createDraft();
-    router.push(`/builder/${id}`);
+  return (
+    <RailChrome
+      railCollapsed={railCollapsed}
+      onToggleRail={() => setRailCollapsed((v) => !v)}
+      activeTab={activeTab}
+      onNav={handleNav}
+      showPublish={false}
+    />
+  );
+}
+
+/** Rail dans la vue d'un gent — configuration, diffusion, assistant. */
+function BuilderRailGent() {
+  const router = useRouter();
+  const { currentDraft, activeTab, switchTab, railCollapsed, toggleRail, publishDraft } = useBuilder();
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+
+  function handleNav(tab: BuilderTab) {
+    if (tab === "mesgents") {
+      router.push("/builder/mesgents");
+      return;
+    }
+    // ON NE CRÉE PLUS DE GENT EN NAVIGUANT. Ces entrées allouaient un nouveau
+    // brouillon — immédiatement poussé au serveur — à CHAQUE clic. Parcourir le
+    // menu « Créer » depuis un gent ouvert fabriquait donc un gent par entrée
+    // visitée, qu'il fallait ensuite supprimer un par un.
+    //
+    // Ces entrées ne sont pas des actions de création : ce sont les FACETTES du
+    // gent courant. Un même gent est conversationnel, et/ou mini-app, et/ou
+    // visionneuse. Depuis un gent ouvert, elles changent donc d'onglet, comme
+    // toutes les autres. La création reste un acte explicite : « Mes gents →
+    // Nouveau gent », ou la description saisie sur l'accueil.
+    switchTab(tab);
   }
 
-  const items = Object.values(drafts).filter((d) => d.id !== "nouveau-gent");
+  const nameOk = hasCustomName(currentDraft);
+  const dirty = isDirtySincePublish(currentDraft);
+  const live = currentDraft.status === "published";
+  const publishDisabled = !nameOk || !currentDraft.systemPrompt.trim();
+
+  let publishLabel = "Diffuser le gent";
+  if (live && !dirty) publishLabel = "Rediffuser";
+  else if (live && dirty) publishLabel = "Diffuser les modifications";
+
+  let publishHint: string | undefined;
+  if (!nameOk) publishHint = "Donnez un nom au gent avant de le diffuser";
+  else if (!currentDraft.systemPrompt.trim()) publishHint = "Rédigez des instructions système avant de diffuser";
+  else if (live && dirty) publishHint = "Des modifications ne sont pas encore diffusées aux utilisateurs";
+  else if (live)
+    publishHint =
+      "Votre version de travail semble déjà diffusée. En cas de doute (réponses différentes entre Preview et lien), cliquez pour réécrire la version diffusée.";
+  else publishHint = "Rend le gent accessible sur les canaux de l'onglet Diffusion";
+
+  async function handlePublish() {
+    setPublishError(null);
+    setPublishing(true);
+    try {
+      const res = await publishDraft();
+      if (!res.ok) {
+        if (res.status === 401 || res.error === "unauthorized" || res.error === "auth_required") {
+          setPublishError("Session expirée. Reconnectez-vous, puis cliquez à nouveau sur Diffuser.");
+        } else if (res.status === 503 || res.error === "supabase_not_configured") {
+          setPublishError("Serveur indisponible pour le moment. Réessayez dans un instant.");
+        } else if (res.error === "network") {
+          setPublishError("Connexion interrompue. Vérifiez votre réseau et réessayez.");
+        } else {
+          setPublishError(
+            res.error && !/^[a-z0-9_]+$/i.test(res.error)
+              ? res.error
+              : `La diffusion a échoué${res.status ? ` (${res.status})` : ""}. Réessayez.`
+          );
+        }
+      }
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  return (
+    <RailChrome
+      railCollapsed={railCollapsed}
+      onToggleRail={toggleRail}
+      activeTab={activeTab}
+      onNav={handleNav}
+      showPublish
+      publishLabel={publishing ? "Diffusion…" : publishLabel}
+      publishDisabled={publishDisabled || publishing}
+      publishHint={publishHint}
+      publishLive={live && !dirty}
+      onPublish={handlePublish}
+      publishBlocked={
+        publishError
+          ? publishError
+          : publishDisabled
+            ? !nameOk
+              ? "Donnez un nom au gent (bandeau du haut) pour pouvoir le diffuser."
+              : "Rédigez les instructions système (Configuration du gent → Prompt & Modèle) pour pouvoir diffuser."
+            : undefined
+      }
+    />
+  );
+}
+
+function RailChrome({
+  railCollapsed,
+  onToggleRail,
+  activeTab,
+  onNav,
+  showPublish,
+  publishLabel,
+  publishDisabled,
+  publishHint,
+  publishLive,
+  onPublish,
+  publishBlocked,
+}: {
+  railCollapsed: boolean;
+  onToggleRail: () => void;
+  activeTab: BuilderTab;
+  onNav: (tab: BuilderTab) => void;
+  showPublish: boolean;
+  publishLabel?: string;
+  publishDisabled?: boolean;
+  publishHint?: string;
+  publishLive?: boolean;
+  onPublish?: () => void | Promise<unknown>;
+  publishBlocked?: string;
+}) {
+  // Le tiroir mobile : sous 860 px la colonne sort de l'écran, et c'est ce
+  // drapeau qui la ramène. Elle était simplement masquée jusqu'ici, sans
+  // remplacement — le studio n'avait donc aucune navigation sur téléphone.
+  const { ouvert } = useNavMobile();
 
   return (
     <nav
-      className={[styles.rail, railCollapsed ? styles.collapsed : ""].filter(Boolean).join(" ")}
-      aria-label="Gents en construction"
+      className={[styles.rail, railCollapsed ? styles.collapsed : "", ouvert ? styles.open : ""]
+        .filter(Boolean)
+        .join(" ")}
+      aria-label="Configuration du gent"
       id="builder-rail"
     >
       <div className={styles.brand}>
-        <div className={styles.mark} aria-hidden="true" />
-        <h1 className={styles.brandName}>Gent&apos; studio</h1>
-        <a href="/espace/voyage" className={styles.backLink} title="Retour à l'espace utilisateur">
-          ← Espace
-        </a>
+        <ProductBrandMenu surface="studio" compact={railCollapsed} />
         <button
           className={styles.railToggle}
-          onClick={toggleRail}
+          onClick={onToggleRail}
           aria-label={railCollapsed ? "Déployer la colonne" : "Réduire la colonne"}
           title={railCollapsed ? "Déployer" : "Réduire"}
         >
@@ -64,37 +352,67 @@ export function BuilderRail() {
         </button>
       </div>
 
-      <div className={styles.label}>Mes gents</div>
-
-      <button className={styles.newBtn} onClick={handleCreate} title="Nouveau gent">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-        <span className={styles.newBtnLabel}>Nouveau gent</span>
-      </button>
-
-      <ul className={styles.list} role="list">
-        {items.map((d) => (
-          <li key={d.id}>
-            <button
-              className={[styles.item, d.id === currentId ? styles.active : ""].filter(Boolean).join(" ")}
-              onClick={() => handleSwitch(d.id)}
-              title={d.name}
+      {showPublish && onPublish && (
+        <>
+          <button
+            type="button"
+            className={[styles.publishBtn, publishLive ? styles.publishBtnLive : ""].filter(Boolean).join(" ")}
+            onClick={onPublish}
+            disabled={publishDisabled}
+            title={publishHint}
+          >
+            <svg
+              className={styles.publishIcon}
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
             >
-              <span className={styles.ic}>{d.icon}</span>
-              <span className={styles.body}>
-                <div className={styles.name}>{d.name || "Sans nom"}</div>
-                <div className={styles.meta}>
-                  <span className={[styles.statusBadge, STATUS_CLASS[d.status]].join(" ")}>
-                    {STATUS_LABEL[d.status]}
-                  </span>
-                  {d.updatedAt}
-                </div>
-              </span>
-            </button>
-          </li>
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+            <span className={styles.publishLabel}>{publishLabel}</span>
+          </button>
+          {publishBlocked && <div className={styles.publishBlocked}>{publishBlocked}</div>}
+        </>
+      )}
+
+      <div className={styles.nav}>
+        {NAV.map((section, si) => (
+          <div className={styles.section} key={section.title ?? `top-${si}`}>
+            {section.title && <div className={styles.sectionTitle}>{section.title}</div>}
+            {section.entries.map((entry) => (
+              <button
+                key={entry.id}
+                className={[
+                  styles.navItem,
+                  entry.blue ? styles.navItemBlue : "",
+                  activeTab === entry.id ? (entry.blue ? styles.navItemOnBlue : styles.navItemOn) : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={() => onNav(entry.id)}
+                title={entry.label}
+                aria-current={activeTab === entry.id ? "page" : undefined}
+              >
+                <span className={styles.navIcon}>{entry.icon}</span>
+                <span className={styles.navLabel}>{entry.label}</span>
+              </button>
+            ))}
+          </div>
         ))}
-      </ul>
+      </div>
+
+      {/* Le studio est la destination par défaut après connexion : sans ce
+          bloc, on y arrivait sans savoir sous quel compte, ni comment en
+          sortir. */}
+      <MenuCompte />
     </nav>
   );
+}
+
+export function BuilderRail({ mode = "gent" }: { mode?: "gent" | "list" }) {
+  if (mode === "list") return <BuilderRailList />;
+  return <BuilderRailGent />;
 }

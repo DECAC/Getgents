@@ -1,5 +1,11 @@
 import type { GentDraft } from "@/lib/types/builder";
-import type { NotificationChannel, PinnedArtefact, Routine } from "@/lib/types";
+import type {
+  CollabConfig,
+  NotificationChannel,
+  PinnedArtefact,
+  Routine,
+  VisionneuseConfig,
+} from "@/lib/types";
 
 export const DEFAULT_DRAFT_NAME = "Nouveau gent";
 
@@ -28,6 +34,40 @@ function routineSnapshot(routine?: Routine) {
     frequency: routine.frequency,
     hour: routine.hour,
     mission: routine.mission,
+  };
+}
+
+/** Empreinte visionneuse — le document (potentiellement volumineux) compte par sa taille, pas son contenu. */
+function visionneuseSnapshot(visionneuse?: VisionneuseConfig) {
+  if (!visionneuse) return null;
+  return {
+    enabled: visionneuse.enabled,
+    instructions: visionneuse.instructions,
+    documentName: visionneuse.document?.sourceName ?? null,
+    documentPages: visionneuse.document?.pageCount ?? null,
+  };
+}
+
+/** Empreinte collab — hors état de session (collecte, synthèse, messages). */
+function collabSnapshot(collab?: CollabConfig) {
+  if (!collab) return null;
+  return {
+    enabled: collab.enabled,
+    mission: collab.mission ?? null,
+    cadre: collab.cadre ?? null,
+    exclusions: collab.exclusions ?? null,
+    questions: (collab.questions ?? []).map((q) => ({
+      id: q.id,
+      label: q.label,
+      kind: q.kind,
+      options: q.options ?? null,
+      required: q.required ?? false,
+    })),
+    relances: collab.relances ?? null,
+    propositions: collab.propositions ?? null,
+    decision: collab.decision ?? null,
+    confidentialite: collab.confidentialite ?? null,
+    roleCreateur: collab.roleCreateur ?? null,
   };
 }
 
@@ -62,10 +102,21 @@ export function draftContentSnapshot(draft: GentDraft): string {
     knowledgeSources: draft.knowledgeSources,
     connectors: draft.connectors,
     webSearch: draft.webSearch,
+    fileDownloadEnabled: draft.fileDownloadEnabled || undefined,
+    fileDownloadFormEnabled: draft.fileDownloadFormEnabled || undefined,
     jumpForm: draft.jumpForm,
     pinnedArtefact: pinnedSnapshot(draft.pinnedArtefact),
+    visionneuse: visionneuseSnapshot(draft.visionneuse),
+    collab: collabSnapshot(draft.collab),
     routine: routineSnapshot(draft.routine),
     channel: channelSnapshot(draft.channel),
+    appPreview: draft.appPreview
+      ? {
+          appName: draft.appPreview.appName ?? null,
+          themes: draft.appPreview.themes,
+          moduleIds: draft.appPreview.modules.map((m) => m.id),
+        }
+      : null,
   });
 }
 

@@ -1,11 +1,12 @@
-import type { Espace, ThemeTabProposalAction } from "@/lib/types";
+import type { Artefact, Espace, ThemeTab, ThemeTabProposalAction } from "@/lib/types";
 
 // Format demandé au modèle : terminer sa réponse par un bloc caché
 // <!--THEME_TAB: {"action":"create","label":"Titre du thème","moduleIds":["tab-1","artef-123"]}-->
 // (ou "action":"rename" avec "tabId"+"label", ou "action":"delete" avec "tabId")
 // quand regrouper plusieurs modules sous un onglet thématique apporte une
-// vraie valeur de navigation. Jamais appliqué automatiquement — proposé à
-// l'utilisateur, qui valide ou ignore (voir confirmThemeProposal côté client).
+// vraie valeur de navigation. Seul, le bloc est proposé à l'utilisateur
+// (confirmThemeProposal). Émis avec un ARTEFACT, il est appliqué au Garder,
+// sans confirmation séparée — le nouvel artefact y est greffé automatiquement.
 const THEME_TAB_RE = /<!--THEME_TAB:\s*(\{[\s\S]*?\})\s*-->/;
 const TRUNCATED_MARKER_RE = /<!--THEME_TAB:[\s\S]*$/;
 
@@ -40,8 +41,9 @@ export const THEME_TAB_PROMPT_INSTRUCTION =
   "en réutilisant exactement les ids listés ci-dessus (jamais un id inventé) ; ou, pour ajuster un onglet thématique existant, " +
   '<!--THEME_TAB: {"action":"rename","tabId":"theme-...","label":"Nouveau nom"}--> ' +
   'ou <!--THEME_TAB: {"action":"delete","tabId":"theme-..."}-->. ' +
-  "Ne propose ce bloc que ponctuellement, quand un vrai regroupement thématique émerge de la conversation — jamais à chaque réponse, et jamais en même temps qu'un bloc ARTEFACT. " +
-  "L'utilisateur décide toujours d'appliquer ou d'ignorer la proposition — ne dis jamais que l'onglet est déjà créé, renommé ou supprimé.";
+  "Ne propose ce bloc que ponctuellement, quand un vrai regroupement thématique émerge de la conversation — jamais à chaque réponse. " +
+  "Tu PEUX l'émettre en même temps qu'un bloc ARTEFACT : liste alors les ids des modules EXISTANTS à regrouper avec le nouvel artefact (son id n'existe pas encore — le client l'ajoutera tout seul). Dans ce cas l'onglet est créé quand l'utilisateur garde l'artefact, sans lui demander de confirmer le thème. " +
+  "Sans artefact dans la même réponse, l'utilisateur décide d'appliquer ou d'ignorer — ne dis jamais que l'onglet est déjà créé, renommé ou supprimé.";
 
 export function extractThemeTabSignal(raw: string): { text: string; themeAction: ThemeTabProposalAction | null } {
   const match = raw.match(THEME_TAB_RE);
@@ -69,4 +71,44 @@ export function extractThemeTabSignal(raw: string): { text: string; themeAction:
   const start = match.index ?? 0;
   const text = (raw.slice(0, start) + raw.slice(start + match[0].length)).trim();
   return { text, themeAction };
+}
+
+/** Id de module canvas pour un artefact — même format que ModuleCanvas.tsx. */
+export function artefactModuleId(artefactId: string): string {
+  return `artef-${artefactId}`;
+}
+
+/**
+ * Range l'artefact dans un onglet thématique dont le libellé correspond à son
+ * type (Rapport, Checklist…), ou en crée un. Un module n'appartient qu'à un
+ * seul onglet thématique à la fois.
+ */
+export function upsertArtefactThemeTab(themeTabs: ThemeTab[], artefact: Artefact): ThemeTab[] {
+  const moduleId = artefactModuleId(artefact.id);
+  const label = artefact.type;
+  const stripped = themeTabs
+    .map((t) => ({ ...t, moduleIds: t.moduleIds.filter((id) => id !== moduleId) }))
+    .filter((t) => t.moduleIds.length > 0);
+  const existing = stripped.find((t) => t.label.toLowerCase() === label.toLowerCase());
+  if (existing) {
+    if (existing.moduleIds.includes(moduleId)) return stripped;
+    return stripped.map((t) =>
+      t.id === existing.id ? { ...t, moduleIds: [...t.moduleIds, moduleId] } : t
+    );
+  }
+  return [...stripped, { id: `theme-${Date.now()}`, label, moduleIds: [moduleId] }];
+}
+
+/**
+ * Le modèle ne connaît pas encore l'id du nouvel artefact : on le greffe sur
+ * une action « create » pour qu'il rejoigne le thème proposé au Garder.
+ */
+export function themeActionWithArtefact(
+  action: ThemeTabProposalAction,
+  artefactId: string
+): ThemeTabProposalAction {
+  if (action.action !== "create") return action;
+  const moduleId = artefactModuleId(artefactId);
+  if (action.moduleIds.includes(moduleId)) return action;
+  return { ...action, moduleIds: [...action.moduleIds, moduleId] };
 }

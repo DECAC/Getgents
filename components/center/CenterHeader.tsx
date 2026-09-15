@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { readPublishedGents } from "@/lib/publishedGents";
+import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
+import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./CenterHeader.module.css";
+import { BoutonNavMobile } from "@/components/shared/BoutonNavMobile";
 
 const STATUS_CLASS: Record<string, string> = {
   live: styles.pillLive,
@@ -30,22 +33,34 @@ export function CenterHeader() {
   return (
     <header className={styles.ehead}>
       <div className={styles.eheadTop}>
-        <div className={styles.ic}>{e.icon}</div>
+        <BoutonNavMobile />
+        <div className={styles.ic} aria-hidden="true">
+          <BrandIcon variant="fill" />
+        </div>
         <div className={styles.meta}>
-          <h2 className={styles.title}>{e.name}</h2>
+          <div className={styles.titleRow}>
+            <h2 className={styles.title}>{e.name}</h2>
+            <span className={[styles.statusPill, STATUS_CLASS[e.status]].filter(Boolean).join(" ")}>
+              <span className={[styles.dot, DOT_CLASS[e.status]].filter(Boolean).join(" ")} />
+              {e.statusLabel}
+            </span>
+          </div>
           <div className={styles.gentline}>
-            Propulsé par <b>{e.gent}</b> · version {e.version}
+            {/* `propulsePar` attribue le gent à qui l'a fait. Les espaces
+                diffusés avant ce champ n'en ont pas : on retombe alors sur
+                l'ancien affichage — le nom du gent — plutôt que de faire
+                disparaître une ligne de leur en-tête sans prévenir. */}
+            Propulsé par <b>{e.propulsePar?.trim() || e.gent}</b> · version {e.version}
           </div>
         </div>
-        {isPublishedGent && (
-          <a className={styles.builderLink} href={`/builder/${currentId}`} title="Modifier ce gent dans le gent studio">
-            🛠️ Ouvrir dans le gent studio
-          </a>
-        )}
-        <span className={[styles.statusPill, STATUS_CLASS[e.status]].filter(Boolean).join(" ")}>
-          <span className={[styles.dot, DOT_CLASS[e.status]].filter(Boolean).join(" ")} />
-          {e.statusLabel}
-        </span>
+        <div className={styles.headActions}>
+          <FileDownloadControl />
+          {isPublishedGent && (
+            <a className={styles.builderLink} href={`/builder/${currentId}`} title="Modifier ce gent dans GetStudio">
+              🛠️ Ouvrir dans GetStudio
+            </a>
+          )}
+        </div>
       </div>
     </header>
   );

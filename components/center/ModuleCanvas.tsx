@@ -8,11 +8,18 @@ import { ReservationsTab } from "./tabs/ReservationsTab";
 import { BudgetTab } from "./tabs/BudgetTab";
 import { MapTab } from "./tabs/MapTab";
 import { SafeHTMLDoc } from "@/components/shared/SafeHTML";
+import { ImageArtefact } from "@/components/shared/ImageArtefact";
+import { ProfileSummaryArtefact } from "@/components/shared/ProfileSummaryArtefact";
 import { MiniBarChart } from "@/components/shared/MiniBarChart";
 import { ChecklistView } from "@/components/shared/ChecklistView";
 import { MapArtefact } from "@/components/shared/MapArtefact";
 import { DashboardArtefact } from "@/components/shared/dashboard/DashboardArtefact";
+import { ReportArtefact } from "@/components/shared/ReportArtefact";
+import { ArtefactWorkspaceActions } from "@/components/shared/ArtefactWorkspaceActions";
+import { hasReportBody } from "@/lib/reportArtefact";
 import { PinnedArtefactPanel } from "./PinnedArtefactPanel";
+import { StarterBubbles } from "./StarterBubbles";
+import { computeImageModuleHeight } from "@/lib/moduleImageLayout";
 import styles from "./ModuleCanvas.module.css";
 
 interface ModuleLayout {
@@ -42,6 +49,9 @@ interface ModuleDef {
   onRemove?: () => void;
   /** Taille de départ si l'utilisateur n'a pas encore redimensionné. */
   preferredLayout?: ModuleLayout;
+  /** Corps sans scroll interne (ex. image entière visible). */
+  contentFit?: boolean;
+  artefact?: Artefact;
 }
 
 /** Un onglet affiché dans la vue par thème : soit un thème dynamique (plusieurs modules), soit un module isolé. */
@@ -110,6 +120,17 @@ function artefactLayout(a: Artefact): ModuleLayout {
   }
   if (a.chartData?.length) return { cols: 4, height: 300 };
   if (a.mapPoints?.length) return { cols: 4, height: 300 };
+  if (a.imageUrl) return { cols: 4, height: 400 };
+  if (a.profileSummary) {
+    const blocks =
+      1 +
+      (a.profileSummary.experience?.length ?? 0) +
+      (a.profileSummary.skills?.length ? 1 : 0) +
+      (a.profileSummary.media?.length ?? 0);
+    return { cols: 4, height: Math.min(720, 280 + blocks * 48) };
+  }
+  // Vignette d'appel — la lecture se fait en plein écran, pas dans la carte.
+  if (a.document) return { cols: 3, height: 220 };
 
   const plainTextLength = (a.body ?? "").replace(/<[^>]+>/g, " ").trim().length;
   if (a.visual) return { cols: 3, height: clampPreferredHeight(170 + plainTextLength / 5) };
@@ -144,14 +165,23 @@ function DropZone({ index, active, onDragOver, onDrop, onDragLeave }: DropZonePr
 }
 
 export function ModuleCanvas({ espace }: { espace: Espace }) {
-  const { openArtefactModal, toggleChecklistItem, userPosition, removeArtefact } = useEspace();
+  const {
+    openArtefactModal,
+    toggleChecklistItem,
+    userPosition,
+    removeArtefact,
+    generateProfileSummaryMedia,
+  } = useEspace();
+  // Toujours possible : sans modèle assigné, on retombe sur Nanobanana (défaut).
+  const canGenerateImages = true;
 
-  const [viewMode, setViewMode] = useState<"modules" | "themes">("modules");
+
   const [activeViewTabId, setActiveViewTabId] = useState<string | null>(null);
   const [order, setOrder] = useState<string[]>([]);
   const [conf, setConf] = useState<Record<string, ModuleLayout>>({});
   const [savedConf, setSavedConf] = useState<Record<string, ModuleLayout> | null>(null);
   const dragId = useRef<string | null>(null);
+  const userResizedRef = useRef<Set<string>>(new Set());
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const resizeState = useRef<{
     id: string;
@@ -161,6 +191,22 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     startHeight: number;
     colWidth: number;
   } | null>(null);
+
+  const fitImageModuleLayout = useCallback(
+    (moduleId: string, naturalWidth: number, naturalHeight: number, hasCaption: boolean) => {
+      if (userResizedRef.current.has(moduleId)) return;
+      const card = document.querySelector(`[data-module-id="${moduleId}"]`) as HTMLElement | null;
+      const cardWidth = card?.getBoundingClientRect().width ?? 360;
+      const height = computeImageModuleHeight(cardWidth, naturalWidth, naturalHeight, hasCaption);
+      setConf((prev) => {
+        const current = prev[moduleId];
+        const cols = current?.cols ?? 4;
+        if (current?.height === height && current?.cols === cols) return prev;
+        return { ...prev, [moduleId]: { cols, height } };
+      });
+    },
+    []
+  );
 
   const modules: ModuleDef[] = [
     ...espace.tabs.map((tab): ModuleDef => ({
@@ -186,26 +232,87 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
           render: () => <MapTab map={espace.map!} />,
         }]
       : []),
-    ...espace.artefacts.map((a): ModuleDef => ({
-      id: `artef-${a.id}`,
+    ...espace.artefacts.map((a): ModuleDef => {
+      const moduleId = `artef-${a.id}`;
+      return {
+      id: moduleId,
       title: a.title,
       sub: `${a.type} · ${a.date}`,
       kind: "artefact",
       preferredLayout: artefactLayout(a),
+      contentFit: !!a.imageUrl,
+      artefact: a,
       openModal: () => openArtefactModal(a.id),
       onRemove: () => removeArtefact(a.id),
       render: () => (
         <>
           {a.dashboard && <DashboardArtefact spec={a.dashboard} />}
+          {a.profileSummary && (
+            <ProfileSummaryArtefact
+              summary={a.profileSummary}
+              artefactId={a.id}
+              canGenerate={canGenerateImages}
+              onGenerateMedia={(mediaId) => generateProfileSummaryMedia(a.id, mediaId)}
+              compact
+            />
+          )}
+          {a.imageUrl && (
+            <ImageArtefact
+              embedded
+              src={a.imageUrl}
+              alt={a.title}
+              caption={a.imageCaption}
+              source={a.imageSource}
+              onNaturalSize={(width, height) => {
+                fitImageModuleLayout(
+                  moduleId,
+                  width,
+                  height,
+                  !!(a.imageCaption || a.imageSource)
+                );
+                requestAnimationFrame(() =>
+                  fitImageModuleLayout(
+                    moduleId,
+                    width,
+                    height,
+                    !!(a.imageCaption || a.imageSource)
+                  )
+                );
+              }}
+            />
+          )}
           {a.chartData && <MiniBarChart data={a.chartData} />}
           {a.mapPoints && <MapArtefact points={a.mapPoints} userPosition={userPosition} />}
           {a.checklistItems && (
             <ChecklistView items={a.checklistItems} onToggle={(i) => toggleChecklistItem(a.id, i)} />
           )}
-          {a.body && <SafeHTMLDoc html={a.body} />}
+          {hasReportBody(a) ? (
+            <ReportArtefact artefact={a} />
+          ) : (
+            a.body && !a.imageUrl && !a.profileSummary && <SafeHTMLDoc html={a.body} />
+          )}
+          {a.document && (
+            // Vignette cliquable dans son ENTIER : l'invite « cliquer pour
+            // ouvrir » ne valait auparavant que pour le bouton « ouvrir en
+            // grand » de l'en-tête, cliquer la vignette ne faisait rien.
+            <button
+              type="button"
+              className={styles.docPreview}
+              onClick={() => openArtefactModal(a.id)}
+              aria-label={`Ouvrir ${a.title} en visionneuse`}
+            >
+              <span className={styles.docPreviewIcon} aria-hidden="true">📖</span>
+              <span className={styles.docPreviewMeta}>
+                {a.document.pageCount} page{a.document.pageCount > 1 ? "s" : ""}
+                {a.document.toc.length > 0 ? ` · ${a.document.toc.length} entrées de sommaire` : ""}
+              </span>
+              <span className={styles.docPreviewHint}>Cliquer pour ouvrir la visionneuse</span>
+            </button>
+          )}
         </>
       ),
-    })),
+    };
+    }),
   ];
 
   function orderList(list: ModuleDef[]): ModuleDef[] {
@@ -240,6 +347,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
   }
 
   function beginResize(e: React.PointerEvent<HTMLSpanElement>, id: string) {
+    userResizedRef.current.add(id);
     e.preventDefault();
     e.stopPropagation();
     const card = e.currentTarget.parentElement as HTMLElement | null;
@@ -278,17 +386,6 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     resizeState.current = null;
   }
 
-  function collapseAllToList(list: ModuleDef[]) {
-    setConf((prev) => {
-      setSavedConf(prev);
-      const next = { ...prev };
-      list.forEach((m) => {
-        next[m.id] = { cols: GRID_COLUMNS, height: COMPACT_HEIGHT };
-      });
-      return next;
-    });
-  }
-
   function restoreSizes() {
     setConf(savedConf ?? {});
     setSavedConf(null);
@@ -300,15 +397,9 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     return (
       <div className={styles.wrap}>
         {pinned && <PinnedArtefactPanel pinned={pinned} />}
-        {!pinned && (
-          <div className={styles.empty}>
-            <div className={styles.emptyIcon}>{espace.icon}</div>
-            <p className={styles.emptyText}>
-              Cet espace ne contient pas encore de module. Ouvrez la conversation — les artefacts
-              générés par votre assistant apparaîtront ici, librement organisables.
-            </p>
-          </div>
-        )}
+        {/* Espace vierge d'un gent conversationnel : les déclencheurs
+            remplacent le message d'attente par des amorces cliquables. */}
+        {!pinned && <StarterBubbles espace={espace} />}
       </div>
     );
   }
@@ -328,12 +419,18 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     null;
   const activeViewTab = viewTabs.find((v) => v.id === resolvedActiveTabId) ?? null;
 
-  const visibleList =
-    viewMode === "modules"
-      ? modules
-      : activeViewTab
-        ? activeViewTab.moduleIds.map((id) => modules.find((m) => m.id === id)).filter((m): m is ModuleDef => !!m)
-        : [];
+  /**
+   * Toujours l'onglet thematique actif.
+   *
+   * La bascule « Vue modules / Vue par theme » demandait au visiteur de
+   * choisir entre deux presentations du meme contenu — un arbitrage qui
+   * n'appartient pas a celui qui vient lire, et qu'il refaisait a chaque
+   * visite. Les onglets thematiques suffisent a naviguer, et il n'existe plus
+   * de chemin vers l'autre mode.
+   */
+  const visibleList = activeViewTab
+    ? activeViewTab.moduleIds.map((id) => modules.find((m) => m.id === id)).filter((m): m is ModuleDef => !!m)
+    : [];
 
   const orderedVisible = orderList(visibleList);
   const allList = orderedVisible.length > 0 && orderedVisible.every((m) => getLayout(m.id).height <= COMPACT_HEIGHT);
@@ -356,9 +453,24 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
               />
               <section
                 className={[styles.card, isCompact ? styles.cardCompact : ""].filter(Boolean).join(" ")}
+                data-module-id={m.id}
                 style={{
-                  gridColumn: `span ${layout.cols}`,
+                  /*
+                   * SEUL module de l'onglet : il occupe toute la largeur.
+                   *
+                   * Depuis que l'affichage est par theme, un onglet ne porte
+                   * le plus souvent qu'un module — et sa largeur configuree le
+                   * laissait en colonne etroite au milieu d'un panneau vide.
+                   * L'etendue reste respectee des qu'il y a de quoi composer :
+                   * a plusieurs, les tailles relatives redisent quelque chose.
+                   */
+                  gridColumn: list.length === 1 ? "1 / -1" : `span ${layout.cols}`,
                   height: `${layout.height}px`,
+                }}
+                onClick={(e) => {
+                  const t = e.target as HTMLElement;
+                  if (t.closest("button, a, input, select, textarea, label")) return;
+                  m.openModal?.();
                 }}
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -398,20 +510,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                     {m.sub && <span className={styles.cardSub}>{m.sub}</span>}
                   </span>
                   <span className={styles.cardActions}>
-                    {m.openModal && (
-                      <button
-                        type="button"
-                        className={styles.actionBtn}
-                        onClick={m.openModal}
-                        title="Ouvrir en grand"
-                        aria-label="Ouvrir en grand"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                          <path d="M15 3h6v6M10 14 21 3" />
-                        </svg>
-                      </button>
-                    )}
+                    {m.artefact && <ArtefactWorkspaceActions artefact={m.artefact} />}
                     {m.onRemove && (
                       <button
                         type="button"
@@ -427,9 +526,18 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
                     )}
                   </span>
                 </header>
-                {!isCompact && <div className={styles.cardBody}>{m.render()}</div>}
+                {!isCompact && (
+                  <div
+                    className={[styles.cardBody, m.contentFit ? styles.cardBodyFit : ""]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    {m.render()}
+                  </div>
+                )}
                 <span
                   className={styles.resizeHandle}
+                  onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => beginResize(e, m.id)}
                   onPointerMove={onResizeMove}
                   onPointerUp={endResize}
@@ -461,30 +569,6 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
     <div className={styles.wrap}>
       {pinned && <PinnedArtefactPanel pinned={pinned} />}
       <div className={styles.toolbar}>
-        <div className={styles.viewSwitch} role="tablist" aria-label="Style d'affichage">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={viewMode === "modules"}
-            className={[styles.viewSwitchBtn, viewMode === "modules" ? styles.viewSwitchBtnOn : ""]
-              .filter(Boolean)
-              .join(" ")}
-            onClick={() => setViewMode("modules")}
-          >
-            Vue modules
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={viewMode === "themes"}
-            className={[styles.viewSwitchBtn, viewMode === "themes" ? styles.viewSwitchBtnOn : ""]
-              .filter(Boolean)
-              .join(" ")}
-            onClick={() => setViewMode("themes")}
-          >
-            Vue par thème
-          </button>
-        </div>
         <span className={styles.toolbarCount}>
           {orderedVisible.length} module{orderedVisible.length > 1 ? "s" : ""}
         </span>
@@ -499,24 +583,11 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
               Rétablir
             </button>
           )}
-          <button
-            type="button"
-            className={[styles.toolbarBtn, styles.toolbarBtnPrimary, allList ? styles.toolbarBtnDisabled : ""]
-              .filter(Boolean)
-              .join(" ")}
-            onClick={() => collapseAllToList(orderedVisible)}
-            disabled={allList}
-            title="Afficher tous les modules en vue liste compacte"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-            </svg>
-            Tout réduire
-          </button>
+
         </div>
       </div>
 
-      {viewMode === "themes" && (
+      {(
         <div className={styles.viewTabs} role="tablist" aria-label="Onglets thématiques">
           {viewTabs.map((vt) => (
             <div

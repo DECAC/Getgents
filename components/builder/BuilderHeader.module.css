@@ -15,11 +15,11 @@
   width: 42px;
   height: 42px;
   border-radius: 11px;
-  background: var(--plum-tint);
+  background: var(--sage-tint);
   display: grid;
   place-items: center;
-  font-size: 21px;
   flex: none;
+  overflow: hidden;
 }
 
 .meta {
@@ -53,17 +53,37 @@
 }
 
 .nameInput {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.02em;
   border: none;
   background: none;
   color: var(--ink);
-  flex: 1;
+  /* `flex: 1` étirait le champ sur toute la largeur, et rejetait donc
+     l'indicateur de statut à l'autre bout du bandeau — loin du nom qu'il
+     qualifie. On laisse le champ prendre la taille de son contenu. */
+  flex: 0 1 auto;
   min-width: 0;
   padding: 2px 0 2px 6px;
   border-radius: 6px;
+}
+
+/* `field-sizing` ajuste la largeur au texte saisi. Là où il manque (Firefox,
+   Safari à ce jour), on retombe sur un champ élastique : le statut s'éloigne
+   du titre comme avant, ce qui est le comportement d'aujourd'hui — jamais un
+   champ tronqué. */
+@supports (field-sizing: content) {
+  .nameInput {
+    field-sizing: content;
+    max-width: 100%;
+  }
+}
+
+@supports not (field-sizing: content) {
+  .nameInput {
+    flex: 1;
+  }
 }
 .nameInput:focus {
   outline: none;
@@ -129,7 +149,7 @@
 }
 .dotDraft { background: var(--faint); }
 .dotReview { background: var(--gold); }
-.dotPublished { background: var(--sage); }
+.dotPublished { background: var(--success); }
 
 .publishBtn {
   flex: none;
@@ -137,11 +157,11 @@
   border-radius: 9px;
   font-weight: 600;
   font-size: 12.5px;
-  background: var(--plum);
+  background: var(--sage);
   color: #fff;
 }
 .publishBtn:hover {
-  background: #5a3049;
+  background: var(--sage-700);
 }
 .publishBtn:disabled {
   background: var(--line);
@@ -221,9 +241,9 @@
   background: var(--bg);
 }
 .tab.tabOn {
-  color: var(--plum);
+  color: var(--sage);
   font-weight: 600;
-  border-bottom-color: var(--plum);
+  border-bottom-color: var(--sage);
 }
 .tabIcon {
   width: 14px;
@@ -234,4 +254,28 @@
 .tabIcon svg {
   width: 14px;
   height: 14px;
+}
+
+/* ——— En-tête sur petit écran ———
+   Mesuré à 6 px de large : `.nameInput` est `flex: 1; min-width: 0`, il cède
+   donc tout l'espace au statut et à l'icône d'édition, qui n'en cèdent aucun.
+   Le bouton de navigation mobile, ajouté depuis, a acheve de le comprimer.
+
+   La ligne passe donc au retour à la ligne, et le champ réclame une largeur
+   minimale : il occupe une ligne entière, le statut se range en dessous. */
+@media (max-width: 860px) {
+  .top {
+    flex-wrap: wrap;
+  }
+
+  .nameWrap {
+    flex-wrap: wrap;
+  }
+
+  .nameInput {
+    /* Assez pour lire un nom de gent, pas assez pour déborder d'un écran de
+       320 px — la plus petite largeur qu'on doive encore servir. */
+    min-width: 12ch;
+    font-size: 17px;
+  }
 }

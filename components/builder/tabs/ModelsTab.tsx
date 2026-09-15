@@ -1,20 +1,39 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { correspond } from "@/lib/rechercheModele";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
-import type { ModelCapability } from "@/lib/types/builder";
+import type { ModelCapability, OpenRouterModel } from "@/lib/types/builder";
+import { avecModeleConfigure } from "@/lib/openRouterCatalog";
 import styles from "./ModelsTab.module.css";
 
-const CAPABILITY_META: Record<ModelCapability, { title: string; required: boolean }> = {
+const ORDER = ["chat", "image", "tts", "stt"] as const;
+/** Les capacites REELLEMENT proposees. Le catalogue peut en porter d'autres. */
+type CapaciteAffichee = (typeof ORDER)[number];
+
+const CAPABILITY_META: Record<CapaciteAffichee, { title: string; required: boolean }> = {
   chat: { title: "Conversation", required: true },
-  reasoning: { title: "Raisonnement approfondi", required: false },
-  image: { title: "Génération d'image", required: false },
+  image: { title: "Génération d'image (Nanobanana recommandé — bon marché)", required: false },
   tts: { title: "Synthèse vocale (text-to-speech)", required: false },
   stt: { title: "Transcription vocale (speech-to-text)", required: false },
 };
 
-const ORDER: ModelCapability[] = ["chat", "reasoning", "image", "tts", "stt"];
+/*
+ * Plus d'emplacement « Raisonnement approfondi ».
+ *
+ * Il etait affiche, recommande par l'assistant, configurable — et JAMAIS lu
+ * au moment de generer. Le raisonnement est en realite decide par le modele
+ * de conversation lui-meme (voir `supportsReasoningStream`). Un reglage qui
+ * ne regle rien est une promesse non tenue, et l'un des deux termes de la
+ * dette notee dans CLAUDE.md : « le brancher, ou le retirer ».
+ *
+ * Retirer a ete choisi sur MESURE : le modele ne raisonne que sur les
+ * questions qui le meritent (0 s sur un tour simple, 6,6 s sur un tour
+ * complexe). Le reglage aurait donc coute un chantier pour un defaut que
+ * personne n'a.
+ */
+
 
 export function ModelsTab() {
   const { currentDraft, assignModel } = useBuilder();
@@ -50,26 +69,58 @@ export function ModelsTab() {
     return map;
   }, [currentDraft.modelAssignments]);
 
+  /**
+   * Catalogue affiché. `MODEL_CATALOG` reste la valeur INITIALE : si la route
+   * échoue, l'écran demeure utilisable avec la sélection plateforme, au lieu
+   * de se vider.
+   */
+  const [catalogue, setCatalogue] = useState<OpenRouterModel[]>(MODEL_CATALOG);
+
+  useEffect(() => {
+    let vivant = true;
+    fetch("/api/modeles")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (vivant && Array.isArray(d?.modeles) && d.modeles.length) setCatalogue(d.modeles);
+      })
+      .catch(() => undefined);
+    return () => {
+      vivant = false;
+    };
+  }, []);
+
+  /**
+   * Le modèle déjà configuré reste visible même s'il a disparu du catalogue —
+   * un catalogue temporairement amputé effacerait sinon la configuration de
+   * tous les gents du compte : la panne se transformerait en perte de données.
+   */
+  const catalogueComplet = useMemo(() => {
+    let liste = catalogue;
+    for (const a of currentDraft.modelAssignments) {
+      liste = avecModeleConfigure(liste, a.modelId);
+    }
+    return liste;
+  }, [catalogue, currentDraft.modelAssignments]);
+
   const normalizedQuery = query.trim().toLowerCase();
 
   const groups = useMemo(
     () =>
       ORDER.map((capability) => ({
         capability,
-        models: MODEL_CATALOG.filter(
-          (m) =>
-            m.capability === capability &&
-            (normalizedQuery === "" ||
-              m.label.toLowerCase().includes(normalizedQuery) ||
-              m.provider.toLowerCase().includes(normalizedQuery))
+        // `correspond` cherche chaque mot séparément, dans le libellé, le
+        // fournisseur ET l'identifiant : « gemini flash » doit trouver
+        // « Google: Gemini 2.5 Flash », que le « 2.5 » coupait en deux.
+        models: catalogueComplet.filter(
+          (m) => m.capability === capability && correspond(m, normalizedQuery)
         ),
       })),
-    [normalizedQuery]
+    [normalizedQuery, catalogueComplet]
   );
 
   const selectedChips = ORDER.map((capability) => {
     const modelId = assignmentByCapability.get(capability) ?? null;
-    const model = modelId ? MODEL_CATALOG.find((m) => m.id === modelId) ?? null : null;
+    const model = modelId ? catalogueComplet.find((m) => m.id === modelId) ?? null : null;
     return { capability, model };
   }).filter((c) => c.model);
 
@@ -146,6 +197,17 @@ export function ModelsTab() {
               </div>
 
               <div className={styles.comboList}>
+                {/* Sans ce message, une recherche infructueuse vidait le
+                    panneau sans un mot : le créateur en concluait que le
+                    modèle n'existait pas, alors qu'il l'avait mal orthographié. */}
+                {normalizedQuery && groups.every((g) => g.models.length === 0) && (
+                  <div className={styles.comboGroup}>
+                    <div className={styles.comboGroupHead}>
+                      <span>Aucun modèle ne correspond à « {normalizedQuery} »</span>
+                    </div>
+                  </div>
+                )}
+
                 {groups.map(({ capability, models }) => {
                   const meta = CAPABILITY_META[capability];
                   const selectedId = assignmentByCapability.get(capability) ?? null;
@@ -176,6 +238,10 @@ export function ModelsTab() {
                           <button
                             type="button"
                             key={model.id}
+                            // L'IDENTIFIANT est ce qui part réellement chez
+                            // OpenRouter, et il départage deux libellés
+                            // proches. Il ne prend aucune place à l'écran.
+                            title={`${model.label} — ${model.id}`}
                             className={[styles.comboOption, selected ? styles.comboOptionActive : ""]
                               .filter(Boolean)
                               .join(" ")}

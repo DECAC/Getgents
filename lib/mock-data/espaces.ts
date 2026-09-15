@@ -203,6 +203,7 @@ export const ESPACES: EspacesMap = {
         id: "itineraire",
         title: "Itinéraire — road trip 8 jours",
         type: "Rapport",
+        kind: "report",
         icon: ICON_REPORT,
         date: "Mis à jour il y a 2 min",
         body: `<h4>Aperçu du séjour</h4>
@@ -342,6 +343,7 @@ export const ESPACES: EspacesMap = {
         id: "recap-dossier",
         title: "Récapitulatif du dossier",
         type: "Rapport",
+        kind: "report",
         icon: ICON_REPORT,
         date: "Mis à jour aujourd'hui",
         body: `<h4>Synthèse</h4>
@@ -355,6 +357,7 @@ export const ESPACES: EspacesMap = {
         id: "glossaire-succession",
         title: "Glossaire des termes juridiques",
         type: "Rapport",
+        kind: "report",
         icon: ICON_REPORT,
         date: "Généré à la demande",
         body: `<h4>Quelques termes courants</h4>
@@ -402,6 +405,7 @@ export const ESPACES: EspacesMap = {
         id: "recap",
         title: "Récapitulatif de déclaration",
         type: "Rapport",
+        kind: "report",
         icon: ICON_REPORT,
         date: "Finalisé le 28 mai",
         body: `<h4>Synthèse</h4><div class="row"><span>Année</span><b>Revenus 2025</b></div><div class="row"><span>Parts</span><b>2</b></div><div class="row"><span>Date de dépôt</span><b>28 mai 2026</b></div><p style="font-size:12px;color:var(--muted)">Document de synthèse. Ne constitue pas un avis fiscal officiel.</p>`,

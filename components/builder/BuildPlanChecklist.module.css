@@ -1,0 +1,99 @@
+.wrap {
+  flex: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 14px;
+  text-align: left;
+  color: var(--ink);
+}
+.head:hover {
+  background: var(--card);
+}
+
+.gauge {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.gaugeOk {
+  background: var(--blue-tint);
+  border-color: var(--blue);
+  color: var(--blue-700);
+}
+
+.headLabel {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chevron {
+  flex: none;
+  color: var(--faint);
+  transition: transform 0.18s;
+}
+
+.list {
+  list-style: none;
+  padding: 2px 8px 8px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.step {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  text-align: left;
+  font-size: 12px;
+  color: var(--ink);
+}
+.step:hover {
+  background: var(--blue-tint);
+  color: var(--blue-700);
+}
+
+.mark {
+  flex: none;
+  width: 14px;
+  text-align: center;
+  color: var(--faint);
+  font-size: 11px;
+}
+.stepDone .mark {
+  color: var(--blue);
+}
+.stepDone .stepLabel {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--line);
+}
+
+.stepLabel {
+  flex: 1;
+}
+
+.optional {
+  flex: none;
+  font-size: 10px;
+  color: var(--faint);
+  font-style: italic;
+}

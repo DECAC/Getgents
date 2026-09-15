@@ -1,15 +1,92 @@
 .page {
-  /* `html, body` sont en `overflow: hidden` (app.globals.css) : le shell
-     builder/espace gère son propre scroll interne, mais cette page publique
-     n'en avait aucun — un tableau de bord dense (plusieurs sections, tuile
-     rémunération pleine largeur…) dépassait la hauteur d'écran sans qu'on
-     puisse jamais atteindre le bas. `.page` est donc ici la zone de scroll. */
+  /* `100dvh` et non `100vh` : sur iOS, `100vh` compte la hauteur AVEC la barre
+     d'adresse rétractée, si bien que le haut de la page — donc l'en-tête,
+     donc le bouton de téléchargement — passe sous la barre du navigateur et
+     devient inatteignable. `dvh` suit la hauteur réellement visible. La ligne
+     `100vh` reste comme repli pour les navigateurs qui ignorent `dvh`. */
   height: 100vh;
-  overflow-y: auto;
+  height: 100dvh;
+  overflow: hidden;
   background: var(--bg);
   color: var(--ink);
   display: flex;
   flex-direction: column;
+}
+
+/* Conversation à gauche, espace de travail à droite — même agencement que
+   l'espace, pour que le destinataire voie ce que le créateur a prévisualisé. */
+.body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  /* Rangée BORNÉE à la hauteur disponible.
+     Sans cette ligne, la rangée implicite se dimensionne sur son contenu : le
+     panneau de conversation mesurait 844 px dans un corps de 728, et poussait
+     ses propres questions d'amorce et son champ de saisie hors de l'écran. Le
+     visiteur voyait une page vide sous l'en-tête. Invisible sur grand écran,
+     où le contenu tient — c'est le passage au plein écran sur téléphone qui
+     l'a révélé. */
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+  /*
+   * La progression est ce qui rend la manipulation confortable : sans elle,
+   * les deux blocs sautent d'une largeur a l'autre et l'oeil perd ce qu'il
+   * suivait. La courbe part vite puis freine — le mouvement se lit comme un
+   * glissement, pas comme un basculement.
+   */
+  transition: grid-template-columns 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body {
+    transition: none;
+  }
+}
+/*
+ * Conversation SEULE : elle prend toute la largeur.
+ *
+ * L'agencement precedent reservait en permanence une colonne au canevas. Elle
+ * restait vide tant que le gent n'avait rien produit, et a moitie vide
+ * ensuite — un module unique ne remplit pas la moitie d'un ecran. La
+ * conversation, elle, avait toujours de quoi occuper la place.
+ */
+.bodyChat {
+  grid-template-columns: 1fr;
+}
+
+/*
+ * Conversation + volet d'artefact : moities EGALES.
+ *
+ * Pas `var(--assist)` ici : cette variable dimensionne une colonne laterale
+ * d'appoint dans le studio. Le volet n'est pas un appoint — il porte un
+ * tableau de bord ou un document, qui demandent autant de place que le fil.
+ */
+.bodyWithChat {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/*
+ * Volet etendu vers la GAUCHE. La conversation reste ouverte et lisible —
+ * elle ne se replie pas, elle cede du terrain. En dessous de ~340 px un fil
+ * de discussion devient illisible : d'ou 30 %, et pas davantage.
+ */
+.bodyVoletLarge {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
+}
+
+@media (max-width: 860px) {
+  .bodyWithChat,
+  .bodyChat {
+    grid-template-columns: 1fr;
+  }
+  /* Trop étroit pour deux colonnes : la conversation prend toute la place.
+     Le canevas portant les questions d'amorce, la conversation doit les
+     reprendre à son compte — voir la prop `starters` d'AssistantPanel, sans
+     quoi le fil s'ouvre vide et sans rien à quoi se raccrocher. */
+  .bodyWithChat .main {
+    display: none;
+  }
 }
 
 .head {
@@ -17,13 +94,23 @@
   align-items: center;
   gap: 14px;
   padding: 18px 28px;
-  border-bottom: 1px solid var(--line);
-  background: var(--card);
+  /* Ni filet ni surface propre sous le titre : l'écran est UNE zone de
+     travail. Le filet en faisait deux pages superposées ; une teinte
+     différente de la page aurait laissé la même coupure, en plus discret.
+     Tout partage donc le fond, et SEUL le volet garde une surface à lui —
+     c'est lui l'objet posé dessus. */
+  background: transparent;
 }
 
 .icon {
-  font-size: 26px;
-  line-height: 1;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: var(--sage-tint);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex: none;
 }
 
 .headMeta {
@@ -32,7 +119,7 @@
 }
 
 .title {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 17px;
   margin: 0;
   letter-spacing: -0.01em;
@@ -42,6 +129,22 @@
   font-size: 12.5px;
   color: var(--muted);
   margin-top: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.subAuteur b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.headActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
 }
 
 .chatBtn {
@@ -50,29 +153,316 @@
   font-weight: 600;
   padding: 9px 16px;
   border-radius: 9px;
-  background: var(--plum);
+  background: var(--sage);
   color: #fff;
-  border: 1px solid var(--plum);
+  border: 1px solid var(--sage);
 }
 .chatBtn:hover {
   filter: brightness(1.05);
 }
 
+/* `html, body` sont en `overflow: hidden` (app.globals.css). Un tableau de
+   bord dense dépassait la hauteur d'écran sans qu'on puisse atteindre le bas :
+   c'est donc cette colonne qui porte le scroll. */
 .main {
-  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  /* Rembourrage DEPLACE sur .mainInner : la barre du volet est collante, et
+     un rembourrage porte ici l'aurait decalee du haut, laissant un blanc par
+     lequel le contenu aurait defile. */
+  padding: 0;
+}
+
+.mainInner {
   width: 100%;
   max-width: 1080px;
   margin: 0 auto;
   padding: 24px 28px 48px;
 }
 
-.empty {
+
+/* ── Téléphone : une barre de titre mince, et la conversation en dessous ──
+   Constaté sur un appareil réel : `.headActions` en `flex: none` avec trois
+   boutons laissait une trentaine de pixels au titre, qui s'empilait un mot par
+   ligne sur sept lignes — et les boutons débordaient quand même hors de
+   l'écran. L'en-tête mangeait la moitié de la hauteur pour ne rien dire de
+   plus qu'un nom.
+
+   La règle ici : le titre tient sur UNE ligne et se coupe, les actions passent
+   sur une seconde ligne compacte. On vise l'allure d'une messagerie — un
+   bandeau mince, puis l'échange. */
+@media (max-width: 620px) {
+  .head {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 10px 14px;
+  }
+
+  .icon {
+    font-size: 22px;
+  }
+
+  .headMeta {
+    /* `flex: 1` avec `min-width: 0` : le titre prend ce qui reste et se coupe,
+       au lieu de comprimer la colonne jusqu'à un mot par ligne. */
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .title {
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* L'objectif répète ce qui est lisible dans la conversation : sur cette
+     largeur il coûte une ligne pour rien. L'attribution, elle, RESTE — c'est
+     une mention courte, et c'est précisément sur téléphone qu'un visiteur a
+     besoin de savoir qui est derrière ce qu'il lit. */
+  .subObjectif {
+    display: none;
+  }
+
+  .sub:empty,
+  .sub:not(:has(.subAuteur)) {
+    display: none;
+  }
+
+  /* Deuxième ligne, sur toute la largeur : les actions ne rognent plus le
+     titre, et ne débordent plus. */
+  .headActions {
+    flex: 1 0 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+    gap: 6px;
+    /* Sans retour à la ligne, le dernier bouton sortait de l'écran — présent
+       dans le DOM, inatteignable au doigt. Mieux vaut une ligne de plus qu'une
+       action qu'on ne peut pas toucher. */
+    flex-wrap: wrap;
+  }
+
+  .chatBtn {
+    padding: 8px 14px;
+    min-height: 40px;
+  }
+}
+
+/* La conversation étant ouverte d'emblée sur téléphone, le bouton « Discuter »
+   n'a plus de raison d'occuper une ligne : il ne réapparaît que si l'on ferme
+   la conversation, cas où il redevient le seul chemin de retour. */
+
+
+/* ── Bascule Conversation / Le gent ──────────────────────────────────────── */
+.bascule {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  gap: 2px;
+}
+
+.bascule button {
+  padding: 7px 13px;
+  border: none;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bascule button.basculeOn {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+@media (pointer: coarse) {
+  .bascule button {
+    min-height: 40px;
+  }
+}
+
+
+/* Bascule resserrée sur téléphone.
+   CETTE REQUÊTE MÉDIA DOIT RESTER EN FIN DE FICHIER : une première version la
+   plaçait plus haut, avant les règles génériques de `.bascule`, qui
+   l'écrasaient à specificité égale — la règle existait et n'avait aucun effet.
+   À 390 px, la bascule et le téléchargement occupaient toute la ligne et
+   rejetaient le signalement sur une seconde ; une dizaine de pixels suffisent
+   à les réunir. */
+@media (max-width: 620px) {
+  .bascule {
+    padding: 2px;
+  }
+
+  /* La bascule retrouve sa taille lisible : le bouton de téléchargement
+     réduit à sa flèche a libéré une centaine de pixels, et il n'y a plus de
+     raison de serrer le seul élément que l'on doit vraiment lire. */
+  .bascule button {
+    padding: 8px 13px;
+    font-size: 12.5px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Volet d'artefact et espace vide
+ * ------------------------------------------------------------------------- */
+
+/*
+ * L'artefact est POSÉ dans la fenêtre, pas encastré dedans.
+ *
+ * Une colonne collée aux bords se lit comme une seconde page ; un panneau
+ * détaché, avec un filet et une ombre très basse, se lit comme un objet qu'on
+ * peut prendre, garder ou jeter — ce qui est exactement la décision demandée.
+ * L'ombre reste sous le seuil du décoratif : elle sépare, elle n'attire pas.
+ */
+.bodyWithChat .main {
+  margin: 14px 14px 14px 0;
+  /* Plus de filet : SEULE l'ombre detache le volet. Un contour ferme le
+     dessine comme une boite rapportee ; l'ombre suffit a dire « pose ». */
+  border-radius: var(--r);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgba(42, 31, 25, 0.04),
+    0 8px 24px -12px rgba(42, 31, 25, 0.16);
+  overflow: hidden auto;
+}
+
+.voletBarre {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  background: var(--card);
+}
+
+.voletTitre {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.voletActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Commande carrée et discrète — l'agrandissement, le partage plus tard. */
+.voletIcone {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.voletIcone:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/*
+ * Jeter et Garder : la même taille, un poids différent.
+ *
+ * Jeter reste en retrait — c'est une action destructrice qu'aucune confirmation
+ * ne protège, et qu'il ne faut donc pas rendre facile à toucher par mégarde.
+ */
+.voletJeter,
+.voletGarder {
+  border-radius: var(--r-pill);
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.voletJeter {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+.voletJeter:hover {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+.voletGarder {
+  border: 1px solid var(--sage);
+  background: var(--sage);
+  color: #fff;
+}
+.voletGarder:hover {
+  background: var(--sage-700);
+  border-color: var(--sage-700);
+}
+
+.voletFermer {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: var(--r-pill);
+  /* 34 px de haut : sous le seuil confortable, mais c'est une commande
+     secondaire et l'en-tete est deja dense. A revoir avec les ~21 autres
+     boutons courts notes dans la dette. */
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.voletFermer:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.vide {
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 64px 24px;
-  color: var(--muted);
-  font-size: 14px;
+  justify-content: center;
+  gap: 18px;
+  padding: 40px 28px;
   text-align: center;
+}
+
+.videTexte {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+  text-wrap: balance;
+}
+
+.videAction {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: var(--r-pill);
+  padding: 10px 20px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.videAction:hover {
+  background: var(--sage-tint);
+  border-color: var(--sage);
 }

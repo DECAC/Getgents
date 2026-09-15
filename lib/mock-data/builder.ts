@@ -13,6 +13,17 @@ import type {
 /** Modèle OpenRouter utilisé par l'assistant du builder (panneau de droite). */
 export const BUILDER_ASSISTANT_MODEL_ID = "moonshotai/kimi-k3";
 
+/**
+ * Modèle des tours légers de l'assistant du builder : poser une question de
+ * cadrage, classer une intention. La tâche est courte et le format contraint
+ * (une phrase + un bloc JSON), donc un modèle rapide et bon marché suffit — et
+ * c'est ce qui garde l'atelier réactif. La GÉNÉRATION (prompt système, aperçu,
+ * découverte de connecteurs) reste sur BUILDER_ASSISTANT_MODEL_ID.
+ *
+ * Même motif que SUPER_GENT_ROUTER_MODEL et DEFAULT_VISION_MODEL_ID.
+ */
+export const BUILDER_FAST_MODEL_ID = "google/gemini-2.5-flash";
+
 export const MODEL_CATALOG: OpenRouterModel[] = [
   {
     id: "moonshotai/kimi-k3",
@@ -60,6 +71,29 @@ export const MODEL_CATALOG: OpenRouterModel[] = [
     tagline: "Rapide et économique — bon choix pour un premier brouillon.",
   },
   {
+    id: "google/gemini-2.5-pro",
+    label: "Gemini 2.5 Pro",
+    provider: "Google",
+    capability: "chat",
+    contextWindow: 1_048_576,
+    pricing: { input: 1.25, output: 10 },
+    tagline: "Le plus capable de la famille Gemini — raisonnement plus fin que Flash, plus cher.",
+  },
+  {
+    // Route chaque requête vers le modèle le plus adapté selon OpenRouter.
+    // Tarif RÉELLEMENT variable — facturé au prix du modèle choisi, pas un
+    // prix fixe. Les deux montants ci-dessous sont un plancher indicatif, pas
+    // le prix payé : OpenRouter peut river la requête vers un modèle
+    // nettement plus cher sans avertissement préalable au créateur.
+    id: "openrouter/auto",
+    label: "Auto Router (OpenRouter)",
+    provider: "OpenRouter",
+    capability: "chat",
+    contextWindow: 2_000_000,
+    pricing: { input: 0, output: 0 },
+    tagline: "Choisit automatiquement le modèle le plus adapté par requête — tarif variable, dépend du modèle réellement choisi.",
+  },
+  {
     id: "deepseek/deepseek-r1",
     label: "DeepSeek R1",
     provider: "DeepSeek",
@@ -78,12 +112,21 @@ export const MODEL_CATALOG: OpenRouterModel[] = [
     tagline: "Raisonnement pas-à-pas, adapté aux calculs et à la planification.",
   },
   {
-    id: "google/nanobanana",
+    // Surnom « Nanobanana » = Gemini 2.5 Flash Image sur OpenRouter.
+    id: "google/gemini-2.5-flash-image",
     label: "Nanobanana",
     provider: "Google",
     capability: "image",
-    pricing: { input: 0, output: 30 },
-    tagline: "Génération d'images stylisées à partir de descriptions textuelles.",
+    pricing: { input: 0.3, output: 2.5 },
+    tagline: "Génération d'images stylisées à bas coût — modèle recommandé par défaut.",
+  },
+  {
+    id: "google/gemini-3.1-flash-image",
+    label: "Nanobanana 2",
+    provider: "Google",
+    capability: "image",
+    pricing: { input: 0.5, output: 3 },
+    tagline: "Nano Banana 2 — meilleure qualité, un peu plus cher.",
   },
   {
     id: "black-forest-labs/flux-1.1-pro",
@@ -91,7 +134,7 @@ export const MODEL_CATALOG: OpenRouterModel[] = [
     provider: "Black Forest Labs",
     capability: "image",
     pricing: { input: 0, output: 40 },
-    tagline: "Illustrations haute fidélité, rendu photo ou artistique.",
+    tagline: "Illustrations haute fidélité (plus coûteux que Nanobanana).",
   },
   {
     id: "elevenlabs/tts-v3",
@@ -183,6 +226,13 @@ export const CONNECTOR_TOOL_TYPES: ConnectorToolType[] = [
       "Comptes et transactions bancaires via l'API Powens en MODE SANDBOX (données de test uniquement). Identifiants côté serveur (POWENS_DOMAIN, POWENS_CLIENT_ID, POWENS_CLIENT_SECRET) ; la banque sandbox se lie via la webview de consentement.",
   },
   {
+    kind: "gmail",
+    name: "Gmail — boîte mail",
+    icon: "📧",
+    description:
+      "Lecture et envoi d'e-mails via le compte Google du créateur. Connexion OAuth par gent (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET côté serveur) ; les jetons sont stockés de façon sécurisée en base.",
+  },
+  {
     kind: "ordinateur",
     name: "Utilisation de l'ordinateur",
     icon: "🖥️",
@@ -197,39 +247,51 @@ export const CONNECTOR_TOOL_TYPES: ConnectorToolType[] = [
 export const ARTEFACT_EXAMPLES: ArtefactExample[] = [
   {
     id: "tpl-report",
-    label: "Rapport de synthèse",
+    label: "Rapport",
     kind: "report",
-    description: "Document texte structuré (titres, listes) généré à la demande.",
+    description: "Synthèse, modèle de document ou procédure en texte structuré.",
   },
   {
     id: "tpl-checklist",
     label: "Checklist",
     kind: "checklist",
-    description: "Liste de tâches à cocher, utile pour un suivi de préparatifs.",
+    description: "Étapes, pièces ou tâches à cocher au fil de l'échange.",
+  },
+  {
+    id: "tpl-chart",
+    label: "Graphique",
+    kind: "chart",
+    description: "Comparaison chiffrée (montants, pourcentages, catégories).",
+  },
+  {
+    id: "tpl-dashboard",
+    label: "Tableau de bord",
+    kind: "dashboard",
+    description: "Indicateurs clés et scores à lire d'un coup d'œil.",
+  },
+  {
+    id: "tpl-map",
+    label: "Carte",
+    kind: "map",
+    description: "Lieux, itinéraire ou adresses sur fond cartographique.",
+  },
+  {
+    id: "tpl-profile",
+    label: "Résumé de profil",
+    kind: "profile-summary",
+    description: "Parcours d'une personne (expérience, compétences, médias).",
   },
   {
     id: "tpl-visual",
     label: "Aperçu visuel",
     kind: "visual",
-    description: "Illustration stylisée générée par un modèle image (ex. Nanobanana).",
+    description: "Schéma ou visuel généré pour clarifier une idée.",
   },
   {
-    id: "tpl-timeline",
-    label: "Frise chronologique",
-    kind: "timeline",
-    description: "Étapes datées avec statut — adapté aux plannings et parcours.",
-  },
-  {
-    id: "tpl-budget",
-    label: "Suivi budgétaire",
-    kind: "budget",
-    description: "Enveloppe, répartition par poste et historique de dépenses.",
-  },
-  {
-    id: "tpl-map",
-    label: "Carte schématique",
-    kind: "map",
-    description: "Représentation schématique d'un parcours ou de lieux clés.",
+    id: "tpl-image",
+    label: "Image",
+    kind: "image",
+    description: "Illustration ou photo proposée puis ajoutée à l'espace.",
   },
 ];
 
@@ -264,7 +326,7 @@ Règles impératives :
     modelAssignments: [
       { capability: "chat", modelId: "anthropic/claude-sonnet-5" },
       { capability: "reasoning", modelId: null },
-      { capability: "image", modelId: "google/nanobanana" },
+      { capability: "image", modelId: "google/gemini-2.5-flash-image" },
       { capability: "tts", modelId: null },
       { capability: "stt", modelId: null },
     ],
@@ -618,7 +680,9 @@ STYLE
     modelAssignments: [
       { capability: "chat", modelId: null },
       { capability: "reasoning", modelId: null },
-      { capability: "image", modelId: null },
+      // Nanobanana : modèle image bon marché, activé par défaut pour illustrer
+      // les propos (la génération reste soumise à l'autorisation utilisateur).
+      { capability: "image", modelId: "google/gemini-2.5-flash-image" },
       { capability: "tts", modelId: null },
       { capability: "stt", modelId: null },
     ],

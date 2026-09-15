@@ -1,0 +1,162 @@
+/* Écrans d'authentification : une carte centrée, sur le fond de l'app.
+   Mêmes variables que le reste du studio — aucune couleur en dur. */
+
+/* `globals.css` pose `overflow: hidden` sur html et body : l'app est un shell
+   plein écran dont chaque zone défile pour son compte. Un écran-document doit
+   donc porter SA propre zone de défilement, sinon ce qui dépasse la fenêtre
+   est inatteignable — `min-height: 100vh` ne faisait que garantir le
+   débordement. */
+.page {
+  height: 100%;
+  overflow-y: auto;
+  display: grid;
+  justify-items: center;
+  /* `safe` : dès que le contenu dépasse, on cale en haut au lieu de centrer.
+     Un centrage strict pousse la moitié du contenu au-dessus de la zone de
+     défilement, où rien ne peut aller la chercher. */
+  align-content: safe center;
+  padding: 32px 20px;
+  background: var(--bg);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 30px 28px;
+  box-shadow: 0 12px 40px rgba(42, 31, 25, 0.07);
+}
+
+.brand {
+  margin-bottom: 0;
+}
+
+.title {
+  font-size: 21px;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+}
+
+.lede {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin: 0 0 22px;
+}
+
+.field {
+  display: block;
+  margin-bottom: 15px;
+}
+
+.label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 1px;
+}
+
+/* `.submit` habille aussi un lien : l'écran d'accès restreint remplace le
+   bouton d'envoi par un `mailto`, qui doit avoir le même poids visuel.
+   D'où `display: inline-flex` et le centrage — un <a> ne se comporte pas
+   comme un <button> sur ces deux points. */
+.submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 6px;
+  padding: 11px 16px;
+  border: none;
+  border-radius: var(--r-pill);
+  background: var(--sage);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.aside {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  justify-content: space-between;
+}
+
+.aside a {
+  color: var(--sage);
+  text-decoration: none;
+}
+
+.aside a:hover {
+  text-decoration: underline;
+}
+
+.erreur,
+.succes {
+  font-size: 13px;
+  line-height: 1.5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.erreur {
+  background: color-mix(in srgb, var(--plum) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--plum) 30%, transparent);
+}
+
+.succes {
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.note {
+  margin-top: 20px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Les liens secondaires (« Demander un accès », « Mot de passe oublié »)
+   mesuraient 20 px de haut : ce sont des actions à part entière, posées seules
+   sous le formulaire, pas des liens au fil d'une phrase. */
+@media (pointer: coarse) {
+  .aside a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 4px;
+  }
+}

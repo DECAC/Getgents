@@ -80,6 +80,7 @@ export type ConversationRole =
   | "artef-proposal"
   | "theme-proposal"
   | "geo-request"
+  | "image-proposal"
   | "connector-proposal"
   | "config-proposal"
   | "jump-form-proposal"
@@ -127,10 +128,18 @@ export interface MapPoint {
   label: string;
   lat: number;
   lon: number;
+  /** Texte court affiché dans la liste à côté de la carte (expérience type Gemini). */
+  description?: string;
+  /** Type de lieu (plage, médina, restaurant…). */
+  category?: string;
+  /** Note sur 5, optionnelle. */
+  rating?: number;
+  /** Photo https uniquement — jamais d'URL inventée par le modèle. */
+  imageUrl?: string;
 }
 
 export interface ArtefactProposal {
-  kind: "report" | "checklist" | "chart" | "visual" | "map" | "dashboard";
+  kind: "report" | "checklist" | "chart" | "visual" | "map" | "dashboard" | "image" | "profile-summary";
   title: string;
   body?: string;
   items?: string[];
@@ -138,6 +147,12 @@ export interface ArtefactProposal {
   mapPoints?: MapPoint[];
   /** Schéma de tableau de bord (rendu Recharts + cartes en plein espace). */
   dashboard?: import("@/lib/dashboardArtefact").DashboardSpec;
+  /** CV synthétique d'une personne (parcours, skills, médias). */
+  profileSummary?: import("@/lib/profileSummaryArtefact").ProfileSummary;
+  /** Illustration (générée ou photo web) — renseignée après autorisation. */
+  imageUrl?: string;
+  imageCaption?: string;
+  imageSource?: "generated" | "web";
 }
 
 /**
@@ -175,10 +190,18 @@ export interface ConversationMessage {
   title?: string;
   link?: string;
   questions?: { q: string; options: string[]; multi?: boolean }[];
+  /** Relances conversationnelles (questions libres cliquables dans le fil). */
+  followups?: string[];
+  /** Image générée / affichée après autorisation (data URL ou https). */
+  imageUrl?: string;
+  imageStatus?: "pending" | "done" | "error";
   proposal?: ArtefactProposal;
   proposalStatus?: "pending" | "added" | "dismissed";
   themeProposal?: ThemeTabProposalAction;
   themeProposalStatus?: "pending" | "applied" | "dismissed";
+  /** Illustration proposée (génération IA ou photo web) — jamais sans accord. */
+  imageProposal?: import("@/lib/imageSignal").ImageProposal;
+  imageProposalStatus?: "pending" | "generating" | "added" | "dismissed" | "error";
   /** Profil utilisateur proposé par le gent (onboarding/CV), à valider. */
   profileProposal?: import("@/lib/profileSignal").UserProfile;
   profileProposalStatus?: "pending" | "applied" | "dismissed";
@@ -204,9 +227,8 @@ export interface ConversationMessage {
     systemPrompt?: string;
     webSearch?: boolean;
     chatModelId?: string;
-    reasoningModelId?: string;
     connectors?: {
-      kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens";
+      kind: "dataset" | "mcp" | "api-rest" | "prim" | "powens" | "gmail";
       name: string;
       url: string;
       restConfig?: RestApiToolConfig;
@@ -240,14 +262,59 @@ export interface Artefact {
   type: string;
   icon: string;
   date: string;
+  /** Kind produit (rapport, checklist…) — absent sur les artefacts mockés anciens. */
+  kind?: import("@/lib/artefactKind").WorkspaceArtefactKind;
   visual?: boolean;
   body?: string;
   chartData?: { label: string; value: number }[];
   checklistItems?: { label: string; checked: boolean }[];
-  /** Points géolocalisés pour les artefacts carte (fond IGN cartes.gouv.fr). */
+  /** Points géolocalisés pour les artefacts carte (fond mondial OSM / CARTO). */
   mapPoints?: MapPoint[];
   /** Schéma de tableau de bord (rendu Recharts + cartes en plein espace). */
   dashboard?: import("@/lib/dashboardArtefact").DashboardSpec;
+  /** Illustration générée ou photo web (data URL / https). */
+  imageUrl?: string;
+  imageCaption?: string;
+  imageSource?: "generated" | "web";
+  /** Résumé de profil (CV synthétique) — médias inclus. */
+  profileSummary?: import("@/lib/profileSummaryArtefact").ProfileSummaryStored;
+  /** Visionneuse de document : lecture immersive paginée, avec sommaire. */
+  document?: DocumentViewerSpec;
+}
+
+/**
+ * Popup de verdict : l'artefact est prévisualisé mais n'est pas encore dans
+ * l'espace. Garder l'ajoute (et le range dans un onglet thématique) ; Jeter
+ * l'abandonne.
+ */
+export interface PendingArtefactVerdict {
+  proposalMessageId: string;
+  preview: Artefact;
+}
+
+/** Une entrée de sommaire, cliquable, pointant vers une page du document. */
+export interface DocumentViewerSection {
+  id: string;
+  title: string;
+  /** Niveau d'indentation (1 = titre de premier rang). */
+  level: number;
+  /** Page (0-indexée) où commence cette section. */
+  page: number;
+}
+
+/**
+ * Contenu complet d'un document ouvert en visionneuse — pagination réelle
+ * (PDF) ou reconstituée par découpage (Word, texte). Le sommaire vient des
+ * signets du PDF quand ils existent, sinon des titres détectés dans le texte.
+ */
+export interface DocumentViewerSpec {
+  sourceName: string;
+  sourceKind: "pdf" | "docx" | "text";
+  pageCount: number;
+  pages: string[];
+  toc: DocumentViewerSection[];
+  /** Vrai si le document dépassait le budget de caractères et a été coupé. */
+  truncated: boolean;
 }
 
 export interface EspaceMetric {
@@ -314,6 +381,18 @@ export interface Espace {
   icon: string;
   name: string;
   gent: string;
+  /**
+   * Ce qui suit « Propulsé par » dans l'en-tête de l'espace.
+   *
+   * La ligne affichait `gent`, c'est-à-dire le NOM DU GENT — juste sous le
+   * titre, qui l'affiche déjà. Elle ne disait donc rien. Elle sert désormais à
+   * attribuer le gent à qui l'a fait : le nom posé sur ce gent, ou à défaut
+   * celui du compte, figé au moment de la diffusion.
+   *
+   * Absent sur les espaces d'avant ce champ : l'en-tête retombe alors sur
+   * l'ancien affichage plutôt que de perdre une ligne.
+   */
+  propulsePar?: string;
   version: number;
   status: EspaceStatus;
   statusLabel: string;
@@ -328,10 +407,26 @@ export interface Espace {
   activeConversationId: string;
   files: UserFile[];
   artefacts: Artefact[];
+  /**
+   * Application à blocs générée dans le studio (onglet Aperçu) : c'est le
+   * rendu que Preview et l'espace publié doivent montrer à la place de
+   * l'ancien canevas d'artefacts, dès qu'il y a des modules.
+   */
+  appPreview?: import("@/lib/appPreview").AppPreviewSpec;
   /** Onglets thématiques regroupant des modules du canvas — optionnel, défaut [] à la lecture. */
   themeTabs?: ThemeTab[];
   systemPrompt?: string;
   chatModelId?: string;
+  /** Modèle de génération d'image assigné (capability "image"), ex. google/gemini-2.5-flash-image. */
+  imageModelId?: string;
+  /**
+   * « Déclencheurs » : questions d'amorce choisies par le gent d'après sa
+   * configuration (voir lib/starterSignal.ts). Affichées sur un canevas vierge,
+   * ou — si un aperçu d'application remplit déjà l'espace — au démarrage de
+   * la conversation. Générées une fois, puis persistées.
+   */
+  starters?: string[];
+  startersGeneratedAt?: string;
   /** Serveurs MCP (transport Streamable HTTP) configurés dans le builder. */
   mcpServers?: { name: string; url: string }[];
   /** Datasets open data (portails Opendatasoft) interrogeables par proximité. */
@@ -340,6 +435,8 @@ export interface Espace {
   prim?: boolean;
   /** Connecteur Powens actif (agrégation bancaire sandbox, secrets côté serveur). */
   powens?: boolean;
+  /** Connecteur Gmail actif (OAuth par gent, jetons en base). */
+  gmail?: boolean;
   /** Connecteurs API REST personnalisés configurés à la main dans le builder. */
   restApis?: RestApiConnector[];
   /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
@@ -354,6 +451,49 @@ export interface Espace {
   pinnedArtefact?: PinnedArtefact;
   /** Canal de diffusion de la note produite par la routine (WhatsApp…). */
   channel?: NotificationChannel;
+  /**
+   * Horodatage ISO de la dernière écriture de la version de travail. Sert à
+   * départager le cache local et le serveur à l'hydratation : le compteur
+   * `version` ne suffit pas, il est calculé depuis le cache local seul et
+   * repart donc à 1 sur une machine où ce cache est froid — le serveur
+   * l'emportait alors et Preview rouvrait la configuration précédente.
+   */
+  workingUpdatedAt?: string;
+  /**
+   * Type de gent « visionneuse » : le document est fixé par le créateur, et
+   * l'espace s'ouvre directement en lecture immersive plutôt qu'en
+   * conversation vide — la conversation reste possible mais reste scopée à
+   * ce document (voir DocumentViewerModal), ce n'est jamais l'un OU l'autre.
+   */
+  visionneuse?: VisionneuseConfig;
+  /**
+   * Téléchargement du document du gent (base de connaissance / visionneuse)
+   * côté lecteur. Copié depuis le brouillon à la Preview / publication.
+   */
+  fileDownloadEnabled?: boolean;
+  /** Si vrai, le téléchargement passe par un formulaire (nom, prénom, e-mail, captcha). */
+  fileDownloadFormEnabled?: boolean;
+  /** Documents proposés au téléchargement (texte déjà extrait, servi en PDF). */
+  downloadableDocuments?: DownloadableDocument[];
+  /**
+   * Type de gent « collaboratif » : le lien de partage ouvre un salon à
+   * plusieurs participants, orchestré par le gent (voir lib/collab.ts et
+   * supabase/migrations/014_collab_sessions.sql).
+   */
+  collab?: CollabConfig;
+}
+
+/**
+ * Type de gent dédié à la lecture immersive d'un document unique, fixé une
+ * fois par le créateur (à l'inverse du bouton « Ouvrir en visionneuse » du
+ * gent conversationnel, où l'utilisateur choisit son document à l'usage).
+ */
+export interface VisionneuseConfig {
+  enabled: boolean;
+  /** Consignes du créateur pour l'assistant qui accompagne la lecture (ex. angle, ton). */
+  instructions?: string;
+  /** Document extrait une fois à la configuration, servi tel quel à chaque visite. */
+  document?: DocumentViewerSpec;
 }
 
 /**
@@ -462,3 +602,104 @@ export interface Routine {
 }
 
 export type EspacesMap = Record<string, Espace>;
+
+/** Fichier proposé au téléchargement côté lecteur (contenu déjà lu par le gent). */
+export interface DownloadableDocument {
+  id: string;
+  name: string;
+  text: string;
+}
+
+/**
+ * Personne qui a rempli le formulaire de téléchargement ET téléchargé le PDF.
+ * Conservé pour l'onglet Monitor « Marketing ».
+ */
+export interface DownloadLead {
+  id: string;
+  createdAt: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  gentId: string;
+  gentName: string;
+  fileName?: string;
+}
+
+/**
+ * Question de collecte posée en privé par l'orchestrateur à chaque
+ * participant (ex. « Quels samedis te conviennent ? »). Le libellé est ce
+ * que le gent reformule ; le type guide le rendu cliquable côté salon.
+ */
+export interface CollabQuestion {
+  id: string;
+  label: string;
+  /**
+   * texte libre | dates/période (suggestions optionnelles + réponse libre autorisée)
+   * | choix unique parmi options.
+   */
+  kind: "text" | "dates" | "choice";
+  /**
+   * Pour "choice" : options obligatoires.
+   * Pour "dates" : suggestions cliquables optionnelles (ex. samedis précis) ;
+   *   le participant peut aussi répondre en texte libre
+   *   (ex. « les mardis à jeudi en octobre »).
+   */
+  options?: string[];
+  /** Si vrai, la synthèse attend cette réponse avant de passer à la décision. */
+  required?: boolean;
+}
+
+/**
+ * Configuration d'un gent « collaboratif » : plusieurs participants rejoignent
+ * un salon via un lien + leur prénom ; le gent orchestre la mission (collecte
+ * en privé, vérification web, propositions, vote, synthèse).
+ *
+ * Tous ces champs sont PUBLICS par nature (ils décrivent la mission aux
+ * participants) : la projection `espaceForPublicLink` les transmet tels quels.
+ */
+export interface CollabConfig {
+  enabled: boolean;
+  /**
+   * Gabarit appliqué depuis le studio (évite de réécraser une config
+   * personnalisée, et force le bon exemple au premier passage sur l'onglet).
+   */
+  template?: "team-building";
+  /** Ce que le groupe doit accomplir (ex. « Trouver la journée team building »). */
+  mission?: string;
+  /** Cadre structuré : bornes affichées en bandeau et rappelées à l'orchestrateur. */
+  cadre?: {
+    budget?: string;
+    lieu?: string;
+    periode?: string;
+    taille?: string;
+  };
+  /** Ce qui est explicitement hors de propos pour la mission. */
+  exclusions?: string;
+  /** Questions que l'orchestrateur pose en privé à chaque participant. */
+  questions?: CollabQuestion[];
+  /** Relance des participants silencieux. */
+  relances?: {
+    /** Délai avant relance, en heures (défaut 24). */
+    delaiHeures?: number;
+    /** Nombre max de relances par participant (défaut 2). */
+    max?: number;
+  };
+  propositions?: {
+    /** Votes nécessaires avant de retenir une option (défaut : majorité). */
+    quorum?: number;
+    /** Nombre d'options vérifiées proposées au vote (défaut 3). */
+    options?: number;
+    /** Vérification web des options avant publication (défaut true). */
+    webCheck?: boolean;
+  };
+  /** Qui tranche : vote du groupe, ou le créateur seul. */
+  decision?: "vote" | "createur";
+  confidentialite?: {
+    /** Synthèses partagées dans l'onglet dédié (défaut true). */
+    syntheses?: boolean;
+    /** Verbatim des réponses privées visibles du groupe (défaut false). */
+    verbatim?: boolean;
+  };
+  /** Rôle du créateur dans le salon (défaut « membre » : il participe). */
+  roleCreateur?: "membre" | "organisateur";
+}

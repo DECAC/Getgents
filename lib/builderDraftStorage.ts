@@ -1,8 +1,14 @@
 import type { GentDraft, GentDraftsMap } from "@/lib/types/builder";
 import type { Espace } from "@/lib/types";
 import { GENT_DRAFTS } from "@/lib/mock-data/builder";
-import { appAccessHeaders } from "@/lib/appAccess";
+import { apiFetchInit, signalerSessionExpiree } from "@/lib/apiFetch";
+import { cacheKey } from "@/lib/session/currentUser";
+import { suggestGentIcon } from "@/lib/gentIcons";
+import { applyEventManagerTemplate } from "@/lib/eventManagerTemplate";
 
+// Base de la clé : la clé RÉELLE porte l'identifiant du compte (voir
+// lib/storageScope.ts). Un brouillon contient le prompt système en cours
+// d'écriture et les documents de connaissance de son auteur.
 export const DRAFTS_STORAGE_KEY = "getgents:gent-drafts";
 export const NOUVEAU_GENT_TEMPLATE_ID = "nouveau-gent";
 
@@ -19,19 +25,29 @@ export function createDraftId(): string {
   return `draft-${Date.now()}`;
 }
 
+/** Identifiants réservés au système — jamais des vrais gents. */
+export const RESERVED_DRAFT_IDS = [NOUVEAU_GENT_TEMPLATE_ID, "_dashboard"] as const;
+
+export function isPersistableDraftId(id: string): boolean {
+  return !!id.trim() && !(RESERVED_DRAFT_IDS as readonly string[]).includes(id);
+}
+
 /** Retire le slot gabarit de la carte persistée (il ne doit pas être sauvegardé). */
 export function draftsForPersistence(drafts: GentDraftsMap): GentDraftsMap {
-  const { [NOUVEAU_GENT_TEMPLATE_ID]: _removed, ...rest } = drafts;
-  return rest;
+  const out: GentDraftsMap = {};
+  for (const [id, draft] of Object.entries(drafts)) {
+    if (isPersistableDraftId(id)) out[id] = draft;
+  }
+  return out;
 }
 
 export function readStoredDrafts(): GentDraftsMap {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(DRAFTS_STORAGE_KEY);
+    const raw = window.localStorage.getItem(cacheKey(DRAFTS_STORAGE_KEY));
     if (!raw) return {};
     const parsed = JSON.parse(raw) as GentDraftsMap;
-    delete parsed[NOUVEAU_GENT_TEMPLATE_ID];
+    for (const reserved of RESERVED_DRAFT_IDS) delete parsed[reserved];
     return parsed;
   } catch {
     return {};
@@ -41,7 +57,7 @@ export function readStoredDrafts(): GentDraftsMap {
 export function writeStoredDrafts(drafts: GentDraftsMap): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(draftsForPersistence(drafts)));
+    window.localStorage.setItem(cacheKey(DRAFTS_STORAGE_KEY), JSON.stringify(draftsForPersistence(drafts)));
   } catch {
     // quota dépassé / navigation privée
   }
@@ -58,17 +74,39 @@ let remoteAvailable: boolean | null = null;
 const pushTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const PUSH_DEBOUNCE_MS = 1500;
 
+/**
+ * Annule les envois différés en attente. Voir la note jumelle dans
+ * lib/publishedGents.ts : un push programmé juste avant une déconnexion
+ * partirait avec la session du compte SUIVANT.
+ */
+export function cancelPendingDraftPushes(): void {
+  pushTimers.forEach((timer) => clearTimeout(timer));
+  pushTimers.clear();
+}
+
+
 /** À appeler quand la clé APP_ACCESS_SECRET est (re)saisie — relance les syncs. */
 export function resetDraftsRemoteAvailability(): void {
   remoteAvailable = null;
 }
 
-/** Récupère les brouillons depuis le serveur — null si indisponible. */
-export async function fetchRemoteDrafts(): Promise<GentDraftsMap | null> {
+/** Récupère les brouillons depuis le serveur — null si indisponible, 'unauthorized' si 401. */
+export async function fetchRemoteDrafts(): Promise<GentDraftsMap | null | "unauthorized"> {
   if (remoteAvailable === false) return null;
   try {
-    const res = await fetch("/api/drafts", { cache: "no-store", headers: appAccessHeaders() });
-    if (res.status === 503 || res.status === 401) {
+    const res = await fetch("/api/drafts", {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (res.status === 401) {
+      // La session a expiré : plus rien à saisir, il faut se reconnecter.
+      // L'événement laisse l'interface décider — ce module ne connaît ni le
+      // routeur ni l'écran à afficher.
+      remoteAvailable = false;
+      signalerSessionExpiree();
+      return "unauthorized";
+    }
+    if (res.status === 503) {
       remoteAvailable = false;
       return null;
     }
@@ -83,28 +121,137 @@ export async function fetchRemoteDrafts(): Promise<GentDraftsMap | null> {
   }
 }
 
+/**
+ * État de la sauvegarde distante, observable par l'interface.
+ *
+ * Le studio enregistre tout seul, en permanence — mais rien ne le disait, et
+ * l'écran ne montrait aucune trace de l'écriture. On ne peut pas demander à
+ * quelqu'un de faire confiance à un mécanisme invisible : de là vient
+ * l'impression qu'il faut « penser à sauver ».
+ *
+ * `en-attente` couvre aussi le délai anti-rebond : pendant 1,5 s après la
+ * dernière frappe, la modification n'est QUE locale. C'est court, mais réel —
+ * fermer l'onglet dans cette fenêtre perd les derniers caractères, et c'est
+ * précisément ce que le bouton « Enregistrer » rend maîtrisable.
+ */
+export type EtatSauvegarde = "repos" | "en-attente" | "enregistre" | "echec";
+
+let etatSauvegarde: EtatSauvegarde = "repos";
+
+/**
+ * Brouillons dont le dernier envoi a échoué.
+ *
+ * On les garde pour que le bouton les REPRENNE, au lieu de tout renvoyer :
+ * un créateur avec trente brouillons déclencherait sinon trente PUT à chaque
+ * clic, pour n'en corriger qu'un.
+ */
+const echecs = new Set<string>();
+const abonnes = new Set<(e: EtatSauvegarde) => void>();
+
+function poserEtat(e: EtatSauvegarde): void {
+  etatSauvegarde = e;
+  for (const f of Array.from(abonnes)) f(e);
+}
+
+export function lireEtatSauvegarde(): EtatSauvegarde {
+  return etatSauvegarde;
+}
+
+export function abonnerSauvegarde(f: (e: EtatSauvegarde) => void): () => void {
+  abonnes.add(f);
+  return () => abonnes.delete(f);
+}
+
+/**
+ * Écrit tout de suite ce qui attend, sans attendre l'anti-rebond.
+ *
+ * C'est ce que fait le bouton « Enregistrer » : il n'invente pas une
+ * sauvegarde qui n'existerait pas, il supprime le délai — et surtout il
+ * CONFIRME, ce qu'aucun écran ne faisait.
+ */
+export function flushRemoteDrafts(): void {
+  // Un clic explicite REESSAIE toujours. Sans cette ligne, un seul 401/503
+  // antérieur mettait `remoteAvailable` à false et court-circuitait tous les
+  // envois suivants : le bouton n'aurait rien envoyé tout en affichant
+  // « Enregistré » — un mensonge, exactement le travers que ce bouton était
+  // censé corriger. Même raisonnement que `flushPublishedGent` pour les gents
+  // publiés : l'utilisateur a cliqué exprès, on ne décide pas à sa place que
+  // le serveur est injoignable.
+  remoteAvailable = null;
+
+  for (const [, timer] of Array.from(pushTimers.entries())) clearTimeout(timer);
+  const enAttente = Array.from(pushTimers.keys());
+  pushTimers.clear();
+  // Ce qui attend l'anti-rebond, PLUS ce qui a échoué la dernière fois : après
+  // une coupure, on clique justement parce qu'on doute, et ne renvoyer que le
+  // brouillon en cours de frappe laisserait le précédent perdu côté serveur.
+  const aRenvoyer = new Set([...enAttente, ...Array.from(echecs)]);
+  if (!aRenvoyer.size) {
+    // Tout est déjà écrit. On le confirme quand même : un clic sans retour
+    // visible laisse croire à une panne.
+    poserEtat("enregistre");
+    return;
+  }
+
+  const stored = readStoredDrafts();
+  for (const id of Array.from(aRenvoyer)) {
+    const draft = stored[id];
+    if (draft) envoyerMaintenant(id, draft);
+  }
+}
+
+/** L'envoi lui-même, séparé de son ordonnancement. */
+function envoyerMaintenant(id: string, draft: GentDraft): void {
+  fetch(`/api/drafts/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ draft }),
+  })
+    .then((res) => {
+      if (res.status === 503 || res.status === 401) {
+        remoteAvailable = false;
+        echecs.delete(id);
+        // Pas un échec à signaler : sans serveur configuré, le cache local
+        // EST la sauvegarde. Crier à l'erreur ici serait mentir.
+        poserEtat("enregistre");
+      } else if (res.ok) {
+        remoteAvailable = true;
+        echecs.delete(id);
+        poserEtat("enregistre");
+      } else {
+        echecs.add(id);
+        poserEtat("echec");
+      }
+    })
+    .catch(() => {
+      echecs.add(id);
+      // Réseau indisponible : le cache local garde le brouillon, la
+      // prochaine édition retentera. On le dit, sans dramatiser.
+      poserEtat("echec");
+    });
+}
+
 /** Pousse un brouillon vers le serveur, débouncé par id (l'édition est frappe à frappe). */
 export function pushRemoteDraft(id: string, draft: GentDraft): void {
-  if (remoteAvailable === false || id === NOUVEAU_GENT_TEMPLATE_ID) return;
+  if (id === NOUVEAU_GENT_TEMPLATE_ID) return;
+  if (remoteAvailable === false) {
+    // Pas de serveur (Supabase non configuré, session expirée) : le cache
+    // local EST la sauvegarde, et elle vient d'avoir lieu. Sans cette ligne
+    // l'indicateur restait figé sur son dernier état — il aurait affiché
+    // « Enregistrer » pendant qu'on tape, ce qui laisse croire à une attente
+    // qui n'existe pas.
+    poserEtat("enregistre");
+    return;
+  }
   const pending = pushTimers.get(id);
   if (pending) clearTimeout(pending);
+  poserEtat("en-attente");
   pushTimers.set(
     id,
     setTimeout(() => {
       pushTimers.delete(id);
-      fetch(`/api/drafts/${encodeURIComponent(id)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...appAccessHeaders() },
-        body: JSON.stringify({ draft }),
-      })
-        .then((res) => {
-          if (res.status === 503 || res.status === 401) remoteAvailable = false;
-          else if (res.ok) remoteAvailable = true;
-        })
-        .catch(() => {
-          // Réseau indisponible : le cache local garde le brouillon, la
-          // prochaine édition retentera.
-        });
+      envoyerMaintenant(id, draft);
     }, PUSH_DEBOUNCE_MS)
   );
 }
@@ -116,8 +263,9 @@ export function pushRemoteDraft(id: string, draft: GentDraft): void {
  * Les brouillons présents seulement en local (créés hors ligne ou avant la
  * configuration de Supabase) remontent vers le serveur.
  */
-export async function syncDraftsFromRemote(): Promise<GentDraftsMap | null> {
+export async function syncDraftsFromRemote(): Promise<GentDraftsMap | null | "unauthorized"> {
   const remote = await fetchRemoteDrafts();
+  if (remote === "unauthorized") return "unauthorized";
   if (remote === null) return null;
   const merged = { ...readStoredDrafts(), ...remote };
   writeStoredDrafts(merged);
@@ -148,9 +296,13 @@ export async function deleteRemoteDraft(id: string): Promise<{ ok: boolean; erro
   try {
     const res = await fetch(`/api/drafts/${encodeURIComponent(id)}`, {
       method: "DELETE",
-      headers: appAccessHeaders(),
+      credentials: "include",
     });
-    if (res.status === 503 || res.status === 401) {
+    if (res.status === 401) {
+      remoteAvailable = false;
+      return { ok: true };
+    }
+    if (res.status === 503) {
       remoteAvailable = false;
       return { ok: true };
     }
@@ -178,6 +330,56 @@ export function allocateNewDraft(): string {
   return id;
 }
 
+/**
+ * Crée un brouillon déjà configuré en Event Manager (gabarit team building).
+ * Le collab est posé ICI pour que Preview / Diffusion voient le salon dès
+ * l'ouverture, sans attendre le montage de l'onglet Collaboratif.
+ */
+export function allocateEventManagerDraft(): string {
+  const id = createDraftId();
+  const stored = readStoredDrafts();
+  const draft = applyEventManagerTemplate(freshDraftFromTemplate(id));
+  stored[id] = draft;
+  writeStoredDrafts(stored);
+  pushRemoteDraft(id, draft);
+  return id;
+}
+
+/**
+ * Crée un brouillon à partir du rôle décrit sur l'accueil du studio.
+ *
+ * La description sert d'objectif provisoire (elle s'affiche donc immédiatement
+ * dans le bandeau et la liste des gents) et reste en attente dans
+ * `pendingBuilderMessage` : le builder la rejoue dans l'assistant à
+ * l'ouverture, pour que l'échange se poursuive sans que le créateur ait à se
+ * répéter. L'emblème vient de l'exemple choisi, ou se déduit de la
+ * description — sans quoi tous les gents naîtraient avec la même étoile.
+ */
+export function allocateDraftFromDescription(description: string, icon?: string): string {
+  const role = description.trim();
+  const id = createDraftId();
+  const stored = readStoredDrafts();
+  const draft: GentDraft = {
+    ...freshDraftFromTemplate(id),
+    icon: icon?.trim() || suggestGentIcon(role),
+    objective: role.slice(0, 240),
+    pendingBuilderMessage: role,
+  };
+  stored[id] = draft;
+  writeStoredDrafts(stored);
+  pushRemoteDraft(id, draft);
+  return id;
+}
+
+/** Retire la description en attente du cache local (elle vient d'être rejouée). */
+export function clearStoredPendingBuilderMessage(id: string): void {
+  const stored = readStoredDrafts();
+  const draft = stored[id];
+  if (!draft?.pendingBuilderMessage) return;
+  stored[id] = { ...draft, pendingBuilderMessage: undefined };
+  writeStoredDrafts(stored);
+}
+
 export function seedDrafts(initialId: string): GentDraftsMap {
   const drafts: GentDraftsMap = JSON.parse(JSON.stringify(GENT_DRAFTS));
   drafts[NOUVEAU_GENT_TEMPLATE_ID] = JSON.parse(JSON.stringify(GENT_DRAFTS[NOUVEAU_GENT_TEMPLATE_ID]));
@@ -195,11 +397,14 @@ export function mergeStoredDrafts(prev: GentDraftsMap): GentDraftsMap {
   return merged;
 }
 
-/** Liste tous les brouillons visibles (mock + localStorage), hors gabarit. */
+/** Liste tous les brouillons visibles (mock + localStorage), hors gabarits système. */
 export function listVisibleDrafts(): GentDraft[] {
-  const merged = mergeStoredDrafts(seedDrafts("_dashboard"));
+  const base: GentDraftsMap = JSON.parse(JSON.stringify(GENT_DRAFTS));
+  for (const reserved of RESERVED_DRAFT_IDS) delete base[reserved];
+  const merged = mergeStoredDrafts(base);
+  for (const reserved of RESERVED_DRAFT_IDS) delete merged[reserved];
   return Object.values(merged)
-    .filter((d) => d.id !== NOUVEAU_GENT_TEMPLATE_ID)
+    .filter((d) => isPersistableDraftId(d.id))
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 }
 
@@ -230,9 +435,13 @@ export function restoreDraftFromPublished(id: string, espace: Espace): GentDraft
     systemPrompt: espace.systemPrompt ?? "",
     status: "published",
     webSearch: espace.webSearch,
+    fileDownloadEnabled: espace.fileDownloadEnabled,
+    fileDownloadFormEnabled: espace.fileDownloadFormEnabled,
     jumpForm: espace.jumpForm,
     connectors,
     pinnedArtefact: pinned,
+    appPreview: espace.appPreview,
+    collab: espace.collab?.enabled ? espace.collab : undefined,
     routine: espace.routine
       ? {
           enabled: espace.routine.enabled,

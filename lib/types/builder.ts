@@ -38,6 +38,7 @@ export type ConnectorToolKind =
   | "dataset"
   | "prim"
   | "powens"
+  | "gmail"
   | "ordinateur";
 
 export interface ConnectorToolType {
@@ -75,7 +76,15 @@ export interface KnowledgeSource {
   truncated?: boolean;
 }
 
-export type ArtefactKind = "report" | "checklist" | "visual" | "timeline" | "budget" | "map";
+export type ArtefactKind =
+  | "report"
+  | "checklist"
+  | "chart"
+  | "visual"
+  | "map"
+  | "dashboard"
+  | "profile-summary"
+  | "image";
 
 /**
  * Exemple illustratif d'un type d'artefact que le gent peut générer.
@@ -106,6 +115,36 @@ export interface GentDraft {
   builderConversation: ConversationMessage[];
   /** Autorise le gent publié à faire des recherches web (plugin OpenRouter). */
   webSearch?: boolean;
+  /** Affiche un bouton de téléchargement du document côté lecteur. */
+  fileDownloadEnabled?: boolean;
+  /** Exige le formulaire (nom, prénom, e-mail, captcha) avant le PDF. */
+  fileDownloadFormEnabled?: boolean;
+  /**
+   * Identifiants des documents réellement proposés au téléchargement.
+   *
+   * `undefined` signifie « tous » — c'était le seul comportement possible
+   * jusqu'ici, et les gents existants doivent continuer d'offrir ce qu'ils
+   * offraient. Une liste vide signifie « aucun », ce qui est un choix
+   * légitime mais que l'interface doit signaler : téléchargement autorisé et
+   * rien à télécharger est un état muet, pas une erreur qu'on peut deviner.
+   */
+  fileDownloadSelection?: string[];
+  /**
+   * Attribution propre à CE gent, affichée sous « Propulsé par ».
+   * Vide : on retombe sur le nom du compte au moment de la diffusion.
+   */
+  propulsePar?: string;
+  /**
+   * Questions d'amorce ÉCRITES PAR LE CRÉATEUR.
+   *
+   * Absentes ou vides, la plateforme en génère à la première ouverture de
+   * l'espace, puis les mémorise — et plus rien ne les régénère jamais. Le
+   * créateur n'avait donc aucune main : ni pour les corriger, ni pour imposer
+   * la formulation qu'il avait pourtant décrite dans son prompt.
+   *
+   * Renseignées, elles font foi et le générateur ne s'exécute pas.
+   */
+  starters?: string[];
   /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
   jumpForm?: JumpForm;
   /** Routine planifiée (mission exécutée automatiquement côté serveur). */
@@ -114,8 +153,36 @@ export interface GentDraft {
   channel?: import("@/lib/types").NotificationChannel;
   /** Artefact figé « mini-app » défini par le créateur. */
   pinnedArtefact?: import("@/lib/types").PinnedArtefact;
+  /** Type de gent « visionneuse » : document fixé par le créateur, lu en immersion. */
+  visionneuse?: import("@/lib/types").VisionneuseConfig;
+  /** Type de gent « collaboratif » : salon multi-participants orchestré. */
+  collab?: import("@/lib/types").CollabConfig;
+  /**
+   * Application à blocs produite dans l'onglet Aperçu : copiée dans l'espace
+   * à la Preview / publication, pour que l'utilisateur voie le nouveau rendu
+   * et non l'ancien canevas d'artefacts.
+   */
+  appPreview?: import("@/lib/appPreview").AppPreviewSpec;
+  /** Modules ajoutés/remplacés au dernier tour d'assistant — badge « nouveau ». */
+  appPreviewFreshIds?: string[];
   /** Empreinte du contenu au moment de la dernière publication (voir builderSnapshot.ts). */
   publishedSnapshot?: string;
+  /**
+   * Mode « fais-moi confiance » persistant : l'assistant ne consulte plus le
+   * créateur avant de générer (voir lib/cadrage.ts).
+   *
+   * Préférence d'ATELIER, pas de contenu : volontairement absente de
+   * draftContentSnapshot, sinon un simple basculement marquerait le gent
+   * « modifié depuis la publication » et rallumerait le bouton Diffuser.
+   */
+  autoPilot?: boolean;
+  /**
+   * Rôle décrit par le créateur sur l'accueil du studio, en attente d'être
+   * rejoué dans l'assistant à l'ouverture du gent. Consommé une seule fois
+   * (voir BuilderProvider), puis effacé — c'est ce qui permet de poursuivre
+   * dans le builder l'échange commencé sur la page d'accueil.
+   */
+  pendingBuilderMessage?: string;
 }
 
 export type GentDraftsMap = Record<string, GentDraft>;

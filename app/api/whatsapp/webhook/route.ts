@@ -1,4 +1,8 @@
+import { contexteForUser } from "@/lib/server/openRouterKey";
+import { consommerPourVisiteur } from "@/lib/server/gentGuard";
+import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 import { NextResponse } from "next/server";
+import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { replyAsGent } from "@/lib/server/gentReply";
 import { sendWhatsAppText } from "@/lib/server/whatsapp";
@@ -78,11 +82,19 @@ export async function POST(req: Request) {
   if (!supabase) return NextResponse.json({ ok: true });
 
   const sender = digits(msg.from);
-  const { data } = await supabase.from("published_gents").select("id, espace");
-  const match = (data ?? []).find((row) => {
-    const ch = (row.espace as Espace).channel;
-    return ch?.kind === "whatsapp" && ch.to && digits(ch.to) === sender;
-  });
+  // Un correspondant WhatsApp parle au gent DIFFUSÉ, pas à la version de
+  // travail en cours d'édition dans le studio.
+  const { data } = await supabase.from("published_gents").select(`id, owner_id, ${DIFFUSED_COLUMNS}`);
+  const match = (data ?? [])
+    .map((row) => {
+      const espace = diffusedEspace(row as { espace?: unknown; diffused?: unknown });
+      const r = row as { id: string; owner_id?: string | null };
+      return espace ? { id: r.id, ownerId: r.owner_id ?? null, espace } : null;
+    })
+    .find((row) => {
+      const ch = row?.espace.channel;
+      return ch?.kind === "whatsapp" && ch.to && digits(ch.to) === sender;
+    });
 
   if (!match) {
     // Aucun gent associé à ce numéro : on répond poliment sans planter.
@@ -90,9 +102,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const result = await replyAsGent(match.espace as Espace, msg.text.body);
+  // Un message entrant est une génération facturée, déclenchée par un tiers :
+  // c'est le propriétaire du gent qui la paie, et son quota qui la borne.
+  const ctx = await contexteForUser(match.ownerId);
+  const quota = await consommerPourVisiteur(ctx, "llm");
+  if (!quota.ok) {
+    await sendWhatsAppText(msg.from, MESSAGE_VISITEUR_INDISPONIBLE);
+    return NextResponse.json({ ok: true });
+  }
+
+  const result = await replyAsGent(match.espace, msg.text.body, ctx);
   await sendWhatsAppText(msg.from, result.reply);
-  await supabase.from("published_gents").upsert({ id: match.id, espace: result.espace });
+  await supabase.from("published_gents").update({ diffused: result.espace }).eq("id", match.id);
 
   return NextResponse.json({ ok: true });
 }

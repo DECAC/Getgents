@@ -135,7 +135,11 @@ describe("projection publique d'un espace", () => {
   it("ne laisse fuir ni le profil, ni la mémoire, ni les conversations, ni les fichiers", () => {
     expect(pub.profile).toBeUndefined();
     expect(pub.memory).toBe("");
-    expect(pub.conversations).toEqual([]);
+    // Un fil vierge est bien transmis — sans lui, l'espace annoncerait un
+    // activeConversationId sans fil correspondant et la conversation resterait
+    // muette. Ce qui ne doit pas fuir, ce sont les MESSAGES du créateur.
+    expect(pub.conversations).toHaveLength(1);
+    expect(pub.conversations[0].messages).toEqual([]);
     expect(pub.files).toEqual([]);
     expect(pub.artefacts).toEqual([]);
     expect(serialized).not.toContain("Note privée");

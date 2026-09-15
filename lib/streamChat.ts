@@ -21,6 +21,16 @@ export interface StreamChatResult {
 export const CHAT_MAX_TOKENS = {
   espace: 12_288,
   builder: 16_000,
+  /** Aperçu seul : 4 modules JSON, sans prompt système ni GENT_CONFIG. */
+  apercu: 10_000,
+  /** Tour « quelles évolutions ? » : une question + bloc QUESTIONS. */
+  apercuAsk: 2_000,
+  /**
+   * Tour de cadrage : l'assistant pose UNE question cliquable avant de
+   * produire quoi que ce soit. Une phrase et un bloc QUESTIONS — au-delà,
+   * c'est qu'il a commencé à générer, ce qu'on ne veut pas ici.
+   */
+  cadrage: 1_200,
 } as const;
 
 /** Phase affichée à l'utilisateur pendant le traitement d'une requête. */
@@ -58,6 +68,9 @@ export function humanToolCallLabel(call: string): string {
   if (call.startsWith("prim_next_departures")) return "horaires de passage (PRIM)";
   if (call.startsWith("powens_accounts")) return "comptes bancaires (Powens)";
   if (call.startsWith("powens_transactions")) return "transactions bancaires (Powens)";
+  if (call.startsWith("gmail_search")) return "recherche d'e-mails (Gmail)";
+  if (call.startsWith("gmail_get_message")) return "lecture d'un e-mail (Gmail)";
+  if (call.startsWith("gmail_send")) return "envoi d'un e-mail (Gmail)";
   if (call.startsWith("dataset_")) {
     const action = call.includes("__query") ? "jeu de données (filtres)" : "jeu de données (proximité)";
     return action;
@@ -98,6 +111,8 @@ export async function streamChatCompletion(
     datasets?: { name: string; url: string }[];
     prim?: boolean;
     powens?: boolean;
+    gmail?: boolean;
+    gentId?: string;
     restApis?: RestApiConnector[];
     webSearch?: boolean;
   },

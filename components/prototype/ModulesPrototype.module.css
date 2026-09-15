@@ -1,0 +1,1461 @@
+/* Prototype de refonte des modules générés (artefacts). Isolé du produit :
+ * aucune de ces classes n'est utilisée ailleurs. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+}
+
+/* ---------- Barre du haut ---------- */
+
+.topBar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px clamp(16px, 3vw, 32px);
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+}
+
+.espaceMark {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--blue-tint);
+  color: var(--blue-700);
+  flex: none;
+}
+
+.espaceName {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.espaceSub {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.viewSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  margin-left: 10px;
+}
+
+.viewBtn {
+  padding: 6px 13px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.viewBtn:hover {
+  color: var(--ink);
+}
+.viewBtnOn {
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  padding: 5px 12px;
+}
+
+.topSpacer {
+  flex: 1;
+}
+
+.ghostBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.ghostBtn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--line) 55%, var(--blue));
+  background: var(--blue-tint);
+}
+.ghostBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- Zone de canevas ---------- */
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px clamp(16px, 3vw, 32px) 24px;
+}
+
+.themeGroup {
+  margin-bottom: 26px;
+}
+
+.themeTitle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 11px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.themeTitleLine {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.sizeCompact {
+  grid-column: span 3;
+}
+.sizeStandard {
+  grid-column: span 4;
+}
+.sizeLarge {
+  grid-column: span 6;
+}
+.sizeFull {
+  grid-column: span 12;
+}
+
+@media (max-width: 1320px) {
+  .sizeCompact {
+    grid-column: span 4;
+  }
+  .sizeStandard {
+    grid-column: span 6;
+  }
+}
+@media (max-width: 900px) {
+  .sizeCompact,
+  .sizeStandard,
+  .sizeLarge,
+  .sizeFull {
+    grid-column: span 12;
+  }
+}
+
+/* ---------- Carte module ---------- */
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  animation: cardIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: border-color 0.14s ease, transform 0.14s ease;
+}
+.card:hover {
+  border-color: color-mix(in srgb, var(--line) 55%, var(--blue));
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Brouillon : le module vient d'être construit et attend un verdict. */
+.cardDraft {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--line) 35%, var(--sage));
+  background: color-mix(in srgb, var(--card) 92%, var(--sage-tint));
+}
+
+.cardDragging {
+  opacity: 0.4;
+}
+.cardDropTarget {
+  border-color: var(--blue);
+  transform: translateY(-2px);
+}
+
+/* Épinglé : un seul signe distinctif, un filet plein côté gauche. */
+.cardPinned::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--blue);
+  pointer-events: none;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px 10px;
+  cursor: grab;
+  user-select: none;
+}
+.head:active {
+  cursor: grabbing;
+}
+
+.glyph {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--bg);
+  color: var(--muted);
+  border: 1px solid var(--line-soft);
+}
+.glyphAccent {
+  background: var(--blue-tint);
+  color: var(--blue-700);
+  border-color: transparent;
+}
+
+.headText {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-family: "Sora", sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+.dotFresh {
+  background: var(--success);
+}
+.dotStale {
+  background: var(--gold);
+}
+.dotError {
+  background: var(--plum);
+}
+.dotBuilding {
+  background: var(--sage);
+  animation: pulse 1.1s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.75);
+  }
+}
+
+.version {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: 0 6px;
+  line-height: 15px;
+  flex: none;
+}
+
+.menuWrap {
+  position: relative;
+  flex: none;
+}
+
+.iconBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.iconBtn:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.menu {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  z-index: 30;
+  min-width: 178px;
+  padding: 5px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 26px rgba(42, 31, 25, 0.14);
+}
+
+.menuLabel {
+  padding: 6px 9px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+}
+.menuItem:hover {
+  background: var(--bg);
+}
+.menuItemDanger {
+  color: var(--plum);
+}
+.menuItemDanger:hover {
+  background: var(--plum-tint);
+}
+
+.sizeRow {
+  display: flex;
+  gap: 3px;
+  padding: 2px 6px 5px;
+}
+.sizeChip {
+  flex: 1;
+  padding: 5px 0;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.sizeChip:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+.sizeChipOn {
+  background: var(--blue-tint);
+  border-color: transparent;
+  color: var(--blue-700);
+}
+
+/* Bandeau de fraîcheur — visible seulement quand la donnée a vieilli. */
+.staleBar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: color-mix(in srgb, var(--gold-tint) 55%, var(--card));
+  border-top: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
+  font-size: 11.5px;
+  color: #7a5410;
+}
+.staleAction {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #7a5410;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Rangée d'actions — discrète, se révèle au survol de la carte. */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 10px;
+  border-top: 1px solid var(--line-soft);
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+.card:hover .actions,
+.card:focus-within .actions {
+  opacity: 1;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.action:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* Barre de verdict du brouillon — elle, toujours visible. */
+.draftBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-top: 1px dashed color-mix(in srgb, var(--line) 35%, var(--sage));
+}
+.draftHint {
+  flex: 1;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.keepBtn {
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  background: var(--sage);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.keepBtn:hover {
+  background: var(--sage-700);
+}
+.dropBtn {
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.dropBtn:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+/* Champ « Affiner » */
+.refineBar {
+  display: flex;
+  gap: 7px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg);
+}
+.refineInput {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 11px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.refineInput:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+.refineSend {
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  background: var(--blue);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.refineSend:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ---------- Blocs ---------- */
+
+.blockHeading {
+  font-family: "Sora", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 2px 0 -4px;
+}
+
+.blockText {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink);
+  margin: 0;
+}
+
+.stats {
+  display: flex;
+  gap: 8px;
+}
+.stat {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 11px;
+  border-radius: 11px;
+  background: var(--bg);
+  border: 1px solid var(--line-soft);
+}
+.statValue {
+  font-family: "Sora", sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.statLabel {
+  font-size: 10.5px;
+  color: var(--faint);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.statDelta {
+  font-size: 10.5px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+.deltaUp {
+  color: var(--plum);
+}
+.deltaDown {
+  color: var(--success);
+}
+
+.chartCaption {
+  font-size: 10.5px;
+  color: var(--faint);
+  margin-top: 6px;
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  height: 108px;
+  padding-top: 4px;
+}
+.chartCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+}
+.bar {
+  width: 100%;
+  border-radius: 5px 5px 3px 3px;
+  background: var(--blue);
+  animation: barIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: bottom;
+}
+.barMuted {
+  background: color-mix(in srgb, var(--blue) 32%, var(--line));
+}
+@keyframes barIn {
+  from {
+    transform: scaleY(0.02);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.barLabel {
+  font-size: 10px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 0 8px 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.table td {
+  padding: 7px 8px 7px 0;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink);
+}
+.table tr:last-child td {
+  border-bottom: none;
+}
+.tdNum {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding-right: 0;
+}
+
+.callout {
+  display: flex;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.calloutInfo {
+  background: var(--blue-tint);
+  color: #2f4d80;
+}
+.calloutWarning {
+  background: var(--gold-tint);
+  color: #7a5410;
+}
+.calloutSuccess {
+  background: var(--success-tint);
+  color: #2c6330;
+}
+.calloutTitle {
+  font-weight: 700;
+  display: block;
+  margin-bottom: 1px;
+}
+.calloutIcon {
+  flex: none;
+  margin-top: 1px;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 6px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  text-align: left;
+  color: var(--ink);
+}
+.checkRow:hover {
+  background: var(--bg);
+}
+.box {
+  width: 17px;
+  height: 17px;
+  border-radius: 6px;
+  border: 1.5px solid var(--line);
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: transparent;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.boxOn {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+.checkDone {
+  color: var(--faint);
+  text-decoration: line-through;
+}
+
+.mapBox {
+  position: relative;
+  height: 150px;
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--line-soft);
+}
+.mapPin {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.mapPinDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--sage);
+  border: 2px solid var(--card);
+}
+.mapPinLabel {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  padding: 0 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* ---------- États ---------- */
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.shimmer {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--line-soft) 25%,
+    color-mix(in srgb, var(--line-soft) 45%, var(--card)) 50%,
+    var(--line-soft) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.25s linear infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.shimmerBlock {
+  height: 74px;
+  border-radius: 11px;
+}
+
+.errorBody {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 4px 0 2px;
+}
+.errorText {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0;
+}
+.retryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.retryBtn:hover {
+  background: var(--bg);
+}
+
+/* ---------- Composeur ---------- */
+
+.composer {
+  flex: none;
+  padding: 12px clamp(16px, 3vw, 32px) 16px;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+}
+
+.composerRow {
+  display: flex;
+  gap: 8px;
+  max-width: 940px;
+  margin: 0 auto;
+}
+
+.composerInput {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.composerInput:focus {
+  outline: none;
+  border-color: var(--blue);
+  background: var(--card);
+}
+
+.sendBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--blue);
+  color: #fff;
+  flex: none;
+}
+.sendBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ideas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 940px;
+  margin: 9px auto 0;
+}
+.idea {
+  padding: 6px 13px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.idea:hover {
+  border-color: color-mix(in srgb, var(--line) 55%, var(--blue));
+  background: var(--blue-tint);
+  color: var(--blue-700);
+}
+
+.emptyView {
+  padding: 60px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---------- Bandeau de démo ---------- */
+
+.demoNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px clamp(16px, 3vw, 32px);
+  background: var(--sage-tint);
+  color: var(--sage-700);
+  font-size: 11.5px;
+  font-weight: 600;
+  flex: none;
+}
+
+/* ---------- Sélecteur d'espace ---------- */
+
+.espaceSwitch {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 4px;
+}
+.espacePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.espacePill:hover {
+  color: var(--ink);
+  background: var(--bg);
+}
+.espacePillOn {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+/* ---------- Barre d'onglets : la navigation principale de l'espace ---------- */
+
+.tabsBar {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 0 clamp(16px, 3vw, 32px);
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 14px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.tab:hover {
+  color: var(--ink);
+}
+.tabOn {
+  color: var(--ink);
+  border-bottom-color: var(--blue);
+}
+
+.tabCount {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--faint);
+  background: var(--bg);
+  border-radius: var(--r-pill);
+  padding: 1px 6px;
+  line-height: 15px;
+}
+.tabOn .tabCount {
+  background: var(--blue-tint);
+  color: var(--blue-700);
+}
+
+/* Pastille « ça a bougé depuis votre dernier passage ». */
+.tabDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sage);
+}
+
+.activity {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.activityDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  flex: none;
+}
+
+/* ---------- Bloc profil (mini CV) ---------- */
+
+.profile {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--blue-tint);
+  color: var(--blue-700);
+  font-family: "Sora", sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.profileMain {
+  flex: 1;
+  min-width: 0;
+}
+.profileName {
+  font-family: "Sora", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.headlineRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 1px;
+}
+.headline {
+  font-size: 12.5px;
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 1px 4px;
+  margin-left: -4px;
+  text-align: left;
+}
+.headline:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+.headlineInput {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--blue);
+  background: var(--card);
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.headlineInput:focus {
+  outline: none;
+}
+.editHint {
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.facts {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+}
+.factValue {
+  font-family: "Sora", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.factLabel {
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.skillX {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  color: var(--faint);
+}
+.skillX:hover {
+  background: var(--plum-tint);
+  color: var(--plum);
+}
+.skillAdd {
+  padding: 4px 11px;
+  border-radius: var(--r-pill);
+  border: 1px dashed var(--line);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.skillAdd:hover {
+  border-color: var(--blue);
+  color: var(--blue-700);
+  background: var(--blue-tint);
+}
+.skillInput {
+  width: 130px;
+  padding: 4px 11px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--blue);
+  background: var(--card);
+  font-family: inherit;
+  font-size: 11.5px;
+  color: var(--ink);
+}
+.skillInput:focus {
+  outline: none;
+}
+
+.meterRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.meterLabel {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.meterValue {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-left: auto;
+}
+.meter {
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--line-soft);
+  overflow: hidden;
+}
+.meterFill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--blue);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- Bloc contacts ---------- */
+
+.contacts {
+  display: flex;
+  flex-direction: column;
+}
+.contactRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.contactRow:last-child {
+  border-bottom: none;
+}
+.contactRow:hover {
+  background: var(--bg);
+}
+.contactAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--sage-tint);
+  color: var(--sage-700);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+.contactMain {
+  flex: 1;
+  min-width: 0;
+}
+.contactName {
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.contactRole {
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.statusPill {
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: 10.5px;
+  font-weight: 700;
+  flex: none;
+  border: 1px solid transparent;
+}
+.stTodo {
+  background: var(--gold-tint);
+  color: #7a5410;
+}
+.stSent {
+  background: var(--blue-tint);
+  color: var(--blue-700);
+}
+.stReplied {
+  background: var(--success-tint);
+  color: #2c6330;
+}
+.statusPill:hover {
+  border-color: currentColor;
+}
+.contactAction {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  flex: none;
+  opacity: 0;
+}
+.contactRow:hover .contactAction {
+  opacity: 1;
+}
+.contactAction:hover {
+  background: var(--blue-tint);
+  color: var(--blue-700);
+}
+
+/* ---------- Bloc postes ---------- */
+
+.jobFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.jobChip {
+  padding: 4px 11px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.jobChip:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+.jobChipOn {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.jobList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.job {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.12s ease;
+}
+.job:hover {
+  border-color: color-mix(in srgb, var(--line) 55%, var(--blue));
+}
+.jobOpen {
+  border-color: var(--blue);
+  background: var(--bg);
+}
+.jobHead {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+}
+.jobMain {
+  flex: 1;
+  min-width: 0;
+}
+.jobTitle {
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jobMeta {
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jobMatch {
+  width: 74px;
+  flex: none;
+}
+.jobMatchValue {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+  margin-bottom: 3px;
+}
+.matchBar {
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--line-soft);
+  overflow: hidden;
+}
+.matchFill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--success);
+}
+.matchFillMid {
+  background: var(--gold);
+}
+
+.jobBody {
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.jobTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.jobTag {
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  background: var(--card);
+  border: 1px solid var(--line);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.jobNote {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 0;
+}
+.jobActions {
+  display: flex;
+  gap: 6px;
+}
+.jobBtn {
+  padding: 6px 13px;
+  border-radius: var(--r-pill);
+  background: var(--blue);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.jobBtn:hover {
+  background: var(--blue-700);
+}
+.jobBtnGhost {
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.jobBtnGhost:hover {
+  background: var(--card);
+  color: var(--ink);
+}
+.jobDismissed {
+  opacity: 0.45;
+}
+
+/* ---------- Bloc actions suggérées ---------- */
+
+.actionPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.actionPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.actionPill:hover {
+  border-color: var(--sage);
+  background: var(--sage-tint);
+  color: var(--sage-700);
+}

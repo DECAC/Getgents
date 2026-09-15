@@ -103,7 +103,7 @@
   margin-bottom: 4px;
 }
 .sTitle {
-  font-family: "Inter", sans-serif;
+  font-family: "Sora", sans-serif;
   font-size: 14.5px;
   font-weight: 700;
   margin: 0;
@@ -260,7 +260,7 @@
   font-size: 11px;
 }
 .fileRemove:hover {
-  background: var(--plum-tint);
+  background: var(--sage-tint);
   color: #b4462f;
 }
 .fileBusy {

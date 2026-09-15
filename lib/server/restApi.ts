@@ -3,6 +3,8 @@
 // clé API et les paramètres fournis par le modèle sont combinés pour former une
 // requête HTTP réelle, dont la réponse (texte/JSON) est renvoyée au modèle.
 import type { RestApiToolConfig } from "@/lib/types";
+import { envRefusalMessage, isAllowedEnvName } from "@/lib/server/envAllowlist";
+import { checkPublicHttpUrl, connectorUrlPolicy } from "@/lib/server/urlGuard";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -10,15 +12,32 @@ const REQUEST_TIMEOUT_MS = 15_000;
  * Résout la valeur d'une clé : littérale, ou lue dans une variable
  * d'environnement serveur si elle est notée `env:NOM` ou `${NOM}`.
  * Permet de garder un vrai secret côté serveur plutôt que dans le navigateur.
+ *
+ * Le nom vient de la configuration du connecteur, donc du client : il est
+ * confronté à la liste blanche. Sans elle, `env:SUPABASE_SERVICE_ROLE_KEY`
+ * suffisait à faire lire la clé d'administration de la base et à l'envoyer
+ * vers l'hôte de son choix. `refused` distingue « variable interdite » de
+ * « variable non définie », deux causes qui n'appellent pas le même message.
  */
-function resolveSecretInfo(value: string): { value: string; envName: string | null } {
+function resolveSecretInfo(value: string): {
+  value: string;
+  envName: string | null;
+  refused: boolean;
+} {
   const trimmed = value.trim();
   const envMatch = trimmed.match(/^env:([A-Z0-9_]+)$/i) || trimmed.match(/^\$\{([A-Z0-9_]+)\}$/i);
-  if (envMatch) return { value: process.env[envMatch[1]] ?? "", envName: envMatch[1] };
-  return { value: trimmed, envName: null };
+  if (envMatch) {
+    const name = envMatch[1]!;
+    if (!isAllowedEnvName(name)) return { value: "", envName: name, refused: true };
+    return { value: process.env[name] ?? "", envName: name, refused: false };
+  }
+  return { value: trimmed, envName: null, refused: false };
 }
 
 function resolveSecret(value: string): string {
+  // Une variable interdite donne une chaîne vide : l'appel échouera côté API
+  // tierce, ce qui est le bon comportement — on ne renvoie jamais de valeur
+  // lue hors de la liste blanche.
   return resolveSecretInfo(value).value;
 }
 
@@ -65,12 +84,13 @@ export async function callRestApi(
   config: RestApiToolConfig,
   args: Record<string, unknown>
 ): Promise<{ text: string; ok: boolean }> {
-  let url: URL;
-  try {
-    url = new URL(config.baseUrl);
-  } catch {
-    return { text: `URL de base invalide : ${config.baseUrl}`, ok: false };
-  }
+  // Garde anti-SSRF : l'URL vient de la configuration du connecteur, donc du
+  // client, et le corps de la réponse lui est renvoyé. Sans ce contrôle, un
+  // connecteur pointant sur 169.254.169.254 exfiltre les identifiants de
+  // l'instance cloud.
+  const checked = checkPublicHttpUrl(config.baseUrl, connectorUrlPolicy());
+  if (!checked.ok) return { text: checked.reason, ok: false };
+  const url = checked.url;
 
   const headers: Record<string, string> = { Accept: "application/json" };
   for (const h of config.headers ?? []) {
@@ -84,7 +104,8 @@ export async function callRestApi(
 
   // Authentification par clé API (en-tête ou paramètre de requête).
   if (config.auth?.mode === "api-key" && config.auth.fieldName.trim()) {
-    const { value: key, envName } = resolveSecretInfo(config.auth.value);
+    const { value: key, envName, refused } = resolveSecretInfo(config.auth.value);
+    if (refused) return { text: envRefusalMessage(envName!), ok: false };
     // Clé absente : message explicite plutôt que de laisser l'API renvoyer un
     // 401 opaque — c'est la cause d'échec la plus fréquente en test.
     if (!key) {
@@ -128,12 +149,28 @@ export async function callRestApi(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const init: RequestInit = { method: config.method, headers, signal: controller.signal };
+    // `redirect: "manual"` : sans ça, la garde d'URL se contourne en un saut —
+    // un hôte public autorisé répond 302 vers 169.254.169.254 et fetch suit
+    // la redirection sans repasser par le contrôle.
+    const init: RequestInit = {
+      method: config.method,
+      headers,
+      signal: controller.signal,
+      redirect: "manual",
+    };
     if (config.method === "POST") {
       headers["Content-Type"] = "application/json";
       init.body = JSON.stringify(bodyPayload);
     }
     const res = await fetch(url.toString(), init);
+    if (res.status >= 300 && res.status < 400) {
+      return {
+        text:
+          `Redirection refusée (HTTP ${res.status}) depuis ${masked} : les connecteurs ne suivent pas les redirections, ` +
+          `car elles permettraient d'atteindre un hôte non autorisé. Configurez l'URL finale de l'API.`,
+        ok: false,
+      };
+    }
     const text = await res.text();
     if (!res.ok) {
       return {

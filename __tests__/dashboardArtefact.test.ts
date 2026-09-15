@@ -40,7 +40,7 @@ describe("parseDashboard", () => {
     const spec = parseDashboard({
       blocks: [{ type: "chart", variant: "bar", series: [{ key: "a", label: "A" }], data: [{ label: "L", a: 5, junk: { x: 1 } }] }],
     });
-    const chart = spec!.blocks[0] as Extract<(typeof spec)["blocks"][number], { type: "chart" }>;
+    const chart = spec!.blocks[0] as Extract<NonNullable<typeof spec>["blocks"][number], { type: "chart" }>;
     expect(chart.data[0]).toEqual({ label: "L", a: 5 });
   });
 });

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import {
   describeShareLinksFailure,
@@ -11,6 +12,9 @@ import { canRefresh, shareLinkState } from "@/lib/shareLink";
 import { refreshPinnedArtefact } from "@/lib/server/pinnedArtefact";
 import { withoutSessionContext } from "@/lib/espaceApiPayload";
 import type { Espace } from "@/lib/types";
+import { contexteForGent } from "@/lib/server/openRouterKey";
+import { consommerPourVisiteur } from "@/lib/server/gentGuard";
+import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -70,13 +74,14 @@ export async function POST(req: Request, { params }: Params) {
 
   const { data, error } = await supabase
     .from("published_gents")
-    .select("espace")
+    .select(DIFFUSED_COLUMNS)
     .eq("id", link.gentId)
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ error: "gent_not_found" }, { status: 404 });
+  const diffused = diffusedEspace(data);
+  if (!diffused) return NextResponse.json({ error: "gent_not_found" }, { status: 404 });
 
-  let espace = data.espace as Espace;
+  let espace = diffused;
   if (body.inputs && espace.pinnedArtefact) {
     const inputs = espace.pinnedArtefact.inputs.map((i) =>
       body.inputs && i.id in body.inputs ? { ...i, value: body.inputs[i.id] } : i
@@ -94,7 +99,14 @@ export async function POST(req: Request, { params }: Params) {
   // Le crédit est consommé avant la génération : un échec LLM ne doit pas
   // offrir de tentatives illimitées.
   await incrementRefreshCount(token);
-  const result = await refreshPinnedArtefact(forGeneration, "lien");
+
+  // Le propriétaire du gent paie la génération du visiteur (voir la route de
+  // conversation du même lien).
+  const ctx = await contexteForGent(link.gentId);
+  const quota = await consommerPourVisiteur(ctx, "llm");
+  if (!quota.ok) return quota.response;
+
+  const result = await refreshPinnedArtefact(forGeneration, ctx, "lien");
 
   // Ne JAMAIS réécrire published_gents avec le résultat du visiteur :
   // - ses entrées (CV, LinkedIn…) et son dashboard sont personnels ;

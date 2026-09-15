@@ -6,6 +6,9 @@
 import type { Espace, ConversationMessage } from "@/lib/types";
 import { profileContextNote } from "@/lib/profileSignal";
 import { renderMarkdown } from "@/lib/markdown";
+import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
+import type { ContexteLlm } from "@/lib/server/openRouterKey";
+import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
@@ -26,8 +29,12 @@ function toPlain(m: ConversationMessage): string {
   return (m.text ?? "").replace(/<[^>]+>/g, "").trim();
 }
 
-export async function replyAsGent(espace: Espace, userText: string): Promise<GentReplyResult> {
-  const key = process.env.OPENROUTER_API_KEY;
+export async function replyAsGent(
+  espace: Espace,
+  userText: string,
+  ctx: ContexteLlm
+): Promise<GentReplyResult> {
+  const key = ctx.cle;
   const t = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
   const userMsg: ConversationMessage = { role: "user", text: `<p>${userText.replace(/</g, "&lt;")}</p>`, t };
 
@@ -40,7 +47,7 @@ export async function replyAsGent(espace: Espace, userText: string): Promise<Gen
     return { ok, reply, espace: { ...espace, conversations } };
   };
 
-  if (!key) return withUser("Service indisponible (clé API absente côté serveur).", false);
+  if (!key) return withUser(MESSAGE_VISITEUR_INDISPONIBLE, false);
 
   const profileNote = espace.profile ? `\n\n${profileContextNote(espace.profile)}` : "";
   const dateNote = `Date et heure : ${new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "medium", timeStyle: "short" })} (Paris).`;
@@ -59,7 +66,7 @@ export async function replyAsGent(espace: Espace, userText: string): Promise<Gen
   try {
     const res = await fetch(OPENROUTER_API, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: enTetesOpenRouter(key),
       body: JSON.stringify({
         model: espace.chatModelId ?? "anthropic/claude-sonnet-5",
         messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: userText }],
