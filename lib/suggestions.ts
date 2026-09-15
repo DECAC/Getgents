@@ -5,9 +5,12 @@
 //
 // Relances conversationnelles (distinctes) :
 // <!--FOLLOWUPS: ["Question libre 1 ?","Question libre 2 ?"]-->
-const QUESTIONS_MARKER_RE = /<!--\s*QUESTIONS\s*:/i;
+const QUESTIONS_MARKER_RE = /<!--\s*QUESTIONS\s*:/gi;
 const FOLLOWUPS_RE = /<!--FOLLOWUPS:\s*(\[[\s\S]*?\])\s*-->/;
-const LIST_ITEM_RE = /^\s*(?:[-*•]|\d+[.)])\s+\S/;
+// Puce, numéro ou lettre (« A) », « B. ») : les modèles présentent aussi les
+// choix d'un jeu de rôle ou d'un QCM sous forme lettrée.
+const CHOICE_ITEM_PREFIX = /^\s*(?:\*\*)?(?:[-*•]|\d+[.)]|[A-H][.)])(?:\*\*)?\s+/;
+const LIST_ITEM_RE = /^\s*(?:\*\*)?(?:[-*•]|\d+[.)]|[A-H][.)])(?:\*\*)?\s+\S/;
 const OPTIONS_HEADING_RE = /^\s*(?:\*\*)?(?:options?|choix|propositions?)(?:\*\*)?\s*:?\s*$/i;
 
 export interface QuestionBlock {
@@ -51,19 +54,34 @@ function withoutUiOptions(options: string[]): string[] {
     .filter((o) => o.length > 0 && !reserved.includes(o.toLowerCase()));
 }
 
+/**
+ * Une option est normalement une chaîne ; certains modèles renvoient un objet
+ * (`{"label": "…"}`), ce qui faisait rejeter TOUT le bloc et disparaître les
+ * boutons. On en tire le libellé plutôt que de perdre la question.
+ */
+function optionLabel(o: unknown): string | null {
+  if (typeof o === "string") return o;
+  if (o && typeof o === "object") {
+    const rec = o as Record<string, unknown>;
+    for (const key of ["label", "text", "title", "option", "value"]) {
+      if (typeof rec[key] === "string") return rec[key] as string;
+    }
+  }
+  return null;
+}
+
 function parseQuestionBlocks(parsed: unknown): QuestionBlock[] {
   const items = Array.isArray(parsed) ? parsed : parsed && typeof parsed === "object" ? [parsed] : [];
   return items
     .filter(
-      (item): item is QuestionBlock =>
-        !!item &&
-        typeof item.q === "string" &&
-        Array.isArray(item.options) &&
-        item.options.every((o: unknown) => typeof o === "string")
+      (item): item is { q: string; options: unknown[]; multi?: unknown } =>
+        !!item && typeof item.q === "string" && Array.isArray(item.options)
     )
     .map((item) => ({
       q: item.q.trim().slice(0, 240),
-      options: withoutUiOptions(item.options).slice(0, 5),
+      options: withoutUiOptions(
+        item.options.map(optionLabel).filter((o): o is string => o !== null)
+      ).slice(0, 5),
       multi: !!item.multi,
     }))
     .filter((item) => item.q.length > 0 && item.options.length >= 1)
@@ -115,6 +133,23 @@ function sliceBalancedJson(raw: string, from: number): { json: string; end: numb
 }
 
 /**
+ * Fin d'un JSON tronqué : la première ligne, avant `bound`, qui ne commence
+ * pas comme une suite de JSON (`[ { " ] } ,`). C'est là que la prose reprend.
+ */
+function endOfTruncatedJson(raw: string, from: number, bound: number): number {
+  let pos = from;
+  while (pos < bound) {
+    const nl = raw.indexOf("\n", pos);
+    if (nl < 0 || nl >= bound) return bound;
+    const nextNl = raw.indexOf("\n", nl + 1);
+    const nextLine = raw.slice(nl + 1, nextNl < 0 || nextNl > bound ? bound : nextNl).trim();
+    if (nextLine && !/^[[\]{}",]/.test(nextLine)) return nl + 1;
+    pos = nl + 1;
+  }
+  return bound;
+}
+
+/**
  * Retire une liste à puces / numérotée en fin de message (et les lignes qui
  * recopient déjà les options). L'interface affiche ces choix en boutons.
  */
@@ -125,7 +160,7 @@ export function stripVisibleChoiceList(text: string, options?: string[]): string
     t = t
       .split("\n")
       .filter((line) => {
-        const cleaned = line.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, "").replace(/[*_]/g, "").trim().toLowerCase();
+        const cleaned = line.replace(CHOICE_ITEM_PREFIX, "").replace(/[*_]/g, "").trim().toLowerCase();
         return !cleaned || !optSet.has(cleaned);
       })
       .join("\n")
@@ -146,7 +181,18 @@ export function stripVisibleChoiceList(text: string, options?: string[]): string
  * Repli : le modèle a listé les choix en markdown sans bloc QUESTIONS.
  * On transforme la liste finale en boutons, et on ne garde que la question.
  */
-export function recoverQuestionsFromChoiceList(text: string): { text: string; questions: QuestionBlock[] } {
+export function recoverQuestionsFromChoiceList(
+  text: string,
+  opts: {
+    /**
+     * N'agir que si le texte qui précède la liste pose bien une question
+     * (se termine par « ? »). Dans l'espace utilisateur, le repli s'applique à
+     * toute réponse : sans ce garde-fou, une simple liste de conseils en fin de
+     * message deviendrait des boutons.
+     */
+    requireQuestion?: boolean;
+  } = {}
+): { text: string; questions: QuestionBlock[] } {
   const lines = text.replace(/\r\n/g, "\n").trim().split("\n");
   let i = lines.length - 1;
   while (i >= 0 && !lines[i].trim()) i--;
@@ -158,9 +204,10 @@ export function recoverQuestionsFromChoiceList(text: string): { text: string; qu
       i--;
       continue;
     }
-    const m = line.match(/^\s*(?:[-*•]|\d+[.)])\s+(.+)$/);
-    if (!m) break;
-    items.unshift(m[1].replace(/\s+/g, " ").trim());
+    if (!CHOICE_ITEM_PREFIX.test(line)) break;
+    const label = line.replace(CHOICE_ITEM_PREFIX, "").replace(/\*\*$/, "").replace(/\s+/g, " ").trim();
+    if (!label) break;
+    items.unshift(label);
     i--;
   }
   if (items.length < 2 || items.length > 6) return { text, questions: [] };
@@ -170,6 +217,7 @@ export function recoverQuestionsFromChoiceList(text: string): { text: string; qu
   const options = withoutUiOptions(items).slice(0, 5);
   if (options.length < 2) return { text, questions: [] };
   const q = (qText.split(/\n\n+/).pop() ?? qText).replace(/^#+\s*/, "").trim().slice(0, 240);
+  if (opts.requireQuestion && !/\?\s*[*_]*$/.test(q)) return { text, questions: [] };
   return { text: qText, questions: [{ q, options, multi: false }] };
 }
 
@@ -187,26 +235,59 @@ export const FOLLOWUPS_PROMPT_INSTRUCTION =
   "(4) ne liste PAS ces relances dans le texte visible — l'interface les affichera en boutons ; " +
   "(5) n'émets jamais plus d'un bloc FOLLOWUPS par réponse.";
 
+/**
+ * Une réponse peut contenir PLUSIEURS blocs QUESTIONS : le moteur de
+ * conversation diffuse le texte de chaque tour d'outils (recherche web…) et le
+ * navigateur les concatène. Le modèle peut donc avoir émis un bloc, appelé un
+ * outil, puis récrit sa réponse avec un nouveau bloc. On retire TOUS les blocs
+ * du texte visible et l'on garde les questions du DERNIER bloc complet — c'est
+ * la question effectivement posée. Un bloc tronqué (flux en cours, ou tour
+ * interrompu) est masqué sans jamais faire disparaître ce qui le suit.
+ */
 export function extractQuestions(raw: string): { text: string; questions: QuestionBlock[] } {
-  const marker = raw.match(QUESTIONS_MARKER_RE);
-  if (marker && marker.index !== undefined) {
-    const sliced = sliceBalancedJson(raw, marker.index + marker[0].length);
-    if (!sliced) {
-      return { text: raw.slice(0, marker.index).trim(), questions: [] };
-    }
+  const markers = Array.from(raw.matchAll(QUESTIONS_MARKER_RE))
+    .filter((m) => m.index !== undefined)
+    .map((m) => ({ start: m.index as number, afterMarker: (m.index as number) + m[0].length }));
+  if (markers.length) {
+    const hidden: { start: number; end: number }[] = [];
     let questions: QuestionBlock[] = [];
-    try {
-      questions = parseQuestionBlocks(JSON.parse(sliced.json));
-    } catch {
-      // ignore malformed block
+    markers.forEach(({ start, afterMarker }, idx) => {
+      const nextMarker = idx + 1 < markers.length ? markers[idx + 1].start : raw.length;
+      const sliced = sliceBalancedJson(raw, afterMarker);
+      if (!sliced || sliced.end > nextMarker) {
+        // JSON jamais refermé : on masque jusqu'à la fin du commentaire si
+        // elle existe avant tout autre signal ; sinon jusqu'à la première
+        // ligne qui n'a plus l'allure de JSON (la reprise en prose du tour
+        // suivant) ; à défaut jusqu'au signal suivant ou la fin du texte
+        // (flux en cours).
+        const nextComment = raw.indexOf("<!--", afterMarker);
+        const bound = Math.min(nextMarker, nextComment >= 0 ? nextComment : raw.length);
+        const closer = raw.indexOf("-->", afterMarker);
+        hidden.push({
+          start,
+          end: closer >= 0 && closer < bound ? closer + 3 : endOfTruncatedJson(raw, afterMarker, bound),
+        });
+        return;
+      }
+      const closer = raw.slice(sliced.end).match(/^\s*-->/);
+      hidden.push({ start, end: sliced.end + (closer ? closer[0].length : 0) });
+      try {
+        const parsed = parseQuestionBlocks(JSON.parse(sliced.json));
+        if (parsed.length) questions = parsed;
+      } catch {
+        // bloc mal formé : ignoré, un bloc précédent valide reste en vigueur
+      }
+    });
+
+    let visible = "";
+    let cursor = 0;
+    for (const seg of hidden) {
+      if (seg.start > cursor) visible += raw.slice(cursor, seg.start);
+      cursor = Math.max(cursor, seg.end);
     }
-    const after = raw.slice(sliced.end);
-    const closer = after.match(/^\s*-->/);
-    const end = sliced.end + (closer ? closer[0].length : 0);
-    const text = stripVisibleChoiceList(
-      (raw.slice(0, marker.index) + raw.slice(end)).trim(),
-      questions.flatMap((q) => q.options)
-    );
+    visible += raw.slice(cursor);
+
+    const text = stripVisibleChoiceList(visible.trim(), questions.flatMap((q) => q.options));
     return { text, questions };
   }
 

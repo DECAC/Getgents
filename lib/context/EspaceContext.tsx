@@ -22,7 +22,7 @@ import {
   getActiveConversation,
   newConversationId,
 } from "@/lib/conversationUtils";
-import { extractQuestions, extractFollowups } from "@/lib/suggestions";
+import { extractQuestions, extractFollowups, recoverQuestionsFromChoiceList } from "@/lib/suggestions";
 import { extractArtefactSignal } from "@/lib/artefactSignal";
 import { ARTEFACT_KIND_META, type WorkspaceArtefactKind } from "@/lib/artefactKind";
 import { convertArtefactToKind } from "@/lib/artefactConversion";
@@ -725,7 +725,14 @@ export function EspaceProvider({
       controller.signal
     )
       .then(({ text: fullRaw, reasoning, truncated }) => {
-        const afterQuestions = extractQuestions(fullRaw);
+        const extracted = extractQuestions(fullRaw);
+        // Repli : le modèle a posé une question et listé les choix en clair
+        // (puces, numéros, lettres) sans bloc QUESTIONS. Sans ce repli,
+        // l'utilisateur d'un gent « à choix » (jeu de rôle, QCM) se retrouve
+        // sans boutons et doit recopier une option à la main.
+        const afterQuestions = extracted.questions.length
+          ? extracted
+          : recoverQuestionsFromChoiceList(extracted.text, { requireQuestion: true });
         const afterFollowups = extractFollowups(afterQuestions.text);
         const afterArtefact = extractArtefactSignal(afterFollowups.text);
         const afterTheme = extractThemeTabSignal(afterArtefact.text);

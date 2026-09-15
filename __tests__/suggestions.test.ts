@@ -50,6 +50,49 @@ describe("extractQuestions", () => {
     expect(text).toBe("Question ?");
     expect(questions).toEqual([]);
   });
+
+  // Tours d'outils : le moteur diffuse le texte de chaque tour et le
+  // navigateur concatène. Le dernier bloc complet est la question réellement
+  // posée ; tous les blocs disparaissent du texte visible.
+  it("garde le DERNIER bloc complet quand la réponse en contient plusieurs", () => {
+    const raw =
+      'Je vérifie un chiffre.\n<!--QUESTIONS: [{"q":"Ancienne ?","options":["X","Y"]}]-->\n' +
+      'Situation — déficit à 5,8 %.\nQuestion — Quel levier ?\n<!--QUESTIONS: [{"q":"Quel levier ?","options":["Économies","Impôts","Dette"]}]-->';
+    const { text, questions } = extractQuestions(raw);
+    expect(questions).toHaveLength(1);
+    expect(questions[0].q).toBe("Quel levier ?");
+    expect(questions[0].options).toEqual(["Économies", "Impôts", "Dette"]);
+    expect(text).not.toMatch(/QUESTIONS/);
+    expect(text).toMatch(/Je vérifie un chiffre/);
+    expect(text).toMatch(/Quel levier \?$/);
+  });
+
+  it("un bloc tronqué en début de réponse ne fait pas disparaître la suite", () => {
+    const raw =
+      'Un instant.\n<!--QUESTIONS: [{"q":"Coupée","options":["A"\n' +
+      'Question — Quelle position sur les retraites ?\n<!--QUESTIONS: [{"q":"Quelle position sur les retraites ?","options":["Réforme","Statu quo"]}]-->';
+    const { text, questions } = extractQuestions(raw);
+    expect(questions[0].options).toEqual(["Réforme", "Statu quo"]);
+    expect(text).toMatch(/Quelle position sur les retraites \?/);
+    expect(text).not.toMatch(/Coupée|QUESTIONS/);
+  });
+
+  it("un bloc tronqué suivi de texte puis d'un FOLLOWUPS ne masque pas ce texte", () => {
+    const raw =
+      'Intro.\n<!--QUESTIONS: [{"q":"Coupée"\nTexte final visible.\n<!--FOLLOWUPS: ["Suite ?"]-->';
+    const { text, questions } = extractQuestions(raw);
+    expect(questions).toEqual([]);
+    expect(text).toMatch(/Intro\./);
+    expect(text).toMatch(/Texte final visible\./);
+    expect(text).toMatch(/<!--FOLLOWUPS/);
+  });
+
+  it("accepte des options sous forme d'objets { label }", () => {
+    const raw =
+      'Choix ?\n<!--QUESTIONS: [{"q":"Choix ?","options":[{"label":"Oui"},{"text":"Non"},42]}]-->';
+    const { questions } = extractQuestions(raw);
+    expect(questions[0].options).toEqual(["Oui", "Non"]);
+  });
 });
 
 describe("recoverQuestionsFromChoiceList", () => {
@@ -69,6 +112,25 @@ describe("recoverQuestionsFromChoiceList", () => {
 
   it("n'invente pas de question s'il n'y a pas de liste", () => {
     expect(recoverQuestionsFromChoiceList("Voici l'aperçu mis à jour.").questions).toEqual([]);
+  });
+
+  it("reconnaît une liste lettrée (A) B) C)) typique d'un jeu de rôle", () => {
+    const raw =
+      "Question — Quelle réponse à la crise des urgences ?\nA) Plan de revalorisation ciblé\nB) Recours à l'intérim\nC) Fermetures de nuit assumées";
+    const { text, questions } = recoverQuestionsFromChoiceList(raw, { requireQuestion: true });
+    expect(text).toBe("Question — Quelle réponse à la crise des urgences ?");
+    expect(questions[0].options).toEqual([
+      "Plan de revalorisation ciblé",
+      "Recours à l'intérim",
+      "Fermetures de nuit assumées",
+    ]);
+  });
+
+  it("avec requireQuestion, laisse intacte une liste qui ne suit pas une question", () => {
+    const raw = "Trois conseils pour la suite.\n- Relire le CV\n- Préparer l'entretien\n- Relancer le recruteur";
+    const { text, questions } = recoverQuestionsFromChoiceList(raw, { requireQuestion: true });
+    expect(questions).toEqual([]);
+    expect(text).toBe(raw);
   });
 });
 
