@@ -603,6 +603,9 @@ export function EspaceProvider({
     const gmail = espace.gmail;
     const restApis = espace.restApis;
     const webSearch = espace.webSearch;
+    // Moteur de jeu déterministe (ex. « Élysée 2027 ») : la route répondra
+    // sans appeler de modèle — ni clé ni quota côté serveur.
+    const moteurJeu = espace.moteurJeu;
     const thread = espace.conversations.find((t) => t.id === threadId);
     const history = [...(thread?.messages ?? []), userMsg]
       .filter((m) => m.role === "agent" || m.role === "user")
@@ -690,6 +693,7 @@ export function EspaceProvider({
         gentId: id,
         restApis,
         webSearch,
+        jeu: moteurJeu,
       },
       (fullSoFar, reasoningSoFar) => {
         const displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;

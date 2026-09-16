@@ -14,6 +14,7 @@ import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 import { notifierUsageInvite } from "@/lib/server/signalements";
 import { langueDeLEnTete } from "@/lib/langue";
 import { mesurerReponse, porteDuContenu, porteUnSigne, type InstantsReponse } from "@/lib/chatTiming";
+import { reponseSseElysee } from "@/lib/elysee2027/serveur";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -105,6 +106,13 @@ export async function POST(req: Request, { params }: Params) {
     token,
     label: link.targetLabel,
   });
+
+  // Moteur de jeu déterministe (ex. « Élysée 2027 ») : la réponse sort des
+  // règles du jeu, sans modèle. Ni clé ni quota ne sont consommés — un jeu
+  // partagé massivement ne coûte rien au propriétaire ni à la plateforme.
+  if (espace.moteurJeu) {
+    return reponseSseElysee(history);
+  }
 
   // Appel DIRECT du moteur de conversation, sans repasser par HTTP.
   //

@@ -36,6 +36,8 @@ import { resolveModelId } from "@/lib/allowedModels";
 import { enTetesOpenRouter, noterEchecCle, type ContexteLlm } from "@/lib/server/openRouterKey";
 import { messageCleOpenRouter } from "@/lib/openRouterKey";
 import { DECLARATION_RECHERCHE_WEB, creerOutilRechercheWeb } from "@/lib/server/webTool";
+import { MOTEUR_ELYSEE } from "@/lib/elysee2027/moteur";
+import { reponseSseElysee } from "@/lib/elysee2027/serveur";
 import {
   applyToolCallDelta,
   flattenToolRoundForRetry,
@@ -71,6 +73,13 @@ export interface ChatBody {
   gentId?: string;
   restApis?: RestApiConnector[];
   webSearch?: boolean;
+  /**
+   * Moteur de jeu déterministe (ex. "elysee-2027") : la réponse est produite
+   * par les règles du jeu, SANS appel à OpenRouter — ni clé, ni quota, ni
+   * facturation. Le garde-fou de facturation `ContexteLlm` reste exigé par la
+   * signature, mais n'est pas consommé sur ce chemin.
+   */
+  jeu?: string;
 }
 
 /**
@@ -121,6 +130,13 @@ export async function chatResponseFor(
   ctx: ContexteLlm,
   source: string
 ): Promise<Response> {
+  // Moteur de jeu déterministe : réponse immédiate, sans clé ni fournisseur.
+  // Placé AVANT toute logique de clé ou de modèle : ce chemin ne doit rien
+  // coûter ni dépendre d'OpenRouter, même pas en repli.
+  if (body.jeu === MOTEUR_ELYSEE) {
+    return reponseSseElysee(body.messages ?? []);
+  }
+
   const key = ctx.cle;
   // Le modèle — donc le prix au token — était choisi par l'appelant et relayé
   // tel quel à OpenRouter. Sur une route sans authentification, cela revient à

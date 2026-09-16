@@ -147,6 +147,11 @@ export interface GentDraft {
   starters?: string[];
   /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
   jumpForm?: JumpForm;
+  /**
+   * Moteur de jeu déterministe (ex. "elysee-2027") : le chat répond via les
+   * règles du jeu, SANS appel à un modèle de langage ni à OpenRouter.
+   */
+  moteurJeu?: string;
   /** Routine planifiée (mission exécutée automatiquement côté serveur). */
   routine?: import("@/lib/types").Routine;
   /** Canal de diffusion de la note produite par la routine (WhatsApp…). */

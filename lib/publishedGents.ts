@@ -693,6 +693,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     gmail: gmail || undefined,
     restApis: restApis.length ? restApis : undefined,
     jumpForm: draft.jumpForm,
+    moteurJeu: draft.moteurJeu,
     routine: draft.routine,
     channel: draft.channel,
     pinnedArtefact: draft.pinnedArtefact,
