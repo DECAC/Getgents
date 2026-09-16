@@ -17,6 +17,12 @@ export interface QuestionBlock {
   q: string;
   options: string[];
   multi?: boolean;
+  /**
+   * Faux pour interdire la réponse libre : l'interface n'ajoute alors PAS le
+   * choix « Autre » (jeux à choix fermés, ex. le moteur « Élysée 2027 »).
+   * Absent ou vrai, le comportement historique est conservé.
+   */
+  allowOther?: boolean;
 }
 
 /** Ajoutée automatiquement par l'interface — ne pas demander au modèle de l'inclure. */
@@ -74,7 +80,7 @@ function parseQuestionBlocks(parsed: unknown): QuestionBlock[] {
   const items = Array.isArray(parsed) ? parsed : parsed && typeof parsed === "object" ? [parsed] : [];
   return items
     .filter(
-      (item): item is { q: string; options: unknown[]; multi?: unknown } =>
+      (item): item is { q: string; options: unknown[]; multi?: unknown; allowOther?: unknown } =>
         !!item && typeof item.q === "string" && Array.isArray(item.options)
     )
     .map((item) => ({
@@ -83,6 +89,9 @@ function parseQuestionBlocks(parsed: unknown): QuestionBlock[] {
         item.options.map(optionLabel).filter((o): o is string => o !== null)
       ).slice(0, 5),
       multi: !!item.multi,
+      // Seul `false` explicite est retenu : l'absence du champ conserve le
+      // comportement historique (l'interface ajoute le choix « Autre »).
+      allowOther: item.allowOther === false ? false : undefined,
     }))
     .filter((item) => item.q.length > 0 && item.options.length >= 1)
     .slice(0, 6);

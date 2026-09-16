@@ -16,11 +16,13 @@ interface Props {
   showTrust?: boolean;
 }
 
-function optionsWithUiOptions(options: string[], showTrust: boolean): string[] {
+function optionsWithUiOptions(options: string[], showTrust: boolean, allowOther: boolean): string[] {
   const trimmed = options.map((o) => o.trim()).filter(Boolean);
-  const out = trimmed.some((o) => o.toLowerCase() === QUICK_REPLY_OTHER_LABEL.toLowerCase())
-    ? [...trimmed]
-    : [...trimmed, QUICK_REPLY_OTHER_LABEL];
+  // `allowOther === false` (jeux à choix fermés) : pas de réponse libre.
+  const out =
+    !allowOther || trimmed.some((o) => o.toLowerCase() === QUICK_REPLY_OTHER_LABEL.toLowerCase())
+      ? [...trimmed]
+      : [...trimmed, QUICK_REPLY_OTHER_LABEL];
   if (showTrust && !out.some((o) => o.toLowerCase() === QUICK_REPLY_TRUST_LABEL.toLowerCase())) {
     out.push(QUICK_REPLY_TRUST_LABEL);
   }
@@ -115,7 +117,7 @@ export function QuickReplyQuestions({ questions, onSubmit, showTrust = false }: 
   return (
     <div className={styles.wrap} role="group" aria-label="Réponses proposées">
       {questions.map((q, i) => {
-        const displayOptions = optionsWithUiOptions(q.options, showTrust);
+        const displayOptions = optionsWithUiOptions(q.options, showTrust, q.allowOther !== false);
         const selected = selections[i] ?? [];
         const otherActive = selected.some(isOtherOption);
 
