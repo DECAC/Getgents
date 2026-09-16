@@ -1,0 +1,88 @@
+/**
+ * « Élysée 2027 » — jeu de rôle présidentiel SANS modèle de langage.
+ *
+ * Ce module est volontairement déterministe : aucune donnée de ce dossier ne
+ * transite par OpenRouter ni par aucun LLM. L'état de la partie est reconstruit
+ * à chaque tour en REJOUANT l'historique des messages — le serveur est sans
+ * état, le fil de conversation fait office de sauvegarde.
+ *
+ * Sources des chiffres cités dans les situations (aucun chiffre inventé) :
+ *  - Cour des comptes, Rapport public annuel 2026 « Cohésion territoriale et
+ *    attractivité des territoires » — synthèses (mars 2026) ;
+ *  - INSEE, Rapport annuel 2025 ;
+ *  - Banque de France, Rapport annuel 2025.
+ */
+
+/** Les cinq jauges de la partie, toutes sur 0-100. */
+export type JaugeId = "bonheur" | "confiance" | "pouvoirAchat" | "finances" | "cohesion";
+
+export const JAUGES: { id: JaugeId; label: string }[] = [
+  { id: "bonheur", label: "Bonheur" },
+  { id: "confiance", label: "Confiance" },
+  { id: "pouvoirAchat", label: "Pouvoir d'achat" },
+  { id: "finances", label: "Finances" },
+  { id: "cohesion", label: "Cohésion" },
+];
+
+/**
+ * Effet d'une réponse sur les jauges, en points (−12 à +12 par jauge et par
+ * tour — borne d'équilibrage du jeu). Les cinq clés sont TOUJOURS présentes :
+ * chaque réponse affiche son influence complète, y compris quand elle est
+ * nulle sur une jauge (0).
+ */
+export type Effets = Record<JaugeId, number>;
+
+export interface OptionDecision {
+  /** Libellé du bouton — court, c'est un choix cliquable. */
+  label: string;
+  /** Conséquence racontée au joueur (2 à 4 phrases, ton expert, non partisan). */
+  consequence: string;
+  effets: Effets;
+  /** Identifiant d'une décision enchaînée si ce choix est fait (arbre). */
+  suite?: string;
+}
+
+export interface Decision {
+  id: string;
+  theme: string;
+  titre: string;
+  /** Mise en contexte : 2 à 4 phrases avec au moins un chiffre sourcé. */
+  situation: string;
+  question: string;
+  /** Exactement 4 réponses — le choix « Autre » est exclu par le jeu. */
+  options: [OptionDecision, OptionDecision, OptionDecision, OptionDecision];
+}
+
+export type Difficulte = "apaisee" | "realiste" | "tempete";
+
+export const DIFFICULTES: Record<
+  Difficulte,
+  { label: string; jauges: Record<JaugeId, number> }
+> = {
+  apaisee: {
+    label: "Apaisée",
+    jauges: { bonheur: 55, confiance: 50, pouvoirAchat: 50, finances: 45, cohesion: 60 },
+  },
+  realiste: {
+    label: "Réaliste",
+    jauges: { bonheur: 45, confiance: 38, pouvoirAchat: 42, finances: 35, cohesion: 50 },
+  },
+  tempete: {
+    label: "Tempête",
+    jauges: { bonheur: 38, confiance: 30, pouvoirAchat: 36, finances: 25, cohesion: 42 },
+  },
+};
+
+/** Seuils de fin de partie (règles du jeu, reprises de la V0). */
+export const SEUILS = {
+  revolution: { jauge: "bonheur" as JaugeId, max: 15 },
+  guerreCivile: { jauge: "cohesion" as JaugeId, max: 10 },
+  tutelle: { jauge: "finances" as JaugeId, max: 5 },
+  victoire: { bonheur: 80, confiance: 70, toursConsecutifs: 2 },
+  victoireFinDeMandat: { bonheur: 65 },
+  alerteBasse: 25,
+  alerteHaute: 75,
+};
+
+/** Borne d'équilibrage : jamais plus de ±12 points sur une jauge par tour. */
+export const AMPLITUDE_MAX = 12;
