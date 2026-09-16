@@ -115,6 +115,8 @@ export async function streamChatCompletion(
     gentId?: string;
     restApis?: RestApiConnector[];
     webSearch?: boolean;
+    /** Moteur de jeu déterministe : la route répond sans appeler de LLM. */
+    jeu?: string;
   },
   onToken: (fullTextSoFar: string, fullReasoningSoFar: string) => void,
   onToolEvent?: (ev: ToolEvent) => void,

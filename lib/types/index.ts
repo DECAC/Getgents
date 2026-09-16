@@ -441,6 +441,11 @@ export interface Espace {
   restApis?: RestApiConnector[];
   /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
   jumpForm?: JumpForm;
+  /**
+   * Moteur de jeu déterministe (ex. "elysee-2027") : le chat répond via les
+   * règles du jeu, SANS appel à un modèle de langage ni à OpenRouter.
+   */
+  moteurJeu?: string;
   /** Recherche web activée pour ce gent (plugin web OpenRouter). */
   webSearch?: boolean;
   /** Profil utilisateur validé (onboarding/CV) — réinjecté dans le prompt système. */
