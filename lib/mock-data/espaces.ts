@@ -1,4 +1,6 @@
 import type { EspacesMap } from "@/lib/types";
+import { GENT_DRAFTS } from "@/lib/mock-data/builder";
+import { draftToEspace } from "@/lib/publishedGents";
 
 const ICON_REPORT =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v5h5"/><path d="M19 8v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7z"/><path d="M9 13h6M9 17h4"/></svg>';
@@ -412,4 +414,11 @@ export const ESPACES: EspacesMap = {
       },
     ],
   },
+
+  // Jeu déterministe « Élysée 2027 » : l'espace est DÉRIVÉ du brouillon du
+  // studio (même source, jamais de divergence) pour être jouable immédiatement
+  // — sans Preview préalable ni ligne en base. Le chat est répondu par le
+  // moteur de règles (moteurJeu), sans modèle de langage : la partie ne coûte
+  // rien, donc la démo peut être ouverte à tous.
+  "elysee-2027": draftToEspace(GENT_DRAFTS["elysee-2027"]),
 };

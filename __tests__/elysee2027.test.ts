@@ -4,6 +4,7 @@ import { DECISIONS, ORDRE_CANONIQUE, PRIORITE_VERS_DECISION, decisionParId } fro
 import { reponseJeuElysee } from "@/lib/elysee2027/moteur";
 import { AMPLITUDE_MAX, DIFFICULTES, JAUGES } from "@/lib/elysee2027/types";
 import { extractQuestions } from "@/lib/suggestions";
+import { ESPACES } from "@/lib/mock-data/espaces";
 
 /* ------------------------------------------------------------------ */
 /* Les données : 50 décisions valides et sourcées                      */
@@ -231,5 +232,15 @@ describe("elysee2027 — moteur", () => {
     const reponse = reponseJeuElysee([{ role: "user", content: "Bonjour, c'est quoi ce gent ?" }]);
     expect(reponse).toContain("Nouvelle partie");
     expect(questionEnCours(reponse).allowOther).toBe(false);
+  });
+
+  test("l'espace de démonstration existe et est branché sur le moteur", () => {
+    // /espace/elysee-2027 doit se charger SANS serveur : l'espace vient du
+    // catalogue statique, dérivé du brouillon du studio.
+    const espace = ESPACES["elysee-2027"];
+    expect(espace).toBeDefined();
+    expect(espace.moteurJeu).toBe("elysee-2027");
+    expect(espace.jumpForm?.fields.length).toBeGreaterThan(0);
+    expect(espace.conversations.length).toBeGreaterThan(0);
   });
 });
