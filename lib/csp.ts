@@ -26,9 +26,18 @@ export interface OptionsCsp {
    * l'y autoriser ouvrirait au détournement de clic.
    */
   encadrable?: boolean;
+  /**
+   * `true` en développement SEULEMENT. Le rechargement à chaud de Next évalue
+   * du code par `eval` : sans cette ouverture, la page ne s'hydrate jamais en
+   * local — l'espace reste bloqué sur « Ouverture de l'aperçu… », et l'on
+   * croit à une régression de l'application. En production, le bundle n'a
+   * aucun besoin d'`eval` : l'autoriser là serait rendre le XSS exploitable
+   * malgré tout le reste.
+   */
+  developpement?: boolean;
 }
 
-export function politiqueCsp({ nonce, encadrable = false }: OptionsCsp): string {
+export function politiqueCsp({ nonce, encadrable = false, developpement = false }: OptionsCsp): string {
   return [
     "default-src 'self'",
     "base-uri 'self'",
@@ -45,7 +54,9 @@ export function politiqueCsp({ nonce, encadrable = false }: OptionsCsp): string 
     // comprend `strict-dynamic` ; ils ne servent que de repli pour les
     // navigateurs restés à CSP niveau 1, où ils valent mieux qu'un site cassé.
     // Les retirer ne renforcerait rien et casserait ces navigateurs-là.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-inline' https:`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-inline' https:${
+      developpement ? " 'unsafe-eval'" : ""
+    }`,
 
     // Les styles gardent `'unsafe-inline'`, et c'est un arbitrage assumé :
     // React pose des attributs `style`, Next injecte ses styles critiques, et
