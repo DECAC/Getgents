@@ -64,7 +64,13 @@ export async function middleware(request: NextRequest) {
   const nonce = nouveauNonce();
   // Les liens de partage ont vocation à être intégrés chez un tiers.
   const encadrable = pathname.startsWith("/l/");
-  const csp = politiqueCsp({ nonce, encadrable });
+  const csp = politiqueCsp({
+    nonce,
+    encadrable,
+    // Le serveur de développement recharge à chaud par `eval` : la politique
+    // de production l'en empêche et rien ne s'hydrate en local.
+    developpement: process.env.NODE_ENV !== "production",
+  });
 
   const enTetes = new Headers(request.headers);
   enTetes.set("x-nonce", nonce);

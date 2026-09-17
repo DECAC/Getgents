@@ -35,6 +35,15 @@ describe("politiqueCsp", () => {
     expect(d["img-src"]).toContain("data:");
   });
 
+  it("n'autorise jamais eval en production, et l'autorise en développement", () => {
+    // `eval` est la porte par laquelle un XSS reprend la main malgré le nonce :
+    // elle ne s'ouvre que pour le rechargement à chaud du serveur local.
+    expect(d["script-src"]).not.toContain("'unsafe-eval'");
+    const dev = directives(politiqueCsp({ nonce: NONCE, developpement: true }));
+    expect(dev["script-src"]).toContain("'unsafe-eval'");
+    expect(dev["script-src"]).toContain(`'nonce-${NONCE}'`);
+  });
+
   it("refuse l'encadrement par défaut, l'autorise pour un lien de partage", () => {
     expect(d["frame-ancestors"]).toBe("'self'");
     expect(directives(politiqueCsp({ nonce: NONCE, encadrable: true }))["frame-ancestors"]).toBe("*");
