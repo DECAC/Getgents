@@ -119,6 +119,11 @@ export function espaceForPublicLink(espace: Espace): Espace {
     // POUR les participants — ils passent tels quels. Aucun secret n'y vit.
     collab: espace.collab?.enabled ? espace.collab : undefined,
     jumpForm: espace.jumpForm,
+    // Moteur de jeu : c'est une RÈGLE PUBLIQUE du gent, pas une donnée du
+    // créateur. Absent de cette liste blanche, le navigateur du visiteur
+    // ignorait qu'il joue — il n'aurait plus su qu'il tient une partie, alors
+    // que la route, elle, répond bien par le moteur.
+    moteurJeu: espace.moteurJeu,
     // Les déclencheurs décrivent les usages du gent, pas l'activité de son
     // créateur : ils sont donc transmis tels quels au destinataire, à qui ils
     // servent encore plus qu'à lui (il découvre le gent).

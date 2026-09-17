@@ -3,6 +3,7 @@ import { chatResponseFor, type ChatBody } from "@/lib/server/chatEngine";
 import { requireUserWithQuota } from "@/lib/server/gentGuard";
 import { requireUser } from "@/lib/server/session";
 import { messageCleOpenRouter } from "@/lib/openRouterKey";
+import { MOTEUR_ELYSEE } from "@/lib/elysee2027/moteur";
 
 // Un tour avec boucle d'outils (MCP, datasets, API REST) peut être long.
 export const maxDuration = 300;
@@ -21,7 +22,12 @@ export async function POST(req: NextRequest) {
   // donc AUCUN quota consommé et AUCUNE clé OpenRouter exigée — c'est tout
   // l'intérêt du jeu débranché. La session reste obligatoire. Le contexte
   // facturation est un leurre typé : ce chemin n'appelle jamais OpenRouter.
-  if (body.jeu) {
+  //
+  // La condition porte sur l'identifiant EXACT du moteur, et non sur la
+  // présence du champ : `jeu: "n-importe-quoi"` sautait la garde de quota
+  // puis retombait sur le chemin LLM avec une clé vide — une porte de sortie
+  // du compteur de facturation, exactement ce que la discipline interdit.
+  if (body.jeu === MOTEUR_ELYSEE) {
     const auth = await requireUser();
     if ("response" in auth) return auth.response;
     return chatResponseFor(body, { ownerId: auth.user.id, cle: "", source: "plateforme" }, "jeu");
