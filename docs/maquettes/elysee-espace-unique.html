@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Élysée 2027 en espace unique (artefact figé, sans conversation)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Jetons et conventions reprises du dépôt : styles/tokens.css,
+   PinnedArtefactPanel.module.css (cadre mini-app, bandeau d'accent, badge),
+   JumpFormCard.module.css (formulaire de lancement), QuickReplyQuestions
+   (marqueur de choix). Police Sora, comme toute l'application. */
+:root{
+  --ink:#2a1f19; --muted:#73665f; --faint:#a2958f;
+  --bg:#fbf3ed; --card:#fffdf9; --line:#eadbd3; --line-soft:#f3e9e3;
+  --sage:#e65d76; --sage-700:#c73758; --sage-tint:#ffdee2;
+  --gold:#dca331; --gold-tint:#fde4bb;
+  --plum:#d64651; --plum-tint:#ffdbda;
+  --success:#57a45b; --success-tint:#d4f1d4;
+  --blue:#4f7cc9; --blue-700:#3a5fa3; --blue-tint:#dbe7fb;
+  --r-pill:999px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:15px/1.55 "Sora",system-ui,sans-serif;
+}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ===== En-tête du gent (identique à la page d'un lien de partage) ===== */
+.entete{
+  display:flex;align-items:center;gap:12px;padding:12px 20px;
+  background:var(--card);border-bottom:1px solid var(--line)
+}
+.marque{
+  width:34px;height:34px;border-radius:10px;background:var(--sage-tint);color:var(--sage-700);
+  display:grid;place-items:center;font-weight:800;font-size:13px;flex:none
+}
+.enteteTitre{font-size:16px;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.actif{font-size:11px;font-weight:700;color:var(--success);background:var(--success-tint);padding:2px 8px;border-radius:var(--r-pill)}
+.enteteSous{font-size:12px;color:var(--muted)}
+
+/* ===== L'espace : une seule colonne, un seul objet ===== */
+.espace{max-width:980px;margin:0 auto;padding:18px 20px 40px}
+
+/* Cadre mini-app : bandeau d'accent, badge, titre Sora — comme l'artefact
+   figé du gent LinkedIn en production. */
+.miniapp{
+  background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);transition:box-shadow .4s,border-color .4s
+}
+.accent{height:4px;background:linear-gradient(90deg,var(--sage),var(--sage),var(--gold))}
+.miniapp.tension{border-color:var(--plum);box-shadow:0 0 0 3px var(--plum-tint)}
+.miniapp.tension .accent{background:linear-gradient(90deg,var(--plum),var(--plum),var(--gold))}
+
+.tete{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:13px 18px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap
+}
+.teteGauche{display:flex;align-items:center;gap:10px;min-width:0}
+.badge{
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--sage);background:var(--sage-tint);padding:3px 8px;border-radius:6px;flex:none
+}
+.titre{font-size:17px;font-weight:700;letter-spacing:-.02em;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.teteActions{display:flex;align-items:center;gap:10px;flex:none}
+.etatPartie{font-size:11.5px;color:var(--muted)}
+.btnSecondaire{
+  font:inherit;font-size:12px;font-weight:600;color:var(--muted);
+  border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 11px;cursor:pointer
+}
+.btnSecondaire:hover{color:var(--ink);border-color:var(--sage)}
+
+/* ===== Lancement : le formulaire est le SEUL point d'entrée ===== */
+.lancement{padding:20px 18px 22px;max-width:620px}
+.pitch{margin:0 0 16px;font-size:13.5px;color:var(--muted)}
+.champs{display:flex;flex-direction:column;gap:11px}
+.champ{display:flex;flex-direction:column;gap:5px}
+.champLabel{font-size:12px;font-weight:600}
+.req{color:var(--sage)}
+.champ select,.champ input{
+  font:inherit;font-size:13px;color:var(--ink);padding:9px 12px;
+  border:1px solid var(--line);border-radius:9px;background:var(--bg)
+}
+.champ select:focus,.champ input:focus{outline:none;border-color:var(--sage);box-shadow:0 0 0 3px var(--sage-tint)}
+.lancer{
+  margin-top:16px;display:inline-flex;align-items:center;gap:8px;font:inherit;font-weight:700;font-size:14px;
+  background:var(--sage);color:#fff;border:0;border-radius:var(--r-pill);padding:11px 20px;cursor:pointer
+}
+.lancer:hover{background:var(--sage-700)}
+
+/* ===== Tableau de bord ===== */
+.tableau{border-bottom:1px solid var(--line-soft)}
+.frise{display:flex;align-items:center;gap:12px;padding:10px 18px 8px}
+.plots{display:flex;gap:4px;flex:1}
+.plot{height:6px;flex:1;border-radius:3px;background:var(--line)}
+.plotJoue{background:var(--blue)}
+.plotCourant{background:var(--sage);box-shadow:0 0 0 2px var(--sage-tint)}
+.tourTexte{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.difficulte{font-size:11px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);background:var(--blue-tint);color:var(--blue-700);white-space:nowrap}
+.difficulte.chaud{background:var(--plum-tint);color:var(--plum)}
+
+.jauges{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;border-top:1px solid var(--line-soft)}
+.jauge{padding:9px 16px;border-right:1px solid var(--line-soft);transition:background .4s}
+.jauge:last-child{border-right:0}
+.label{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.etiquette{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue-700);background:var(--blue-tint);padding:2px 6px;border-radius:var(--r-pill);margin-left:6px}
+.chiffres{display:flex;align-items:baseline;gap:7px;margin:1px 0 5px}
+.valeur{font-size:23px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.maitresse .valeur{font-size:34px}
+.maitresse{background:var(--line-soft)}
+.delta{font-size:11.5px;font-weight:700;padding:1px 6px;border-radius:var(--r-pill);min-width:32px;text-align:center}
+.hausse{background:var(--success-tint);color:#2f6b33}
+.baisse{background:var(--plum-tint);color:var(--plum)}
+.stable{background:var(--line-soft);color:var(--faint)}
+.piste{position:relative;height:9px;border-radius:5px;background:#fff;border:1px solid var(--line-soft);overflow:hidden}
+.maitresse .piste{height:11px;background:var(--card)}
+.zoneBasse{position:absolute;inset:0 auto 0 0;width:25%;background:var(--plum-tint)}
+.zoneHaute{position:absolute;inset:0 0 0 auto;width:25%;background:var(--gold-tint)}
+.remplissage{position:absolute;top:0;bottom:0;left:0;border-radius:5px;background:var(--blue);transition:width .7s cubic-bezier(.2,.8,.2,1),background .4s}
+.seuil{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--plum);opacity:.8}
+.jauge.alerte{background:var(--plum-tint)}
+.jauge.alerte .remplissage{background:var(--plum);animation:battement 1.5s ease-in-out infinite}
+.jauge.alerte .label{color:var(--plum)}
+.jauge.recompense{background:var(--gold-tint)}
+.jauge.recompense .remplissage{background:var(--gold)}
+.jauge.recompense .label{color:#8a5f13}
+@keyframes battement{0%,100%{opacity:1}50%{opacity:.45}}
+.jauge.bouge .valeur{animation:saut .55s ease-out}
+@keyframes saut{0%{transform:scale(1)}35%{transform:scale(1.2)}100%{transform:scale(1)}}
+
+.bande{display:grid;grid-template-columns:1.1fr 1fr 1.6fr;border-top:1px solid var(--line-soft)}
+.case{padding:8px 16px;border-right:1px solid var(--line-soft);font-size:12.5px;min-width:0}
+.case:last-child{border-right:0}
+.caseTitre{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-weight:700}
+.menaceChaude{background:var(--plum-tint);color:var(--plum)}
+.menaceChaude .caseTitre{color:var(--plum)}
+.condition{display:inline-flex;align-items:center;gap:5px;margin-right:12px}
+.pastille{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}
+.tenue{color:#2f6b33;font-weight:600}
+.tenue .pastille{background:var(--success)}
+.serie{margin-top:2px;font-size:11.5px;color:var(--muted)}
+.dernier{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dernierDetail{display:block;color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Franchissements du tour */
+.signaux{display:flex;gap:8px;flex-wrap:wrap;padding:7px 18px;border-top:1px solid var(--line-soft)}
+.signal{font-size:12px;font-weight:600;padding:3px 10px;border-radius:var(--r-pill);animation:apparition .4s ease-out}
+.signalAlerte{background:var(--plum);color:#fff}
+.signalRecompense{background:var(--gold);color:#4a3208}
+@keyframes apparition{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+/* ===== Section questions / réponses ===== */
+.qa{padding:18px;animation:entree .45s ease-out}
+@keyframes entree{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.qaHaut{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.chip{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--blue-700);background:var(--blue-tint);padding:3px 9px;border-radius:var(--r-pill)}
+.theme{font-size:12.5px;color:var(--muted)}
+
+/* Conséquence du tour précédent : c'est la seule narration, il n'y a plus de
+   conversation pour la porter. */
+.consequence{
+  border-left:3px solid var(--sage);background:var(--bg);border-radius:0 10px 10px 0;
+  padding:11px 14px;margin-bottom:14px;font-size:13.5px
+}
+.consequenceTitre{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--sage-700);margin-bottom:4px}
+.situation{margin:0 0 14px;font-size:14px}
+.question{margin:0 0 12px;font-size:16.5px;font-weight:700;letter-spacing:-.01em}
+.options{display:flex;flex-direction:column;gap:8px;max-width:760px}
+.option{
+  display:flex;align-items:center;gap:11px;text-align:left;font:inherit;font-size:14px;color:var(--ink);
+  background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;
+  transition:border-color .15s,background .15s,transform .15s
+}
+.option:hover{border-color:var(--sage);background:var(--sage-tint)}
+.option:active{transform:scale(.995)}
+.option:disabled{opacity:.5;cursor:default}
+.marqueur{
+  width:22px;height:22px;border-radius:50%;background:var(--line-soft);color:var(--muted);
+  display:grid;place-items:center;font-size:11.5px;font-weight:700;flex:none
+}
+.option:hover .marqueur{background:var(--sage);color:#fff}
+.attente{font-size:13px;color:var(--muted);padding:6px 0}
+
+/* Journal du mandat */
+.journal{border-top:1px solid var(--line-soft);padding:14px 18px;background:var(--bg)}
+.journalTitre{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.journalLigne{display:flex;gap:10px;font-size:12.5px;padding:6px 0;border-top:1px solid var(--line-soft)}
+.journalLigne:first-of-type{border-top:0}
+.journalTour{font-weight:700;white-space:nowrap;color:var(--muted)}
+.journalDetail{color:var(--muted)}
+
+/* ===== Fin de partie ===== */
+.fin{padding:18px;border-top:1px solid var(--line-soft);animation:entree .5s ease-out}
+.finGagnee{background:var(--gold-tint)}
+.finPerdue{background:var(--plum-tint)}
+.finNeutre{background:var(--line-soft)}
+.finTete{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.finIcone{font-size:30px;line-height:1}
+.finTitre{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.finTexte{margin:0 0 12px;font-size:13.5px}
+.finBilan{font-size:13px;margin-bottom:14px}
+.finBilan ol{margin:6px 0 0;padding-left:20px}
+.rejouer{display:flex;gap:8px;flex-wrap:wrap}
+.rejouerBtn{font:inherit;font-size:13px;font-weight:700;background:var(--sage);color:#fff;border:0;border-radius:var(--r-pill);padding:9px 16px;cursor:pointer}
+.rejouerBtn:hover{background:var(--sage-700)}
+
+@media (max-width:1000px){
+  .jauges{grid-template-columns:1.5fr 1fr 1fr}
+  .jauge{border-bottom:1px solid var(--line-soft)}
+  .bande{grid-template-columns:1fr 1fr}
+}
+@media (max-width:640px){
+  .jauges{grid-template-columns:1fr 1fr}
+  .bande{grid-template-columns:1fr}
+  .maitresse .valeur{font-size:30px}
+}
+
+/* ===== Panneau de démonstration ===== */
+.demo{max-width:980px;margin:0 auto;padding:0 20px 40px}
+.demoBoite{background:#fff;border:1px dashed var(--line);border-radius:14px;padding:12px 16px}
+.demoBoite h3{margin:0 0 4px;font-size:13px}
+.demoBoite p{margin:0 0 10px;font-size:12.5px;color:var(--muted)}
+.demoBoite button{font:inherit;font-size:12.5px;background:var(--line-soft);border:1px solid var(--line);border-radius:var(--r-pill);padding:7px 13px;cursor:pointer;margin:0 6px 6px 0}
+.demoBoite button:hover{background:var(--sage-tint);border-color:var(--sage)}
+</style>
+</head>
+<body>
+<h2 class="sr-only">Maquette du jeu Élysée 2027 en espace unique : cadre mini-app, formulaire de lancement unique, tableau de bord de jauges et section questions-réponses successives, sans fenêtre de conversation.</h2>
+
+<header class="entete">
+  <span class="marque" aria-hidden="true">GG</span>
+  <div>
+    <div class="enteteTitre">Élysée 2027 — Dans la peau du président <span class="actif">Actif</span></div>
+    <div class="enteteSous">Propulsé par Charles de Cassan · version 1</div>
+  </div>
+</header>
+
+<main class="espace">
+  <section class="miniapp" id="miniapp" aria-label="Élysée 2027">
+    <div class="accent"></div>
+
+    <div class="tete">
+      <div class="teteGauche">
+        <span class="badge">Mini-app</span>
+        <h2 class="titre">🏛️ Conseil de défense</h2>
+      </div>
+      <div class="teteActions">
+        <span class="etatPartie" id="etatPartie">Aucune partie en cours</span>
+        <button type="button" class="btnSecondaire" id="btnJournal" hidden>Journal</button>
+        <button type="button" class="btnSecondaire" id="btnNouvelle" hidden>Nouvelle partie</button>
+      </div>
+    </div>
+
+    <!-- ========== ÉTAT 1 — LANCEMENT : le seul point d'entrée ========== -->
+    <div class="lancement" id="lancement">
+      <p class="pitch">
+        Vous venez d'être élu(e) président(e) de la République. Chaque décision fait bouger cinq jauges du
+        pays, du bonheur aux finances publiques. Toutes les situations s'appuient sur des chiffres publics
+        sourcés (Cour des comptes, INSEE, Banque de France). Réglez votre mandat, puis entrez en fonction.
+      </p>
+      <div class="champs">
+        <label class="champ">
+          <span class="champLabel">Difficulté <span class="req">*</span></span>
+          <select id="fDifficulte">
+            <option value="apaisee">Apaisée — un pays qui vous fait encore confiance</option>
+            <option value="realiste" selected>Réaliste — un pays tendu, entre attentes et défiance</option>
+            <option value="tempete">Tempête — un pays ébranlé, chaque décision sera un combat</option>
+          </select>
+        </label>
+        <label class="champ">
+          <span class="champLabel">Priorité affichée de votre mandat <span class="req">*</span></span>
+          <select id="fPriorite">
+            <option>Pouvoir d'achat</option>
+            <option>Services publics (santé, école)</option>
+            <option>Transition écologique</option>
+            <option>Sécurité et cohésion</option>
+            <option>Réindustrialisation et emploi</option>
+            <option selected>Redressement des finances publiques</option>
+          </select>
+        </label>
+        <label class="champ">
+          <span class="champLabel">Format <span class="req">*</span></span>
+          <select id="fDuree">
+            <option value="8">Partie courte — 8 décisions</option>
+            <option value="15" selected>Mandat complet — 15 décisions</option>
+          </select>
+        </label>
+        <label class="champ">
+          <span class="champLabel">Comment souhaitez-vous être appelé(e) ?</span>
+          <input id="fTitre" type="text" placeholder="Monsieur le Président / Madame la Présidente">
+        </label>
+      </div>
+      <button type="button" class="lancer" id="btnLancer">
+        Entrer à l'Élysée
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+
+    <!-- ========== ÉTAT 2 — PARTIE ========== -->
+    <div id="partie" hidden>
+      <div class="tableau">
+        <div class="frise">
+          <span class="plots" id="plots" aria-hidden="true"></span>
+          <span class="tourTexte" id="tourTexte"></span>
+          <span class="difficulte" id="badgeDifficulte"></span>
+        </div>
+        <div class="jauges" id="jauges"></div>
+        <div class="signaux" id="signaux" hidden></div>
+        <div class="bande">
+          <div class="case" id="menace"></div>
+          <div class="case" id="objectif"></div>
+          <div class="case" id="derniers"></div>
+        </div>
+      </div>
+
+      <!-- La section questions/réponses remplace la conversation : une seule
+           question à la fois, la précédente laisse place à sa conséquence. -->
+      <div class="qa" id="qa"></div>
+
+      <div class="journal" id="journal" hidden></div>
+    </div>
+
+    <!-- ========== ÉTAT 3 — FIN DE PARTIE ========== -->
+    <div id="fin" hidden></div>
+  </section>
+</main>
+
+<div class="demo">
+  <div class="demoBoite">
+    <h3>Démonstration</h3>
+    <p>Réglez le mandat puis entrez à l'Élysée. Répondez aux questions : chacune laisse place à la suivante. Les boutons ci-dessous forcent un état sans jouer une partie entière.</p>
+    <button onclick="forcer({cohesion:-30})">Crise de cohésion (alerte)</button>
+    <button onclick="forcer({pouvoirAchat:31})">Poussée du pouvoir d'achat (récompense)</button>
+    <button onclick="forcer({bonheur:-33})">Seuil de rupture (défaite)</button>
+    <button onclick="forcerFin('victoire_mandat')">Fin de mandat réussie</button>
+    <button onclick="forcerFin('bilan_mitige')">Bilan mitigé</button>
+  </div>
+</div>
+
+<script>
+const ALERTE_BASSE=25, ALERTE_HAUTE=75;
+const JAUGES=[
+  {id:'bonheur',label:'Bonheur des Français',court:'Bonheur',maitresse:true,seuil:15,issue:'Révolution'},
+  {id:'confiance',label:'Confiance',court:'Confiance'},
+  {id:'pouvoirAchat',label:"Pouvoir d'achat",court:"Pouvoir d'achat"},
+  {id:'finances',label:'Finances',court:'Finances',seuil:5,issue:'Mise sous tutelle'},
+  {id:'cohesion',label:'Cohésion',court:'Cohésion',seuil:10,issue:'Guerre civile'},
+];
+const DIFFICULTES={
+  apaisee:{label:'Apaisée',jauges:{bonheur:55,confiance:50,pouvoirAchat:50,finances:45,cohesion:60}},
+  realiste:{label:'Réaliste',jauges:{bonheur:45,confiance:38,pouvoirAchat:42,finances:35,cohesion:50}},
+  tempete:{label:'Tempête',jauges:{bonheur:38,confiance:30,pouvoirAchat:36,finances:25,cohesion:42}},
+};
+const VICTOIRE={bonheur:80,confiance:70,tours:2};
+const FINS={
+  revolution:{t:'Révolution',i:'🔥',ton:'finPerdue',x:"Le moral du pays s'est effondré et plus rien ne tient. L'Assemblée vous retire sa confiance."},
+  guerre_civile:{t:'Guerre civile',i:'💥',ton:'finPerdue',x:"La cohésion nationale n'a pas survécu : les fractures se sont durcies jusqu'à l'affrontement ouvert."},
+  tutelle:{t:'Mise sous tutelle',i:'🏦',ton:'finPerdue',x:"Les marchés se sont fermés et Bruxelles a activé la procédure : un comité budgétaire gouverne à votre place."},
+  victoire:{t:'Victoire',i:'🏆',ton:'finGagnee',x:"Les Français sont heureux et confiants dans l'avenir, durablement. Votre mandat entre dans l'histoire."},
+  victoire_mandat:{t:'Mandat réussi',i:'🎖️',ton:'finGagnee',x:"Au terme du mandat, le bonheur des Français dépasse le seuil que vous vous étiez fixé."},
+  bilan_mitige:{t:'Bilan mitigé',i:'🏛️',ton:'finNeutre',x:"Le mandat se termine sans triomphe ni catastrophe. Des progrès réels, des occasions manquées."},
+};
+
+/* Quatre décisions d'exemple, dans la forme réelle du moteur. */
+const DECISIONS=[
+ {theme:'Santé',titre:'Le maillage hospitalier',
+  situation:"La France compte 2 380 sites hospitaliers (2023) et 75 % des patients sont hospitalisés à moins de 43 km de leur domicile, mais la spécialisation de la médecine — 44 spécialités contre 8 en 1947 — tend à concentrer l'offre, dans un contexte de déficit des hôpitaux publics de 2,4 Md€ (Cour des comptes, RPA 2026).",
+  question:"Quelle doctrine fixez-vous pour l'organisation de l'offre de soins ?",
+  options:[
+   {label:"Concentrer les plateaux techniques, reconvertir les petits sites",effets:{bonheur:-6,confiance:2,pouvoirAchat:-1,finances:5,cohesion:-5},
+    consequence:"Vous assumez la gradation complète : la qualité et la sécurité des soins y gagnent, mais plusieurs maternités et services de proximité ferment. Les territoires concernés se sentent relégués ; les finances hospitalières respirent."},
+   {label:"Maintenir tous les sites et les refinancer",effets:{bonheur:5,confiance:2,pouvoirAchat:1,finances:-8,cohesion:4},
+    consequence:"Aucun site ne ferme : soulagement dans les territoires. Mais l'effort budgétaire est lourd, et la qualité restera fragile là où l'activité est insuffisante pour la sécurité des patients."},
+   {label:"Financer la gradation des soins et les hôpitaux de proximité",effets:{bonheur:3,confiance:4,pouvoirAchat:0,finances:-4,cohesion:3},
+    consequence:"Vous suivez la voie de la Cour des comptes : les hôpitaux de proximité sont reconnus et financés comme tels, les filières coordonnées se structurent. Ni fermetures brutales, ni statu quo coûteux."},
+   {label:"Miser sur la télémédecine et les équipes mobiles",effets:{bonheur:1,confiance:2,pouvoirAchat:1,finances:-2,cohesion:-1},
+    consequence:"Consultations à distance et équipes « aller-vers » se déploient. Les patients isolés gagnent un accès, mais la fracture numérique en exclut une partie des aînés."}]},
+ {theme:'Finances publiques',titre:'La trajectoire de dette',
+  situation:"Le déficit public s'est établi à 5,8 % du PIB en 2024 et la dette dépasse 112 % du PIB (INSEE, comptes nationaux 2025). La charge d'intérêts devient le deuxième poste du budget de l'État (Banque de France, rapport annuel 2025), et la Commission attend une trajectoire de retour sous les 3 %.",
+  question:"Quel levier engagez-vous pour tenir la trajectoire ?",
+  options:[
+   {label:"Plan d'économies sur les dépenses de fonctionnement",effets:{bonheur:-3,confiance:2,pouvoirAchat:-2,finances:7,cohesion:-4},
+    consequence:"Bruxelles et les marchés saluent un signal de sérieux : la prime de risque se détend. Les syndicats de la fonction publique dénoncent une cure d'austérité et annoncent des mobilisations."},
+   {label:"Hausse ciblée de la fiscalité sur les hauts patrimoines",effets:{bonheur:2,confiance:-1,pouvoirAchat:-1,finances:5,cohesion:-2},
+    consequence:"La mesure est populaire dans l'opinion et rapporte, mais son rendement réel reste incertain et quelques départs de contribuables sont signalés."},
+   {label:"Miser sur la croissance sans réduire la dépense",effets:{bonheur:3,confiance:-3,pouvoirAchat:2,finances:-6,cohesion:1},
+    consequence:"Le pouvoir d'achat respire et l'activité repart un peu, mais la trajectoire s'éloigne : le Haut Conseil des finances publiques juge l'hypothèse de croissance optimiste."},
+   {label:"Revue générale des niches fiscales",effets:{bonheur:-2,confiance:3,pouvoirAchat:-2,finances:6,cohesion:-1},
+    consequence:"Vous ouvrez le chantier le plus documenté par la Cour des comptes. Chaque niche a son lobby : l'arbitrage sera long, mais le rendement est là."}]},
+ {theme:'Cohésion territoriale',titre:'Les quartiers prioritaires',
+  situation:"Les quartiers prioritaires concentrent un taux de pauvreté trois fois supérieur à la moyenne nationale, et l'écart de réussite scolaire ne se réduit plus (Cour des comptes, RPA 2026). Les maires réclament une clarification des financements de la politique de la ville.",
+  question:"Comment engagez-vous la politique de la ville ?",
+  options:[
+   {label:"Contractualiser avec les maires, sur objectifs mesurés",effets:{bonheur:2,confiance:4,pouvoirAchat:0,finances:-3,cohesion:5},
+    consequence:"Les contrats fixent des objectifs vérifiables et redonnent de la visibilité aux élus. L'effet sur le terrain sera lent : effet plein dans deux tours."},
+   {label:"Concentrer les moyens sur l'éducation prioritaire",effets:{bonheur:3,confiance:5,pouvoirAchat:1,finances:-5,cohesion:3},
+    consequence:"Dédoublement de classes et primes aux équipes stables : les familles saluent. Le coût est immédiat, les résultats scolaires ne se verront pas avant plusieurs années."},
+   {label:"Renforcer la présence de sécurité et de services publics",effets:{bonheur:1,confiance:2,pouvoirAchat:0,finances:-4,cohesion:2},
+    consequence:"Commissariats et guichets rouvrent aux horaires élargis. La demande de sécurité est entendue, les associations attendaient davantage sur la prévention."},
+   {label:"Statu quo budgétaire, priorité au désendettement",effets:{bonheur:-4,confiance:-2,pouvoirAchat:-1,finances:4,cohesion:-6},
+    consequence:"Les crédits sont gelés. Les élus des quartiers dénoncent un abandon et plusieurs associations d'éducation populaire ferment faute de financement."}]},
+ {theme:'Énergie',titre:'La facture des ménages',
+  situation:"Les prix de l'électricité restent volatils sur les marchés européens et le parc nucléaire est rétabli à 90 % de disponibilité (RTE, bilan 2025). Ménages et industriels réclament de la visibilité sur leurs factures pour l'année à venir.",
+  question:"Quelle réponse apportez-vous sur l'énergie ?",
+  options:[
+   {label:"Bouclier tarifaire ciblé sur les ménages modestes",effets:{bonheur:4,confiance:2,pouvoirAchat:5,finances:-5,cohesion:1},
+    consequence:"Les ménages ciblés respirent et les associations de consommateurs saluent. Les classes moyennes non éligibles jugent le dispositif trop étroit."},
+   {label:"Contrats longs pour l'industrie électro-intensive",effets:{bonheur:0,confiance:4,pouvoirAchat:0,finances:-2,cohesion:0},
+    consequence:"Les industriels obtiennent la visibilité qu'ils demandaient et gèlent leurs projets de délocalisation. Les ménages n'y voient rien pour eux."},
+   {label:"Programme d'économies d'énergie et rénovation",effets:{bonheur:1,confiance:3,pouvoirAchat:2,finances:-4,cohesion:1},
+    consequence:"La rénovation crée de l'activité locale et allège les factures durablement, mais les effets se comptent en années, pas en mois."},
+   {label:"Laisser jouer le marché",effets:{bonheur:-5,confiance:-3,pouvoirAchat:-6,finances:3,cohesion:-3},
+    consequence:"Les finances publiques sont épargnées. La facture de janvier passe mal : les impayés progressent et la colère monte."}]},
+];
+
+let S=null;
+
+const $=(id)=>document.getElementById(id);
+
+function nouvellePartie(){
+  const d=$('fDifficulte').value, duree=Number($('fDuree').value);
+  S={
+    difficulte:d, duree, titre:$('fTitre').value.trim()||'Président(e)',
+    priorite:$('fPriorite').value,
+    jauges:{...DIFFICULTES[d].jauges},
+    tour:1, idx:0, serie:0, historique:[], deltas:null, consequence:null, fin:null,
+  };
+  $('lancement').hidden=true;
+  $('partie').hidden=false;
+  $('fin').hidden=true;
+  $('btnNouvelle').hidden=false;
+  $('btnJournal').hidden=false;
+  construireJauges();
+  rendre();
+}
+
+function construireJauges(){
+  $('jauges').innerHTML=JAUGES.map(j=>`
+    <div class="jauge ${j.maitresse?'maitresse':''}" id="j-${j.id}">
+      <div class="label">${j.label}${j.maitresse?'<span class="etiquette">jauge maîtresse</span>':''}</div>
+      <div class="chiffres"><span class="valeur" id="v-${j.id}">0</span><span class="delta stable" id="d-${j.id}">=</span></div>
+      <div class="piste" role="meter" aria-label="${j.label}">
+        <div class="zoneBasse"></div><div class="zoneHaute"></div>
+        <div class="remplissage" id="r-${j.id}"></div>
+        ${j.seuil!==undefined?`<div class="seuil" style="left:${j.seuil}%" title="${j.issue} à ${j.seuil}"></div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function zone(v){ return v<=ALERTE_BASSE?'alerte':v>=ALERTE_HAUTE?'recompense':''; }
+
+function rendre(){
+  let tension=false;
+  for (const j of JAUGES){
+    const v=S.jauges[j.id], el=$(`j-${j.id}`), d=S.deltas?S.deltas[j.id]:undefined;
+    $(`v-${j.id}`).textContent=v;
+    $(`r-${j.id}`).style.width=v+'%';
+    const dn=$(`d-${j.id}`);
+    dn.textContent=d===undefined?'=':(d>0?`+${d}`:d<0?`−${Math.abs(d)}`:'=');
+    dn.className='delta '+(d>0?'hausse':d<0?'baisse':'stable');
+    el.className='jauge '+(j.maitresse?'maitresse ':'')+zone(v);
+    if(d){ void el.offsetWidth; el.classList.add('bouge'); }
+    if(zone(v)==='alerte') tension=true;
+  }
+  $('miniapp').className='miniapp'+(tension?' tension':'');
+  $('badgeDifficulte').className='difficulte'+(tension?' chaud':'');
+  $('badgeDifficulte').textContent=tension?'⚠ État de tension':DIFFICULTES[S.difficulte].label;
+
+  $('plots').innerHTML=Array.from({length:S.duree},(_,i)=>
+    `<span class="plot ${i+1<S.tour?'plotJoue':i+1===S.tour&&!S.fin?'plotCourant':''}"></span>`).join('');
+  $('tourTexte').textContent=`Tour ${Math.min(S.tour,S.duree)} / ${S.duree}`+(S.fin?'':` · ${Math.max(0,S.duree-S.tour)} restants`);
+  $('etatPartie').textContent=S.fin?`Partie terminée — ${FINS[S.fin].t}`:`${S.titre} · ${S.priorite}`;
+
+  // Menace la plus proche
+  const m=JAUGES.filter(j=>j.seuil!==undefined)
+    .map(j=>({issue:j.issue,label:j.court,v:S.jauges[j.id],seuil:j.seuil,marge:S.jauges[j.id]-j.seuil}))
+    .sort((a,b)=>a.marge-b.marge)[0];
+  $('menace').className='case'+(m.marge<=15?' menaceChaude':'');
+  $('menace').innerHTML=`<span class="caseTitre">Menace la plus proche</span>${m.issue} — ${m.label} ${m.v}, seuil ${m.seuil} · <strong>${m.marge} points de marge</strong>`;
+
+  // Objectif
+  const b=S.jauges.bonheur>=VICTOIRE.bonheur, c=S.jauges.confiance>=VICTOIRE.confiance;
+  $('objectif').innerHTML=`<span class="caseTitre">Objectif du mandat</span>`+
+    `<span class="condition ${b?'tenue':''}"><span class="pastille"></span>Bonheur ≥ ${VICTOIRE.bonheur}</span>`+
+    `<span class="condition ${c?'tenue':''}"><span class="pastille"></span>Confiance ≥ ${VICTOIRE.confiance}</span>`+
+    `<span class="serie">Tenu ${S.serie} tour${S.serie>1?'s':''} sur ${VICTOIRE.tours} consécutifs</span>`;
+
+  // Trois derniers tours
+  const trois=S.historique.slice(-3).reverse();
+  $('derniers').innerHTML=`<span class="caseTitre">Trois derniers tours</span>`+
+    (trois.length?trois.map(h=>
+      `<span class="dernier">Tour ${h.tour} · ${h.titre}</span><span class="dernierDetail">${
+        JAUGES.filter(j=>h.deltas[j.id]!==0).map(j=>`${j.court} ${h.deltas[j.id]>0?'+':'−'}${Math.abs(h.deltas[j.id])}`).join(' · ')||'Aucun effet'
+      }</span>`).join(''):`<span class="dernierDetail">Votre mandat commence.</span>`);
+
+  // Franchissements
+  const sig=[];
+  if(S.deltas) for(const j of JAUGES){
+    const ap=S.jauges[j.id], av=ap-(S.deltas[j.id]||0);
+    if(ap<=ALERTE_BASSE&&av>ALERTE_BASSE) sig.push(`<span class="signal signalAlerte">⚠ Alerte — ${j.court} ${ap}</span>`);
+    if(ap>=ALERTE_HAUTE&&av<ALERTE_HAUTE) sig.push(`<span class="signal signalRecompense">✦ ${j.court} ${ap}</span>`);
+  }
+  $('signaux').hidden=!sig.length;
+  $('signaux').innerHTML=sig.join('');
+
+  rendreJournal();
+  if(S.fin) rendreFin(); else rendreQuestion();
+}
+
+/* La section Q/R : une seule question à l'écran. La précédente a laissé place
+   à sa conséquence, puis à la situation suivante. */
+function rendreQuestion(){
+  const d=DECISIONS[S.idx%DECISIONS.length];
+  $('qa').innerHTML=`
+    <div class="qaHaut">
+      <span class="chip">Tour ${S.tour} / ${S.duree}</span>
+      <span class="theme">${d.theme} — ${d.titre}</span>
+    </div>
+    ${S.consequence?`<div class="consequence"><span class="consequenceTitre">Conséquence de votre décision</span>${S.consequence}</div>`:''}
+    <p class="situation">${d.situation}</p>
+    <p class="question">${d.question}</p>
+    <div class="options">
+      ${d.options.map((o,i)=>`<button type="button" class="option" onclick="repondre(${i})"><span class="marqueur">${'ABCD'[i]}</span>${o.label}</button>`).join('')}
+    </div>`;
+  $('qa').hidden=false;
+  $('fin').hidden=true;
+}
+
+function rendreJournal(){
+  if($('journal').hidden) return;
+  $('journal').innerHTML=`<div class="journalTitre">Journal du mandat — ${S.historique.length} décision${S.historique.length>1?'s':''}</div>`+
+    (S.historique.length?[...S.historique].reverse().map(h=>
+      `<div class="journalLigne"><span class="journalTour">Tour ${h.tour}</span><span>${h.titre} — « ${h.choix} »<br><span class="journalDetail">${
+        JAUGES.filter(j=>h.deltas[j.id]!==0).map(j=>`${j.court} ${h.deltas[j.id]>0?'+':'−'}${Math.abs(h.deltas[j.id])}`).join(' · ')||'aucun effet'
+      }</span></span></div>`).join(''):`<div class="journalDetail">Aucune décision pour l'instant.</div>`);
+}
+
+function appliquer(effets,brut){
+  const avant={...S.jauges};
+  for(const j of JAUGES){
+    const e=effets[j.id]||0;
+    const v=brut?e:Math.max(-12,Math.min(12,e));   // bornage ±12, tenu par le code
+    S.jauges[j.id]=Math.max(0,Math.min(100,S.jauges[j.id]+v));
+  }
+  S.deltas={};
+  for(const j of JAUGES) S.deltas[j.id]=S.jauges[j.id]-avant[j.id];
+  S.serie=(S.jauges.bonheur>=VICTOIRE.bonheur&&S.jauges.confiance>=VICTOIRE.confiance)?S.serie+1:0;
+  verifierFin();
+}
+
+function verifierFin(){
+  if(S.jauges.bonheur<=15) S.fin='revolution';
+  else if(S.jauges.cohesion<=10) S.fin='guerre_civile';
+  else if(S.jauges.finances<=5) S.fin='tutelle';
+  else if(S.serie>=VICTOIRE.tours) S.fin='victoire';
+  else if(S.historique.length>=S.duree) S.fin=S.jauges.bonheur>=65?'victoire_mandat':'bilan_mitige';
+}
+
+function repondre(i){
+  if(S.fin) return;
+  const d=DECISIONS[S.idx%DECISIONS.length], o=d.options[i];
+  appliquer(o.effets);
+  S.historique.push({tour:S.tour,titre:d.titre,choix:o.label,deltas:{...S.deltas}});
+  S.consequence=o.consequence;
+  if(!S.fin){ S.tour++; S.idx++; }
+  rendre();
+}
+
+function forcer(effets){
+  if(!S||S.fin) return;
+  appliquer(effets,true);
+  S.historique.push({tour:S.tour,titre:'Événement forcé (démo)',choix:'—',deltas:{...S.deltas}});
+  S.consequence="Événement de démonstration appliqué directement aux jauges.";
+  if(!S.fin){ S.tour++; S.idx++; }
+  rendre();
+}
+
+function forcerFin(type){
+  if(!S) return;
+  S.fin=type; rendre();
+}
+
+function rendreFin(){
+  const f=FINS[S.fin];
+  const decisifs=[...S.historique]
+    .sort((a,b)=>Object.values(b.deltas).reduce((s,v)=>s+Math.abs(v),0)-Object.values(a.deltas).reduce((s,v)=>s+Math.abs(v),0))
+    .slice(0,3);
+  $('qa').hidden=true;
+  $('fin').hidden=false;
+  $('fin').className='fin '+f.ton;
+  $('fin').innerHTML=`
+    <div class="finTete"><span class="finIcone">${f.i}</span><span class="finTitre">${f.t}</span></div>
+    ${S.consequence?`<div class="consequence"><span class="consequenceTitre">Conséquence de votre dernière décision</span>${S.consequence}</div>`:''}
+    <p class="finTexte">${f.x}</p>
+    ${decisifs.length?`<div class="finBilan"><strong>Vos décisions décisives :</strong><ol>${decisifs.map(h=>`<li>${h.titre} — « ${h.choix} »</li>`).join('')}</ol></div>`:''}
+    <div class="rejouer">
+      <button type="button" class="rejouerBtn" onclick="retourLancement()">Nouvelle partie</button>
+    </div>`;
+}
+
+function retourLancement(){
+  S=null;
+  $('partie').hidden=true;
+  $('fin').hidden=true;
+  $('lancement').hidden=false;
+  $('btnNouvelle').hidden=true;
+  $('btnJournal').hidden=true;
+  $('journal').hidden=true;
+  $('miniapp').className='miniapp';
+  $('etatPartie').textContent='Aucune partie en cours';
+}
+
+$('btnLancer').addEventListener('click',nouvellePartie);
+$('btnNouvelle').addEventListener('click',retourLancement);
+$('btnJournal').addEventListener('click',()=>{
+  const j=$('journal');
+  j.hidden=!j.hidden;
+  $('btnJournal').textContent=j.hidden?'Journal':'Masquer le journal';
+  rendreJournal();
+});
+</script>
+</body>
+</html>
