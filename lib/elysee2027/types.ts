@@ -86,3 +86,51 @@ export const SEUILS = {
 
 /** Borne d'équilibrage : jamais plus de ±12 points sur une jauge par tour. */
 export const AMPLITUDE_MAX = 12;
+
+/** Issues possibles d'une partie. */
+export type FinJeu =
+  | "revolution"
+  | "guerre_civile"
+  | "tutelle"
+  | "victoire"
+  | "victoire_mandat"
+  | "bilan_mitige";
+
+/** Un tour déjà joué, tel que le tableau de bord le rappelle. */
+export interface TourJoue {
+  tour: number;
+  /** Titre de la décision tranchée. */
+  titre: string;
+  /** Libellé de l'option retenue. */
+  choix: string;
+  deltas: Effets;
+}
+
+/**
+ * État de la partie DESTINÉ À L'AFFICHAGE, émis par le moteur à chaque tour
+ * dans un bloc caché `<!--ETAT_JEU: …-->`.
+ *
+ * Il existe parce que le tableau de bord textuel (« Bonheur 45 → 41 (−4) »)
+ * n'est pas exploitable par l'interface : pour dessiner des jauges, alerter
+ * sur un seuil ou annoncer la fin, il faut des NOMBRES, pas une phrase à
+ * relire. Le moteur étant déterministe, ces valeurs sont la vérité du jeu —
+ * l'interface n'a rien à recalculer ni à deviner.
+ */
+export interface EtatJeuPublic {
+  /** Identifiant du moteur (permet d'ignorer un bloc d'une autre version). */
+  moteur: string;
+  tour: number;
+  duree: number;
+  difficulte: Difficulte;
+  titre: string;
+  jauges: Effets;
+  /** Variation du tour. Absente à l'ouverture et sur un recadrage. */
+  deltas?: Effets;
+  /** Tours consécutifs au-dessus des seuils de victoire. */
+  serieVictoire: number;
+  /** Présente seulement quand la partie est terminée. */
+  fin?: FinJeu;
+  finTitre?: string;
+  /** Les trois derniers tours, du plus récent au plus ancien. */
+  derniers: TourJoue[];
+}

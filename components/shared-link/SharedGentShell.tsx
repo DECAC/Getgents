@@ -11,6 +11,7 @@ import { SignalerIncident } from "@/components/shared/SignalerIncident";
 import { aDesArtefacts, nombreDArtefacts, MESSAGE_ESPACE_VIDE } from "@/lib/espaceArtefacts";
 import { sousTitreDuGent } from "@/lib/enteteGent";
 import type { Espace } from "@/lib/types";
+import { BandeauJeuActif } from "@/components/jeu/BandeauJeu";
 import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./SharedGentShell.module.css";
 
@@ -200,6 +201,11 @@ function SharedGentBody({ token }: { token: string }) {
           <SignalerIncident token={token} />
         </div>
       </header>
+
+      {/* Partie en cours : le tableau de bord se glisse entre l'en-tête et le
+          corps, sur toute la largeur. C'est la surface de jeu principale — un
+          visiteur arrive ici, pas dans le studio. */}
+      <BandeauJeuActif />
 
       <div
         className={[

@@ -6,6 +6,7 @@ import { Rail } from "@/components/rail/Rail";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
 import { Center } from "@/components/center/Center";
 import { Aside } from "@/components/aside/Aside";
+import { BandeauJeu, useEtatJeuActif } from "@/components/jeu/BandeauJeu";
 import { ArtefactModal } from "@/components/shared/ArtefactModal";
 import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
 import { ResvModal } from "@/components/shared/ResvModal";
@@ -41,12 +42,18 @@ function ClassicShellInner() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  // Partie en cours : le tableau de bord occupe une RANGÉE pleine largeur
+  // au-dessus des colonnes. La classe n'est posée que s'il y a quelque chose
+  // à afficher — sans elle, la grille garde sa rangée unique en pleine hauteur.
+  const etatJeu = useEtatJeuActif();
+
   const shellClass = [
     styles.shell,
     railCollapsed ? styles.collapsed : "",
     chatOpen ? styles.assistOpen : "",
     chatOpen && !asideCollapsed ? styles.asideExpanded : "",
     !chatOpen && asideCollapsed ? styles.asideCollapsedOnly : "",
+    etatJeu ? styles.avecBandeau : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -57,6 +64,14 @@ function ClassicShellInner() {
         Aller au contenu principal
       </a>
       <div className={shellClass} id="shell">
+        {/* Bandeau de jauges : premier enfant, il s'étend sur toutes les
+            colonnes. Au-dessus de la conversation, jamais à côté — c'est ce
+            surplomb qui met le joueur sous pression. */}
+        {etatJeu && (
+          <div className={styles.bandeauJeu}>
+            <BandeauJeu etat={etatJeu} />
+          </div>
+        )}
         <Rail />
         {chatOpen && <AssistantPanel />}
         <Center />
