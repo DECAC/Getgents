@@ -10,6 +10,19 @@
   grid-template-columns: var(--rail-min) 1fr var(--aside);
 }
 
+/* Partie en cours : une rangée de tête pleine largeur pour le tableau de bord,
+   puis les colonnes sur la hauteur restante. `minmax(0, 1fr)` et non `1fr` :
+   sans le minimum à zéro, les colonnes se dimensionnent sur leur contenu et
+   débordent de l'écran au lieu de défiler à l'intérieur. */
+.shell.avecBandeau {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.bandeauJeu {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
 .shell.asideCollapsedOnly {
   grid-template-columns: var(--rail) 1fr var(--aside-collapsed);
 }

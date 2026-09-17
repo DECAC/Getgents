@@ -23,6 +23,7 @@ import {
   newConversationId,
 } from "@/lib/conversationUtils";
 import { extractQuestions, extractFollowups, recoverQuestionsFromChoiceList } from "@/lib/suggestions";
+import { extractEtatJeu } from "@/lib/jeuEtat";
 import { extractArtefactSignal } from "@/lib/artefactSignal";
 import { ARTEFACT_KIND_META, type WorkspaceArtefactKind } from "@/lib/artefactKind";
 import { convertArtefactToKind } from "@/lib/artefactConversion";
@@ -729,7 +730,12 @@ export function EspaceProvider({
       controller.signal
     )
       .then(({ text: fullRaw, reasoning, truncated }) => {
-        const extracted = extractQuestions(fullRaw);
+        // État de partie d'un moteur de jeu (bloc ETAT_JEU) : retiré du texte
+        // AVANT tout le reste, car c'est le seul bloc qui contient du JSON
+        // imbriqué — le laisser traîner brouillerait les extracteurs suivants.
+        const afterEtatJeu = extractEtatJeu(fullRaw);
+        const jeuEtat = afterEtatJeu.etat ?? undefined;
+        const extracted = extractQuestions(afterEtatJeu.text);
         // Repli : le modèle a posé une question et listé les choix en clair
         // (puces, numéros, lettres) sans bloc QUESTIONS. Sans ce repli,
         // l'utilisateur d'un gent « à choix » (jeu de rôle, QCM) se retrouve
@@ -817,6 +823,7 @@ export function EspaceProvider({
                   ...msgs[lastIdx],
                   text: finalHtml,
                   questions: afterQuestions.questions,
+                  jeuEtat,
                   followups,
                   reasoning: reasoning || undefined,
                 };
@@ -850,6 +857,7 @@ export function EspaceProvider({
                   ...msgs[lastIdx],
                   text: finalHtml,
                   questions: afterQuestions.questions,
+                  jeuEtat,
                   followups,
                   reasoning: reasoning || undefined,
                 };
@@ -869,6 +877,7 @@ export function EspaceProvider({
             ...m,
             text: finalHtml,
             questions: afterQuestions.questions,
+            jeuEtat,
             followups,
             reasoning: reasoning || undefined,
           }));

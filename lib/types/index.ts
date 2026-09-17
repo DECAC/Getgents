@@ -189,9 +189,24 @@ export interface ConversationMessage {
   status?: "pending" | "sent";
   title?: string;
   link?: string;
-  questions?: { q: string; options: string[]; multi?: boolean }[];
+  /**
+   * Choix cliquables de la réponse. Le type complet est réutilisé (et non
+   * recopié) pour que `allowOther: false` — les jeux à choix fermés —
+   * survive à l'aller-retour par le message : recopié à la main, le champ
+   * disparaissait du type et la réponse libre revenait sans qu'on le voie.
+   */
+  questions?: import("@/lib/suggestions").QuestionBlock[];
   /** Relances conversationnelles (questions libres cliquables dans le fil). */
   followups?: string[];
+  /**
+   * État d'une partie en cours, émis par un moteur de jeu déterministe
+   * (bloc `ETAT_JEU`). Porté par le MESSAGE et non par l'espace : il suit
+   * ainsi le fil de conversation, y compris son enregistrement — un gent
+   * publié retrouve son bandeau de jauges au rechargement, sans rejouer la
+   * partie. (L'espace de démonstration du catalogue statique, lui, n'est pas
+   * enregistré du tout : sa partie repart de zéro, comme sa conversation.)
+   */
+  jeuEtat?: import("@/lib/elysee2027/types").EtatJeuPublic;
   /** Image générée / affichée après autorisation (data URL ou https). */
   imageUrl?: string;
   imageStatus?: "pending" | "done" | "error";

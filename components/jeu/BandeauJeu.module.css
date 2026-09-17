@@ -1,0 +1,479 @@
+/* Bandeau de jauges d'une partie en cours — pleine largeur, en haut de
+   l'écran, au-dessus de la conversation. Il ne défile pas : la pression doit
+   rester sous les yeux du joueur pendant qu'il lit la situation et hésite. */
+
+.panneau {
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  transition: box-shadow 0.4s, border-color 0.4s;
+}
+
+/* Tension : une jauge est en zone critique. Tout le bandeau le dit, avant
+   même qu'on lise un chiffre. */
+.tension {
+  border-bottom-color: var(--plum);
+  box-shadow: inset 0 -3px 0 var(--plum-tint);
+}
+
+.tension .tete {
+  background: linear-gradient(180deg, var(--plum-tint), var(--card));
+}
+
+/* ---- Ligne 1 : identité de la partie et frise du mandat ---- */
+.tete {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  transition: background 0.4s;
+}
+
+.titre {
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.frise {
+  flex: 1;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.plots {
+  display: flex;
+  gap: 4px;
+}
+
+.plot {
+  height: 6px;
+  flex: 1;
+  border-radius: 3px;
+  background: var(--line);
+  transition: background 0.3s;
+}
+
+.plotJoue {
+  background: var(--blue);
+}
+
+.plotCourant {
+  background: var(--sage);
+  box-shadow: 0 0 0 2px var(--sage-tint);
+}
+
+.tour {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  background: var(--blue-tint);
+  color: var(--blue-700);
+  white-space: nowrap;
+}
+
+.badgeAlerte {
+  background: var(--plum-tint);
+  color: var(--plum);
+}
+
+/* ---- Ligne 2 : les cinq jauges côte à côte ---- */
+.jauges {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr;
+}
+
+.jauge {
+  padding: 8px 16px;
+  border-right: 1px solid var(--line-soft);
+  transition: background 0.4s;
+}
+
+.jauge:last-child {
+  border-right: 0;
+}
+
+.label {
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chiffres {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin: 1px 0 5px;
+}
+
+.valeur {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.delta {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+  min-width: 32px;
+  text-align: center;
+}
+
+.hausse {
+  background: var(--success-tint);
+  color: #2f6b33;
+}
+
+.baisse {
+  background: var(--plum-tint);
+  color: var(--plum);
+}
+
+.stable {
+  background: var(--line-soft);
+  color: var(--faint);
+}
+
+/* La jauge maîtresse décide de la victoire : elle est deux fois plus grosse. */
+.maitresse {
+  background: var(--line-soft);
+}
+
+.maitresse .valeur {
+  font-size: 34px;
+}
+
+.maitresse .delta {
+  font-size: 13px;
+  padding: 2px 8px;
+}
+
+.etiquette {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blue-700);
+  background: var(--blue-tint);
+  padding: 2px 6px;
+  border-radius: var(--r-pill);
+  margin-left: 6px;
+}
+
+.piste {
+  position: relative;
+  height: 9px;
+  border-radius: 5px;
+  background: #fff;
+  border: 1px solid var(--line-soft);
+  overflow: hidden;
+}
+
+.maitresse .piste {
+  height: 11px;
+  background: var(--card);
+}
+
+/* Zones peintes dans la piste : sous 25 on entre en danger, au-dessus de 75
+   on installe une dynamique. Le joueur voit où il va avant d'y être. */
+.zoneBasse {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 25%;
+  background: var(--plum-tint);
+}
+
+.zoneHaute {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 25%;
+  background: var(--gold-tint);
+}
+
+.remplissage {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 5px;
+  background: var(--blue);
+  transition: width 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.4s;
+}
+
+/* Repère du seuil de défaite propre à la jauge (révolution, guerre civile,
+   tutelle) : la ligne rouge qu'il ne faut pas franchir. */
+.seuil {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--plum);
+  opacity: 0.8;
+}
+
+.alerte {
+  background: var(--plum-tint);
+}
+
+.alerte .remplissage {
+  background: var(--plum);
+  animation: battement 1.5s ease-in-out infinite;
+}
+
+.alerte .label {
+  color: var(--plum);
+}
+
+@keyframes battement {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.recompense {
+  background: var(--gold-tint);
+}
+
+.recompense .remplissage {
+  background: var(--gold);
+}
+
+.recompense .label {
+  color: #8a5f13;
+}
+
+/* ---- Ligne 3 : menace, objectif, derniers tours ---- */
+.bande {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1.6fr;
+  border-top: 1px solid var(--line-soft);
+}
+
+.case {
+  padding: 7px 16px;
+  border-right: 1px solid var(--line-soft);
+  font-size: 12.5px;
+  min-width: 0;
+}
+
+.case:last-child {
+  border-right: 0;
+}
+
+.caseTitre {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.menaceChaude {
+  background: var(--plum-tint);
+  color: var(--plum);
+}
+
+.menaceChaude .caseTitre {
+  color: var(--plum);
+}
+
+.condition {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 12px;
+}
+
+.pastille {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+  flex: none;
+}
+
+.conditionTenue {
+  color: #2f6b33;
+  font-weight: 600;
+}
+
+.conditionTenue .pastille {
+  background: var(--success);
+}
+
+.serie {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.objectifProche {
+  background: var(--gold-tint);
+}
+
+.tours {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.tourJoue {
+  max-width: 230px;
+  min-width: 0;
+}
+
+.tourJoueTitre {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tourJoueDetail {
+  display: block;
+  color: var(--muted);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vide {
+  color: var(--faint);
+}
+
+/* ---- Franchissements du tour ---- */
+.signaux {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.signal {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  animation: apparition 0.4s ease-out;
+}
+
+.signalAlerte {
+  background: var(--plum);
+  color: #fff;
+}
+
+.signalRecompense {
+  background: var(--gold);
+  color: #4a3208;
+}
+
+@keyframes apparition {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- Fin de partie ---- */
+.fin {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--line-soft);
+  animation: apparition 0.5s ease-out;
+}
+
+.finPerdue {
+  background: var(--plum-tint);
+}
+
+.finGagnee {
+  background: var(--gold-tint);
+}
+
+/* Fin de mandat sans triomphe ni catastrophe : aucun affolement de couleur. */
+.finNeutre {
+  background: var(--line-soft);
+}
+
+.finIcone {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.finTitre {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.finDetail {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+@media (max-width: 1080px) {
+  .jauges {
+    grid-template-columns: 1.5fr 1fr 1fr;
+  }
+
+  .jauge {
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .bande {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .jauges {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bande {
+    grid-template-columns: 1fr;
+  }
+
+  .tete {
+    flex-wrap: wrap;
+  }
+
+  .maitresse .valeur {
+    font-size: 32px;
+  }
+}

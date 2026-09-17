@@ -2,8 +2,9 @@ import * as fs from "fs";
 import * as path from "path";
 import { DECISIONS, ORDRE_CANONIQUE, PRIORITE_VERS_DECISION, decisionParId } from "@/lib/elysee2027/decisions";
 import { reponseJeuElysee } from "@/lib/elysee2027/moteur";
-import { AMPLITUDE_MAX, DIFFICULTES, JAUGES } from "@/lib/elysee2027/types";
+import { AMPLITUDE_MAX, DIFFICULTES, JAUGES, SEUILS } from "@/lib/elysee2027/types";
 import { extractQuestions } from "@/lib/suggestions";
+import { extractEtatJeu } from "@/lib/jeuEtat";
 import { ESPACES } from "@/lib/mock-data/espaces";
 
 /* ------------------------------------------------------------------ */
@@ -132,11 +133,17 @@ function jouerJusquaFin(
   return reponse;
 }
 
-/** Jauges affichées au tableau de bord d'une réponse (valeurs après variation). */
-function jaugesAffichees(reponse: string): number[] {
+/** La ligne « **Tour 3/8** · Bonheur 45 → 41 (−4) · … » d'une réponse. */
+function ligneTableauDeBord(reponse: string): string {
   const ligne = reponse.split("\n").find((l) => l.startsWith("**Tour "));
   expect(ligne).toBeDefined();
-  const sansEnteteNiDeltas = ligne!.replace(/\*\*Tour \d+\/\d+\*\*/g, "").replace(/\([^)]*\)/g, "");
+  return ligne!;
+}
+
+/** Jauges affichées au tableau de bord d'une réponse (valeurs après variation). */
+function jaugesAffichees(reponse: string): number[] {
+  const ligne = ligneTableauDeBord(reponse);
+  const sansEnteteNiDeltas = ligne.replace(/\*\*Tour \d+\/\d+\*\*/g, "").replace(/\([^)]*\)/g, "");
   return Array.from(sansEnteteNiDeltas.matchAll(/(\d+)(?:\s*→\s*(\d+))?/g)).map((m) => Number(m[2] ?? m[1]));
 }
 
@@ -242,5 +249,101 @@ describe("elysee2027 — moteur", () => {
     expect(espace.moteurJeu).toBe("elysee-2027");
     expect(espace.jumpForm?.fields.length).toBeGreaterThan(0);
     expect(espace.conversations.length).toBeGreaterThan(0);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* L'état exposé à l'interface (bandeau de jauges)                     */
+/* ------------------------------------------------------------------ */
+
+describe("elysee2027 — état pour l'interface", () => {
+  test("chaque réponse d'une partie porte un état lisible par le code", () => {
+    const messages: Msg[] = [{ role: "user", content: DEMARRAGE_COURT_REALISTE }];
+    const { text, etat } = extractEtatJeu(reponseJeuElysee(messages));
+    expect(etat).not.toBeNull();
+    expect(etat!.moteur).toBe("elysee-2027");
+    expect(etat!.tour).toBe(1);
+    expect(etat!.duree).toBe(8);
+    expect(etat!.difficulte).toBe("realiste");
+    expect(etat!.titre).toBe("Madame la Présidente");
+    expect(etat!.jauges).toEqual(DIFFICULTES.realiste.jauges);
+    // Aucune variation au premier affichage : rien n'a encore été décidé.
+    expect(etat!.deltas).toBeUndefined();
+    expect(etat!.derniers).toEqual([]);
+    // Et le bloc ne se voit pas dans le texte lu par le joueur.
+    expect(text).not.toMatch(/ETAT_JEU/);
+    expect(text).toContain("Tour 1/8");
+  });
+
+  test("l'état et le tableau de bord textuel annoncent les MÊMES valeurs", () => {
+    const messages: Msg[] = [{ role: "user", content: DEMARRAGE_COURT_REALISTE }];
+    for (let i = 0; i < 6; i++) {
+      const reponse = jouerTour(messages, (d) => i % 4);
+      const { etat } = extractEtatJeu(reponse);
+      expect(etat).not.toBeNull();
+      const affichees = jaugesAffichees(reponse);
+      expect(JAUGES.map((j) => etat!.jauges[j.id])).toEqual(affichees);
+      const ligne = ligneTableauDeBord(reponse);
+      expect(ligne).toContain(`Tour ${etat!.tour}/${etat!.duree}`);
+      if (reponse.includes("Rejouer en mode")) break;
+    }
+  });
+
+  test("après une décision, l'état porte la variation de chaque jauge", () => {
+    const messages: Msg[] = [{ role: "user", content: DEMARRAGE_COURT_REALISTE }];
+    // Option 2 de la décision d'inflation : bonheur −1, confiance +1, finances +2.
+    const { etat } = extractEtatJeu(jouerTour(messages, () => 2));
+    expect(etat!.deltas).toEqual({
+      bonheur: -1,
+      confiance: 1,
+      pouvoirAchat: 0,
+      finances: 2,
+      cohesion: 0,
+    });
+    expect(etat!.jauges.bonheur).toBe(DIFFICULTES.realiste.jauges.bonheur - 1);
+    expect(etat!.derniers).toHaveLength(1);
+    expect(etat!.derniers[0]).toMatchObject({ tour: 1, titre: expect.any(String) });
+  });
+
+  test("les trois derniers tours sont rappelés, du plus récent au plus ancien", () => {
+    const messages: Msg[] = [{ role: "user", content: DEMARRAGE_COURT_REALISTE }];
+    let reponse = "";
+    for (let i = 0; i < 4; i++) reponse = jouerTour(messages, () => 1);
+    const { etat } = extractEtatJeu(reponse);
+    expect(etat!.derniers).toHaveLength(3);
+    expect(etat!.derniers.map((t) => t.tour)).toEqual([4, 3, 2]);
+    for (const t of etat!.derniers) expect(t.choix.length).toBeGreaterThan(0);
+  });
+
+  test("un recadrage n'invente aucune variation", () => {
+    const messages: Msg[] = [
+      { role: "user", content: DEMARRAGE_COURT_REALISTE },
+      { role: "user", content: "Je gouverne par ordonnances." },
+    ];
+    const { etat } = extractEtatJeu(reponseJeuElysee(messages));
+    expect(etat!.deltas).toBeUndefined();
+    expect(etat!.tour).toBe(1);
+  });
+
+  test("la fin de partie est annoncée dans l'état, pas seulement dans le texte", () => {
+    const messages: Msg[] = [{ role: "user", content: DEMARRAGE_COURT_TEMPETE }];
+    const reponse = jouerJusquaFin(messages, optionMinimisant("finances"));
+    const { etat } = extractEtatJeu(reponse);
+    expect(etat!.fin).toBe("tutelle");
+    expect(etat!.finTitre).toBe("Mise sous tutelle");
+    expect(etat!.jauges.finances).toBeLessThanOrEqual(SEUILS.tutelle.max);
+  });
+
+  test("tant qu'aucune partie n'est lancée, aucun état n'est émis", () => {
+    const { etat } = extractEtatJeu(reponseJeuElysee([{ role: "user", content: "C'est quoi ce jeu ?" }]));
+    expect(etat).toBeNull();
+  });
+
+  test("le chemin sans quota exige l'identifiant EXACT du moteur", () => {
+    // Discipline de facturation : une condition sur la simple présence du
+    // champ `jeu` ouvrait une sortie du compteur LLM (voir app/api/chat).
+    const route = fs.readFileSync(path.join(__dirname, "..", "app", "api", "chat", "route.ts"), "utf8");
+    expect(route).toMatch(/body\.jeu === MOTEUR_ELYSEE/);
+    expect(route).not.toMatch(/if \(body\.jeu\)/);
   });
 });

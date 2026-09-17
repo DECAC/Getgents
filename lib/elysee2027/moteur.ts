@@ -17,13 +17,17 @@ import {
   SEUILS,
   type Decision,
   type Difficulte,
+  type Effets,
+  type EtatJeuPublic,
+  type FinJeu,
   type JaugeId,
   type OptionDecision,
+  type TourJoue,
 } from "./types";
 
 export const MOTEUR_ELYSEE = "elysee-2027";
 
-type TypeFin = "revolution" | "guerre_civile" | "tutelle" | "victoire" | "victoire_mandat" | "bilan_mitige";
+type TypeFin = FinJeu;
 
 interface ChoixJoue {
   decisionId: string;
@@ -219,8 +223,17 @@ function fmtDelta(d: number): string {
   return "=";
 }
 
+/**
+ * Numéro du tour affiché. Une seule définition, partagée par le tableau de
+ * bord textuel et par l'état envoyé à l'interface : deux calculs séparés
+ * finiraient par se contredire, et le joueur verrait deux numéros.
+ */
+function numeroDeTour(etat: EtatPartie): number {
+  return Math.min(etat.historique.length + (etat.fin ? 0 : 1), etat.duree);
+}
+
 function tableauDeBord(etat: EtatPartie, choix?: ChoixJoue): string {
-  const tour = Math.min(etat.historique.length + (etat.fin ? 0 : 1), etat.duree);
+  const tour = numeroDeTour(etat);
   const parties = JAUGES.map((j) => {
     const apres = etat.jauges[j.id];
     if (!choix) return `${j.label} ${apres}`;
@@ -389,12 +402,64 @@ function texteInvitation(): string {
 }
 
 /* ------------------------------------------------------------------ */
+/* État exposé à l'interface                                           */
+/* ------------------------------------------------------------------ */
+
+function deltasDe(choix: ChoixJoue): Effets {
+  return JAUGES.reduce((acc, j) => {
+    acc[j.id] = choix.apres[j.id] - choix.avant[j.id];
+    return acc;
+  }, {} as Effets);
+}
+
+/**
+ * Photographie de la partie pour l'affichage. Le tour vaut celui que le
+ * tableau de bord textuel annonce — les deux ne doivent jamais divergér, un
+ * test le vérifie.
+ */
+export function etatJeuPublic(etat: EtatPartie, choix?: ChoixJoue): EtatJeuPublic {
+  const derniers: TourJoue[] = etat.historique
+    .map((c, i) => {
+      const d = decisionParId(c.decisionId);
+      return {
+        tour: i + 1,
+        titre: d?.titre ?? c.decisionId,
+        choix: d?.options[c.optionIndex]?.label ?? "",
+        deltas: deltasDe(c),
+      };
+    })
+    .slice(-3)
+    .reverse();
+
+  return {
+    moteur: MOTEUR_ELYSEE,
+    tour: numeroDeTour(etat),
+    duree: etat.duree,
+    difficulte: etat.difficulte,
+    titre: etat.titre,
+    jauges: { ...etat.jauges },
+    ...(choix ? { deltas: deltasDe(choix) } : {}),
+    serieVictoire: etat.serieVictoire,
+    ...(etat.fin ? { fin: etat.fin, finTitre: RECITS_FIN[etat.fin].titre } : {}),
+    derniers,
+  };
+}
+
+function blocEtat(etat: EtatPartie, choix?: ChoixJoue): string {
+  return `<!--ETAT_JEU: ${JSON.stringify(etatJeuPublic(etat, choix))}-->`;
+}
+
+/* ------------------------------------------------------------------ */
 /* Point d'entrée : rejoue l'historique, répond au dernier message     */
 /* ------------------------------------------------------------------ */
 
 export function reponseJeuElysee(messages: Message[]): string {
   let etat: EtatPartie | null = null;
   let reponse = texteInvitation();
+  // Le choix qui a produit la DERNIÈRE réponse : c'est lui qui porte les
+  // variations de jauges à afficher. Remis à zéro dès que la réponse n'est
+  // plus la conséquence d'une décision (ouverture, recadrage, après-fin).
+  let dernierChoix: ChoixJoue | undefined;
 
   for (const m of messages) {
     if (m.role !== "user" || typeof m.content !== "string") continue;
@@ -403,14 +468,17 @@ export function reponseJeuElysee(messages: Message[]): string {
     if (estDemarrage(texte)) {
       etat = nouvellePartie(texte, etat);
       reponse = texteOuverture(etat);
+      dernierChoix = undefined;
       continue;
     }
     if (!etat) {
       reponse = texteInvitation();
+      dernierChoix = undefined;
       continue;
     }
     if (etat.fin) {
       reponse = texteApresFin(etat);
+      dernierChoix = undefined;
       continue;
     }
 
@@ -422,6 +490,7 @@ export function reponseJeuElysee(messages: Message[]): string {
     if (decision && optionIndex >= 0) {
       const option = decision.options[optionIndex];
       const choix = appliquerChoix(etat, optionIndex);
+      dernierChoix = choix;
       if (etat.fin) {
         reponse = texteFin(etat, option, choix);
       } else {
@@ -434,10 +503,14 @@ export function reponseJeuElysee(messages: Message[]): string {
       }
     } else {
       reponse = texteRecadrage(etat);
+      dernierChoix = undefined;
     }
   }
 
-  return reponse;
+  // L'état part avec CHAQUE réponse d'une partie en cours ou terminée : le
+  // bandeau de l'interface se redessine sans rien relire du texte. Tant
+  // qu'aucune partie n'est lancée (invitation), il n'y a rien à afficher.
+  return etat ? `${reponse}\n${blocEtat(etat, dernierChoix)}` : reponse;
 }
 
 /** Exposé pour les tests : nombre de décisions disponibles. */
