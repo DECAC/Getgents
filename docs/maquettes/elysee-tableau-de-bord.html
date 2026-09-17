@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Tableau de bord figé « Élysée 2027 »</title>
+<style>
+/* Palette : styles/tokens.css du dépôt, pour que la maquette soit
+   directement transposable en CSS Modules. */
+:root{
+  --ink:#2a1f19; --muted:#73665f; --faint:#a2958f;
+  --bg:#fbf3ed; --card:#fffdf9; --line:#eadbd3; --line-soft:#f3e9e3;
+  --sage:#e65d76; --sage-700:#c73758; --sage-tint:#ffdee2;
+  --gold:#dca331; --gold-tint:#fde4bb;
+  --plum:#d64651; --plum-tint:#ffdbda;
+  --success:#57a45b; --success-tint:#d4f1d4;
+  --blue:#4f7cc9; --blue-700:#3a5fa3; --blue-tint:#dbe7fb;
+  --r:18px; --r-pill:999px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ========== BANDEAU FIGÉ, PLEINE LARGEUR, COLLÉ EN HAUT ==========
+   Il ne défile pas : la pression doit rester à l'écran pendant que le
+   joueur lit la situation et hésite. */
+.hud{position:sticky;top:0;z-index:20;background:var(--bg);padding:12px 18px 10px}
+.panel{
+  max-width:1280px;margin:0 auto;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r);position:relative;overflow:hidden;
+  transition:box-shadow .4s,border-color .4s
+}
+/* État de tension : tout le bandeau se met à respirer en rouge dès qu'une
+   jauge entre en zone critique. Premier signal de pression. */
+.panel.tension{border-color:var(--plum);box-shadow:0 0 0 3px var(--plum-tint)}
+.panel.tension .pHead{background:linear-gradient(180deg,var(--plum-tint),var(--card))}
+
+/* ---- Ligne 1 : identité de la partie et frise du mandat ---- */
+.pHead{display:flex;align-items:center;gap:14px;padding:11px 16px;border-bottom:1px solid var(--line-soft);transition:background .4s}
+.pTitle{font-weight:700;font-size:14.5px;white-space:nowrap}
+.pins{flex:1;min-width:120px;display:flex;flex-direction:column;gap:4px}
+.pips{display:flex;gap:4px}
+.pip{height:6px;flex:1;border-radius:3px;background:var(--line);transition:.3s}
+.pip.done{background:var(--blue)}
+.pip.now{background:var(--sage);box-shadow:0 0 0 2px var(--sage-tint)}
+.turnLab{font-size:11.5px;color:var(--muted)}
+.pin{font-size:11px;color:var(--muted);white-space:nowrap}
+.badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);
+  background:var(--blue-tint);color:var(--blue-700);white-space:nowrap}
+.badge.warn{background:var(--plum-tint);color:var(--plum)}
+
+/* ---- Ligne 2 : les cinq jauges côte à côte ---- */
+.grid{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;gap:0}
+.g{padding:12px 16px;border-right:1px solid var(--line-soft);transition:background .4s}
+.g:last-child{border-right:0}
+.gLab{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gNum{display:flex;align-items:baseline;gap:7px;margin:2px 0 7px}
+.gVal{font-size:27px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.gDelta{font-size:11.5px;font-weight:700;padding:1px 6px;border-radius:var(--r-pill);min-width:32px;text-align:center}
+.up{background:var(--success-tint);color:#2f6b33}
+.down{background:var(--plum-tint);color:var(--plum)}
+.flat{background:var(--line-soft);color:var(--faint)}
+
+/* Jauge maîtresse : c'est elle qui décide de la victoire, elle est traitée
+   comme telle — deux fois plus grosse. */
+.g.main{background:var(--line-soft)}
+.g.main .gVal{font-size:46px}
+.g.main .gDelta{font-size:13px;padding:2px 8px}
+.tag{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--blue-700);background:var(--blue-tint);padding:2px 6px;border-radius:var(--r-pill)}
+
+.track{position:relative;height:9px;border-radius:5px;background:#fff;
+  border:1px solid var(--line-soft);overflow:hidden}
+.g.main .track{height:11px;background:var(--card)}
+.zone{position:absolute;top:0;bottom:0}
+.zone.low{left:0;width:25%;background:var(--plum-tint)}
+.zone.high{right:0;width:25%;background:var(--gold-tint)}
+.fill{position:absolute;top:0;bottom:0;left:0;border-radius:5px;background:var(--blue);
+  transition:width .7s cubic-bezier(.2,.8,.2,1),background .4s}
+.tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--plum);opacity:.8}
+
+/* Alerte : la jauge en zone basse pulse et se borde de rouge. */
+.g.alert{background:var(--plum-tint)}
+.g.alert .fill{background:var(--plum);animation:pulse 1.5s ease-in-out infinite}
+.g.alert .gLab{color:var(--plum)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+/* Récompense : zone haute, teinte dorée. */
+.g.reward{background:var(--gold-tint)}
+.g.reward .fill{background:var(--gold)}
+.g.reward .gLab{color:#8a5f13}
+/* Variation du tour : le chiffre saute, aucune conséquence ne passe inaperçue. */
+.g.moved .gVal{animation:pop .55s ease-out}
+@keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.22)}100%{transform:scale(1)}}
+.g.crit{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* ---- Ligne 3 : menace, objectif, derniers tours ---- */
+.strip{display:grid;grid-template-columns:1.1fr 1fr 1.6fr;border-top:1px solid var(--line-soft);
+  transition:opacity .25s,max-height .3s;overflow:hidden}
+.cell{padding:10px 16px;border-right:1px solid var(--line-soft);font-size:12.5px}
+.cell:last-child{border-right:0}
+.cell b{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.cell.threat.hot{background:var(--plum-tint);color:var(--plum)}
+.cell.threat.hot b{color:var(--plum)}
+.cond{display:inline-flex;align-items:center;gap:5px;margin-right:12px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}
+.cond.ok .dot{background:var(--success)}
+.cond.ok{color:#2f6b33;font-weight:600}
+.streak{margin-top:3px;font-size:11.5px;color:var(--muted)}
+.cell.goal.near{background:var(--gold-tint)}
+.evs{display:flex;gap:14px;flex-wrap:wrap}
+.ev{display:flex;gap:6px;animation:slidein .4s ease-out;max-width:230px}
+.ev i{font-style:normal;flex:none}
+.ev em{font-style:normal;color:var(--muted);display:block;font-size:11.5px}
+@keyframes slidein{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+/* Repli au défilement : on garde les jauges, on masque le détail. Le bandeau
+   reste visible sans manger l'écran de lecture. */
+.panel.compact .strip{max-height:0;opacity:0;border-top-color:transparent}
+.panel.compact .g{padding:8px 16px}
+.panel.compact .g.main .gVal{font-size:34px}
+.panel.compact .gVal{font-size:22px}
+
+/* ---- Fin de partie ---- */
+.over{position:absolute;inset:0;background:rgba(255,253,249,.96);display:none;
+  align-items:center;justify-content:center;gap:14px;padding:18px;animation:slidein .5s}
+.over.show{display:flex}
+.over .k{font-size:34px}
+.over .t{font-size:20px;font-weight:800}
+.over .s{font-size:13px;color:var(--muted)}
+.over.win{background:rgba(253,228,187,.97)}
+.over.lose{background:rgba(255,219,218,.97)}
+.over .again{background:var(--sage);color:#fff;border:0;border-radius:var(--r-pill);
+  padding:9px 18px;font:inherit;font-weight:700;cursor:pointer}
+
+@media (max-width:1080px){
+  .grid{grid-template-columns:1.5fr 1fr 1fr}
+  .g{border-bottom:1px solid var(--line-soft)}
+  .strip{grid-template-columns:1fr 1fr}
+}
+@media (max-width:680px){
+  .grid{grid-template-columns:1fr 1fr}
+  .strip{grid-template-columns:1fr}
+  .pHead{flex-wrap:wrap}
+}
+
+/* ========== ESPACE CONVERSATIONNEL (le vrai fil, ici simulé) ========== */
+.chat{max-width:860px;margin:0 auto;padding:16px 18px 8px;display:flex;flex-direction:column;gap:12px}
+.bubble{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.bubble h4{margin:0 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.bubble p{margin:0 0 8px}
+.bubble p:last-child{margin-bottom:0}
+.opts{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.opt{text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:var(--r-pill);
+  padding:10px 16px;font:inherit;color:var(--ink);cursor:pointer;transition:.15s}
+.opt:hover{border-color:var(--sage);background:var(--sage-tint)}
+.opt:disabled{opacity:.45;cursor:default}
+.composer{display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r-pill);padding:9px 16px;color:var(--faint);font-size:14px}
+.composer span{flex:1}
+
+/* ---- Bandeaux d'événement ---- */
+.toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:50;width:288px}
+.toast{border-radius:14px;padding:11px 13px;font-size:13px;font-weight:600;color:#fff;
+  box-shadow:0 8px 24px rgba(42,31,25,.18);animation:toastin .35s ease-out}
+.toast.alert{background:var(--plum)}
+.toast.reward{background:var(--gold);color:#4a3208}
+.toast small{display:block;font-weight:500;opacity:.9;margin-top:2px}
+@keyframes toastin{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+
+/* ---- Panneau de démonstration ---- */
+.demo{max-width:860px;margin:0 auto;padding:6px 18px 40px}
+.demo .box{background:#fff;border:1px dashed var(--line);border-radius:var(--r);padding:12px 16px}
+.demo h3{margin:0 0 4px;font-size:13px}
+.demo p{margin:0 0 10px;font-size:12.5px;color:var(--muted)}
+.demo button{background:var(--line-soft);border:1px solid var(--line);border-radius:var(--r-pill);
+  padding:7px 13px;font:inherit;font-size:12.5px;cursor:pointer;margin:0 6px 6px 0}
+.demo button:hover{background:var(--sage-tint);border-color:var(--sage)}
+.spacer{height:30vh}
+</style>
+</head>
+<body>
+<h2 class="sr-only">Maquette du tableau de bord figé du jeu Élysée 2027 : bandeau pleine largeur en haut de l'écran avec cinq jauges, zones d'alerte et de récompense, menace la plus proche, objectif de victoire et derniers tours ; le fil de conversation reste dessous.</h2>
+
+<!-- ======================= BANDEAU FIGÉ ======================= -->
+<div class="hud">
+  <div class="panel" id="panel">
+    <div class="pHead">
+      <span class="pTitle">🏛️ Conseil de défense</span>
+      <span class="pins">
+        <span class="pips" id="pips"></span>
+        <span class="turnLab" id="turnLab">Tour 3 / 8</span>
+      </span>
+      <span class="pin">📌 figé · mis à jour à chaque décision</span>
+      <span class="badge" id="diff">Réaliste</span>
+    </div>
+
+    <div class="grid">
+      <div class="g main" id="g-bonheur">
+        <div class="gLab">Bonheur des Français <span class="tag">jauge maîtresse</span></div>
+        <div class="gNum"><span class="gVal" id="v-bonheur">47</span><span class="gDelta flat" id="d-bonheur">=</span></div>
+        <div class="track">
+          <div class="zone low"></div><div class="zone high"></div>
+          <div class="fill" id="f-bonheur"></div>
+          <div class="tick" style="left:15%" title="Révolution à 15"></div>
+        </div>
+      </div>
+      <div id="gauges" style="display:contents"></div>
+    </div>
+
+    <div class="strip">
+      <div class="cell threat" id="threat"></div>
+      <div class="cell goal" id="goal">
+        <b>Objectif du mandat</b>
+        <span class="cond" id="c1"><span class="dot"></span>Bonheur ≥ 80</span>
+        <span class="cond" id="c2"><span class="dot"></span>Confiance ≥ 70</span>
+        <div class="streak" id="streak">Tenu 0 tour sur 2 consécutifs</div>
+      </div>
+      <div class="cell">
+        <b>Trois derniers tours</b>
+        <div class="evs" id="feed"></div>
+      </div>
+    </div>
+
+    <div class="over" id="over">
+      <div class="k" id="overK">🏛️</div>
+      <div>
+        <div class="t" id="overT"></div>
+        <div class="s" id="overS"></div>
+      </div>
+      <button class="again" onclick="reset()">Rejouer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ESPACE CONVERSATIONNEL — le vrai fil du gent ============ -->
+<section class="chat" aria-label="Fil de conversation">
+  <div class="bubble" id="story">
+    <h4>Tour 3 · Sécurité</h4>
+    <p><strong>Situation</strong> — Les atteintes aux personnes ont progressé de 4 % sur un an dans plusieurs métropoles (SSMSI, 2025). Les élus locaux réclament des moyens, dans les quartiers populaires comme dans les zones rurales où la présence policière recule.</p>
+    <p><strong>Question</strong> — Quelle priorité donnez-vous à la politique de sécurité ?</p>
+    <div class="opts" id="opts"></div>
+  </div>
+  <div class="composer"><span>Autre réponse…</span><span style="font-size:18px">➤</span></div>
+</section>
+
+<div class="demo">
+  <div class="box">
+    <h3>Démonstration</h3>
+    <p>Cliquez une option dans le fil, ou forcez un état. Faites défiler la page : le bandeau reste collé en haut et se replie.</p>
+    <button onclick="force({cohesion:-30})">Crise de cohésion (alerte)</button>
+    <button onclick="force({achat:31})">Poussée du pouvoir d'achat (récompense)</button>
+    <button onclick="force({bonheur:34,confiance:26})">Seuils de victoire (2 clics)</button>
+    <button onclick="force({bonheur:-33})">Bonheur au seuil de rupture</button>
+    <button onclick="reset()">Réinitialiser</button>
+  </div>
+</div>
+<div class="spacer"></div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+const ALERT=25, REWARD=75;
+const DEF={bonheur:47,confiance:45,achat:47,finances:31,cohesion:50};
+const LABELS={bonheur:'Bonheur',confiance:'Confiance',achat:'Pouvoir d’achat',
+  finances:'Finances',cohesion:'Cohésion'};
+const GAUGES=[
+  {k:'confiance',l:"Confiance en l'avenir"},
+  {k:'achat',l:"Pouvoir d'achat"},
+  {k:'finances',l:'Finances publiques',floor:5,fin:'Mise sous tutelle'},
+  {k:'cohesion',l:'Cohésion nationale',floor:10,fin:'Guerre civile'}
+];
+const ALL=[{k:'bonheur',l:'Bonheur',floor:15,fin:'Révolution'},...GAUGES];
+const TURNS=[
+  {theme:'Sécurité',q:'Quelle priorité donnez-vous à la politique de sécurité ?',opts:[
+    {t:'Renforts policiers dans les zones tendues',d:{bonheur:2,cohesion:-3,finances:-4,confiance:2},
+     c:"Vous annoncez le redéploiement d'effectifs vers les métropoles et les zones rurales sous-dotées. Les maires saluent, mais les associations de quartier dénoncent une réponse uniquement répressive."},
+    {t:'Plan de prévention et médiation',d:{bonheur:1,cohesion:4,finances:-3,confiance:-1},
+     c:"Vous engagez un plan de médiation et d'éducateurs de rue. L'apaisement est réel sur le terrain, mais les résultats chiffrés ne seront visibles qu'à moyen terme — l'opposition raille l'angélisme."},
+    {t:'Statu quo budgétaire assumé',d:{bonheur:-4,cohesion:-6,finances:3,confiance:-3},
+     c:"Vous renvoyez la question au prochain budget. Les syndicats de police et les élus locaux y voient un abandon ; le sentiment d'insécurité progresse dans les sondages."}
+  ]},
+  {theme:'Logement',q:'Comment répondez-vous à la crise du logement ?',opts:[
+    {t:'Choc d’offre : construction accélérée',d:{bonheur:3,achat:4,finances:-6,confiance:3},
+     c:"Vous débloquez le foncier public et allégez les procédures. Les promoteurs repartent, les maires s'inquiètent de l'artificialisation et la facture pèse sur le déficit."},
+    {t:'Encadrement des loyers élargi',d:{bonheur:4,achat:5,cohesion:-3,confiance:-2},
+     c:"Les locataires respirent immédiatement. Les bailleurs privés menacent de retirer des biens du marché locatif, ce qui pourrait réduire l'offre dans deux tours."},
+    {t:'Aide ciblée aux primo-accédants',d:{bonheur:2,achat:2,finances:-2},
+     c:"La mesure est saluée mais jugée trop étroite : elle ne touche qu'une fraction des ménages et ne change rien pour les locataires du parc tendu."}
+  ]},
+  {theme:'Retraites',q:'Quelle position adoptez-vous sur les retraites ?',opts:[
+    {t:'Allongement de la durée de cotisation',d:{bonheur:-7,cohesion:-8,finances:9,confiance:2},
+     c:"Le signal budgétaire est fort et Bruxelles applaudit. Mais l'intersyndicale appelle à la grève générale et les cortèges dépassent le million de personnes."},
+    {t:'Réforme du financement sans toucher à l’âge',d:{bonheur:1,cohesion:2,finances:2},
+     c:"Vous jouez sur l'assiette des cotisations plutôt que sur l'âge. Le compromis tient, mais le Conseil d'orientation des retraites prévient que le besoin de financement reste ouvert."},
+    {t:'Report de la réforme après consultation',d:{bonheur:2,cohesion:3,finances:-5,confiance:-4},
+     c:"L'apaisement social est immédiat. Les marchés et la Cour des comptes doutent ouvertement de votre capacité à tenir la trajectoire."}
+  ]}
+];
+
+let S, turn, idx, streak, feed, over;
+
+function reset(){
+  S={...DEF}; turn=3; idx=0; streak=0; feed=[
+    {i:'📉',t:'Tour 2 · Bouclier tarifaire ciblé',s:'Finances −5 · Pouvoir d’achat +5'},
+    {i:'🏥',t:'Tour 1 · Revalorisation des soignants',s:'Bonheur +5 · Finances −6'}
+  ];
+  over=false;
+  document.getElementById('over').className='over';
+  document.getElementById('toasts').innerHTML='';
+  build(); render(); renderTurn();
+}
+
+function build(){
+  document.getElementById('gauges').innerHTML=GAUGES.map(g=>`
+    <div class="g" id="g-${g.k}">
+      <div class="gLab">${g.l}</div>
+      <div class="gNum"><span class="gVal" id="v-${g.k}">0</span><span class="gDelta flat" id="d-${g.k}">=</span></div>
+      <div class="track">
+        <div class="zone low"></div><div class="zone high"></div>
+        <div class="fill" id="f-${g.k}"></div>
+        ${g.floor?`<div class="tick" style="left:${g.floor}%" title="${g.fin} à ${g.floor}"></div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function renderTurn(){
+  const t=TURNS[idx%TURNS.length], st=document.getElementById('story');
+  st.querySelector('h4').textContent=`Tour ${Math.min(turn,8)} · ${t.theme}`;
+  st.querySelectorAll('p')[1].innerHTML=`<strong>Question</strong> — ${t.q}`;
+  document.getElementById('opts').innerHTML=t.opts.map((o,i)=>
+    `<button class="opt" onclick="choose(${i})"${over?' disabled':''}>${o.t}</button>`).join('');
+}
+
+function render(deltas){
+  let tension=false;
+  ALL.forEach(g=>{
+    const v=S[g.k], el=document.getElementById('g-'+g.k);
+    document.getElementById('v-'+g.k).textContent=v;
+    document.getElementById('f-'+g.k).style.width=v+'%';
+    const d=deltas&&deltas[g.k], dn=document.getElementById('d-'+g.k);
+    dn.textContent=d?(d>0?`+${d}`:d):'=';
+    dn.className='gDelta '+(d>0?'up':d<0?'down':'flat');
+    el.className='g'+(g.k==='bonheur'?' main':'')+(v<=ALERT?' alert':v>=REWARD?' reward':'');
+    if(d){void el.offsetWidth; el.classList.add('moved')}
+    if(v<=g.floor+8) el.classList.add('crit');
+    if(v<=ALERT) tension=true;
+  });
+  document.getElementById('panel').className='panel'+(tension?' tension':'')+(compact?' compact':'');
+  const badge=document.getElementById('diff');
+  badge.className='badge'+(tension?' warn':'');
+  badge.textContent=tension?'⚠ État de tension':'Réaliste';
+
+  document.getElementById('pips').innerHTML=Array.from({length:8},(_,i)=>
+    `<span class="pip ${i+1<turn?'done':i+1===turn?'now':''}"></span>`).join('');
+  document.getElementById('turnLab').textContent=`Tour ${Math.min(turn,8)} / 8 · ${Math.max(0,9-turn)} restants`;
+
+  // Menace la plus proche : toujours nommer la catastrophe la plus près.
+  const r=ALL.filter(g=>g.floor).map(g=>({n:g.fin,l:LABELS[g.k],v:S[g.k],f:g.floor,gap:S[g.k]-g.floor}))
+    .sort((a,b)=>a.gap-b.gap)[0];
+  const th=document.getElementById('threat');
+  th.className='cell threat'+(r.gap<=15?' hot':'');
+  th.innerHTML=`<b>Menace la plus proche</b>${r.n} — ${r.l} ${r.v}, seuil ${r.f} · <strong>${r.gap} points de marge</strong>`;
+
+  const o1=S.bonheur>=80, o2=S.confiance>=70;
+  document.getElementById('c1').className='cond'+(o1?' ok':'');
+  document.getElementById('c2').className='cond'+(o2?' ok':'');
+  document.getElementById('goal').className='cell goal'+(o1&&o2?' near':'');
+  document.getElementById('streak').textContent=`Tenu ${streak} tour${streak>1?'s':''} sur 2 consécutifs`;
+
+  document.getElementById('feed').innerHTML=feed.slice(0,3).map(e=>
+    `<div class="ev"><i>${e.i}</i><span>${e.t}<em>${e.s}</em></span></div>`).join('');
+}
+
+function toast(kind,txt,sub){
+  const n=document.createElement('div');
+  n.className='toast '+kind;
+  n.innerHTML=txt+(sub?`<small>${sub}</small>`:'');
+  const box=document.getElementById('toasts');
+  box.prepend(n);
+  setTimeout(()=>n.remove(),5200);
+  while(box.children.length>3) box.lastChild.remove();
+}
+
+function apply(d,label,consequence,brut){
+  const before={...S};
+  Object.keys(d).forEach(k=>{
+    // Bornage ±12 par jauge et par tour, comme la règle du prompt : c'est le
+    // code qui tient la physique, pas le modèle. Les raccourcis de
+    // démonstration (brut) sautent ce plafond pour atteindre un seuil d'un clic.
+    const v=brut?d[k]:Math.max(-12,Math.min(12,d[k]));
+    S[k]=Math.max(0,Math.min(100,S[k]+v));
+  });
+  const deltas={}; Object.keys(S).forEach(k=>{const x=S[k]-before[k]; if(x) deltas[k]=x});
+
+  // Bandeaux : seul le FRANCHISSEMENT d'un seuil en déclenche un, sinon
+  // l'alerte devient du bruit de fond.
+  ALL.forEach(({k,l})=>{
+    if(before[k]>ALERT && S[k]<=ALERT) toast('alert',`⚠ Alerte — ${l} ${S[k]}`,'Zone critique atteinte');
+    if(before[k]<REWARD && S[k]>=REWARD) toast('reward',`✦ ${l} ${S[k]}`,'Dynamique favorable installée');
+  });
+
+  if(label) feed.unshift({i:deltas.bonheur>0?'📈':deltas.bonheur<0?'📉':'⚖️',t:`Tour ${turn} · ${label}`,
+    s:Object.keys(deltas).map(k=>`${LABELS[k]} ${deltas[k]>0?'+':''}${deltas[k]}`).join(' · ')});
+
+  streak = (S.bonheur>=80 && S.confiance>=70) ? streak+1 : 0;
+  render(deltas);
+  if(consequence) document.getElementById('story').querySelectorAll('p')[0]
+    .innerHTML=`<strong>Conséquence immédiate</strong> — ${consequence}`;
+  checkEnd();
+}
+
+function choose(i){
+  if(over) return;
+  const o=TURNS[idx%TURNS.length].opts[i];
+  turn++; idx++;
+  apply(o.d,o.t,o.c);
+  if(!over) renderTurn();
+}
+function force(d){
+  if(over) return;
+  turn++; apply(d,'Événement forcé (démo)',null,true);
+  if(!over) renderTurn();
+}
+
+function checkEnd(){
+  let r=null;
+  if(S.bonheur<=15) r={k:'🔥',t:'Révolution',s:'Bonheur tombé à '+S.bonheur+'. Le pays est ingouvernable.',c:'lose'};
+  else if(S.cohesion<=10) r={k:'💥',t:'Guerre civile',s:'Cohésion nationale à '+S.cohesion+'.',c:'lose'};
+  else if(S.finances<=5) r={k:'🏦',t:'Mise sous tutelle',s:'Finances publiques à '+S.finances+'.',c:'lose'};
+  else if(streak>=2) r={k:'🏆',t:'Mandat victorieux',s:'Bonheur '+S.bonheur+' et Confiance '+S.confiance+' tenus deux tours.',c:'win'};
+  else if(turn>8) r=S.bonheur>=65
+    ? {k:'🎖️',t:'Mandat réussi',s:'Fin du mandat avec un Bonheur de '+S.bonheur+'.',c:'win'}
+    : {k:'🏛️',t:'Bilan mitigé',s:'Fin du mandat, Bonheur '+S.bonheur+'.',c:''};
+  if(!r) return;
+  over=true;
+  document.getElementById('overK').textContent=r.k;
+  document.getElementById('overT').textContent=r.t;
+  document.getElementById('overS').textContent=r.s;
+  document.getElementById('over').className='over show '+r.c;
+  toast(r.c==='win'?'reward':'alert',r.t,'Fin de partie — bilan disponible');
+  document.getElementById('opts').innerHTML='<button class="opt" disabled>Partie terminée — voir le bilan en haut</button>';
+}
+
+// Repli du bandeau au défilement.
+let compact=false;
+addEventListener('scroll',()=>{
+  const now=scrollY>40;
+  if(now!==compact){compact=now; document.getElementById('panel').classList.toggle('compact',compact)}
+},{passive:true});
+
+reset();
+</script>
+</body>
+</html>
