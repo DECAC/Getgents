@@ -415,10 +415,13 @@ export const ESPACES: EspacesMap = {
     ],
   },
 
-  // Jeu déterministe « Élysée 2027 » : l'espace est DÉRIVÉ du brouillon du
-  // studio (même source, jamais de divergence) pour être jouable immédiatement
-  // — sans Preview préalable ni ligne en base. Le chat est répondu par le
-  // moteur de règles (moteurJeu), sans modèle de langage : la partie ne coûte
-  // rien, donc la démo peut être ouverte à tous.
+  // Les DEUX « Élysée 2027 », côte à côte pour être comparés : le GÉNÉRATIF,
+  // tenu par un modèle (il consomme donc une clé et du quota, et les jauges
+  // valent ce que le modèle sait compter), et le DÉTERMINISTE, tenu par le
+  // moteur de règles (`moteurJeu`) — sans modèle de langage, donc gratuit,
+  // immédiat et exact. Les deux espaces sont DÉRIVÉS des brouillons du studio
+  // (même source, jamais de divergence), ce qui les rend jouables sans Preview
+  // préalable ni ligne en base.
   "elysee-2027": draftToEspace(GENT_DRAFTS["elysee-2027"]),
+  "elysee-2027-deterministe": draftToEspace(GENT_DRAFTS["elysee-2027-deterministe"]),
 };

@@ -165,6 +165,14 @@ strict (JSON dans un marqueur HTML), et un `bad_marker` rend le salon muet.
 
 Vercel, plan **Pro** — les 300 s de `maxDuration` en dépendent (voir les pièges).
 
+**Cloudflare Workers a été essayé, puis DÉBRANCHÉ.** L'intégration ajoutait un
+contrôle à chaque PR, et ce contrôle échouait toujours : le dépôt n'a ni
+`wrangler.toml`, ni adaptateur (`@opennextjs/cloudflare`), ni la moindre
+dépendance Cloudflare — c'est un Next.js standard, déployé par Vercel. Rien à
+réparer, donc, mais il fallait la couper plutôt que la tolérer : **un contrôle
+qui échoue toujours ne signale plus rien**, et on apprend à passer outre le
+rouge le jour où il est vrai. Ne pas la rebrancher sans adaptateur.
+
 **Deux avis de sécurité restent ouverts**, et ils exigent Next 16 — deux
 majeures d'écart. « DoS via Image Optimizer » ne vise que les applications
 **auto-hébergées** : sur Vercel l'optimiseur est celui de la plateforme, donc

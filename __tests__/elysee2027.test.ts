@@ -8,6 +8,7 @@ import { AMPLITUDE_MAX, DIFFICULTES, JAUGES, SEUILS } from "@/lib/elysee2027/typ
 import { extractQuestions } from "@/lib/suggestions";
 import { extractEtatJeu } from "@/lib/jeuEtat";
 import { ESPACES } from "@/lib/mock-data/espaces";
+import { GENT_DRAFTS } from "@/lib/mock-data/builder";
 
 /* ------------------------------------------------------------------ */
 /* Les données : 50 décisions valides et sourcées                      */
@@ -280,10 +281,31 @@ describe("elysee2027 — moteur", () => {
     expect(questionEnCours(reponse).allowOther).toBe(false);
   });
 
+  test("les deux gents « Élysée » cohabitent, et un seul porte le moteur", () => {
+    // Les deux versions sont gardées côte à côte POUR ÊTRE COMPARÉES : le même
+    // jeu tenu par un modèle d'un côté, par du code de l'autre.
+    //
+    // `moteurJeu` est le SEUL bit qui décide du chemin de chat (`/api/chat` et
+    // la route du lien de partage testent l'égalité stricte). Le poser sur le
+    // gent génératif le couperait de son modèle ; l'oublier sur le
+    // déterministe le renverrait vers OpenRouter avec un prompt qui n'a jamais
+    // servi. Dans les deux cas, aucune erreur — juste un jeu qui n'est plus
+    // celui qu'on croit.
+    const generatif = GENT_DRAFTS["elysee-2027"];
+    const deterministe = GENT_DRAFTS["elysee-2027-deterministe"];
+    expect(generatif).toBeDefined();
+    expect(deterministe).toBeDefined();
+    expect(generatif.moteurJeu).toBeUndefined();
+    expect(deterministe.moteurJeu).toBe("elysee-2027");
+    expect(generatif.name).not.toBe(deterministe.name);
+    // Deux gents ne peuvent pas partager l'identifiant de leur formulaire.
+    expect(generatif.jumpForm?.id).not.toBe(deterministe.jumpForm?.id);
+  });
+
   test("l'espace de démonstration existe et est branché sur le moteur", () => {
-    // /espace/elysee-2027 doit se charger SANS serveur : l'espace vient du
-    // catalogue statique, dérivé du brouillon du studio.
-    const espace = ESPACES["elysee-2027"];
+    // /espace/elysee-2027-deterministe doit se charger SANS serveur : l'espace
+    // vient du catalogue statique, dérivé du brouillon du studio.
+    const espace = ESPACES["elysee-2027-deterministe"];
     expect(espace).toBeDefined();
     expect(espace.moteurJeu).toBe("elysee-2027");
     expect(espace.jumpForm?.fields.length).toBeGreaterThan(0);
