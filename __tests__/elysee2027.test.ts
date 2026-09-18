@@ -1,7 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
 import { DECISIONS, ORDRE_CANONIQUE, PRIORITE_VERS_DECISION, decisionParId } from "@/lib/elysee2027/decisions";
-import { reponseJeuElysee } from "@/lib/elysee2027/moteur";
+import { reponseJeuElysee,
+  normaliserReponse,
+} from "@/lib/elysee2027/moteur";
 import { AMPLITUDE_MAX, DIFFICULTES, JAUGES, SEUILS } from "@/lib/elysee2027/types";
 import { extractQuestions } from "@/lib/suggestions";
 import { extractEtatJeu } from "@/lib/jeuEtat";
@@ -34,7 +36,11 @@ describe("elysee2027 — données", () => {
   test("chaque décision a exactement 4 options aux libellés distincts", () => {
     for (const d of DECISIONS) {
       expect(d.options).toHaveLength(4);
-      const labels = d.options.map((o) => o.label.trim().toLowerCase());
+      // Normalisés AVEC la règle du moteur, pas avec une approximation :
+      // `trim().toLowerCase()` laissait passer deux libellés ne différant que
+      // par un accent ou une espace double. Le moteur, lui, les confond — et
+      // `findIndex` retiendrait silencieusement le premier.
+      const labels = d.options.map((o) => normaliserReponse(o.label));
       expect(new Set(labels).size).toBe(4);
       for (const o of d.options) {
         expect(o.label.length).toBeGreaterThan(0);
@@ -157,6 +163,39 @@ const optionMinimisant = (jauge: (typeof JAUGES)[number]["id"]) =>
   };
 
 describe("elysee2027 — moteur", () => {
+  /*
+   * Régression : `prochaineDecision` évitait de servir deux fois la même
+   * thématique de suite — en UNE passe. Si toutes les décisions non jouées
+   * restantes partageaient le thème courant, la boucle s'épuisait, renvoyait
+   * `null`, et le moteur clôturait le mandat AVANT son terme, sans trace.
+   *
+   * Honnêteté sur la portée : avec 50 décisions, 13 thèmes et un mandat
+   * plafonné à 15 tours, cette branche précise n'est pas atteignable par l'API
+   * publique — ce test ne l'exerce donc PAS. Il garde la propriété générale
+   * dont elle relève : un mandat va jusqu'à son terme annoncé. Il mordrait si
+   * le jeu de décisions se réduisait ou si la durée augmentait, c'est-à-dire
+   * exactement dans les conditions qui rendraient le défaut réel.
+   */
+  test("un mandat complet va jusqu'à son terme, jamais faute de décision à servir", () => {
+    const messages: Msg[] = [{
+      role: "user",
+      content: "Démarre une nouvelle partie. Difficulté : Réaliste. Priorité affichée de mon mandat : Pouvoir d'achat. Format : Mandat complet (15 tours). Appelle-moi Madame la Présidente.",
+    }];
+    // Stratégie médiane : on cherche à ne déclencher aucune fin par effondrement,
+    // pour que seul le terme du mandat puisse conclure la partie.
+    const reponse = jouerJusquaFin(messages, (d) => {
+      let meilleure = 0;
+      d.options.forEach((o, i) => {
+        const somme = (x: typeof o) => Object.values(x.effets).reduce((a, b) => a + b, 0);
+        if (somme(o) > somme(d.options[meilleure])) meilleure = i;
+      });
+      return meilleure;
+    });
+    expect(reponse).toMatch(/### (Victoire|Mandat réussi|Bilan mitigé)/);
+    // La partie n'a pas pu se clore avant le tour 15 par manque de décision.
+    expect(reponse).not.toContain("Tour 14/15");
+  });
+
   test("le démarrage ouvre une partie : tour 1/8, jauges Réaliste, 4 options sans « Autre »", () => {
     const reponse = reponseJeuElysee([{ role: "user", content: DEMARRAGE_COURT_REALISTE }]);
     expect(reponse).toContain("Tour 1/8");

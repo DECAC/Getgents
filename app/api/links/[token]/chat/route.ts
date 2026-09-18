@@ -15,6 +15,7 @@ import { notifierUsageInvite } from "@/lib/server/signalements";
 import { langueDeLEnTete } from "@/lib/langue";
 import { mesurerReponse, porteDuContenu, porteUnSigne, type InstantsReponse } from "@/lib/chatTiming";
 import { reponseSseElysee } from "@/lib/elysee2027/serveur";
+import { MOTEUR_ELYSEE } from "@/lib/elysee2027/moteur";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -110,7 +111,11 @@ export async function POST(req: Request, { params }: Params) {
   // Moteur de jeu déterministe (ex. « Élysée 2027 ») : la réponse sort des
   // règles du jeu, sans modèle. Ni clé ni quota ne sont consommés — un jeu
   // partagé massivement ne coûte rien au propriétaire ni à la plateforme.
-  if (espace.moteurJeu) {
+  // Égalité STRICTE, comme dans `/api/chat` : `if (espace.moteurJeu)` acceptait
+  // n'importe quelle valeur et servait Élysée. Non exploitable — la valeur vient
+  // du gent publié, pas de l'appelant — mais un second moteur y serait tombé
+  // silencieusement dans le premier.
+  if (espace.moteurJeu === MOTEUR_ELYSEE) {
     return reponseSseElysee(history);
   }
 
