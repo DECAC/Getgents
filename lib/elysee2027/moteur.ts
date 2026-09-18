@@ -22,10 +22,20 @@ import {
   type FinJeu,
   type JaugeId,
   type OptionDecision,
+  type SceneJeu,
   type TourJoue,
 } from "./types";
 
 export const MOTEUR_ELYSEE = "elysee-2027";
+
+/**
+ * Le seul libellé qui lève la pause d'après-décision.
+ *
+ * Le tour se joue en deux temps : on tranche, on encaisse la conséquence, puis
+ * on DEMANDE la suite. Sans cette coupure, la question suivante défilait sous
+ * la conséquence et personne ne la lisait.
+ */
+export const LIBELLE_SUITE = "Question suivante";
 
 type TypeFin = FinJeu;
 
@@ -45,6 +55,13 @@ interface EtatPartie {
   jouees: string[];
   /** Décision actuellement posée au joueur. */
   enCours: string;
+  /**
+   * Vrai entre un choix et la demande de la suite : `enCours` désigne alors la
+   * décision SUIVANTE, que le joueur n'a pas encore lue. Tant que c'est vrai,
+   * ses libellés ne doivent pas pouvoir être appariés — sinon un clic en retard
+   * trancherait une décision jamais affichée.
+   */
+  enAttente: boolean;
   /** Position de la décision en cours dans ORDRE_CANONIQUE. */
   positionCanon: number;
   /** Tours consécutifs au-dessus des seuils de victoire. */
@@ -147,6 +164,7 @@ function nouvellePartie(texte: string, precedente: EtatPartie | null): EtatParti
     jauges: { ...DIFFICULTES[difficulte].jauges },
     jouees: [],
     enCours: premiere,
+    enAttente: false,
     positionCanon: Math.max(0, ORDRE_CANONIQUE.indexOf(premiere)),
     serieVictoire: 0,
     historique: [],
@@ -214,6 +232,9 @@ function appliquerChoix(etat: EtatPartie, optionIndex: number): ChoixJoue {
   }
   const choix: ChoixJoue = { decisionId: decision.id, optionIndex, avant, apres: { ...etat.jauges } };
   etat.historique.push(choix);
+  // `enCours` continue d'avancer plus bas — c'est lui qui déclenche la fin de
+  // mandat quand il n'y a plus rien à servir. C'est l'AFFICHAGE qu'on retient.
+  etat.enAttente = true;
   etat.jouees.push(decision.id);
   const auDessus =
     etat.jauges.bonheur >= SEUILS.victoire.bonheur && etat.jauges.confiance >= SEUILS.victoire.confiance;
@@ -285,12 +306,31 @@ function blocDecision(decision: Decision): string {
   return [
     `### ${decision.theme} — ${decision.titre}`,
     "",
+    // La scénette précède la situation chiffrée : on plante le décor, puis on
+    // donne les faits. Absente sur une décision non mise en scène, et la
+    // réponse se lit exactement comme avant.
+    ...(decision.scenette ? [decision.scenette, ""] : []),
     decision.situation,
     "",
     `**${decision.question}**`,
     "",
     blocQuestions(decision.question, decision.options.map((o) => o.label)),
   ].join("\n");
+}
+
+/**
+ * La pause qui suit un choix : ce qu'il a produit, et rien de la suite.
+ *
+ * `une` et `reaction` ne sont pas recopiées ici — elles partent dans l'état,
+ * donc dans le marqueur, et l'interface les DESSINE. Les répéter dans le texte
+ * les ferait lire deux fois.
+ */
+function texteApresChoix(etat: EtatPartie, option: OptionDecision, choix: ChoixJoue): string {
+  return sections(
+    option.consequence,
+    [tableauDeBord(etat, choix), ...alertes(choix)].join("\n"),
+    blocQuestions("Poursuivre ?", [LIBELLE_SUITE])
+  );
 }
 
 const CONTEXTE_DIFFICULTE: Record<Difficulte, string> = {
@@ -397,6 +437,18 @@ function texteRecadrage(etat: EtatPartie): string {
   ].join("\n");
 }
 
+/**
+ * Le joueur a écrit autre chose pendant la pause : on repose la seule action
+ * possible, sans rien trancher. Le cas qui compte est le clic en retard sur un
+ * libellé de la décision suivante — il ne doit RIEN décider.
+ */
+function texteRappelPause(etat: EtatPartie): string {
+  return sections(
+    `Prenez le temps, ${etat.titre} : la conséquence de votre décision est ci-dessus.`,
+    blocQuestions("Poursuivre ?", [LIBELLE_SUITE])
+  );
+}
+
 function texteApresFin(etat: EtatPartie): string {
   const fin = RECITS_FIN[etat.fin ?? "bilan_mitige"];
   return [
@@ -440,6 +492,24 @@ function deltasDe(choix: ChoixJoue): Effets {
  * tableau de bord textuel annonce — les deux ne doivent jamais divergér, un
  * test le vérifie.
  */
+/**
+ * La mise en scène du moment. Pendant la pause, c'est celle de la décision QUI
+ * VIENT D'ÊTRE TRANCHÉE (avec la une et la réaction du choix retenu) ; sinon,
+ * celle de la décision posée. Renvoie `undefined` quand rien n'est habillé —
+ * l'interface n'affiche alors aucun cartouche.
+ */
+function sceneDe(etat: EtatPartie, choix?: ChoixJoue): SceneJeu | undefined {
+  const source = etat.enAttente && choix ? decisionParId(choix.decisionId) : decisionParId(etat.enCours);
+  const option = etat.enAttente && choix ? source?.options[choix.optionIndex] : undefined;
+  const scene: SceneJeu = {
+    ...(source?.lieu ? { lieu: source.lieu } : {}),
+    ...(source?.urgence ? { urgence: source.urgence } : {}),
+    ...(option?.une ? { une: option.une } : {}),
+    ...(option?.reaction ? { reaction: option.reaction } : {}),
+  };
+  return Object.keys(scene).length ? scene : undefined;
+}
+
 export function etatJeuPublic(etat: EtatPartie, choix?: ChoixJoue): EtatJeuPublic {
   const derniers: TourJoue[] = etat.historique
     .map((c, i) => {
@@ -465,6 +535,7 @@ export function etatJeuPublic(etat: EtatPartie, choix?: ChoixJoue): EtatJeuPubli
     serieVictoire: etat.serieVictoire,
     ...(etat.fin ? { fin: etat.fin, finTitre: RECITS_FIN[etat.fin].titre } : {}),
     derniers,
+    ...(sceneDe(etat, choix) ? { scene: sceneDe(etat, choix) } : {}),
   };
 }
 
@@ -505,8 +576,39 @@ export function reponseJeuElysee(messages: Message[]): string {
       continue;
     }
 
-    const decision = decisionParId(etat.enCours);
     const libelle = libelleReponse(texte);
+
+    /*
+     * PAUSE. Entre un choix et la demande de suite, une seule action existe.
+     *
+     * On traite ce cas AVANT d'apparier quoi que ce soit : `enCours` désigne
+     * déjà la décision suivante, dont les libellés sont appariables alors que
+     * le joueur ne les a jamais vus. Les apparier ici trancherait une décision
+     * à sa place — sans erreur, et sans qu'il comprenne ce qui s'est passé.
+     */
+    if (etat.enAttente) {
+      if (libelle && normaliserReponse(libelle) === normaliserReponse(LIBELLE_SUITE)) {
+        etat.enAttente = false;
+        const suivante = decisionParId(etat.enCours);
+        reponse = suivante
+          ? sections(tableauDeBord(etat), blocDecision(suivante))
+          : texteInvitation();
+        /*
+         * `dernierChoix` est CONSERVÉ, alors que le tableau de bord textuel
+         * repart sans flèches. Les deux disent vrai : le texte pose l'état
+         * courant devant la nouvelle question, et l'état envoyé à l'interface
+         * garde la variation du dernier tour — c'est encore la dernière chose
+         * qui a bougé, et le bandeau la montrerait à tort comme nulle.
+         */
+      } else {
+        reponse = texteRappelPause(etat);
+        // `dernierChoix` est CONSERVÉ : la scène de la pause (une, réaction) et
+        // les variations affichées restent celles du choix qu'on rappelle.
+      }
+      continue;
+    }
+
+    const decision = decisionParId(etat.enCours);
     const optionIndex =
       decision && libelle ? decision.options.findIndex((o) => normaliserReponse(o.label) === normaliserReponse(libelle)) : -1;
 
@@ -515,14 +617,13 @@ export function reponseJeuElysee(messages: Message[]): string {
       const choix = appliquerChoix(etat, optionIndex);
       dernierChoix = choix;
       if (etat.fin) {
+        // Une fin de partie ne passe pas par la pause : le bilan EST le temps
+        // d'arrêt, et faire cliquer « Question suivante » sur une révolution
+        // promettrait une suite qui n'existe pas.
+        etat.enAttente = false;
         reponse = texteFin(etat, option, choix);
       } else {
-        const suivante = decisionParId(etat.enCours);
-        reponse = sections(
-          option.consequence,
-          [tableauDeBord(etat, choix), ...alertes(choix)].join("\n"),
-          suivante ? blocDecision(suivante) : null
-        );
+        reponse = texteApresChoix(etat, option, choix);
       }
     } else {
       reponse = texteRecadrage(etat);

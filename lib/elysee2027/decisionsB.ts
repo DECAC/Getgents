@@ -81,11 +81,19 @@ export const DECISIONS_B: Decision[] = [
     situation:
       "La France compte 252 300 policiers et gendarmes pour 24,4 Md€ de moyens de l'État (+33 % depuis 2016), mais leur répartition par département est décorrélée de la délinquance constatée, et le ratio par habitant a décru dans les zones en croissance (Cour des comptes, RPA 2026).",
     question: "Comment répartir les forces de sécurité ?",
+    lieu: "Bureau du président, 6 h 50",
+    urgence: "Point de sécurité quotidien dans 10 minutes",
+    scenette:
+      "La carte est punaisée au mur depuis la veille : les effectifs d'un côté, la délinquance de l'autre, et les deux qui ne se superposent pas. Le préfet coordonnateur attend debout. Il sait que déplacer un policier, c'est le retirer à quelqu'un.",
     options: [
       {
         label: "Rééquilibrer les effectifs selon les besoins d'ici 2030",
         consequence:
           "Vous reprenez la recommandation de la Cour : les effectifs suivent la délinquance et la démographie. Les zones sur-dotées perdent des postes — et le disent ; les zones tendues respirent.",
+        une:
+          "Le président redessine la carte de la sécurité — Le Courrier de la République",
+        reaction:
+          "Le préfet coordonnateur décroche la carte. « C'est ce qu'il fallait faire. Les départements qui perdent des postes ne compteront pas ceux que d'autres gagnent : ils compteront les leurs. »",
         effets: { bonheur: 2, confiance: 2, pouvoirAchat: 0, finances: -1, cohesion: 2 },
         suite: "securite-municipales",
       },
@@ -93,18 +101,30 @@ export const DECISIONS_B: Decision[] = [
         label: "Recruter 10 000 policiers et gendarmes supplémentaires",
         consequence:
           "Vous augmentez les effectifs partout sans rien retirer à personne. Consensus immédiat ; la masse salariale s'alourdit durablement.",
+        une:
+          "Dix mille policiers et gendarmes de plus — L'Écho du matin",
+        reaction:
+          "Le préfet coordonnateur ne discute pas. « Personne ne protestera, c'est vrai. Mais on recrute pour trente ans, et la carte restera fausse pendant tout ce temps. »",
         effets: { bonheur: 3, confiance: 2, pouvoirAchat: 0, finances: -5, cohesion: 2 },
       },
       {
         label: "Réviser les zones de compétence police-gendarmerie",
         consequence:
           "Vous clarifiez qui fait quoi, recommandation réitérée de la Cour. Efficacité en vue, sans heurts majeurs ; les corporatismes grondent.",
+        une:
+          "Police, gendarmerie : les frontières bougent — Le Courrier de la République",
+        reaction:
+          "Le préfet coordonnateur esquisse un sourire. « Une vieille recommandation, jamais appliquée. Les deux maisons vont gronder, puis s'y faire. »",
         effets: { bonheur: 1, confiance: 2, pouvoirAchat: 0, finances: 1, cohesion: 1 },
       },
       {
         label: "Ne rien changer, priorité au budget",
         consequence:
           "Vous reportez toute évolution. Les économies sont immédiates ; le sentiment d'insécurité, lui, ne se gère pas par le non-choix.",
+        une:
+          "Sécurité : le statu quo assumé — L'Écho du matin",
+        reaction:
+          "Le préfet coordonnateur remet son dossier sous le bras. « Entendu. Je vous le dis franchement : le sentiment d'insécurité ne s'administre pas par le report. »",
         effets: { bonheur: -2, confiance: -2, pouvoirAchat: 0, finances: 2, cohesion: -2 },
       },
     ],
@@ -321,11 +341,19 @@ export const DECISIONS_B: Decision[] = [
     situation:
       "Sans redressement, la charge d'intérêts de la dette augmentera de 70 milliards d'euros par an au bout de dix ans (Banque de France, Rapport annuel 2025). Chaque euro d'intérêt est un euro qui ne va ni aux hôpitaux ni aux écoles.",
     question: "Quelle trajectoire pour les finances publiques ?",
+    lieu: "Bureau du président, 22 h 10",
+    urgence: "L'adjudication de demain ouvre à 10 h 50",
+    scenette:
+      "Le bureau sent le papier et le café froid. Le secrétaire général de l'Élysée a étalé trois scénarios de trajectoire, chacun avec sa courbe. Il n'en commente aucun : il attend que vous choisissiez lequel vous défendrez demain matin, et dans dix ans.",
     options: [
       {
         label: "Plan pluriannuel d'économies et revue des dépenses",
         consequence:
           "Vous engagez le redressement : chaque politique est passée au crible de l'efficacité. Les marchés et Bruxelles saluent ; les premiers budgets rabotés se paient en popularité.",
+        une:
+          "Rigueur : le président prend le pays de vitesse — Le Courrier de la République",
+        reaction:
+          "Le secrétaire général plie ses courbes. « Les créanciers dormiront mieux. Vos ministres, moins : chacun croit que la revue de dépenses parle du voisin. »",
         effets: { bonheur: -4, confiance: 3, pouvoirAchat: -1, finances: 8, cohesion: -2 },
         suite: "finances-collectivites",
       },
@@ -333,18 +361,30 @@ export const DECISIONS_B: Decision[] = [
         label: "Contribution accrue des hauts revenus et patrimoines",
         consequence:
           "Vous demandez l'effort aux plus aisés. Recettes nouvelles et sentiment de justice ; la vigilance s'impose sur les effets d'évitement et d'expatriation.",
+        une:
+          "Les grandes fortunes appelées à l'effort — L'Écho du matin",
+        reaction:
+          "Le secrétaire général reste prudent. « Le pays trouvera cela juste. Reste à savoir combien de ces patrimoines seront encore ici l'an prochain pour le payer. »",
         effets: { bonheur: 1, confiance: 0, pouvoirAchat: -1, finances: 5, cohesion: 1 },
       },
       {
         label: "La croissance d'abord : pas d'austérité",
         consequence:
           "Vous pariez sur l'activité pour résorber le déficit. Pari tenable quand la croissance est là — elle est de 0,9 % ; les taux d'emprunt, eux, montent.",
+        une:
+          "Pas d'austérité : le pari présidentiel — Le Courrier de la République",
+        reaction:
+          "Le secrétaire général pose enfin son stylo. « C'est un pari, et je vous le dis comme tel : il se gagne avec de la croissance. Elle n'est pas au rendez-vous. »",
         effets: { bonheur: 3, confiance: -2, pouvoirAchat: 1, finances: -5, cohesion: 1 },
       },
       {
         label: "Négocier un délai avec les partenaires européens",
         consequence:
           "Vous obtenez un étalement de la trajectoire. Répit diplomatique réel ; le stock de dette, lui, continue de produire des intérêts.",
+        une:
+          "Bruxelles accorde du temps à Paris — L'Écho du matin",
+        reaction:
+          "Le secrétaire général acquiesce sans chaleur. « Du temps, oui. Les intérêts, eux, ne prennent pas de délai — ils courent aussi la nuit. »",
         effets: { bonheur: 0, confiance: 1, pouvoirAchat: 0, finances: 2, cohesion: 0 },
       },
     ],
@@ -391,29 +431,49 @@ export const DECISIONS_B: Decision[] = [
     situation:
       "L'inflation est revenue à 0,9 % en France en 2025 — 0,7 % fin décembre — contre 2,3 % en 2024, sans récession (Banque de France, Rapport annuel 2025). Une marge de manœuvre inédite existe pour le pouvoir d'achat.",
     question: "Comment utiliser cette marge de manœuvre ?",
+    lieu: "Salon vert, 8 h 05",
+    urgence: "Arbitrage attendu avant le conseil des ministres",
+    scenette:
+      "La conseillère économique est arrivée avec une nouvelle rare dans ce bureau : une bonne. Les prix ont cessé de courir. Elle prévient d'emblée que la fenêtre est étroite et qu'elle se refermera, sans dire quand.",
     options: [
       {
         label: "Revaloriser les minima sociaux",
         consequence:
           "Vous profitez de l'accalmie des prix pour revaloriser. Les plus modestes respirent immédiatement ; la dépense est pérenne, la marge était temporaire.",
+        une:
+          "Minima sociaux : le coup d'envoi du quinquennat — Le Courrier de la République",
+        reaction:
+          "La conseillère économique note la décision. « Les plus modestes le sentiront dès le mois prochain. Mais vous venez d'engager une dépense permanente sur une marge qui, elle, ne l'est pas. »",
         effets: { bonheur: 4, confiance: 1, pouvoirAchat: 4, finances: -5, cohesion: 2 },
       },
       {
         label: "Bouclier ciblé alimentation-énergie pour les modestes",
         consequence:
           "Vous ciblez les ménages dont le panier s'est le plus renchéri — les modestes ont subi une inflation plus forte que les aisés, comme l'a mesuré l'INSEE à La Réunion. Juste et lisible.",
+        une:
+          "Alimentation, énergie : l'aide va aux plus exposés — L'Écho du matin",
+        reaction:
+          "La conseillère économique approuve. « Ciblé, donc défendable. Préparez-vous aux dossiers de ceux qui sont juste au-dessus du seuil : ils sont toujours les plus durs. »",
         effets: { bonheur: 3, confiance: 1, pouvoirAchat: 3, finances: -4, cohesion: 2 },
       },
       {
         label: "Conserver la marge : prudence budgétaire",
         consequence:
           "Vous n'utilisez pas la marge. Les comptes vous remercient ; les ménages, qui ne voient pas les prix baisser mais seulement ralentir, moins.",
+        une:
+          "Le président ne dépensera pas l'accalmie — Le Courrier de la République",
+        reaction:
+          "La conseillère économique hoche la tête. « Techniquement, c'est le meilleur choix. Politiquement, personne ne remercie jamais pour une dépense qui n'a pas eu lieu. »",
         effets: { bonheur: -1, confiance: 1, pouvoirAchat: 0, finances: 2, cohesion: 0 },
       },
       {
         label: "Chèque pouvoir d'achat ponctuel",
         consequence:
           "Vous distribuez un chèque unique. Effet immédiat et très visible ; l'instrument est connu, et son effet sur la consommation s'érode à chaque usage.",
+        une:
+          "Un chèque pour tous avant l'été — L'Écho du matin",
+        reaction:
+          "La conseillère économique ne cache pas sa réserve. « L'effet sera immédiat et très visible. C'est le troisième chèque en peu d'années : chacun porte un peu moins loin que le précédent. »",
         effets: { bonheur: 4, confiance: -1, pouvoirAchat: 3, finances: -6, cohesion: 1 },
       },
     ],
@@ -698,29 +758,49 @@ export const DECISIONS_B: Decision[] = [
     situation:
       "L'empreinte carbone de la France a baissé de 3,4 % en 2024, après −6,1 % en 2023 (INSEE, Rapport annuel 2025). La trajectoire tient, mais la dépendance aux importations carbonées demeure.",
     question: "Quel rythme pour la transition ?",
+    lieu: "Salon vert, 14 h 30",
+    urgence: "Le discours de trajectoire est attendu vendredi",
+    scenette:
+      "La conseillère écologie a apporté la courbe d'empreinte, celle qui descend enfin. Elle la pose à l'envers sur la table, comme si le graphique n'était pas le sujet. Le sujet, dit-elle, c'est le rythme — et qui le tiendra.",
     options: [
       {
         label: "Accélérer : normes et investissement vert massif",
         consequence:
           "Vous haussez l'ambition : rénovation, industrie verte, mobilités. La trajectoire s'infléchit ; la facture publique et les contraintes pour les ménages aussi.",
+        une:
+          "Climat : le président met le pied sur l'accélérateur — Le Courrier de la République",
+        reaction:
+          "La conseillère écologie ne masque pas sa satisfaction. « La trajectoire s'infléchira, vraiment. Le ministre du Budget demandera dès demain où l'on prend l'argent, et il faudra le lui dire. »",
         effets: { bonheur: 1, confiance: 2, pouvoirAchat: -1, finances: -6, cohesion: 0 },
       },
       {
         label: "Tenir la trajectoire actuelle",
         consequence:
           "Vous consolidez sans accélérer. La baisse continue au rythme observé ; les objectifs 2030 resteront juste hors d'atteinte.",
+        une:
+          "Climat : ni recul ni accélération — L'Écho du matin",
+        reaction:
+          "La conseillère écologie range sa courbe. « On continue. Vous savez comme moi que continuer, à ce rythme-là, laisse l'échéance juste hors de portée. »",
         effets: { bonheur: 1, confiance: 1, pouvoirAchat: 0, finances: 0, cohesion: 0 },
       },
       {
         label: "Bonus-malus renforcé véhicules et logements",
         consequence:
           "Vous durcissez le malus et abondez le bonus. Le marché s'oriente ; les ménages contraints à la voiture se sentent punis.",
+        une:
+          "Voitures, logements : le malus se durcit — Le Courrier de la République",
+        reaction:
+          "La conseillère écologie prévient. « Le marché s'orientera vite. Ceux qui n'ont pas le choix de leur voiture le vivront comme une punition, et ils le diront fort. »",
         effets: { bonheur: -1, confiance: 1, pouvoirAchat: -2, finances: 2, cohesion: -1 },
       },
       {
         label: "Fonds pour les territoires dépendants des importations",
         consequence:
           "Vous ciblez les territoires insulaires et ruraux dont l'empreinte vient des importations, comme La Réunion l'a documenté. Justice territoriale ; effet national limité.",
+        une:
+          "Outre-mer et ruralité : un fonds pour les territoires exposés — L'Écho du matin",
+        reaction:
+          "La conseillère écologie approuve à demi. « C'est juste, et ce sera reçu comme tel. À l'échelle nationale, cela ne déplacera pas la courbe. »",
         effets: { bonheur: 2, confiance: 1, pouvoirAchat: 0, finances: -3, cohesion: 2 },
       },
     ],

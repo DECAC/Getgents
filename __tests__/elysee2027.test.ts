@@ -3,6 +3,7 @@ import * as path from "path";
 import { DECISIONS, ORDRE_CANONIQUE, PRIORITE_VERS_DECISION, decisionParId } from "@/lib/elysee2027/decisions";
 import { reponseJeuElysee,
   normaliserReponse,
+  LIBELLE_SUITE,
 } from "@/lib/elysee2027/moteur";
 import { AMPLITUDE_MAX, DIFFICULTES, JAUGES, SEUILS } from "@/lib/elysee2027/types";
 import { extractQuestions } from "@/lib/suggestions";
@@ -31,6 +32,48 @@ describe("elysee2027 — données", () => {
       const avant = decisionParId(ORDRE_CANONIQUE[i - 1]);
       const apres = decisionParId(ORDRE_CANONIQUE[i]);
       expect(avant && apres && avant.theme === apres.theme).toBe(false);
+    }
+  });
+
+  test("toute décision d'ouverture est mise en scène, et la mise en scène reste facultative", () => {
+    // Chaque priorité du formulaire de départ fixe la première décision de la
+    // partie : ces décisions-là sont les seules que TOUT joueur voit. Ce sont
+    // donc elles qu'on habille en premier, et le test le garde.
+    for (const id of Object.values(PRIORITE_VERS_DECISION)) {
+      const d = decisionParId(id)!;
+      expect(d.lieu).toBeTruthy();
+      expect(d.urgence).toBeTruthy();
+      expect(d.scenette).toBeTruthy();
+      for (const o of d.options) {
+        expect(o.une).toBeTruthy();
+        expect(o.reaction).toBeTruthy();
+      }
+    }
+    // Et l'inverse : le jeu doit rester jouable sans mise en scène, sinon les
+    // décisions non encore habillées casseraient la partie.
+    expect(DECISIONS.some((d) => !d.scenette)).toBe(true);
+  });
+
+  test("la mise en scène n'invente ni chiffre, ni personne, ni journal réel", () => {
+    /*
+     * Trois règles, et elles ne sont pas décoratives :
+     *  — les chiffres vivent dans `situation`, où un autre test exige leur
+     *    source ; un chiffre glissé dans du récit échapperait à ce contrôle ;
+     *  — un conseiller est une FONCTION, jamais une personne réelle : le jeu
+     *    ne met pas de mots dans la bouche de quelqu'un ;
+     *  — le quotidien cité est INVENTÉ : prêter une une à un vrai journal
+     *    serait lui faire écrire ce qu'il n'a pas écrit.
+     */
+    const QUOTIDIENS_REELS = /le monde|le figaro|liberation|libération|les echos|les échos|la croix|l'?humanite|l'?humanité|le parisien|ouest-france|mediapart|le point|l'?express|marianne/i;
+    const recits = DECISIONS.flatMap((d) => [
+      ...(d.scenette ? [d.scenette] : []),
+      ...d.options.flatMap((o) => [...(o.une ? [o.une] : []), ...(o.reaction ? [o.reaction] : [])]),
+    ]);
+    expect(recits.length).toBeGreaterThan(0);
+    for (const texte of recits) {
+      // « 7 h 40 » et « 20 minutes » vivent dans `lieu`/`urgence`, pas ici.
+      expect(texte).not.toMatch(/\d/);
+      expect(texte).not.toMatch(QUOTIDIENS_REELS);
     }
   });
 
@@ -116,15 +159,31 @@ function questionEnCours(reponse: string) {
   return questions[0];
 }
 
-/** Joue un tour : choisit l'option selon `strategie` et renvoie la réponse. */
+/** Répond à la question posée, quelle qu'elle soit, et renvoie la réponse. */
+function repondre(messages: Msg[], q: { q: string }, libelle: string): string {
+  messages.push({ role: "user", content: `${q.q} → ${libelle}` });
+  return reponseJeuElysee(messages);
+}
+
+/**
+ * Joue un tour COMPLET : tranche la décision, puis lève la pause d'après-choix.
+ *
+ * Le tour se joue en deux temps depuis la mise en scène — la conséquence
+ * d'abord, la question suivante seulement quand le joueur la demande. Le
+ * harnais franchit les deux, pour que les tests existants continuent de
+ * décrire ce qu'ils décrivaient : un tour de jeu.
+ */
 function jouerTour(messages: Msg[], strategie: (d: (typeof DECISIONS)[number]) => number): string {
   const reponsePrecedente = reponseJeuElysee(messages);
   const q = questionEnCours(reponsePrecedente);
   const decision = DECISIONS.find((d) => d.question === q.q);
   if (!decision) throw new Error(`Question introuvable : ${q.q}`);
   const idx = strategie(decision);
-  messages.push({ role: "user", content: `${q.q} → ${decision.options[idx].label}` });
-  return reponseJeuElysee(messages);
+  const apresChoix = repondre(messages, q, decision.options[idx].label);
+  // Fin de partie : pas de pause, le bilan est déjà la réponse.
+  const suite = questionEnCours(apresChoix);
+  if (suite.options.length !== 1 || suite.options[0] !== LIBELLE_SUITE) return apresChoix;
+  return repondre(messages, suite, LIBELLE_SUITE);
 }
 
 /** Joue jusqu'à une fin de partie (ou 50 tours), renvoie la dernière réponse. */
@@ -211,13 +270,58 @@ describe("elysee2027 — moteur", () => {
 
   test("une réponse applique exactement les effets de l'option choisie", () => {
     const messages: Msg[] = [{ role: "user", content: DEMARRAGE_COURT_REALISTE }];
+    const premiere = questionEnCours(reponseJeuElysee(messages));
+    const decision = DECISIONS.find((d) => d.question === premiere.q)!;
     // « Conserver la marge » : bonheur −1, confiance +1, pouvoir d'achat 0, finances +2, cohésion 0.
-    const reponse = jouerTour(messages, () => 2);
-    expect(reponse).toContain("Tour 2/8");
-    expect(reponse).toContain("Bonheur 45 → 44");
-    expect(reponse).toContain("Confiance 38 → 39");
-    expect(reponse).toContain("Finances 35 → 37");
-    expect(questionEnCours(reponse).allowOther).toBe(false);
+    const pause = repondre(messages, premiere, decision.options[2].label);
+    expect(pause).toContain("Bonheur 45 → 44");
+    expect(pause).toContain("Confiance 38 → 39");
+    expect(pause).toContain("Finances 35 → 37");
+
+    // La suite ne vient qu'à la demande — et elle repart de l'état atteint.
+    const suite = repondre(messages, questionEnCours(pause), LIBELLE_SUITE);
+    expect(suite).toContain("Tour 2/8");
+    expect(questionEnCours(suite).allowOther).toBe(false);
+  });
+
+  test("la pause d'après-choix ne sert pas la question suivante", () => {
+    const messages: Msg[] = [{ role: "user", content: DEMARRAGE_COURT_REALISTE }];
+    const premiere = questionEnCours(reponseJeuElysee(messages));
+    const decision = DECISIONS.find((d) => d.question === premiere.q)!;
+    const pause = repondre(messages, premiere, decision.options[0].label);
+
+    // Une seule action possible : demander la suite.
+    const q = questionEnCours(pause);
+    expect(q.options).toEqual([LIBELLE_SUITE]);
+    expect(pause).toContain(decision.options[0].consequence);
+    // Et surtout : aucune décision servie sous la conséquence.
+    expect(pause).not.toContain("###");
+  });
+
+  test("pendant la pause, un libellé de la décision suivante ne tranche rien", () => {
+    /*
+     * Le piège que ce test garde : `enCours` désigne DÉJÀ la décision
+     * suivante pendant la pause. Si le moteur appariait les libellés à ce
+     * moment-là, un clic en retard — ou un bouton resté à l'écran —
+     * trancherait une décision que le joueur n'a jamais lue, sans erreur.
+     */
+    const messages: Msg[] = [{ role: "user", content: DEMARRAGE_COURT_REALISTE }];
+    const premiere = questionEnCours(reponseJeuElysee(messages));
+    const decision = DECISIONS.find((d) => d.question === premiere.q)!;
+    repondre(messages, premiere, decision.options[0].label);
+
+    // On identifie la décision suivante en levant la pause sur une COPIE.
+    const leverLaPause = (fil: Msg[]) =>
+      reponseJeuElysee([...fil, { role: "user", content: `Poursuivre ? → ${LIBELLE_SUITE}` }]);
+    const attendue = questionEnCours(leverLaPause(messages)).q;
+
+    // Puis on clique le libellé de cette décision AVANT d'avoir demandé la suite.
+    const suivante = DECISIONS.find((d) => d.question === attendue)!;
+    const egare = repondre(messages, { q: "Poursuivre ?" }, suivante.options[0].label);
+    expect(questionEnCours(egare).options).toEqual([LIBELLE_SUITE]);
+
+    // Rien n'a été tranché : la suite sert toujours la MÊME décision.
+    expect(questionEnCours(leverLaPause(messages)).q).toBe(attendue);
   });
 
   test("le moteur est déterministe : même historique, même réponse", () => {

@@ -13,11 +13,19 @@ export const DECISIONS_A: Decision[] = [
     situation:
       "La France compte 2 380 sites hospitaliers (2023) et 75 % des patients sont hospitalisés à moins de 43 km de leur domicile, mais la spécialisation de la médecine — 44 spécialités contre 8 en 1947 — tend à concentrer l'offre, dans un contexte de déficit des hôpitaux publics de 2,4 Md€ (Cour des comptes, RPA 2026). Plusieurs services de proximité sont menacés dans les territoires.",
     question: "Quelle doctrine fixez-vous pour l'organisation de l'offre de soins ?",
+    lieu: "Salon vert, 7 h 40",
+    urgence: "Le ministre de la Santé est annoncé dans 20 minutes",
+    scenette:
+      "On a posé la revue de presse sur la console, pliée à la page des hôpitaux. Par la fenêtre, le jardin est encore gris. Le directeur de cabinet entre sans frapper : trois préfets ont appelé cette nuit, chacun pour le même service, chacun pour dire qu'il ne fermera pas.",
     options: [
       {
         label: "Concentrer les plateaux techniques, reconvertir les petits sites",
         consequence:
           "Vous assumez la gradation complète : la qualité et la sécurité des soins y gagnent, mais plusieurs maternités et services de proximité ferment. Les territoires concernés se sentent relégués ; les finances hospitalières respirent.",
+        une:
+          "« L'État referme la carte des hôpitaux » — Le Courrier de la République",
+        reaction:
+          "Le directeur de cabinet ne lève pas les yeux de sa liste. « C'est la bonne décision, et elle vous coûtera trois départements. Je préviens les préfets avant qu'ils l'apprennent par la radio. »",
         effets: { bonheur: -6, confiance: 2, pouvoirAchat: -1, finances: 5, cohesion: -5 },
         suite: "sante-ght",
       },
@@ -25,18 +33,30 @@ export const DECISIONS_A: Decision[] = [
         label: "Maintenir tous les sites et les refinancer",
         consequence:
           "Aucun site ne ferme : soulagement dans les territoires. Mais l'effort budgétaire est lourd, et la qualité restera fragile là où l'activité est insuffisante pour la sécurité des patients.",
+        une:
+          "« Aucun site ne fermera », promet l'Élysée — L'Écho du matin",
+        reaction:
+          "Le directeur de cabinet referme son carnet. « Vous venez d'acheter la paix. Le directeur du budget demandera avec quoi — et il aura raison de demander. »",
         effets: { bonheur: 5, confiance: 2, pouvoirAchat: 1, finances: -8, cohesion: 4 },
       },
       {
         label: "Financer la gradation des soins et les hôpitaux de proximité",
         consequence:
           "Vous suivez la voie de la Cour des comptes : les hôpitaux de proximité sont reconnus et financés comme tels, les filières coordonnées se structurent. Ni fermetures brutales, ni statu quo coûteux.",
+        une:
+          "Hôpitaux : la voie étroite du nouveau président — Le Courrier de la République",
+        reaction:
+          "Le directeur de cabinet marque un temps. « Personne ne descendra dans la rue pour ça, et personne ne vous en félicitera non plus. C'est en général le signe qu'on a visé juste. »",
         effets: { bonheur: 3, confiance: 4, pouvoirAchat: 0, finances: -4, cohesion: 3 },
       },
       {
         label: "Miser sur la télémédecine et les équipes mobiles",
         consequence:
           "Consultations à distance et équipes « aller-vers » se déploient. Les patients isolés gagnent un accès, mais la fracture numérique en exclut une partie des aînés, et le soin physique reste irremplaçable.",
+        une:
+          "Le soin à distance érigé en politique d'État — L'Écho du matin",
+        reaction:
+          "Le directeur de cabinet hésite. « Les maires vont demander ce qu'on fait de ceux qui n'ont ni réseau ni écran. Il faudra une réponse, et elle n'est pas dans la note. »",
         effets: { bonheur: 1, confiance: 2, pouvoirAchat: 1, finances: -2, cohesion: -1 },
       },
     ],
@@ -664,11 +684,19 @@ export const DECISIONS_A: Decision[] = [
     situation:
       "La réindustrialisation exige 22 000 hectares de foncier supplémentaires d'ici 2030, alors que l'industrie n'occupe que 4,5 % des surfaces artificialisées (Cour des comptes, RPA 2026). Les projets échouent souvent faute de terrains prêts.",
     question: "Comment libérer du foncier pour l'industrie ?",
+    lieu: "Salon vert, 11 h 15",
+    urgence: "Trois industriels reçus à midi",
+    scenette:
+      "Sur la table, des photos aériennes : des hectares de friches, des zones promises « prêtes » qui ne le sont pas. Le délégué à l'industrie raconte le dernier projet parti ailleurs en Europe, faute d'un terrain viabilisé à temps. Il ne s'agit pas d'argent, dit-il, mais de mois.",
     options: [
       {
         label: "Sites « clés en main » réservés aux terrains réellement prêts",
         consequence:
           "Vous reprenez la recommandation de la Cour : le label n'ira qu'aux terrains viabilisés et autorisés. Les projets s'installent enfin vite ; les collectivités doivent pré-financer.",
+        une:
+          "L'État ne labellisera que les terrains vraiment prêts — Le Courrier de la République",
+        reaction:
+          "Le délégué à l'industrie approuve nettement. « Enfin un label qui veut dire quelque chose. Les collectivités devront avancer les frais, et toutes ne le pourront pas. »",
         effets: { bonheur: 1, confiance: 3, pouvoirAchat: 0, finances: -3, cohesion: 0 },
         suite: "industrie-delais",
       },
@@ -676,18 +704,30 @@ export const DECISIONS_A: Decision[] = [
         label: "Renforcer la préemption publique des terrains",
         consequence:
           "L'État et les collectivités pourront préempter plus largement. Efficace pour constituer des réserves foncières, mais les propriétaires crient à l'expropriation rampante.",
+        une:
+          "Foncier : l'État élargit son droit de préemption — L'Écho du matin",
+        reaction:
+          "Le délégué à l'industrie tempère. « Efficace pour constituer des réserves. Attendez-vous à ce que les propriétaires parlent d'expropriation, et à ce que les tribunaux soient saisis. »",
         effets: { bonheur: -2, confiance: 0, pouvoirAchat: 0, finances: -4, cohesion: -2 },
       },
       {
         label: "Recycler d'abord les friches industrielles",
         consequence:
           "Vous financez la dépollution et la remise en service des friches. Sobriété foncière et réindustrialisation avancent ensemble ; les coûts de dépollution sont aléatoires.",
+        une:
+          "Les friches, nouvelle frontière industrielle — Le Courrier de la République",
+        reaction:
+          "Le délégué à l'industrie montre les photos. « La bonne idée et la plus lente. Le coût de dépollution ne se connaît qu'une fois qu'on a creusé. »",
         effets: { bonheur: 2, confiance: 2, pouvoirAchat: 0, finances: -4, cohesion: 2 },
       },
       {
         label: "Appliquer strictement la sobriété foncière",
         consequence:
           "Vous refusez toute artificialisation nouvelle : cohérent avec le zéro artificialisation nette, mais des projets industriels iront voir ailleurs en Europe.",
+        une:
+          "Zéro artificialisation : le président ne cède pas — L'Écho du matin",
+        reaction:
+          "Le délégué à l'industrie repose ses photos. « C'est cohérent, je ne le conteste pas. Les trois industriels de midi iront chercher leurs hectares ailleurs, et ils le diront. »",
         effets: { bonheur: 0, confiance: 0, pouvoirAchat: 0, finances: 1, cohesion: 1 },
         suite: "environnement-foncier",
       },

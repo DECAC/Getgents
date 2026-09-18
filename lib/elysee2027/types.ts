@@ -40,6 +40,24 @@ export interface OptionDecision {
   effets: Effets;
   /** Identifiant d'une décision enchaînée si ce choix est fait (arbre). */
   suite?: string;
+
+  /*
+   * Mise en scène — FACULTATIVE, et elle doit le rester. Le jeu compte 50
+   * décisions dont une poignée seulement est habillée : une décision nue doit
+   * rester parfaitement jouable, sinon les 45 autres cassent la partie.
+   */
+
+  /**
+   * La une du lendemain. Le quotidien cité est INVENTÉ : prêter un titre à un
+   * journal réel serait lui faire dire ce qu'il n'a pas écrit.
+   */
+  une?: string;
+  /**
+   * La réaction d'un conseiller, désigné par sa FONCTION (« le secrétaire
+   * général de l'Élysée ») et jamais par un nom : le jeu ne met pas de mots
+   * dans la bouche de personnes réelles.
+   */
+  reaction?: string;
 }
 
 export interface Decision {
@@ -49,6 +67,19 @@ export interface Decision {
   /** Mise en contexte : 2 à 4 phrases avec au moins un chiffre sourcé. */
   situation: string;
   question: string;
+
+  /* Mise en scène — FACULTATIVE (voir `OptionDecision`). */
+
+  /** Où la scène se passe — « Salon vert, 7 h 40 ». */
+  lieu?: string;
+  /** Le délai qui pèse — « Conseil des ministres dans 20 minutes ». */
+  urgence?: string;
+  /**
+   * Deux ou trois phrases de mise en situation, servies AVANT la situation
+   * chiffrée. C'est du récit : elle ne porte AUCUN chiffre — ceux-ci restent
+   * dans `situation`, où le test de source les surveille.
+   */
+  scenette?: string;
   /** Exactement 4 réponses — le choix « Autre » est exclu par le jeu. */
   options: [OptionDecision, OptionDecision, OptionDecision, OptionDecision];
 }
@@ -133,4 +164,19 @@ export interface EtatJeuPublic {
   finTitre?: string;
   /** Les trois derniers tours, du plus récent au plus ancien. */
   derniers: TourJoue[];
+  /**
+   * La mise en scène du moment, quand la décision en porte une. Elle passe par
+   * l'état — donc par le marqueur — et non par le texte visible : l'interface
+   * la DESSINE (cartouche, papier, citation) au lieu de relire de la prose.
+   */
+  scene?: SceneJeu;
+}
+
+/** La mise en scène telle que l'interface la reçoit. Tout est facultatif. */
+export interface SceneJeu {
+  lieu?: string;
+  urgence?: string;
+  /** Présents seulement pendant la pause qui suit un choix. */
+  une?: string;
+  reaction?: string;
 }
