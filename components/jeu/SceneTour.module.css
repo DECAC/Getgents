@@ -1,0 +1,217 @@
+/* La surface d'un tour — maquette « salon vert », repeinte aux couleurs de
+   l'État sur fond CLAIR (le fond bleu chargeait trop l'application).
+
+   Registre : papier officiel. Bleu France en encre, Rouge Marianne réservé à
+   ce qui presse ou menace. Ces couleurs vivent ICI et non dans
+   `styles/tokens.css` : c'est la palette d'un jeu, pas celle du produit.
+
+   La famille sérif est nommée comme dans la maquette, avec Georgia en repli.
+   Georgia est présente partout, donc le registre sérif tient SANS charger la
+   moindre police : une requête de plus pour un jeu ne se justifierait pas. */
+.scene {
+  --bleu-france: #000091;
+  --marianne: #e1000f;
+  --etat: #f4f6fb;
+  --etat-sur: #ffffff;
+  --etat-line: #dfe3f2;
+  --etat-ink: #1b1b35;
+  --etat-muted: #5a5f7d;
+
+  background: var(--etat);
+  border: 1px solid var(--etat-line);
+  border-radius: 12px;
+  padding: 22px 24px 24px;
+  color: var(--etat-ink);
+  max-width: 100%;
+}
+
+@media (max-width: 560px) {
+  .scene {
+    padding: 18px 16px 20px;
+  }
+}
+
+.tour {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--etat-muted);
+}
+
+.titre {
+  margin: 6px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  color: var(--etat-ink);
+}
+
+/* ---- Le décor : où l'on est, et ce qui presse ---- */
+.didascalie {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--bleu-france);
+}
+
+.minuterie {
+  color: #fff;
+  background: var(--marianne);
+  padding: 3px 9px;
+  border-radius: 999px;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.scenette {
+  margin: 16px 0 0;
+  font-family: Spectral, Georgia, serif;
+  font-size: 17.5px;
+  line-height: 1.65;
+  font-style: italic;
+  max-width: 58ch;
+  color: var(--etat-ink);
+}
+
+/* ---- Les faits, puis la question ---- */
+.situation {
+  margin: 16px 0 0;
+  font-family: Spectral, Georgia, serif;
+  font-size: 16.5px;
+  line-height: 1.6;
+  max-width: 64ch;
+  color: var(--etat-muted);
+}
+
+.question {
+  margin: 14px 0 0;
+  font-family: Spectral, Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+  max-width: 56ch;
+  text-wrap: balance;
+  color: var(--bleu-france);
+}
+
+/* ---- Les décisions cliquables ---- */
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 20px;
+}
+
+.option {
+  text-align: left;
+  background: var(--etat-sur);
+  border: 1.5px solid var(--etat-line);
+  border-radius: 999px;
+  padding: 13px 20px;
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--etat-ink);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.option:hover:not(:disabled) {
+  border-color: var(--bleu-france);
+  background: #e8ebfa;
+  color: var(--bleu-france);
+}
+
+/* Un tour déjà passé se relit, il ne se rejoue pas. */
+.option:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--bleu-france);
+  outline-offset: 2px;
+}
+
+/* ---- Ce que le choix a produit ---- */
+.choisi {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--etat-muted);
+}
+
+.consequence {
+  margin: 10px 0 0;
+  font-family: Spectral, Georgia, serif;
+  font-size: 16.5px;
+  line-height: 1.6;
+  max-width: 64ch;
+  color: var(--etat-ink);
+}
+
+/* La une du lendemain : un vrai bloc de journal, manchette comprise. */
+.une {
+  margin: 22px 0 0;
+  border: 1px solid var(--etat-line);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--etat-sur);
+}
+
+.manchette {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 9px 16px;
+  border-bottom: 2px solid var(--etat-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--etat-ink);
+}
+
+/* « Quotidien de fiction » n'est pas une coquetterie : le journal cité est
+   inventé, et le lecteur doit pouvoir le savoir sans quitter la page. */
+.manchette span:last-child {
+  letter-spacing: 0.06em;
+  color: var(--etat-muted);
+}
+
+.titraille {
+  margin: 0;
+  padding: 16px 16px 4px;
+  font-family: Spectral, Georgia, serif;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-wrap: balance;
+  color: var(--etat-ink);
+}
+
+.reaction {
+  margin: 0;
+  padding: 0 16px 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--etat-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option {
+    transition: none;
+  }
+}

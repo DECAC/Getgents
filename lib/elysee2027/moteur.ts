@@ -22,7 +22,8 @@ import {
   type FinJeu,
   type JaugeId,
   type OptionDecision,
-  type SceneJeu,
+  type ConsequenceAffichee,
+  type DecisionAffichee,
   type TourJoue,
 } from "./types";
 
@@ -36,6 +37,11 @@ export const MOTEUR_ELYSEE = "elysee-2027";
  * la conséquence et personne ne la lisait.
  */
 export const LIBELLE_SUITE = "Question suivante";
+
+/** L'intitulé du bloc de reprise. Une seule définition : le texte du fil et
+ *  l'état envoyé à l'interface doivent proposer la MÊME question, sinon la
+ *  réponse composée par l'interface n'est plus appariée. */
+const QUESTION_SUITE = "Poursuivre ?";
 
 type TypeFin = FinJeu;
 
@@ -329,7 +335,7 @@ function texteApresChoix(etat: EtatPartie, option: OptionDecision, choix: ChoixJ
   return sections(
     option.consequence,
     [tableauDeBord(etat, choix), ...alertes(choix)].join("\n"),
-    blocQuestions("Poursuivre ?", [LIBELLE_SUITE])
+    blocQuestions(QUESTION_SUITE, [LIBELLE_SUITE])
   );
 }
 
@@ -445,7 +451,7 @@ function texteRecadrage(etat: EtatPartie): string {
 function texteRappelPause(etat: EtatPartie): string {
   return sections(
     `Prenez le temps, ${etat.titre} : la conséquence de votre décision est ci-dessus.`,
-    blocQuestions("Poursuivre ?", [LIBELLE_SUITE])
+    blocQuestions(QUESTION_SUITE, [LIBELLE_SUITE])
   );
 }
 
@@ -493,21 +499,39 @@ function deltasDe(choix: ChoixJoue): Effets {
  * test le vérifie.
  */
 /**
- * La mise en scène du moment. Pendant la pause, c'est celle de la décision QUI
- * VIENT D'ÊTRE TRANCHÉE (avec la une et la réaction du choix retenu) ; sinon,
- * celle de la décision posée. Renvoie `undefined` quand rien n'est habillé —
- * l'interface n'affiche alors aucun cartouche.
+ * La décision posée, pour l'interface. Absente pendant la pause et après la
+ * fin : il n'y a alors rien à trancher.
  */
-function sceneDe(etat: EtatPartie, choix?: ChoixJoue): SceneJeu | undefined {
-  const source = etat.enAttente && choix ? decisionParId(choix.decisionId) : decisionParId(etat.enCours);
-  const option = etat.enAttente && choix ? source?.options[choix.optionIndex] : undefined;
-  const scene: SceneJeu = {
-    ...(source?.lieu ? { lieu: source.lieu } : {}),
-    ...(source?.urgence ? { urgence: source.urgence } : {}),
-    ...(option?.une ? { une: option.une } : {}),
-    ...(option?.reaction ? { reaction: option.reaction } : {}),
+function decisionAffichee(etat: EtatPartie): DecisionAffichee | undefined {
+  if (etat.enAttente || etat.fin) return undefined;
+  const d = decisionParId(etat.enCours);
+  if (!d) return undefined;
+  return {
+    theme: d.theme,
+    titre: d.titre,
+    ...(d.lieu ? { lieu: d.lieu } : {}),
+    ...(d.urgence ? { urgence: d.urgence } : {}),
+    ...(d.scenette ? { scenette: d.scenette } : {}),
+    situation: d.situation,
+    question: d.question,
+    options: d.options.map((o) => o.label),
   };
-  return Object.keys(scene).length ? scene : undefined;
+}
+
+/** Ce qu'a produit le choix. Présent pendant la pause, et là seulement. */
+function consequenceAffichee(etat: EtatPartie, choix?: ChoixJoue): ConsequenceAffichee | undefined {
+  if (!etat.enAttente || !choix) return undefined;
+  const d = decisionParId(choix.decisionId);
+  const o = d?.options[choix.optionIndex];
+  if (!o) return undefined;
+  return {
+    choisi: o.label,
+    texte: o.consequence,
+    ...(o.une ? { une: o.une } : {}),
+    ...(o.reaction ? { reaction: o.reaction } : {}),
+    question: QUESTION_SUITE,
+    action: LIBELLE_SUITE,
+  };
 }
 
 export function etatJeuPublic(etat: EtatPartie, choix?: ChoixJoue): EtatJeuPublic {
@@ -535,7 +559,8 @@ export function etatJeuPublic(etat: EtatPartie, choix?: ChoixJoue): EtatJeuPubli
     serieVictoire: etat.serieVictoire,
     ...(etat.fin ? { fin: etat.fin, finTitre: RECITS_FIN[etat.fin].titre } : {}),
     derniers,
-    ...(sceneDe(etat, choix) ? { scene: sceneDe(etat, choix) } : {}),
+    ...(decisionAffichee(etat) ? { decision: decisionAffichee(etat) } : {}),
+    ...(consequenceAffichee(etat, choix) ? { consequence: consequenceAffichee(etat, choix) } : {}),
   };
 }
 

@@ -12,7 +12,15 @@
  *
  * Module PUR — testable sans navigateur.
  */
-import { JAUGES, SEUILS, type EtatJeuPublic, type Effets, type JaugeId } from "@/lib/elysee2027/types";
+import {
+  JAUGES,
+  SEUILS,
+  type ConsequenceAffichee,
+  type DecisionAffichee,
+  type EtatJeuPublic,
+  type Effets,
+  type JaugeId,
+} from "@/lib/elysee2027/types";
 
 // Capture jusqu'au `-->` et non jusqu'à la première accolade fermante :
 // l'état contient des objets imbriqués (les jauges), qu'une expression
@@ -36,10 +44,56 @@ function deltasValides(v: unknown): v is Effets {
   return JAUGES.every((j) => typeof rec[j.id] === "number" && Number.isFinite(rec[j.id] as number));
 }
 
+function texteNonVide(v: unknown): v is string {
+  return typeof v === "string" && v.trim().length > 0;
+}
+
+
+/**
+ * La décision posée, telle que la surface de tour la dessine. Tout ce qui
+ * n'est pas une chaîne exploitable est écarté : le composant ne teste rien.
+ */
+function decisionValide(v: unknown): DecisionAffichee | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const o = v as Record<string, unknown>;
+  const options = Array.isArray(o.options) ? o.options.filter(texteNonVide) : [];
+  if (!texteNonVide(o.titre) || !texteNonVide(o.question) || options.length === 0) return undefined;
+  return {
+    theme: texteNonVide(o.theme) ? o.theme : "",
+    titre: o.titre,
+    ...(texteNonVide(o.lieu) ? { lieu: o.lieu } : {}),
+    ...(texteNonVide(o.urgence) ? { urgence: o.urgence } : {}),
+    ...(texteNonVide(o.scenette) ? { scenette: o.scenette } : {}),
+    situation: texteNonVide(o.situation) ? o.situation : "",
+    question: o.question,
+    options,
+  };
+}
+
+/** La conséquence encaissée, et l'unique action qui reste. */
+function consequenceValide(v: unknown): ConsequenceAffichee | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const o = v as Record<string, unknown>;
+  if (!texteNonVide(o.texte) || !texteNonVide(o.question) || !texteNonVide(o.action)) return undefined;
+  return {
+    choisi: texteNonVide(o.choisi) ? o.choisi : "",
+    texte: o.texte,
+    ...(texteNonVide(o.une) ? { une: o.une } : {}),
+    ...(texteNonVide(o.reaction) ? { reaction: o.reaction } : {}),
+    question: o.question,
+    action: o.action,
+  };
+}
+
 /**
  * Valide la forme avant de l'afficher. Un bloc mal formé est ignoré plutôt
  * que rendu à moitié : un bandeau qui affiche « NaN » est pire qu'un bandeau
  * absent.
+ *
+ * ATTENTION — cette fonction RECONSTRUIT l'objet champ par champ, elle ne le
+ * laisse pas passer. Un champ ajouté au moteur et oublié ici disparaît en
+ * silence : l'interface ne le voit jamais, et rien ne le signale. C'est
+ * exactement ce qui est arrivé à la surface de tour.
  */
 function etatValide(v: unknown): EtatJeuPublic | null {
   if (!v || typeof v !== "object") return null;
@@ -77,6 +131,8 @@ function etatValide(v: unknown): EtatJeuPublic | null {
     ...(typeof o.fin === "string" ? { fin: o.fin as EtatJeuPublic["fin"] } : {}),
     ...(typeof o.finTitre === "string" ? { finTitre: o.finTitre } : {}),
     derniers,
+    ...(decisionValide(o.decision) ? { decision: decisionValide(o.decision) } : {}),
+    ...(consequenceValide(o.consequence) ? { consequence: consequenceValide(o.consequence) } : {}),
   };
 }
 

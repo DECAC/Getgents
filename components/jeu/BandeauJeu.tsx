@@ -10,14 +10,7 @@
  */
 import { useMemo } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
-import {
-  DIFFICULTES,
-  JAUGES,
-  SEUILS,
-  type EtatJeuPublic,
-  type JaugeId,
-  type SceneJeu,
-} from "@/lib/elysee2027/types";
+import { DIFFICULTES, JAUGES, SEUILS, type EtatJeuPublic, type JaugeId } from "@/lib/elysee2027/types";
 import {
   enTension,
   franchissements,
@@ -114,40 +107,6 @@ function Jauge({
   );
 }
 
-/**
- * La mise en scène du moment — le décor avant les chiffres.
- *
- * Elle est DESSINÉE à partir de l'état, jamais relue dans le texte du fil :
- * le moteur envoie `lieu`, `urgence` et, pendant la pause qui suit un choix,
- * la une du lendemain et la réaction d'un conseiller. Toutes les décisions
- * n'en portent pas — sans scène, ce bloc ne s'affiche simplement pas.
- */
-function Scene({ scene }: { scene: SceneJeu }) {
-  return (
-    <div className={styles.scene}>
-      {(scene.lieu || scene.urgence) && (
-        <div className={styles.decor}>
-          {scene.lieu && <span className={styles.lieu}>{scene.lieu}</span>}
-          {/* L'urgence est le seul élément de décor en rouge : c'est elle qui
-              presse. Le rouge reste réservé à ce qui menace. */}
-          {scene.urgence && <span className={styles.urgence}>{scene.urgence}</span>}
-        </div>
-      )}
-      {(scene.une || scene.reaction) && (
-        <div className={styles.suites}>
-          {scene.une && (
-            <div className={styles.une}>
-              <span className={styles.uneTitre}>La une de demain</span>
-              <span className={styles.uneTexte}>{scene.une}</span>
-            </div>
-          )}
-          {scene.reaction && <blockquote className={styles.reaction}>{scene.reaction}</blockquote>}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function BandeauJeu({ etat }: { etat: EtatJeuPublic }) {
   const tension = enTension(etat);
   const menace = menaceLaPlusProche(etat);
@@ -187,8 +146,6 @@ export function BandeauJeu({ etat }: { etat: EtatJeuPublic }) {
           {tension ? "⚠ État de tension" : DIFFICULTES[etat.difficulte]?.label ?? etat.difficulte}
         </span>
       </div>
-
-      {etat.scene && <Scene scene={etat.scene} />}
 
       <div className={styles.jauges}>
         {maitresse && (

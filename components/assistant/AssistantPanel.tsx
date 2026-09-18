@@ -5,6 +5,7 @@ import { sousTitreDuGent } from "@/lib/enteteGent";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import { QuickReplyQuestions } from "@/components/shared/QuickReplyQuestions";
+import { SceneTour } from "@/components/jeu/SceneTour";
 import { FollowupChips } from "@/components/shared/FollowupChips";
 import { JumpFormCard } from "@/components/shared/JumpFormCard";
 import { extractDocumentText } from "@/lib/extractDocumentText";
@@ -843,6 +844,9 @@ export function AssistantPanel({
 
     const isLastMessage = i === lastAgentIndex;
     const isAgent = m.role === "agent";
+    // Un tour n'est dessiné que s'il porte de quoi le dessiner : l'ouverture,
+    // le recadrage et le bilan restent du texte, comme avant.
+    const tourDeJeu = m.jeuEtat?.decision || m.jeuEtat?.consequence ? m.jeuEtat : null;
     const canCopy = isAgent && !!m.text?.trim();
     const isCopied = copiedIndex === i;
     return (
@@ -878,6 +882,15 @@ export function AssistantPanel({
             )}
           </div>
           {isAgent && renderReasoning(m, i)}
+          {/*
+            Un tour de jeu REMPLACE la bulle. Rendu en bulle, il retombait dans
+            la typographie du produit : la mise en scène disparaissait et il ne
+            restait qu'un texte avec des boutons. Le moteur envoie le tour
+            structuré ; c'est lui qu'on dessine.
+          */}
+          {isAgent && tourDeJeu ? (
+            <SceneTour etat={tourDeJeu} onRepondre={sendMessage} actif={isLastMessage} />
+          ) : (
           <div className={styles.bubble}>
             <SafeHTML html={m.text ?? ""} />
             {m.imageStatus === "pending" && (
@@ -892,7 +905,10 @@ export function AssistantPanel({
             )}
             <div className={styles.t}>{m.t}</div>
           </div>
-          {isAgent && isLastMessage && !!m.questions?.length && (
+          )}
+          {/* Les réponses rapides sont DANS la scène quand il y a une scène :
+              les afficher en plus donnerait deux jeux de boutons. */}
+          {isAgent && isLastMessage && !tourDeJeu && !!m.questions?.length && (
             <QuickReplyQuestions questions={m.questions} onSubmit={sendMessage} />
           )}
           {isAgent && isLastMessage && !!m.followups?.length && (

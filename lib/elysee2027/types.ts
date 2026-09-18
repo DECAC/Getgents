@@ -165,18 +165,45 @@ export interface EtatJeuPublic {
   /** Les trois derniers tours, du plus récent au plus ancien. */
   derniers: TourJoue[];
   /**
-   * La mise en scène du moment, quand la décision en porte une. Elle passe par
-   * l'état — donc par le marqueur — et non par le texte visible : l'interface
-   * la DESSINE (cartouche, papier, citation) au lieu de relire de la prose.
+   * LE TOUR, en entier et structuré — la décision posée, ou la conséquence
+   * qu'on encaisse. Jamais les deux : le tour se joue en deux temps.
+   *
+   * Le texte du fil reste lisible seul (un jeu doit survivre à une interface
+   * qui ne le connaît pas), mais ce n'est pas lui qu'on affiche : l'interface
+   * DESSINE la scène à partir d'ici. Sans cela, la mise en scène retombe dans
+   * la typographie d'une bulle de conversation, et il ne reste qu'un texte.
    */
-  scene?: SceneJeu;
+  decision?: DecisionAffichee;
+  consequence?: ConsequenceAffichee;
 }
 
-/** La mise en scène telle que l'interface la reçoit. Tout est facultatif. */
-export interface SceneJeu {
+/** La décision posée au joueur, telle que l'interface la dessine. */
+export interface DecisionAffichee {
+  theme: string;
+  titre: string;
+  /** Mise en scène — facultative, comme sur `Decision`. */
   lieu?: string;
   urgence?: string;
-  /** Présents seulement pendant la pause qui suit un choix. */
+  scenette?: string;
+  situation: string;
+  question: string;
+  /** Les quatre libellés cliquables, dans l'ordre. */
+  options: string[];
+}
+
+/** Ce qu'a produit le choix, et la seule action qui reste : demander la suite. */
+export interface ConsequenceAffichee {
+  /** Le libellé retenu, rappelé au joueur. */
+  choisi: string;
+  texte: string;
   une?: string;
   reaction?: string;
+  /**
+   * La question du bloc de reprise et son unique libellé. L'interface compose
+   * sa réponse EXACTEMENT comme les réponses rapides le font (« question →
+   * libellé ») : deux formats concurrents finiraient par diverger, et le
+   * moteur cesserait d'apparier.
+   */
+  question: string;
+  action: string;
 }

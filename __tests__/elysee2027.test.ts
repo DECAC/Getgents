@@ -499,6 +499,46 @@ describe("elysee2027 — état pour l'interface", () => {
     expect(etat!.jauges.finances).toBeLessThanOrEqual(SEUILS.tutelle.max);
   });
 
+  test("l'état porte le TOUR entier, et la réponse qu'il compose est appariée", () => {
+    /*
+     * L'interface ne relit pas la prose du fil : elle DESSINE le tour à partir
+     * de l'état. Deux choses doivent donc tenir, et c'est ce test qui les tient.
+     *
+     * 1. L'état porte de quoi dessiner : décor, situation, question, libellés.
+     * 2. La réponse que l'interface compose (« question → libellé ») est celle
+     *    que le moteur apparie. Si les deux formats divergeaient, chaque clic
+     *    serait recadré — sans erreur, et sans que rien ne le signale.
+     */
+    const messages: Msg[] = [{ role: "user", content: DEMARRAGE_COURT_REALISTE }];
+    const { etat: ouverture } = extractEtatJeu(reponseJeuElysee(messages));
+    const d = ouverture!.decision!;
+    expect(d.options).toHaveLength(4);
+    expect(d.situation).toBeTruthy();
+    // La priorité « Pouvoir d'achat » ouvre sur une décision mise en scène.
+    expect(d.lieu).toBeTruthy();
+    expect(d.urgence).toBeTruthy();
+    expect(d.scenette).toBeTruthy();
+    expect(ouverture!.consequence).toBeUndefined();
+
+    // Le clic, composé EXACTEMENT comme l'interface le compose.
+    messages.push({ role: "user", content: `${d.question} → ${d.options[0]}` });
+    const { etat: pause } = extractEtatJeu(reponseJeuElysee(messages));
+    expect(pause!.consequence!.choisi).toBe(d.options[0]);
+    expect(pause!.consequence!.une).toBeTruthy();
+    expect(pause!.consequence!.reaction).toBeTruthy();
+    // Pendant la pause, rien à trancher : la décision n'est pas dessinée.
+    expect(pause!.decision).toBeUndefined();
+    // Preuve que le clic a été apparié : les jauges ont bougé.
+    expect(pause!.deltas).toBeDefined();
+
+    // Et la reprise, composée de la même façon, sert la décision suivante.
+    const c = pause!.consequence!;
+    messages.push({ role: "user", content: `${c.question} → ${c.action}` });
+    const { etat: suite } = extractEtatJeu(reponseJeuElysee(messages));
+    expect(suite!.decision).toBeDefined();
+    expect(suite!.consequence).toBeUndefined();
+  });
+
   test("tant qu'aucune partie n'est lancée, aucun état n'est émis", () => {
     const { etat } = extractEtatJeu(reponseJeuElysee([{ role: "user", content: "C'est quoi ce jeu ?" }]));
     expect(etat).toBeNull();
