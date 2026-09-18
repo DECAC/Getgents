@@ -63,7 +63,16 @@ interface Message {
 /* ------------------------------------------------------------------ */
 
 /** Normalisation pour comparer les libellés sans se soucier de la casse ni des accents. */
-function norm(s: string): string {
+/**
+ * La règle d'appariement des réponses, EXPORTÉE pour être testable.
+ *
+ * C'est elle qui décide si ce qu'a répondu le joueur correspond au libellé
+ * d'une option. Un test de données doit donc vérifier l'unicité des libellés
+ * AVEC elle : `trim().toLowerCase()` laissait passer deux libellés qui ne
+ * diffèrent que par un accent ou une espace double — le moteur les aurait
+ * confondus, et `findIndex` aurait silencieusement retenu le premier.
+ */
+export function normaliserReponse(s: string): string {
   return s
     .toLowerCase()
     .normalize("NFD")
@@ -81,11 +90,11 @@ function sections(...parties: (string | null | undefined)[]): string {
 const RE_DEMARRAGE = /^(demarre une nouvelle partie|nouvelle partie|rejouer)\b/;
 
 function estDemarrage(texte: string): boolean {
-  return RE_DEMARRAGE.test(norm(texte));
+  return RE_DEMARRAGE.test(normaliserReponse(texte));
 }
 
 function difficulteDepuis(texte: string, defaut: Difficulte): Difficulte {
-  const t = norm(texte);
+  const t = normaliserReponse(texte);
   if (/\bapaisee\b/.test(t)) return "apaisee";
   if (/\btempete\b/.test(t)) return "tempete";
   if (/\brealiste\b/.test(t)) return "realiste";
@@ -93,23 +102,23 @@ function difficulteDepuis(texte: string, defaut: Difficulte): Difficulte {
 }
 
 function dureeDepuis(texte: string, defaut: number): number {
-  const t = norm(texte);
+  const t = normaliserReponse(texte);
   if (/partie courte|8 tours/.test(t)) return 8;
   if (/mandat complet|15 tours/.test(t)) return 15;
   return defaut;
 }
 
 function titreDepuis(texte: string): string {
-  const t = norm(texte);
+  const t = normaliserReponse(texte);
   if (/madame la presidente/.test(t)) return "Madame la Présidente";
   if (/monsieur le president/.test(t)) return "Monsieur le Président";
   return "Président(e)";
 }
 
 function prioriteDepuis(texte: string): string | undefined {
-  const t = norm(texte);
+  const t = normaliserReponse(texte);
   for (const [priorite, decisionId] of Object.entries(PRIORITE_VERS_DECISION)) {
-    if (t.includes(norm(priorite))) return decisionId;
+    if (t.includes(normaliserReponse(priorite))) return decisionId;
   }
   return undefined;
 }
@@ -171,12 +180,26 @@ function prochaineDecision(etat: EtatPartie, suite?: string): { id: string; posi
     return { id: suite, position: ORDRE_CANONIQUE.indexOf(suite) };
   }
   const themeCourant = decisionParId(etat.enCours)?.theme;
-  for (let i = 1; i <= ORDRE_CANONIQUE.length; i++) {
-    const position = (etat.positionCanon + i) % ORDRE_CANONIQUE.length;
-    const id = ORDRE_CANONIQUE[position];
-    if (etat.jouees.includes(id)) continue;
-    if (decisionParId(id)?.theme === themeCourant) continue;
-    return { id, position };
+
+  /*
+   * DEUX passes, et c'est la seconde qui compte.
+   *
+   * Éviter deux fois de suite la même thématique est un confort de lecture, pas
+   * une règle du jeu. En une seule passe, il devenait une règle : si toutes les
+   * décisions non jouées restantes partageaient le thème courant, la boucle
+   * s'épuisait et renvoyait `null` — le moteur concluait « plus rien à servir »
+   * et clôturait le mandat avant son terme, sans la moindre trace.
+   *
+   * On ne renvoie donc `null` que lorsqu'il ne reste réellement plus rien.
+   */
+  for (const eviterLeTheme of [true, false]) {
+    for (let i = 1; i <= ORDRE_CANONIQUE.length; i++) {
+      const position = (etat.positionCanon + i) % ORDRE_CANONIQUE.length;
+      const id = ORDRE_CANONIQUE[position];
+      if (etat.jouees.includes(id)) continue;
+      if (eviterLeTheme && decisionParId(id)?.theme === themeCourant) continue;
+      return { id, position };
+    }
   }
   return null;
 }
@@ -485,7 +508,7 @@ export function reponseJeuElysee(messages: Message[]): string {
     const decision = decisionParId(etat.enCours);
     const libelle = libelleReponse(texte);
     const optionIndex =
-      decision && libelle ? decision.options.findIndex((o) => norm(o.label) === norm(libelle)) : -1;
+      decision && libelle ? decision.options.findIndex((o) => normaliserReponse(o.label) === normaliserReponse(libelle)) : -1;
 
     if (decision && optionIndex >= 0) {
       const option = decision.options[optionIndex];
