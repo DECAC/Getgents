@@ -12,6 +12,7 @@ import { aDesArtefacts, nombreDArtefacts, MESSAGE_ESPACE_VIDE } from "@/lib/espa
 import { sousTitreDuGent } from "@/lib/enteteGent";
 import type { Espace } from "@/lib/types";
 import { BandeauJeuActif } from "@/components/jeu/BandeauJeu";
+import { PlateauJeu } from "@/components/jeu/PlateauJeu";
 import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./SharedGentShell.module.css";
 
@@ -35,6 +36,7 @@ function SharedGentBody({ token }: { token: string }) {
     openAssistant,
     closeAssistant,
     miniAppMode,
+    modeJeu,
     documentViewerOpen,
     pendingArtefactVerdict,
     confirmArtefactProposal,
@@ -84,12 +86,13 @@ function SharedGentBody({ token }: { token: string }) {
    * pour parler.
    */
   useEffect(() => {
-    if (miniAppMode) closeAssistant();
+    if (miniAppMode || modeJeu) closeAssistant();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [miniAppMode]);
-  // Un gent en mode mini-application s'utilise par son tableau de bord : le
-  // destinataire n'a pas non plus accès à la conversation.
-  const chatAvailable = !miniAppMode;
+  }, [miniAppMode, modeJeu]);
+  // Mini-application et jeu s'utilisent par la page, pas par la conversation :
+  // le destinataire d'un lien n'y a pas accès non plus. Un visiteur arrive
+  // ICI et nulle part ailleurs — c'est sa seule vue du gent.
+  const chatAvailable = !miniAppMode && !modeJeu;
   // Visionneuse ouverte : la conversation y est déjà rendue, à droite du
   // document (voir DocumentViewerModal) — ne pas la monter deux fois.
   const chatOpen = chatAvailable && assistantOpen && !documentViewerOpen;
@@ -300,7 +303,10 @@ function SharedGentBody({ token }: { token: string }) {
                 d'amorce tant que la conversation n'a pas commencé) ou ancien
                 canevas d'artefacts. Sans lui, un artefact accepté par le
                 destinataire était bien enregistré mais ne s'affichait nulle part. */}
-            {apercu ? (
+            {modeJeu ? (
+              /* Le jeu occupe la page, exactement comme dans le studio. */
+              <PlateauJeu />
+            ) : apercu ? (
               /* Aperçu en attente : le MÊME rendu que la fenêtre, par le
                  composant partagé — ce qu'on garde doit être ce qu'on a vu. */
               <ArtefactCorps artefact={apercu.preview} interactif={false} />

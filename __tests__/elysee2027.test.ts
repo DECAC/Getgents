@@ -406,6 +406,23 @@ describe("elysee2027 — moteur", () => {
     expect(generatif.jumpForm?.id).not.toBe(deterministe.jumpForm?.id);
   });
 
+  test("le gent de jeu garde son formulaire de départ — c'est la seule entrée", () => {
+    /*
+     * En mode jeu, la conversation n'est ni rendue ni rappelable : la partie
+     * se joue sur la page. Le formulaire de départ devient donc le SEUL moyen
+     * de lancer une partie. Le perdre n'afficherait aucune erreur — le gent
+     * s'ouvrirait, et ne se jouerait pas.
+     */
+    const espace = ESPACES["elysee-2027-deterministe"];
+    expect(espace.jumpForm?.fields.length).toBeGreaterThan(0);
+    // Et les priorités qu'il propose doivent toutes ouvrir sur une décision.
+    const priorites = espace.jumpForm!.fields.find((f) => f.id === "priorite")?.options ?? [];
+    expect(priorites.length).toBeGreaterThan(0);
+    for (const p of priorites) {
+      expect(decisionParId(PRIORITE_VERS_DECISION[p])).toBeDefined();
+    }
+  });
+
   test("l'espace de démonstration existe et est branché sur le moteur", () => {
     // /espace/elysee-2027-deterministe doit se charger SANS serveur : l'espace
     // vient du catalogue statique, dérivé du brouillon du studio.

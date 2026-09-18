@@ -15,14 +15,25 @@ import styles from "./EspaceShell.module.css";
 
 /** Espace classique (conversationnel / mini-app / visionneuse). */
 function ClassicShellInner() {
-  const { railCollapsed, assistantOpen, asideCollapsed, closeModal, closeAssistant, miniAppMode, documentViewerOpen } =
-    useEspace();
+  const {
+    railCollapsed,
+    assistantOpen,
+    asideCollapsed,
+    closeModal,
+    closeAssistant,
+    miniAppMode,
+    modeJeu,
+    documentViewerOpen,
+  } = useEspace();
   // Mode mini-application : le gent s'utilise par son tableau de bord ; le
   // panneau conversationnel n'est ni rendu ni atteignable.
   // Visionneuse ouverte : c'est ELLE qui héberge la conversation, à droite du
   // document — la monter ici en plus en ferait deux instances, dont une
   // invisible sous la visionneuse.
-  const chatOpen = assistantOpen && !miniAppMode && !documentViewerOpen;
+  // Mode jeu : même raison qu'en mini-application — la partie se joue sur la
+  // page, et une décision présidentielle dans une colonne de discussion n'est
+  // plus une décision.
+  const chatOpen = assistantOpen && !miniAppMode && !modeJeu && !documentViewerOpen;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {

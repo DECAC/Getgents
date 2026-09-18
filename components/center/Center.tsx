@@ -5,10 +5,12 @@ import { useEspace } from "@/lib/context/EspaceContext";
 import { canResizeAssist, setAssistWidthFromPointer } from "@/lib/assistResize";
 import { CenterHeader } from "./CenterHeader";
 import { WorkspaceCanvas } from "./WorkspaceCanvas";
+import { PlateauJeu } from "@/components/jeu/PlateauJeu";
 import styles from "./Center.module.css";
 
 export function Center() {
-  const { currentEspace, currentId, openAssistant, closeAssistant, assistantOpen, miniAppMode } = useEspace();
+  const { currentEspace, currentId, openAssistant, closeAssistant, assistantOpen, miniAppMode, modeJeu } =
+    useEspace();
   const pullTabRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef({ active: false, moved: false, startX: 0 });
   const suppressClickRef = useRef(false);
@@ -80,11 +82,13 @@ export function Center() {
 
       <div className={styles.content} tabIndex={-1}>
         {/* key force la réinitialisation de l'agencement quand on change d'espace */}
-        <WorkspaceCanvas key={currentId} espace={currentEspace} />
+        {modeJeu ? <PlateauJeu key={currentId} /> : <WorkspaceCanvas key={currentId} espace={currentEspace} />}
       </div>
 
-      {/* Mode mini-application : pas de conversation, donc pas d'onglet d'appel. */}
-      {!miniAppMode && (
+      {/* Mini-application et jeu : pas de conversation, donc pas d'onglet
+          d'appel. Le laisser rendrait le tiroir rappelable, et le joueur
+          retomberait dans l'ancien rendu sans comprendre pourquoi. */}
+      {!miniAppMode && !modeJeu && (
       <button
         ref={pullTabRef}
         type="button"

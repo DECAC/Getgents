@@ -107,10 +107,76 @@ function Jauge({
   );
 }
 
-export function BandeauJeu({ etat }: { etat: EtatJeuPublic }) {
-  const tension = enTension(etat);
+
+/**
+ * Menace, objectif et derniers tours — l'ANALYSE de la partie.
+ *
+ * Descendue en pied de plateau, et non gardée dans le bandeau : on va la
+ * chercher au lieu de la subir. Le bandeau ne garde que les jauges, qui sont
+ * la pression permanente.
+ */
+export function BilanJeu({ etat }: { etat: EtatJeuPublic }) {
   const menace = menaceLaPlusProche(etat);
   const objectif = objectifVictoire(etat);
+  return (
+    <div className={styles.bande}>
+      <div className={[styles.case, menace.marge <= 15 ? styles.menaceChaude : ""].filter(Boolean).join(" ")}>
+        <span className={styles.caseTitre}>Menace la plus proche</span>
+        {menace.issue} — {menace.label} {menace.valeur}, seuil {menace.seuil} ·{" "}
+        <strong>{menace.marge} points de marge</strong>
+      </div>
+
+      <div
+        className={[
+          styles.case,
+          objectif.bonheurAtteint && objectif.confianceAtteinte ? styles.objectifProche : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <span className={styles.caseTitre}>Objectif du mandat</span>
+        <span className={[styles.condition, objectif.bonheurAtteint ? styles.conditionTenue : ""].join(" ")}>
+          <span className={styles.pastille} aria-hidden="true" />
+          Bonheur ≥ {SEUILS.victoire.bonheur}
+        </span>
+        <span
+          className={[styles.condition, objectif.confianceAtteinte ? styles.conditionTenue : ""].join(" ")}
+        >
+          <span className={styles.pastille} aria-hidden="true" />
+          Confiance ≥ {SEUILS.victoire.confiance}
+        </span>
+        <span className={styles.serie}>
+          Tenu {objectif.serie} tour{objectif.serie > 1 ? "s" : ""} sur {objectif.requis} consécutifs
+        </span>
+      </div>
+
+      <div className={styles.case}>
+        <span className={styles.caseTitre}>Trois derniers tours</span>
+        {etat.derniers.length === 0 ? (
+          <span className={styles.vide}>Votre mandat commence.</span>
+        ) : (
+          <div className={styles.tours}>
+            {etat.derniers.map((t) => (
+              <span key={t.tour} className={styles.tourJoue}>
+                <span className={styles.tourJoueTitre}>
+                  Tour {t.tour} · {t.titre}
+                </span>
+                <span className={styles.tourJoueDetail}>
+                  {JAUGES.filter((j) => t.deltas[j.id] !== 0)
+                    .map((j) => `${j.label} ${signeDelta(t.deltas[j.id])}`)
+                    .join(" · ") || "Aucun effet"}
+                </span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function BandeauJeu({ etat }: { etat: EtatJeuPublic }) {
+  const tension = enTension(etat);
   const signaux = franchissements(etat);
   const maitresse = JAUGES.find((j) => j.id === JAUGE_MAITRESSE);
   const autres = JAUGES.filter((j) => j.id !== JAUGE_MAITRESSE);
@@ -177,60 +243,6 @@ export function BandeauJeu({ etat }: { etat: EtatJeuPublic }) {
           ))}
         </div>
       )}
-
-      <div className={styles.bande}>
-        <div className={[styles.case, menace.marge <= 15 ? styles.menaceChaude : ""].filter(Boolean).join(" ")}>
-          <span className={styles.caseTitre}>Menace la plus proche</span>
-          {menace.issue} — {menace.label} {menace.valeur}, seuil {menace.seuil} ·{" "}
-          <strong>{menace.marge} points de marge</strong>
-        </div>
-
-        <div
-          className={[
-            styles.case,
-            objectif.bonheurAtteint && objectif.confianceAtteinte ? styles.objectifProche : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          <span className={styles.caseTitre}>Objectif du mandat</span>
-          <span className={[styles.condition, objectif.bonheurAtteint ? styles.conditionTenue : ""].join(" ")}>
-            <span className={styles.pastille} aria-hidden="true" />
-            Bonheur ≥ {SEUILS.victoire.bonheur}
-          </span>
-          <span
-            className={[styles.condition, objectif.confianceAtteinte ? styles.conditionTenue : ""].join(" ")}
-          >
-            <span className={styles.pastille} aria-hidden="true" />
-            Confiance ≥ {SEUILS.victoire.confiance}
-          </span>
-          <span className={styles.serie}>
-            Tenu {objectif.serie} tour{objectif.serie > 1 ? "s" : ""} sur {objectif.requis} consécutifs
-          </span>
-        </div>
-
-        <div className={styles.case}>
-          <span className={styles.caseTitre}>Trois derniers tours</span>
-          {etat.derniers.length === 0 ? (
-            <span className={styles.vide}>Votre mandat commence.</span>
-          ) : (
-            <div className={styles.tours}>
-              {etat.derniers.map((t) => (
-                <span key={t.tour} className={styles.tourJoue}>
-                  <span className={styles.tourJoueTitre}>
-                    Tour {t.tour} · {t.titre}
-                  </span>
-                  <span className={styles.tourJoueDetail}>
-                    {JAUGES.filter((j) => t.deltas[j.id] !== 0)
-                      .map((j) => `${j.label} ${signeDelta(t.deltas[j.id])}`)
-                      .join(" · ") || "Aucun effet"}
-                  </span>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
 
       {etat.fin && (
         <div

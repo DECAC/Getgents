@@ -250,6 +250,14 @@ interface EspaceContextValue {
    * alors par son tableau de bord et non par la conversation.
    */
   miniAppMode: boolean;
+  /**
+   * Mode JEU : le gent est piloté par un moteur déterministe (`moteurJeu`).
+   * Comme en mini-application, la partie se joue sur la zone principale et le
+   * panneau conversationnel n'est ni rendu ni rappelable — une décision
+   * présidentielle dans une colonne de discussion n'est plus une décision.
+   * Le fil reste la SAUVEGARDE de la partie : on le cache, on ne le supprime pas.
+   */
+  modeJeu: boolean;
   /** Ajoute un document à la session (texte déjà extrait côté navigateur). */
   addFile: (file: UserFile) => void;
   removeFile: (fileId: string) => void;
@@ -1816,6 +1824,7 @@ export function EspaceProvider({
         pinnedError,
         shareMode,
         miniAppMode: !!currentEspace.pinnedArtefact?.enabled,
+        modeJeu: !!currentEspace.moteurJeu,
         addFile,
         removeFile,
         addDocumentArtefact,
