@@ -44,47 +44,64 @@
   }
 }
 /*
- * Conversation SEULE : elle prend toute la largeur.
+ * Conversation ouverte : DEUX pistes, toujours — la conversation, puis le volet.
  *
- * L'agencement precedent reservait en permanence une colonne au canevas. Elle
- * restait vide tant que le gent n'avait rien produit, et a moitie vide
- * ensuite — un module unique ne remplit pas la moitie d'un ecran. La
- * conversation, elle, avait toujours de quoi occuper la place.
+ * Le volet change de palier (rien, bande, moitié, large) en changeant la
+ * largeur de la seconde piste. Toutes ces largeurs sont des longueurs ou des
+ * pourcentages : le navigateur sait interpoler de l'une à l'autre, et le volet
+ * GLISSE dans tous les sens. Mélanger `fr` et `px` d'un palier à l'autre ferait
+ * sauter la mise en page sans transition.
+ *
+ * Largeur nulle quand il n'y a rien à montrer : l'agencement précédent
+ * réservait en permanence une colonne au canevas, vide tant que le gent
+ * n'avait rien produit. La piste existe quand même, pour que la première
+ * ouverture parte du bord.
  */
 .bodyChat {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr) 0px;
 }
 
 /*
- * Conversation + volet d'artefact : moities EGALES.
+ * Volet rangé en BANDE : on sait que l'espace est là sans qu'il prenne de
+ * place. 52 px de piste, dont 14 de marge — la bande visible en fait 38.
+ */
+.bodyBande {
+  grid-template-columns: minmax(0, 1fr) 52px;
+}
+
+/*
+ * Conversation + volet d'artefact : moitiés ÉGALES.
  *
- * Pas `var(--assist)` ici : cette variable dimensionne une colonne laterale
+ * Pas `var(--assist)` ici : cette variable dimensionne une colonne latérale
  * d'appoint dans le studio. Le volet n'est pas un appoint — il porte un
  * tableau de bord ou un document, qui demandent autant de place que le fil.
  */
 .bodyWithChat {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 50%;
 }
 
 /*
- * Volet etendu vers la GAUCHE. La conversation reste ouverte et lisible —
- * elle ne se replie pas, elle cede du terrain. En dessous de ~340 px un fil
- * de discussion devient illisible : d'ou 30 %, et pas davantage.
+ * Volet étendu vers la GAUCHE. La conversation reste ouverte et lisible —
+ * elle ne se replie pas, elle cède du terrain. En dessous de ~340 px un fil
+ * de discussion devient illisible : d'où 30 %, et pas davantage.
  */
 .bodyVoletLarge {
-  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
+  grid-template-columns: minmax(0, 1fr) 70%;
 }
 
 @media (max-width: 860px) {
+  .bodyChat,
+  .bodyBande,
   .bodyWithChat,
-  .bodyChat {
+  .bodyVoletLarge {
     grid-template-columns: 1fr;
   }
-  /* Trop étroit pour deux colonnes : la conversation prend toute la place.
-     Le canevas portant les questions d'amorce, la conversation doit les
-     reprendre à son compte — voir la prop `starters` d'AssistantPanel, sans
-     quoi le fil s'ouvre vide et sans rien à quoi se raccrocher. */
-  .bodyWithChat .main {
+  /* Trop étroit pour deux colonnes : la conversation prend toute la place, et
+     le volet — bande comprise — disparaît ; « Le gent » y mène. Le canevas
+     portant les questions d'amorce, la conversation doit les reprendre à son
+     compte — voir la prop `starters` d'AssistantPanel, sans quoi le fil
+     s'ouvre vide et sans rien à quoi se raccrocher. */
+  .bodyChat .main {
     display: none;
   }
 }
@@ -321,7 +338,7 @@
  * peut prendre, garder ou jeter — ce qui est exactement la décision demandée.
  * L'ombre reste sous le seuil du décoratif : elle sépare, elle n'attire pas.
  */
-.bodyWithChat .main {
+.bodyChat .main {
   margin: 14px 14px 14px 0;
   /* Plus de filet : SEULE l'ombre detache le volet. Un contour ferme le
      dessine comme une boite rapportee ; l'ombre suffit a dire « pose ». */
@@ -465,4 +482,95 @@
 .videAction:hover {
   background: var(--sage-tint);
   border-color: var(--sage);
+}
+
+/* ---------------------------------------------------------------------------
+ * Bande : le volet rangé sur le bord droit
+ * ------------------------------------------------------------------------- */
+
+/*
+ * Toute la hauteur est un bouton. Discrète au repos — la même surface que le
+ * volet, sans contour — elle se teinte au survol pour dire qu'elle s'ouvre.
+ */
+.bande {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  /* Le libellé n'apparaît qu'une fois la piste réduite : pendant le glissement
+     depuis la moitié, il se serait écrasé contre le bord. */
+  animation: bandeApparait 240ms ease 120ms both;
+}
+.bande:hover {
+  background: var(--sage-tint);
+  color: var(--ink);
+}
+.bande:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: -2px;
+}
+
+.bandeChevron {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.bandeCompte {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--sage);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+/* Lu de bas en haut, comme le dos d'un livre rangé. */
+.bandeTexte {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--faint);
+}
+.bande:hover .bandeTexte {
+  color: var(--muted);
+}
+
+/* Le contenu du volet rouvert apparaît en fondu : il se remet en page pendant
+   que la piste s'élargit, et le fondu masque ce réarrangement. */
+.bodyChat .mainInner,
+.bodyChat .voletBarre {
+  animation: bandeApparait 260ms ease 60ms both;
+}
+
+@keyframes bandeApparait {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bande,
+  .bodyChat .mainInner,
+  .bodyChat .voletBarre {
+    animation: none;
+  }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { EspaceProvider, useEspace } from "@/lib/context/EspaceContext";
 import { WorkspaceCanvas } from "@/components/center/WorkspaceCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
@@ -98,52 +98,61 @@ function SharedGentBody({ token }: { token: string }) {
   const chatOpen = chatAvailable && assistantOpen && !documentViewerOpen;
 
   /**
-   * Le volet d'artefact, à droite de la conversation.
+   * Largeur du volet d'artefact, à droite de la conversation. Avec « Le gent »
+   * (conversation fermée, canevas seul), cela fait quatre affichages :
    *
-   * Par défaut FERMÉ : la conversation prend toute la largeur. L'agencement
-   * précédent réservait en permanence une colonne au canevas, qui restait
-   * vide tant que le gent n'avait rien produit — et à moitié vide ensuite,
-   * un seul module ne remplissant pas la moitié d'un écran.
+   *   - `bande`  : une bande discrète sur le bord droit. On sait que l'espace
+   *                est là, et combien il contient ; un clic le rouvre.
+   *   - `moitie` : moitiés égales — l'ouverture automatique à l'arrivée d'un
+   *                artefact.
+   *   - `large`  : le volet s'étend vers la gauche, la conversation reste
+   *                lisible (30 %).
    *
-   * Il s'ouvre TOUT SEUL quand un artefact arrive : c'est le moment où il a
-   * quelque chose à montrer, et le seul où l'interrompre se justifie.
+   * Un seul état plutôt qu'un booléen « ouvert » et un autre « large » : les
+   * combinaisons impossibles (fermé ET large) disparaissent, et la bande est
+   * un palier de plus, pas un cas particulier.
+   *
+   * Par défaut en BANDE : la conversation garde presque toute la largeur. Un
+   * volet vide ne réserve même pas la bande — voir `colonneVolet`.
    */
-  const [voletOuvert, setVoletOuvert] = useState(false);
-
-  /**
-   * Le volet peut s'etendre VERS LA GAUCHE, en gardant la conversation
-   * ouverte. Deux largeurs seulement — moities egales, ou volet large — parce
-   * qu'une poignee de redimensionnement demande de la precision a la souris
-   * pour un reglage qu'on ne fait qu'une fois. Un clic suffit, et l'on revient
-   * d'un clic.
-   */
-  const [voletLarge, setVoletLarge] = useState(false);
+  const [volet, setVolet] = useState<"bande" | "moitie" | "large">("bande");
+  // Rouvrir sans défaire un choix : un volet déjà large le reste.
+  const ouvrirVolet = useCallback(() => setVolet((v) => (v === "bande" ? "moitie" : v)), []);
 
   // Un artefact qui attend une décision ouvre le volet : c'est exactement le
   // moment où il a quelque chose à montrer.
   useEffect(() => {
-    if (pendingArtefactVerdict) setVoletOuvert(true);
+    if (pendingArtefactVerdict) ouvrirVolet();
     // Verdict rendu : l'agrandissement n'a plus d'objet.
     else setAgrandi(false);
-  }, [pendingArtefactVerdict]);
+  }, [pendingArtefactVerdict, ouvrirVolet]);
   const compte = nombreDArtefacts(currentEspace);
   const comptePrecedent = useRef(compte);
   useEffect(() => {
     // On compare au compte PRÉCÉDENT, pas à zéro : rouvrir le volet à chaque
     // rendu d'un espace déjà garni le rendrait impossible à fermer.
-    if (compte > comptePrecedent.current) setVoletOuvert(true);
+    if (compte > comptePrecedent.current) ouvrirVolet();
     comptePrecedent.current = compte;
-  }, [compte]);
+  }, [compte, ouvrirVolet]);
 
   const espaceGarni = aDesArtefacts(currentEspace);
   const sousTitre = sousTitreDuGent(currentEspace.gent, currentEspace.name);
-  // Deux colonnes seulement si la conversation ET le volet sont là. Sur écran
-  // étroit la feuille de style ramène à une colonne : le volet n'a pas la
-  // place, et « Le gent » reste le chemin vers le canevas.
-  const deuxColonnes = chatOpen && voletOuvert;
+  const voletVisible = volet !== "bande";
   // L'aperçu ne prend la place du canevas que si le volet est effectivement
-  // visible : sinon la décision serait demandée dans un écran qu'on ne voit pas.
-  const apercu = voletOuvert ? pendingArtefactVerdict : null;
+  // ouvert : sinon la décision serait demandée dans un écran qu'on ne voit pas.
+  const apercu = voletVisible ? pendingArtefactVerdict : null;
+  /**
+   * Une bande sur un espace VIDE ne mènerait à rien : on ne la montre que s'il
+   * y a quelque chose derrière. La colonne existe malgré tout, à largeur nulle,
+   * pour que la première ouverture glisse depuis le bord au lieu d'apparaître.
+   */
+  const colonneVolet: "vide" | "bande" | "moitie" | "large" = !chatOpen
+    ? "vide"
+    : voletVisible
+      ? volet
+      : espaceGarni
+        ? "bande"
+        : "vide";
 
   return (
     <div className={styles.page}>
@@ -213,9 +222,10 @@ function SharedGentBody({ token }: { token: string }) {
       <div
         className={[
           styles.body,
-          deuxColonnes ? styles.bodyWithChat : "",
-          deuxColonnes && voletLarge ? styles.bodyVoletLarge : "",
           chatOpen ? styles.bodyChat : "",
+          colonneVolet === "bande" ? styles.bodyBande : "",
+          colonneVolet === "moitie" ? styles.bodyWithChat : "",
+          colonneVolet === "large" ? styles.bodyVoletLarge : "",
         ]
           .filter(Boolean)
           .join(" ")}
@@ -223,20 +233,39 @@ function SharedGentBody({ token }: { token: string }) {
         {/* `starters` : sur téléphone le canevas est masqué, et c'est lui qui
             porte d'ordinaire les questions d'amorce. Sans cela, le
             destinataire d'un lien arrivait sur un fil vide — rien à lire,
-            rien à toucher, aucune idée de ce qu'on peut demander. */}
+            rien à toucher, aucune idée de ce qu'on peut demander. La bande
+            ne montre pas le canevas non plus : même règle. */}
         {/* `embedded` sur écran étroit : la grille lui donne déjà toute la
             place, il ne doit pas se comporter en tiroir superposé. Sur grand
             écran il reste une colonne redimensionnable. */}
         {chatOpen && <AssistantPanel
-            starters={etroit || !voletOuvert}
-            embedded={etroit || !voletOuvert}
+            starters={etroit || !voletVisible}
+            embedded={etroit || !voletVisible}
             // L'en-tête de la page porte déjà le nom du gent.
             sansEntete
           />}
-        {/* Le canevas n'est monté que s'il a une place : en volet à côté de la
-            conversation, ou en pleine page sous l'onglet « Le gent ». */}
-        {(!chatOpen || voletOuvert) && (
+        {/* Le canevas n'est monté que s'il a une place : en volet (bande
+            comprise) à côté de la conversation, ou en pleine page sous
+            « Le gent ». Il RESTE monté entre la bande, la moitié et le large :
+            c'est ce qui laisse la largeur glisser au lieu de sauter. */}
+        {(!chatOpen || colonneVolet !== "vide") && (
         <main className={styles.main}>
+          {chatOpen && !voletVisible ? (
+            /* La bande : discrète, mais toute sa hauteur est cliquable — une
+               cible de trente pixels de large ne se vise pas, elle se trouve. */
+            <button
+              type="button"
+              className={styles.bande}
+              onClick={ouvrirVolet}
+              title="Ouvrir l'espace du gent"
+              aria-label={`Ouvrir l'espace du gent — ${compte} élément${compte > 1 ? "s" : ""}`}
+            >
+              <span className={styles.bandeChevron} aria-hidden="true">‹</span>
+              {compte > 0 && <span className={styles.bandeCompte}>{compte}</span>}
+              <span className={styles.bandeTexte}>Ce que le gent a produit</span>
+            </button>
+          ) : (
+          <>
           {chatOpen && (
             <div className={styles.voletBarre}>
               <span className={styles.voletTitre}>
@@ -276,20 +305,20 @@ function SharedGentBody({ token }: { token: string }) {
                     <button
                       type="button"
                       className={styles.voletIcone}
-                      onClick={() => setVoletLarge((v) => !v)}
-                      title={voletLarge ? "Réduire l'espace du gent" : "Étendre l'espace du gent"}
-                      aria-label={voletLarge ? "Réduire l'espace du gent" : "Étendre l'espace du gent"}
-                      aria-pressed={voletLarge}
+                      onClick={() => setVolet((v) => (v === "large" ? "moitie" : "large"))}
+                      title={volet === "large" ? "Réduire l'espace du gent" : "Étendre l'espace du gent"}
+                      aria-label={volet === "large" ? "Réduire l'espace du gent" : "Étendre l'espace du gent"}
+                      aria-pressed={volet === "large"}
                     >
-                      {voletLarge ? "⇥" : "⇤"}
+                      {volet === "large" ? "⇥" : "⇤"}
                     </button>
                   <button
                     type="button"
                     className={styles.voletFermer}
-                    onClick={() => setVoletOuvert(false)}
-                    // Fermer ne détruit rien : le canevas reste atteignable
-                    // par « Le gent ». Le dire évite de faire hésiter.
-                    title="Fermer — vous le retrouverez dans « Le gent »"
+                    onClick={() => setVolet("bande")}
+                    // Fermer ne détruit rien : le volet se range en bande sur
+                    // le bord, d'où un clic le rouvre.
+                    title="Ranger sur le côté — un clic sur la bande le rouvre"
                   >
                     Fermer
                   </button>
@@ -325,6 +354,8 @@ function SharedGentBody({ token }: { token: string }) {
               </div>
             )}
           </div>
+          </>
+          )}
         </main>
         )}
       </div>
