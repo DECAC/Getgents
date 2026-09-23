@@ -1,9 +1,22 @@
 import { libelleOnglet } from "@/lib/libelleOnglet";
 
 describe("intitule d'onglet tire du contexte", () => {
-  it("retient ce qui suit le tiret — la partie qui distingue", () => {
+  it("écarte la partie qui nomme une personne, quel que soit l'ordre", () => {
     expect(libelleOnglet("Charles de Cassan — Parcours", "Tableau de bord")).toBe("Parcours");
     expect(libelleOnglet("Charles de Cassan — résumé", "Résumé de profil")).toBe("Résumé");
+    // Le cas qui a motivé la règle : la première version gardait la DERNIÈRE
+    // partie et nommait l'onglet « Charles de Cassan ».
+    expect(libelleOnglet("Parcours professionnel — Charles de Cassan", "Tableau de bord")).toBe(
+      "Parcours professionnel"
+    );
+  });
+
+  it("retient la première partie quand aucune ne nomme une personne", () => {
+    expect(libelleOnglet("Synthèse — réunion du 12 mars", "Rapport")).toBe("Synthèse");
+  });
+
+  it("écarte la partie qui répète le nom du gent", () => {
+    expect(libelleOnglet("Road trip Maroc — Budget", "Rapport", ["Road trip Maroc"])).toBe("Budget");
   });
 
   it("garde le titre entier quand il n'y a pas de tiret", () => {
@@ -23,7 +36,7 @@ describe("intitule d'onglet tire du contexte", () => {
   });
 
   it("met une majuscule", () => {
-    expect(libelleOnglet("Sujet — parcours", "X")).toBe("Parcours");
+    expect(libelleOnglet("parcours — Charles de Cassan", "X")).toBe("Parcours");
   });
 
   it("retombe sur la categorie quand le titre est vide", () => {
@@ -32,6 +45,6 @@ describe("intitule d'onglet tire du contexte", () => {
   });
 
   it("ignore un fragment d'un seul caractere", () => {
-    expect(libelleOnglet("Parcours — A", "X")).toBe("Parcours — A");
+    expect(libelleOnglet("Parcours — A", "X")).toBe("Parcours");
   });
 });

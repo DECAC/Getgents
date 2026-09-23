@@ -32,7 +32,15 @@ export function WorkspaceCanvas({ espace }: { espace: Espace }) {
     const showStarters =
       shouldShowConversationStarters(espace, activeConversationMessageCount(espace)) && !assistantOpen;
     const newest = espace.artefacts[0];
-    const spec = withKeptArtefacts(espace.appPreview, espace.artefacts);
+    const spec = withKeptArtefacts(espace.appPreview, espace.artefacts, [
+      espace.appPreview.appName,
+      espace.gent,
+      espace.name,
+    ]);
+    const newestModuleId = newest ? keptArtefactModuleId(newest.id) : undefined;
+    // L'onglet porte le nom du CONTENU, plus celui du type : c'est lui qu'il
+    // faut viser pour montrer l'artefact qu'on vient de garder.
+    const newestTheme = spec.modules.find((m) => m.id === newestModuleId)?.theme;
 
     return (
       <div className={styles.withPreview}>
@@ -42,8 +50,8 @@ export function WorkspaceCanvas({ espace }: { espace: Espace }) {
             variant="workspace"
             onAsk={runStarter}
             artefacts={espace.artefacts}
-            focusTheme={newest?.type}
-            highlightModuleId={newest ? keptArtefactModuleId(newest.id) : undefined}
+            focusTheme={newestTheme}
+            highlightModuleId={newestModuleId}
           />
         </div>
         {showStarters && (

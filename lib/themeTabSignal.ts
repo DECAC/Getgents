@@ -1,4 +1,5 @@
 import type { Artefact, Espace, ThemeTab, ThemeTabProposalAction } from "@/lib/types";
+import { libelleOnglet } from "@/lib/libelleOnglet";
 
 // Format demandé au modèle : terminer sa réponse par un bloc caché
 // <!--THEME_TAB: {"action":"create","label":"Titre du thème","moduleIds":["tab-1","artef-123"]}-->
@@ -79,13 +80,21 @@ export function artefactModuleId(artefactId: string): string {
 }
 
 /**
- * Range l'artefact dans un onglet thématique dont le libellé correspond à son
- * type (Rapport, Checklist…), ou en crée un. Un module n'appartient qu'à un
- * seul onglet thématique à la fois.
+ * Range l'artefact dans un onglet thématique nommé d'après son CONTENU
+ * (« Parcours professionnel »), jamais d'après son type (« Tableau de bord ») —
+ * voir `libelleOnglet`. Un onglet existant du même nom l'accueille. Un module
+ * n'appartient qu'à un seul onglet thématique à la fois.
+ *
+ * `contexte` : nom du gent et de l'espace, pour ne pas nommer l'onglet d'après
+ * le sujet commun à tous les artefacts.
  */
-export function upsertArtefactThemeTab(themeTabs: ThemeTab[], artefact: Artefact): ThemeTab[] {
+export function upsertArtefactThemeTab(
+  themeTabs: ThemeTab[],
+  artefact: Artefact,
+  contexte: readonly (string | null | undefined)[] = []
+): ThemeTab[] {
   const moduleId = artefactModuleId(artefact.id);
-  const label = artefact.type;
+  const label = libelleOnglet(artefact.title, artefact.type, contexte);
   const stripped = themeTabs
     .map((t) => ({ ...t, moduleIds: t.moduleIds.filter((id) => id !== moduleId) }))
     .filter((t) => t.moduleIds.length > 0);

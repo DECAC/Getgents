@@ -62,25 +62,32 @@ describe("withKeptArtefacts", () => {
     expect(next.modules[1].blocks.some((b) => b.kind === "text" && "text" in b && b.text.includes("Hello"))).toBe(true);
   });
 
-  // L'onglet du createur l'emporte : il a prevu « Mon profil », l'artefact
-  // l'y rejoint au lieu d'ouvrir un onglet concurrent au nom voisin.
-  it("réutilise un onglet studio si le type porte le même nom", () => {
-    const a = artef({ id: "a1", title: "CV", type: "Mon profil" });
+  it("rejoint un onglet studio qui porte le nom de son CONTENU", () => {
+    const a = artef({ id: "a1", title: "mon profil", type: "Résumé de profil" });
     const next = withKeptArtefacts(PREVIEW, [a]);
     expect(next.themes).toEqual(["Mon profil", "Postes"]);
     expect(next.modules[1].theme).toBe("Mon profil");
   });
+
+  // Un onglet studio qui porte le nom d'une CATEGORIE n'attire plus les
+  // artefacts de cette categorie : la coincidence n'est pas une intention.
+  it("ne se range pas dans l'onglet studio homonyme de son type", () => {
+    const spec: AppPreviewSpec = { ...PREVIEW, themes: [...PREVIEW.themes, "Tableau de bord"] };
+    const a = artef({ id: "a1", title: "Parcours professionnel — Charles de Cassan", type: "Tableau de bord" });
+    expect(withKeptArtefacts(spec, [a]).modules[1].theme).toBe("Parcours professionnel");
+  });
 });
 
 describe("changement de type", () => {
-  it("met à jour le libellé et range l'artefact dans l'onglet du nouveau type", () => {
+  // Changer la FORME ne change pas le SUJET : l'onglet garde son nom.
+  it("met à jour le libellé sans renommer l'onglet, qui porte le contenu", () => {
     const a = artef({ id: "a1", title: "Note", type: "Rapport", kind: "report", body: "- Relire\n- Signer" });
     const next = convertArtefactToKind(a, "checklist");
     expect(next.type).toBe("Checklist");
     expect(next.kind).toBe("checklist");
     expect(next.icon).toBe("✅");
     const tabs = upsertArtefactThemeTab([], next);
-    expect(tabs[0].label).toBe("Checklist");
+    expect(tabs[0].label).toBe("Note");
     expect(tabs[0].moduleIds).toEqual(["artef-a1"]);
   });
 });

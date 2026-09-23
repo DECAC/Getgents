@@ -1430,10 +1430,10 @@ export function EspaceProvider({
           const action = themeActionWithArtefact(targetMsg.themeProposal, newArtefactId);
           themeTabs = applyThemeTabAction(themeTabs, action);
           if (action.action !== "create") {
-            themeTabs = upsertArtefactThemeTab(themeTabs, newArtefact);
+            themeTabs = upsertArtefactThemeTab(themeTabs, newArtefact, [espace.gent, espace.name]);
           }
         } else {
-          themeTabs = upsertArtefactThemeTab(themeTabs, newArtefact);
+          themeTabs = upsertArtefactThemeTab(themeTabs, newArtefact, [espace.gent, espace.name]);
         }
       }
 
@@ -1474,7 +1474,7 @@ export function EspaceProvider({
       if (!current) return prev;
       const updated = convertArtefactToKind(current, kind);
       const artefacts = espace.artefacts.map((a) => (a.id === artefactId ? updated : a));
-      const themeTabs = upsertArtefactThemeTab(espace.themeTabs ?? [], updated);
+      const themeTabs = upsertArtefactThemeTab(espace.themeTabs ?? [], updated, [espace.gent, espace.name]);
       return { ...prev, [id]: { ...espace, artefacts, themeTabs } };
     });
   }, []);

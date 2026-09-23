@@ -129,7 +129,11 @@ function artefactToStackedBlocks(artefact: Artefact): AppBlock[] {
   return blocks;
 }
 
-function artefactToModule(artefact: Artefact, themesExistants: readonly string[]): AppModuleSpec {
+function artefactToModule(
+  artefact: Artefact,
+  themesExistants: readonly string[],
+  contexte: readonly (string | null | undefined)[]
+): AppModuleSpec {
   const kind = inferArtefactKind(artefact);
   const size =
     kind === "dashboard" || kind === "map" || kind === "profile-summary"
@@ -140,7 +144,7 @@ function artefactToModule(artefact: Artefact, themesExistants: readonly string[]
   return {
     id: keptArtefactModuleId(artefact.id),
     title: artefact.title,
-    theme: themeDeLArtefact(artefact, themesExistants),
+    theme: themeDeLArtefact(artefact, themesExistants, contexte),
     size,
     source: artefact.type,
     blocks: artefactToBlocks(artefact),
@@ -148,28 +152,41 @@ function artefactToModule(artefact: Artefact, themesExistants: readonly string[]
 }
 
 /**
- * Greffe les artefacts gardés sur l'aperçu d'application : chaque artefact
- * devient une tuile, rangée dans un onglet au nom de son type (Rapport,
- * Checklist…). Les onglets studio restent en tête.
- */
-/**
- * Onglet d'accueil d'un artefact.
+ * Onglet d'accueil d'un artefact : son CONTEXTE — « Parcours professionnel »,
+ * et non « Tableau de bord ». La catégorie ne dit rien de ce qu'on trouve dans
+ * l'onglet, et rangeait deux sujets sans rapport sous la même étiquette dès
+ * qu'ils partageaient une forme.
  *
- * Regle : un onglet que le CREATEUR a lui-meme cree l'emporte. S'il a prevu
- * « Mon profil », un artefact de ce type l'y rejoint plutot que d'ouvrir un
- * onglet concurrent au nom voisin.
+ * Un onglet studio du MÊME NOM que ce contexte l'accueille (à la casse près),
+ * plutôt que d'ouvrir un doublon.
  *
- * Sinon, le CONTEXTE : « Parcours », et non « Tableau de bord ». La categorie
- * ne dit rien de ce qu'on trouve dans l'onglet, et rangeait deux sujets sans
- * rapport sous la meme etiquette des qu'ils partageaient une forme.
+ * Une version précédente rangeait l'artefact dans l'onglet studio qui portait
+ * le nom de son TYPE : un créateur ayant un onglet « Tableau de bord » y voyait
+ * atterrir son « Parcours professionnel ». La coïncidence entre un nom
+ * d'onglet et une catégorie technique n'est pas une intention du créateur.
  */
-function themeDeLArtefact(artefact: Artefact, themesExistants: readonly string[]): string {
-  if (themesExistants.includes(artefact.type)) return artefact.type;
-  return libelleOnglet(artefact.title, artefact.type);
+function themeDeLArtefact(
+  artefact: Artefact,
+  themesExistants: readonly string[],
+  contexte: readonly (string | null | undefined)[]
+): string {
+  const libelle = libelleOnglet(artefact.title, artefact.type, contexte);
+  return themesExistants.find((t) => t.toLowerCase() === libelle.toLowerCase()) ?? libelle;
 }
 
-export function withKeptArtefacts(spec: AppPreviewSpec, artefacts: Artefact[]): AppPreviewSpec {
-  const modules = artefacts.map((a) => artefactToModule(a, spec.themes));
+/**
+ * Greffe les artefacts gardés sur l'aperçu d'application : chaque artefact
+ * devient une tuile, rangée dans un onglet nommé d'après son contenu. Les
+ * onglets studio restent en tête.
+ *
+ * `contexte` : nom du gent et de l'espace — voir `libelleOnglet`.
+ */
+export function withKeptArtefacts(
+  spec: AppPreviewSpec,
+  artefacts: Artefact[],
+  contexte: readonly (string | null | undefined)[] = [spec.appName]
+): AppPreviewSpec {
+  const modules = artefacts.map((a) => artefactToModule(a, spec.themes, contexte));
   if (!modules.length) return spec;
   const extraThemes: string[] = [];
   for (const m of modules) {
