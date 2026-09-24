@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
+import { hasCustomName } from "@/lib/builderSnapshot";
 import type { CollabQuestion } from "@/lib/types";
 import {
   EVENT_MANAGER_DEFAULT_PROMPT,
@@ -17,8 +18,12 @@ function newQuestionId(): string {
 
 /**
  * Type de gent « Event Manager » : tout le paramétrage au même endroit.
- * Ouvrir l'onglet depuis le menu active le type et précharge un gabarit
- * team building — pas besoin d'un second interrupteur.
+ *
+ * OUVRIR L'ONGLET NE MODIFIE RIEN. Il posait le gabarit à l'ouverture sur tout
+ * gent sans salon configuré — c'est-à-dire sur tout gent conversationnel :
+ * son prompt, son nom et son emblème étaient REMPLACÉS par ceux de l'Event
+ * Manager, sur un simple passage dans le menu. L'activation est désormais un
+ * clic explicite, qui ne touche ni un prompt déjà écrit ni un nom déjà choisi.
  */
 export function CollaboratifTab() {
   const { currentDraft, updateCollab, updateSystemPrompt, toggleWebSearch, updateName, updateIcon } =
@@ -28,7 +33,6 @@ export function CollaboratifTab() {
 
   const [promptValue, setPromptValue] = useState(currentDraft.systemPrompt);
   const lastPushedRef = useRef(currentDraft.systemPrompt);
-  const seededForDraftRef = useRef<string | null>(null);
 
   const [optionsCountDraft, setOptionsCountDraft] = useState(
     String(collab?.propositions?.options ?? 3)
@@ -66,28 +70,21 @@ export function CollaboratifTab() {
     setOptionsCountDraft(String(currentDraft.collab?.propositions?.options ?? 3));
   }, [currentDraft.id, currentDraft.collab?.propositions?.options]);
 
-  // Secours : si le brouillon n'a encore aucune config collab (ex. Accueil),
-  // on pose le gabarit. Le menu Créer le pose déjà à l'allocation.
-  useEffect(() => {
-    if (seededForDraftRef.current === currentDraft.id) return;
-    seededForDraftRef.current = currentDraft.id;
-
-    if (currentDraft.collab !== undefined) {
-      return;
-    }
-
+  function activerEventManager() {
     const seeded = teamBuildingCollabConfig();
-    setPromptValue(EVENT_MANAGER_DEFAULT_PROMPT);
-    lastPushedRef.current = EVENT_MANAGER_DEFAULT_PROMPT;
-    updateSystemPrompt(EVENT_MANAGER_DEFAULT_PROMPT);
-    updateName("Event Manager");
-    updateIcon("🧭");
-    if (!currentDraft.webSearch) toggleWebSearch();
     updateCollab(seeded);
     setOptionsCountDraft(String(seeded.propositions?.options ?? 3));
-    // Intentionnel : une seule fois par brouillon à l'ouverture de l'onglet.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentDraft.id]);
+    if (!currentDraft.systemPrompt.trim()) {
+      setPromptValue(EVENT_MANAGER_DEFAULT_PROMPT);
+      lastPushedRef.current = EVENT_MANAGER_DEFAULT_PROMPT;
+      updateSystemPrompt(EVENT_MANAGER_DEFAULT_PROMPT);
+    }
+    if (!hasCustomName(currentDraft)) {
+      updateName("Event Manager");
+      updateIcon("🧭");
+    }
+    if (!currentDraft.webSearch) toggleWebSearch();
+  }
 
   function handlePromptChange(text: string) {
     setPromptValue(text);
@@ -126,6 +123,27 @@ export function CollaboratifTab() {
   }
 
   const wordCount = promptValue.trim().split(/\s+/).filter(Boolean).length;
+
+  if (!collab) {
+    return (
+      <div className={styles.wrap}>
+        <div className={styles.card}>
+          <h4 className={styles.title}>Event Manager</h4>
+          <div className={styles.sub}>
+            Un gent <b>orchestrateur d&apos;événements</b> : salon commun, collecte en privé,
+            vérification web, propositions au vote, synthèse des décisions. L&apos;activer pose un
+            gabarit <b>team building</b> à adapter.
+            {currentDraft.systemPrompt.trim()
+              ? " Les instructions déjà écrites de ce gent sont conservées."
+              : ""}
+          </div>
+          <button type="button" className={local.activer} onClick={activerEventManager}>
+            Activer Event Manager sur ce gent
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.wrap}>

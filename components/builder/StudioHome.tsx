@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   allocateDraftFromDescription,
   listVisibleDrafts,
+  ONGLET_DU_FORMAT,
   syncDraftsFromRemote,
 } from "@/lib/builderDraftStorage";
 import {
@@ -57,8 +58,11 @@ export function StudioHome() {
       // `creating` reste vrai jusqu'à la navigation : un double clic ne doit
       // pas fabriquer deux brouillons pour une seule intention.
       setCreating(true);
-      const id = allocateDraftFromDescription(text, icon);
-      router.push(`/builder/${id}?tab=${tab}`);
+      // Le format de l'exemple est ACTIVÉ, pas seulement affiché : arriver sur
+      // l'onglet Mini App d'un gent dont la mini-app est éteinte obligeait à
+      // trouver l'interrupteur.
+      const id = allocateDraftFromDescription(text, icon, tab);
+      router.push(`/builder/${id}?tab=${ONGLET_DU_FORMAT[tab]}`);
     },
     [creating, router]
   );

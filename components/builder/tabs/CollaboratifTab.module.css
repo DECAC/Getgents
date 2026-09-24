@@ -130,3 +130,16 @@
   line-height: 1.45;
   margin-top: 4px;
 }
+
+.activer {
+  margin-top: 12px;
+  padding: 10px 18px;
+  border-radius: var(--r-pill);
+  background: var(--sage);
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+}
+.activer:hover {
+  filter: brightness(1.08);
+}

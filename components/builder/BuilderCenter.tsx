@@ -2,7 +2,6 @@
 
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { BuilderHeader } from "./BuilderHeader";
-import { AccueilTab } from "./tabs/AccueilTab";
 import { ConversationnelTab } from "./tabs/ConversationnelTab";
 import { MiniAppTab } from "./tabs/MiniAppTab";
 import { VisionneuseTab } from "./tabs/VisionneuseTab";
@@ -26,13 +25,14 @@ export function BuilderCenter() {
     if (activeTab === "visionneuse") return <VisionneuseTab />;
     if (activeTab === "collaboratif") return <CollaboratifTab />;
     if (activeTab === "apercu") return <ApercuTab />;
-    if (activeTab === "prompt") return <PromptTab />;
     if (activeTab === "connectors") return <ConnectorsTab />;
     if (activeTab === "knowledge") return <KnowledgeTab />;
     if (activeTab === "diffusion") return <DiffusionTab />;
     if (activeTab === "marketing") return <MarketingTab />;
     if (activeTab === "audit") return <AuditTab />;
-    return <AccueilTab />;
+    // Par défaut, les instructions du gent. L'ancien écran « que voulez-vous
+    // construire ? » posait la question de la création à un gent déjà créé.
+    return <PromptTab />;
   }
 
   return (

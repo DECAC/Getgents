@@ -235,6 +235,13 @@ const BUILDER_ASSISTANT_REPLIES = [
   "Cela ressemble à une action engageante (compte tiers). Pensez à ajouter le connecteur correspondant et à documenter l'invariant de confirmation dans le prompt.",
 ];
 
+/**
+ * Onglet d'un gent ouvert sans `?tab=` : ses instructions. On y arrivait sur
+ * un écran « que voulez-vous construire ? » — la question de la CRÉATION,
+ * posée à chaque ouverture d'un gent déjà créé.
+ */
+export const ONGLET_PAR_DEFAUT: BuilderTab = "prompt";
+
 export function BuilderProvider({
   children,
   initialId,
@@ -246,7 +253,7 @@ export function BuilderProvider({
 }) {
   const [drafts, setDrafts] = useState<GentDraftsMap>(() => seedDrafts(initialId));
   const [currentId, setCurrentId] = useState(initialId);
-  const [activeTab, setActiveTab] = useState<BuilderTab>(initialTab ?? "accueil");
+  const [activeTab, setActiveTab] = useState<BuilderTab>(initialTab ?? ONGLET_PAR_DEFAUT);
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [assistantCollapsed, setAssistantCollapsed] = useState(false);
   const [replyCursor, setReplyCursor] = useState(0);
@@ -286,7 +293,7 @@ export function BuilderProvider({
     setThinkingStatus(null);
     setReplyCursor(0);
     setCurrentId(initialId);
-    setActiveTab(initialTab ?? "accueil");
+    setActiveTab(initialTab ?? ONGLET_PAR_DEFAUT);
     setDrafts((prev) => {
       if (prev[initialId]) return prev;
       const stored = readStoredDrafts();
@@ -378,7 +385,7 @@ export function BuilderProvider({
       if (stored[id]) return { ...prev, [id]: stored[id] };
       return { ...prev, [id]: freshDraftFromTemplate(id) };
     });
-    setActiveTab("accueil");
+    setActiveTab(ONGLET_PAR_DEFAUT);
   }, []);
 
   const switchTab = useCallback((tab: BuilderTab) => setActiveTab(tab), []);
@@ -405,7 +412,7 @@ export function BuilderProvider({
     setReplyCursor(0);
     setCurrentId(id);
     prevInitialIdRef.current = id;
-    setActiveTab("accueil");
+    setActiveTab(ONGLET_PAR_DEFAUT);
     return id;
   }, []);
 

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  allocateNewDraft,
   listVisibleDrafts,
   restoreDraftFromPublished,
   saveRestoredDraft,
@@ -91,11 +90,6 @@ export function useGentsList() {
     ? orphanedPublished.filter(({ espace }) => (espace.gent || espace.name || "").toLowerCase().includes(normalizedQuery))
     : orphanedPublished;
   const noResults = normalizedQuery.length > 0 && filteredDrafts.length === 0 && filteredOrphans.length === 0;
-
-  function handleCreate() {
-    const id = allocateNewDraft();
-    router.push(`/builder/${id}`);
-  }
 
   function handleRestore(id: string, espace: Espace) {
     const draft = restoreDraftFromPublished(id, espace);

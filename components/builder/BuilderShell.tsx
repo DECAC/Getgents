@@ -29,9 +29,11 @@ function BuilderShellInner() {
   );
 }
 
+// « accueil » n'en fait plus partie : c'était l'écran de choix du type, retiré.
+// Une ancienne adresse ?tab=accueil retombe donc sur l'onglet par défaut.
 const VALID_TABS: BuilderTab[] = [
-  "accueil",
   "mesgents",
+  "prompt",
   "conversationnel",
   "miniapp",
   "visionneuse",

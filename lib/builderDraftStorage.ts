@@ -331,21 +331,6 @@ export function allocateNewDraft(): string {
 }
 
 /**
- * Crée un brouillon déjà configuré en Event Manager (gabarit team building).
- * Le collab est posé ICI pour que Preview / Diffusion voient le salon dès
- * l'ouverture, sans attendre le montage de l'onglet Collaboratif.
- */
-export function allocateEventManagerDraft(): string {
-  const id = createDraftId();
-  const stored = readStoredDrafts();
-  const draft = applyEventManagerTemplate(freshDraftFromTemplate(id));
-  stored[id] = draft;
-  writeStoredDrafts(stored);
-  pushRemoteDraft(id, draft);
-  return id;
-}
-
-/**
  * Crée un brouillon à partir du rôle décrit sur l'accueil du studio.
  *
  * La description sert d'objectif provisoire (elle s'affiche donc immédiatement
@@ -355,20 +340,84 @@ export function allocateEventManagerDraft(): string {
  * répéter. L'emblème vient de l'exemple choisi, ou se déduit de la
  * description — sans quoi tous les gents naîtraient avec la même étoile.
  */
-export function allocateDraftFromDescription(description: string, icon?: string): string {
-  const role = description.trim();
+export function allocateDraftFromDescription(
+  description: string,
+  icon?: string,
+  format: FormatGent = "conversationnel"
+): string {
   const id = createDraftId();
+  const base = brouillonNeuf(id, format, description);
+  const draft: GentDraft = icon?.trim() ? { ...base, icon: icon.trim() } : base;
   const stored = readStoredDrafts();
-  const draft: GentDraft = {
-    ...freshDraftFromTemplate(id),
-    icon: icon?.trim() || suggestGentIcon(role),
-    objective: role.slice(0, 240),
-    pendingBuilderMessage: role,
-  };
   stored[id] = draft;
   writeStoredDrafts(stored);
   pushRemoteDraft(id, draft);
   return id;
+}
+
+/**
+ * Format de départ d'un gent. Il PRÉCONFIGURE, il ne verrouille rien : un gent
+ * conversationnel peut recevoir une mini-app plus tard, et l'inverse.
+ */
+export type FormatGent = "conversationnel" | "miniapp" | "visionneuse" | "collaboratif";
+
+export const FORMATS_GENT: readonly FormatGent[] = ["conversationnel", "miniapp", "visionneuse", "collaboratif"];
+
+/** Onglet où atterrit le créateur : là où le format se configure. */
+export const ONGLET_DU_FORMAT: Record<FormatGent, "prompt" | "miniapp" | "visionneuse" | "collaboratif"> = {
+  conversationnel: "prompt",
+  miniapp: "miniapp",
+  visionneuse: "visionneuse",
+  collaboratif: "collaboratif",
+};
+
+/** Active la facette du format sur un brouillon. Pure. */
+export function appliquerFormat(draft: GentDraft, format: FormatGent): GentDraft {
+  if (format === "miniapp") {
+    const actuel = draft.pinnedArtefact ?? { enabled: false, title: "", mission: "", inputs: [] };
+    return { ...draft, pinnedArtefact: { ...actuel, enabled: true } };
+  }
+  if (format === "visionneuse") {
+    const actuel = draft.visionneuse ?? { enabled: false, instructions: "" };
+    return { ...draft, visionneuse: { ...actuel, enabled: true } };
+  }
+  if (format === "collaboratif") return applyEventManagerTemplate(draft);
+  return draft;
+}
+
+/**
+ * Brouillon d'un gent neuf : format appliqué et, si une description est
+ * donnée, objectif provisoire, emblème déduit et message rejoué par
+ * l'assistant du builder. Pure — `creerGent` l'écrit.
+ */
+export function brouillonNeuf(id: string, format: FormatGent, description = ""): GentDraft {
+  const role = description.trim();
+  let draft = appliquerFormat(freshDraftFromTemplate(id), format);
+  if (role) {
+    draft = {
+      ...draft,
+      // Le gabarit Event Manager porte déjà son emblème.
+      icon: format === "collaboratif" ? draft.icon : suggestGentIcon(role),
+      objective: role.slice(0, 240),
+      pendingBuilderMessage: role,
+    };
+  }
+  return draft;
+}
+
+/**
+ * LE point de création du studio : écrit le brouillon une fois, le pousse une
+ * fois, et rend l'adresse où l'ouvrir. Créer un gent est un acte explicite,
+ * derrière un formulaire — jamais l'effet de bord d'une entrée de menu.
+ */
+export function creerGent(format: FormatGent, description = ""): { id: string; url: string } {
+  const id = createDraftId();
+  const draft = brouillonNeuf(id, format, description);
+  const stored = readStoredDrafts();
+  stored[id] = draft;
+  writeStoredDrafts(stored);
+  pushRemoteDraft(id, draft);
+  return { id, url: `/builder/${id}?tab=${ONGLET_DU_FORMAT[format]}` };
 }
 
 /** Retire la description en attente du cache local (elle vient d'être rejouée). */

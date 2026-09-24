@@ -128,12 +128,28 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   jamais un `AsyncLocalStorage` : un chemin oublié serait un bug de
   facturation silencieux, le compilateur doit le refuser. Un test de
   discipline garde l'invariant.
+- **Co-édition d'un artefact : chantier du mode COLLABORATIF, pas encore
+  fait.** Aujourd'hui, `artefactsModifiables` laisse chaque visiteur retoucher
+  SA copie (navigateur). Travailler à plusieurs sur le même artefact exige de
+  le stocker côté serveur — à traiter avec le salon, pas avant.
 - **Salon collaboratif** : le modèle dépend de la PHASE
   (`lib/collabModels.ts`) — un modèle rapide en collecte, celui du créateur en
   propositions. Mesuré : 82-91 % du temps d'un tick est l'appel au modèle.
-- **Menu « Créer » du studio** : depuis un gent ouvert, ces entrées CHANGENT
-  D'ONGLET. Elles allouaient un gent neuf à chaque clic. Ne pas revenir en
-  arrière.
+- **Créer et configurer ne partagent plus aucune entrée de menu.** Le rail a
+  deux étages : GLOBAL (« + Nouveau gent », Accueil, Mes gents) et, sous le
+  nom du gent ouvert, SES réglages (Configurer / Formats / Diffuser et
+  suivre). L'ancien menu « Créer » créait un gent depuis la liste et changeait
+  d'onglet depuis un gent : une fois sur deux, on voulait régler son gent et
+  on en fabriquait un. Créer passe par UN formulaire (`NouveauGentDialog` →
+  `creerGent`, `lib/builderDraftStorage.ts`) : une phrase facultative et un
+  format, qui est ACTIVÉ. Un gent s'ouvre sur « Prompt & Modèle »
+  (`ONGLET_PAR_DEFAUT`) ; l'écran « que voulez-vous construire ? »
+  (AccueilTab) est supprimé — il posait la question de la création à un gent
+  déjà créé. Ne rien remettre qui crée depuis une entrée de navigation.
+- **Ouvrir un onglet ne modifie JAMAIS le gent.** L'onglet Event Manager
+  posait son gabarit à l'ouverture sur tout gent sans salon : prompt, nom et
+  emblème d'un gent conversationnel étaient remplacés au simple passage.
+  L'activation est un clic, qui garde le prompt écrit et le nom choisi.
 - **Le studio enregistre tout seul**, à chaque frappe. Le bouton
   « Enregistrer » ne crée pas une sauvegarde manquante : il rend l'écriture
   visible et supprime l'anti-rebond.

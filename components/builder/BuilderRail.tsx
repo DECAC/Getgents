@@ -3,27 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBuilder, type BuilderTab } from "@/lib/context/BuilderContext";
-import { allocateNewDraft, allocateEventManagerDraft, listVisibleDrafts } from "@/lib/builderDraftStorage";
 import { hasCustomName, isDirtySincePublish } from "@/lib/builderSnapshot";
 import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
 import { useNavMobile } from "@/lib/context/NavMobileContext";
 import styles from "./BuilderRail.module.css";
 import { MenuCompte } from "@/components/compte/MenuCompte";
-
-/** Entrées du menu « Créer » : chaque clic ouvre un NOUVEAU brouillon sur l'onglet cible. */
-const CREATE_TABS: BuilderTab[] = [
-  "conversationnel",
-  "miniapp",
-  "visionneuse",
-  "collaboratif",
-  "apercu",
-];
+import { NouveauGentDialog } from "./NouveauGentDialog";
 
 interface NavEntry {
   id: BuilderTab;
   label: string;
   icon: JSX.Element;
   blue?: boolean;
+  /** Format activé sur ce gent : une pastille le signale dans le rail. */
+  actif?: boolean;
 }
 
 interface NavSection {
@@ -46,11 +39,6 @@ const ICON = {
       <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" />
     </svg>
   ),
-  conversationnel: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-4.6A8.4 8.4 0 1 1 21 11.5z" />
-    </svg>
-  ),
   miniapp: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="4" y="3" width="16" height="18" rx="2.5" />
@@ -71,10 +59,17 @@ const ICON = {
       <path d="M13 18.5c.5-2 1.8-3.2 3.5-3.2 1.4 0 2.5.8 3 2.2" />
     </svg>
   ),
-  apercu: (
+  options: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="4" width="18" height="16" rx="2.5" />
-      <path d="M3 9h18M8 4v5" />
+      <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" />
+      <circle cx="16" cy="6" r="2" />
+      <circle cx="10" cy="12" r="2" />
+      <circle cx="18" cy="18" r="2" />
+    </svg>
+  ),
+  nouveau: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+      <path d="M12 5v14M5 12h14" />
     </svg>
   ),
   connectors: (
@@ -114,42 +109,55 @@ const ICON = {
   ),
 };
 
-const NAV: NavSection[] = [
-  { entries: [{ id: "accueil", label: "Accueil", icon: ICON.accueil }] },
-  { entries: [{ id: "mesgents", label: "Mes gents", icon: ICON.mesgents, blue: true }] },
-  {
-    title: "Créer",
-    entries: [
-      { id: "conversationnel", label: "Gent Conversationnel", icon: ICON.conversationnel },
-      { id: "miniapp", label: "Mini App", icon: ICON.miniapp },
-      { id: "visionneuse", label: "Visionneuse", icon: ICON.visionneuse },
-      { id: "collaboratif", label: "Event Manager", icon: ICON.collaboratif },
-    ],
-  },
-  {
-    // « Contexte » ne disait pas ce qu'on y fait. Ces entrées sont les réglages
-    // du gent, valables quel que soit son type — d'où le titre, et d'où
-    // l'arrivée du prompt, qui était introuvable derrière « Gent
-    // Conversationnel ».
-    title: "Configuration du gent",
-    entries: [
-      { id: "prompt", label: "Prompt & Modèle", icon: ICON.prompt },
-      { id: "connectors", label: "Connecteurs", icon: ICON.connectors },
-      { id: "knowledge", label: "Connaissances", icon: ICON.knowledge },
-    ],
-  },
-  {
-    title: "Monitor",
-    entries: [
-      { id: "audit", label: "Audit", icon: ICON.audit },
-      { id: "diffusion", label: "Diffusion", icon: ICON.diffusion },
-      { id: "marketing", label: "Marketing", icon: ICON.marketing },
-    ],
-  },
+/**
+ * Deux étages, qui ne se mélangent plus.
+ *
+ * GLOBAL — toujours là : créer (un bouton, qui ouvre un formulaire), l'accueil,
+ * la liste des gents. Rien ici ne dépend du gent ouvert.
+ *
+ * LE GENT OUVERT — sous son nom, et seulement quand il y en a un : tout ce qui
+ * le règle. Le menu « Créer » d'autrefois mêlait les deux : selon l'écran, ses
+ * entrées créaient un gent ou changeaient d'onglet, et le créateur qui voulait
+ * régler son gent en fabriquait un nouveau une fois sur deux. Depuis la liste,
+ * les entrées de configuration ouvraient en plus, sans le dire, le premier
+ * gent venu.
+ */
+const NAV_GLOBAL: NavEntry[] = [
+  { id: "accueil", label: "Accueil", icon: ICON.accueil },
+  { id: "mesgents", label: "Mes gents", icon: ICON.mesgents, blue: true },
 ];
 
-function firstDraftId(): string | null {
-  return listVisibleDrafts()[0]?.id ?? null;
+function navGent(formats: { miniapp: boolean; visionneuse: boolean; collaboratif: boolean }): NavSection[] {
+  return [
+    {
+      title: "Configurer",
+      entries: [
+        { id: "prompt", label: "Prompt & Modèle", icon: ICON.prompt },
+        // L'ancien « Gent Conversationnel » : des options de conversation
+        // (recherche web, routine, fichiers, artefacts), pas un type de gent.
+        { id: "conversationnel", label: "Options", icon: ICON.options },
+        { id: "knowledge", label: "Connaissances", icon: ICON.knowledge },
+        { id: "connectors", label: "Connecteurs", icon: ICON.connectors },
+      ],
+    },
+    {
+      // Des FACETTES du gent ouvert, cumulables — jamais des créations.
+      title: "Formats",
+      entries: [
+        { id: "miniapp", label: "Mini App", icon: ICON.miniapp, actif: formats.miniapp },
+        { id: "visionneuse", label: "Visionneuse", icon: ICON.visionneuse, actif: formats.visionneuse },
+        { id: "collaboratif", label: "Event Manager", icon: ICON.collaboratif, actif: formats.collaboratif },
+      ],
+    },
+    {
+      title: "Diffuser et suivre",
+      entries: [
+        { id: "diffusion", label: "Diffusion", icon: ICON.diffusion },
+        { id: "marketing", label: "Marketing", icon: ICON.marketing },
+        { id: "audit", label: "Audit", icon: ICON.audit },
+      ],
+    },
+  ];
 }
 
 /** Rail studio au niveau liste — sans gent ouvert ni bouton Diffuser. */
@@ -159,33 +167,15 @@ function BuilderRailList() {
   const activeTab: BuilderTab = "mesgents";
 
   function handleNav(tab: BuilderTab) {
-    if (tab === "mesgents") {
-      router.push("/builder/mesgents");
-      return;
-    }
+    // Au niveau liste, le rail ne porte que la navigation globale : aucune
+    // entrée n'y crée ni n'ouvre un gent en douce.
     if (tab === "accueil") {
       // L'accueil du studio est devenu l'accueil de Getgents : même écran,
-      // nouvelle adresse. Renvoyer ici vers /builder ferait atterrir sur la
-      // liste « Mes gents », que l'entrée juste en dessous atteint déjà.
+      // nouvelle adresse.
       router.push("/accueil");
       return;
     }
-    // Ici — et ICI SEULEMENT — le menu « Créer » crée. On est sur la liste des
-    // gents ou l'accueil : il n'y a pas de gent courant dont ces entrées
-    // pourraient être une facette, donc en ouvrir un neuf est le seul sens
-    // possible. Depuis un gent ouvert, elles changent d'onglet (voir
-    // BuilderRailGent) — c'est là que la création à la volée était insupportable.
-    if (CREATE_TABS.includes(tab)) {
-      const id = tab === "collaboratif" ? allocateEventManagerDraft() : allocateNewDraft();
-      router.push(`/builder/${id}?tab=${tab}`);
-      return;
-    }
-    const id = firstDraftId();
-    if (!id) {
-      router.push("/builder");
-      return;
-    }
-    router.push(`/builder/${id}?tab=${tab}`);
+    router.push("/builder/mesgents");
   }
 
   return (
@@ -211,16 +201,12 @@ function BuilderRailGent() {
       router.push("/builder/mesgents");
       return;
     }
-    // ON NE CRÉE PLUS DE GENT EN NAVIGUANT. Ces entrées allouaient un nouveau
-    // brouillon — immédiatement poussé au serveur — à CHAQUE clic. Parcourir le
-    // menu « Créer » depuis un gent ouvert fabriquait donc un gent par entrée
-    // visitée, qu'il fallait ensuite supprimer un par un.
-    //
-    // Ces entrées ne sont pas des actions de création : ce sont les FACETTES du
-    // gent courant. Un même gent est conversationnel, et/ou mini-app, et/ou
-    // visionneuse. Depuis un gent ouvert, elles changent donc d'onglet, comme
-    // toutes les autres. La création reste un acte explicite : « Mes gents →
-    // Nouveau gent », ou la description saisie sur l'accueil.
+    if (tab === "accueil") {
+      router.push("/accueil");
+      return;
+    }
+    // Tout le reste règle le gent ouvert : on change d'onglet, on ne crée
+    // jamais. La création passe par « Nouveau gent » et son formulaire.
     switchTab(tab);
   }
 
@@ -273,6 +259,15 @@ function BuilderRailGent() {
       onToggleRail={toggleRail}
       activeTab={activeTab}
       onNav={handleNav}
+      gent={{
+        nom: nameOk ? currentDraft.name : "Gent sans nom",
+        icone: currentDraft.icon,
+        sections: navGent({
+          miniapp: !!currentDraft.pinnedArtefact?.enabled,
+          visionneuse: !!currentDraft.visionneuse?.enabled,
+          collaboratif: !!currentDraft.collab?.enabled,
+        }),
+      }}
       showPublish
       publishLabel={publishing ? "Diffusion…" : publishLabel}
       publishDisabled={publishDisabled || publishing}
@@ -285,7 +280,7 @@ function BuilderRailGent() {
           : publishDisabled
             ? !nameOk
               ? "Donnez un nom au gent (bandeau du haut) pour pouvoir le diffuser."
-              : "Rédigez les instructions système (Configuration du gent → Prompt & Modèle) pour pouvoir diffuser."
+              : "Rédigez les instructions système (Configurer → Prompt & Modèle) pour pouvoir diffuser."
             : undefined
       }
     />
@@ -297,6 +292,7 @@ function RailChrome({
   onToggleRail,
   activeTab,
   onNav,
+  gent,
   showPublish,
   publishLabel,
   publishDisabled,
@@ -309,6 +305,8 @@ function RailChrome({
   onToggleRail: () => void;
   activeTab: BuilderTab;
   onNav: (tab: BuilderTab) => void;
+  /** Le gent ouvert : son nom coiffe les réglages. Absent au niveau liste. */
+  gent?: { nom: string; icone?: string; sections: NavSection[] };
   showPublish: boolean;
   publishLabel?: string;
   publishDisabled?: boolean;
@@ -321,13 +319,37 @@ function RailChrome({
   // drapeau qui la ramène. Elle était simplement masquée jusqu'ici, sans
   // remplacement — le studio n'avait donc aucune navigation sur téléphone.
   const { ouvert } = useNavMobile();
+  const [creation, setCreation] = useState(false);
+
+  function entree(entry: NavEntry) {
+    const on = activeTab === entry.id;
+    return (
+      <button
+        key={entry.id}
+        className={[
+          styles.navItem,
+          entry.blue ? styles.navItemBlue : "",
+          on ? (entry.blue ? styles.navItemOnBlue : styles.navItemOn) : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        onClick={() => onNav(entry.id)}
+        title={entry.actif ? `${entry.label} — activé sur ce gent` : entry.label}
+        aria-current={on ? "page" : undefined}
+      >
+        <span className={styles.navIcon}>{entry.icon}</span>
+        <span className={styles.navLabel}>{entry.label}</span>
+        {entry.actif && <span className={styles.actif} aria-label="activé" />}
+      </button>
+    );
+  }
 
   return (
     <nav
       className={[styles.rail, railCollapsed ? styles.collapsed : "", ouvert ? styles.open : ""]
         .filter(Boolean)
         .join(" ")}
-      aria-label="Configuration du gent"
+      aria-label="Navigation du studio"
       id="builder-rail"
     >
       <div className={styles.brand}>
@@ -352,57 +374,60 @@ function RailChrome({
         </button>
       </div>
 
-      {showPublish && onPublish && (
-        <>
-          <button
-            type="button"
-            className={[styles.publishBtn, publishLive ? styles.publishBtnLive : ""].filter(Boolean).join(" ")}
-            onClick={onPublish}
-            disabled={publishDisabled}
-            title={publishHint}
-          >
-            <svg
-              className={styles.publishIcon}
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-            >
-              <path d="M12 19V5M5 12l7-7 7 7" />
-            </svg>
-            <span className={styles.publishLabel}>{publishLabel}</span>
-          </button>
-          {publishBlocked && <div className={styles.publishBlocked}>{publishBlocked}</div>}
-        </>
-      )}
-
       <div className={styles.nav}>
-        {NAV.map((section, si) => (
-          <div className={styles.section} key={section.title ?? `top-${si}`}>
-            {section.title && <div className={styles.sectionTitle}>{section.title}</div>}
-            {section.entries.map((entry) => (
-              <button
-                key={entry.id}
-                className={[
-                  styles.navItem,
-                  entry.blue ? styles.navItemBlue : "",
-                  activeTab === entry.id ? (entry.blue ? styles.navItemOnBlue : styles.navItemOn) : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                onClick={() => onNav(entry.id)}
-                title={entry.label}
-                aria-current={activeTab === entry.id ? "page" : undefined}
-              >
-                <span className={styles.navIcon}>{entry.icon}</span>
-                <span className={styles.navLabel}>{entry.label}</span>
-              </button>
+        <button type="button" className={styles.nouveau} onClick={() => setCreation(true)} title="Créer un nouveau gent">
+          <span className={styles.navIcon}>{ICON.nouveau}</span>
+          <span className={styles.navLabel}>Nouveau gent</span>
+        </button>
+
+        <div className={styles.section}>{NAV_GLOBAL.map(entree)}</div>
+
+        {gent && (
+          <div className={styles.gent}>
+            <div className={styles.gentTete} title={gent.nom}>
+              <span className={styles.gentIcone} aria-hidden="true">
+                {gent.icone || "✦"}
+              </span>
+              <span className={styles.gentNom}>{gent.nom}</span>
+            </div>
+
+            {showPublish && onPublish && (
+              <>
+                <button
+                  type="button"
+                  className={[styles.publishBtn, publishLive ? styles.publishBtnLive : ""].filter(Boolean).join(" ")}
+                  onClick={onPublish}
+                  disabled={publishDisabled}
+                  title={publishHint}
+                >
+                  <svg
+                    className={styles.publishIcon}
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                  >
+                    <path d="M12 19V5M5 12l7-7 7 7" />
+                  </svg>
+                  <span className={styles.publishLabel}>{publishLabel}</span>
+                </button>
+                {publishBlocked && <div className={styles.publishBlocked}>{publishBlocked}</div>}
+              </>
+            )}
+
+            {gent.sections.map((section) => (
+              <div className={styles.section} key={section.title}>
+                <div className={styles.sectionTitle}>{section.title}</div>
+                {section.entries.map(entree)}
+              </div>
             ))}
           </div>
-        ))}
+        )}
       </div>
+
+      {creation && <NouveauGentDialog onClose={() => setCreation(false)} />}
 
       {/* Le studio est la destination par défaut après connexion : sans ce
           bloc, on y arrivait sans savoir sous quel compte, ni comment en

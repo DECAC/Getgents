@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { allocateNewDraft } from "@/lib/builderDraftStorage";
+import { NouveauGentDialog } from "@/components/builder/NouveauGentDialog";
 import { useGentsList } from "@/lib/hooks/useGentsList";
 import { SessionExpiree } from "@/components/shared/SessionExpiree";
 import { BrandIcon } from "@/components/shared/BrandMark";
@@ -47,7 +46,6 @@ function SelectionCheck({
  * titre en haut à gauche.
  */
 export function MesGentsTab() {
-  const router = useRouter();
   const {
     query,
     setQuery,
@@ -61,16 +59,16 @@ export function MesGentsTab() {
     deletingCount,
     deleteError,
     hydrateFromRemote,
-    refreshLists,
     handleRestore,
     handleDelete,
     handleDeleteMany,
   } = useGentsList();
 
+  // Même formulaire que le rail : un gent vierge, sans rôle ni format, était
+  // un gent qu'on ouvrait sans savoir par où le prendre.
+  const [creation, setCreation] = useState(false);
   function handleCreateNew() {
-    const id = allocateNewDraft();
-    refreshLists();
-    router.push(`/builder/${id}`);
+    setCreation(true);
   }
   const [view, setView] = useState<View>("tuile");
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -403,6 +401,7 @@ export function MesGentsTab() {
           ))}
         </div>
       )}
+      {creation && <NouveauGentDialog onClose={() => setCreation(false)} />}
     </div>
   );
 }

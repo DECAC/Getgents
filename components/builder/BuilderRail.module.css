@@ -271,6 +271,83 @@
   text-overflow: ellipsis;
 }
 
+/* ---------- Créer : un bouton, jamais une entrée de menu ---------- */
+.nouveau {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  margin: 0 0 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.nouveau:hover {
+  border-color: var(--sage);
+  background: var(--sage-tint);
+}
+.nouveau .navIcon {
+  color: var(--sage);
+}
+
+/* ---------- Le gent ouvert : ses réglages sous son nom ---------- */
+.gent {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.gentTete {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 2px 8px 10px;
+  min-width: 0;
+}
+
+.gentIcone {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--bg);
+  font-size: 14px;
+}
+
+.gentNom {
+  min-width: 0;
+  font-family: "Sora", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gent .publishBtn {
+  width: calc(100% - 8px);
+  margin: 0 4px 14px;
+}
+.gent .publishBlocked {
+  margin: -8px 4px 14px;
+}
+
+/* Format activé sur ce gent. */
+.actif {
+  flex: none;
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sage);
+}
+
 /* ---------- État réduit : icônes seules ---------- */
 .collapsed .brand {
   flex-direction: column;
@@ -286,7 +363,17 @@
 .collapsed .brandChevron,
 .collapsed .publishLabel,
 .collapsed .sectionTitle,
-.collapsed .navLabel {
+.collapsed .navLabel,
+.collapsed .gentNom {
+  display: none;
+}
+.collapsed .nouveau,
+.collapsed .gentTete {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+.collapsed .actif {
   display: none;
 }
 .collapsed .brandMenu {
@@ -294,8 +381,10 @@
   right: auto;
   width: 190px;
 }
-.collapsed .publishBtn {
-  margin: 2px 10px 14px;
+.collapsed .publishBtn,
+.collapsed .gent .publishBtn {
+  width: 100%;
+  margin: 0 0 14px;
   padding: 10px 0;
 }
 .collapsed .nav {
