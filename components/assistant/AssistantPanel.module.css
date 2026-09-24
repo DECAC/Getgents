@@ -859,3 +859,72 @@
 .panelPlat .tabs {
   border-bottom: none;
 }
+
+/* ── Artefact en préparation / perdu ──────────────────────────────────────
+   Deux lignes discrètes sous la réponse, de la taille du texte secondaire :
+   elles informent, elles ne doivent pas concurrencer la réponse elle-même. */
+.artefactPrep {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.artefactPrepPoint {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sage);
+  animation: artefactPrepPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes artefactPrepPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artefactPrepPoint {
+    animation: none;
+  }
+}
+
+.artefactEchec {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 8px;
+  padding: 9px 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.artefactEchecBtn {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: var(--r-pill);
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.artefactEchecBtn:hover {
+  background: var(--sage-tint);
+  border-color: var(--sage);
+}

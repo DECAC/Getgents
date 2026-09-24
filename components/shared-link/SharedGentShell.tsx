@@ -41,6 +41,7 @@ function SharedGentBody({ token }: { token: string }) {
     pendingArtefactVerdict,
     confirmArtefactProposal,
     declarerVoletVerdict,
+    storageReady,
   } = useEspace();
 
   /**
@@ -128,12 +129,22 @@ function SharedGentBody({ token }: { token: string }) {
   }, [pendingArtefactVerdict, ouvrirVolet]);
   const compte = nombreDArtefacts(currentEspace);
   const comptePrecedent = useRef(compte);
+  // Le compte ne sert de référence qu'une fois la mémoire du visiteur relue :
+  // les artefacts qu'il avait gardés reviennent au montage, et les prendre
+  // pour une arrivée ouvrirait le volet à chaque rechargement.
+  const referencePosee = useRef(false);
   useEffect(() => {
+    if (!storageReady) return;
+    if (!referencePosee.current) {
+      referencePosee.current = true;
+      comptePrecedent.current = compte;
+      return;
+    }
     // On compare au compte PRÉCÉDENT, pas à zéro : rouvrir le volet à chaque
     // rendu d'un espace déjà garni le rendrait impossible à fermer.
     if (compte > comptePrecedent.current) ouvrirVolet();
     comptePrecedent.current = compte;
-  }, [compte, ouvrirVolet]);
+  }, [compte, ouvrirVolet, storageReady]);
 
   const espaceGarni = aDesArtefacts(currentEspace);
   const sousTitre = sousTitreDuGent(currentEspace.gent, currentEspace.name);

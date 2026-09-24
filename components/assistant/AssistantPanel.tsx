@@ -26,6 +26,7 @@ import { buildEspaceReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
 import { StarterBubbles } from "@/components/center/StarterBubbles";
 import { shouldShowConversationStarters } from "@/lib/starterSignal";
+import { MESSAGE_REESSAI_ARTEFACT } from "@/lib/artefactSignal";
 import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./AssistantPanel.module.css";
 
@@ -105,6 +106,7 @@ export function AssistantPanel({
     switchConversation,
     isThinking,
     thinkingStatus,
+    artefactEnPreparation,
     stopGeneration,
     geoStatus,
     confirmGeoRequest,
@@ -905,6 +907,35 @@ export function AssistantPanel({
             )}
             <div className={styles.t}>{m.t}</div>
           </div>
+          )}
+          {/* Le texte est fini, mais le modèle écrit encore l'artefact — ce
+              qui peut durer. Sans cette ligne, il ne restait que le bouton
+              stop pour deviner qu'il se passait quelque chose. */}
+          {isAgent && isLastMessage && isThinking && artefactEnPreparation && (
+            <div className={styles.artefactPrep} role="status" aria-live="polite">
+              <span className={styles.artefactPrepPoint} aria-hidden="true" />
+              Le gent prépare un artefact…
+            </div>
+          )}
+          {/* L'artefact annoncé est perdu : on le DIT. Il disparaissait en
+              silence, après de longues secondes d'écriture. */}
+          {isAgent && m.artefactEchec && (
+            <div className={styles.artefactEchec} role="status">
+              <span>
+                {m.artefactEchec === "tronque"
+                  ? "L'artefact que le gent préparait a été coupé : la réponse a atteint sa longueur maximale."
+                  : "Le gent a préparé un artefact, mais il n'a pas pu être lu."}
+              </span>
+              {isLastMessage && !isThinking && (
+                <button
+                  type="button"
+                  className={styles.artefactEchecBtn}
+                  onClick={() => sendMessage(MESSAGE_REESSAI_ARTEFACT[m.artefactEchec!])}
+                >
+                  Réessayer
+                </button>
+              )}
+            </div>
           )}
           {/* Les réponses rapides sont DANS la scène quand il y a une scène :
               les afficher en plus donnerait deux jeux de boutons. */}

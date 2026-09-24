@@ -140,7 +140,7 @@ export async function runRoutine(
       espace: { ...espace, routine: { ...routine, lastRunAt: stamp, lastRunNote: `échec réseau : ${msg.slice(0, 160)}` } },
     };
   }
-  const { text, artefact: sig } = extractArtefactSignal(raw);
+  const { text, artefact: sig, echec } = extractArtefactSignal(raw);
 
   const t = nowTimeParis();
   const newMessages: ConversationMessage[] = [
@@ -148,6 +148,7 @@ export async function runRoutine(
       role: "agent",
       text: renderMarkdown(text || "Note de veille générée."),
       t,
+      ...(echec ? { artefactEchec: echec } : {}),
     },
   ];
 

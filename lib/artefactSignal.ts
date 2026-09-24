@@ -63,11 +63,30 @@ export const ARTEFACT_PROMPT_INSTRUCTION =
   "\n\n" +
   PROFILE_SUMMARY_PROMPT_INSTRUCTION;
 
-export function extractArtefactSignal(raw: string): { text: string; artefact: ArtefactSignal | null } {
+/**
+ * Pourquoi un artefact annoncé n'a pas pu être lu.
+ *
+ *   - `tronque`   : le bloc a commencé mais la réponse s'est arrêtée avant sa
+ *                   fin (plafond de longueur) ;
+ *   - `illisible` : le bloc est complet mais son contenu est inexploitable
+ *                   (JSON invalide, type inconnu, titre ou nom manquant).
+ *
+ * Absent quand aucun artefact n'était annoncé — le cas normal. Les deux
+ * premiers étaient autrefois confondus avec lui : l'artefact disparaissait
+ * sans un mot, alors que le modèle venait de passer de longues secondes à
+ * l'écrire.
+ */
+export type EchecArtefact = "tronque" | "illisible";
+
+export function extractArtefactSignal(raw: string): {
+  text: string;
+  artefact: ArtefactSignal | null;
+  echec?: EchecArtefact;
+} {
   const match = raw.match(ARTEFACT_RE);
   if (!match) {
     const truncated = raw.match(TRUNCATED_MARKER_RE);
-    if (truncated) return { text: raw.slice(0, truncated.index).trim(), artefact: null };
+    if (truncated) return { text: raw.slice(0, truncated.index).trim(), artefact: null, echec: "tronque" };
     return { text: raw, artefact: null };
   }
 
@@ -116,5 +135,21 @@ export function extractArtefactSignal(raw: string): { text: string; artefact: Ar
 
   const start = match.index ?? 0;
   const text = (raw.slice(0, start) + raw.slice(start + match[0].length)).trim();
-  return { text, artefact };
+  return artefact ? { text, artefact } : { text, artefact: null, echec: "illisible" };
+}
+
+/**
+ * Message envoyé par « Réessayer » sous un artefact perdu. Envoyé comme un
+ * message ordinaire, donc VISIBLE dans le fil : l'utilisateur voit ce qu'on
+ * demande en son nom. Coupé → on demande plus court, sans quoi la même limite
+ * produirait le même échec.
+ */
+export const MESSAGE_REESSAI_ARTEFACT: Record<EchecArtefact, string> = {
+  tronque: "Redonne-moi l'artefact de ta réponse précédente, en version plus compacte, sans répéter le texte.",
+  illisible: "Redonne-moi l'artefact de ta réponse précédente, sans répéter le texte.",
+};
+
+/** Le flux est-il en train d'écrire un bloc d'artefact ? */
+export function artefactEnCoursDEcriture(fluxPartiel: string): boolean {
+  return fluxPartiel.includes("<!--ARTEFACT");
 }

@@ -199,6 +199,12 @@ export interface ConversationMessage {
   /** Relances conversationnelles (questions libres cliquables dans le fil). */
   followups?: string[];
   /**
+   * Le gent a annoncé un artefact qu'on n'a pas pu lire (réponse coupée, ou
+   * bloc illisible). Affiché sous la réponse avec un « Réessayer » — voir
+   * `EchecArtefact`.
+   */
+  artefactEchec?: import("@/lib/artefactSignal").EchecArtefact;
+  /**
    * État d'une partie en cours, émis par un moteur de jeu déterministe
    * (bloc `ETAT_JEU`). Porté par le MESSAGE et non par l'espace : il suit
    * ainsi le fil de conversation, y compris son enregistrement — un gent

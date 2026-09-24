@@ -24,7 +24,13 @@ import {
 } from "@/lib/conversationUtils";
 import { extractQuestions, extractFollowups, recoverQuestionsFromChoiceList } from "@/lib/suggestions";
 import { extractEtatJeu } from "@/lib/jeuEtat";
-import { extractArtefactSignal } from "@/lib/artefactSignal";
+import { extractArtefactSignal, artefactEnCoursDEcriture } from "@/lib/artefactSignal";
+import {
+  appliquerMemoireVisiteur,
+  cleMemoireVisiteur,
+  extraireMemoireVisiteur,
+  lireMemoireVisiteur,
+} from "@/lib/memoireVisiteur";
 import { ARTEFACT_KIND_META, type WorkspaceArtefactKind } from "@/lib/artefactKind";
 import { convertArtefactToKind } from "@/lib/artefactConversion";
 import {
@@ -200,6 +206,8 @@ interface EspaceContextValue {
   isThinking: boolean;
   /** Libellé de la phase en cours (réflexion, outil, rédaction…). */
   thinkingStatus: string | null;
+  /** Le modèle écrit un bloc d'artefact, après le texte visible. */
+  artefactEnPreparation: boolean;
   /** Interrompt la génération en cours (bouton Stop du composer). */
   stopGeneration: () => void;
   /** Position partagée par l'utilisateur (consentement explicite) — null sinon. */
@@ -295,6 +303,9 @@ export function EspaceProvider({
 }) {
   const shareMode = !!shareToken;
   const [espaces, setEspaces] = useState<EspacesMap>(() => initialEspaces ?? seedEspaces(initialId));
+  // L'espace tel que le serveur l'a servi : ce qui s'y trouve appartient au
+  // créateur, tout ajout ultérieur au visiteur (voir lib/memoireVisiteur).
+  const diffuseRef = useRef<Espace | undefined>(initialEspaces?.[initialId]);
   const [currentId, setCurrentId] = useState(initialId);
   const [loadedFromStorage, setLoadedFromStorage] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>(0);
@@ -305,6 +316,13 @@ export function EspaceProvider({
   const [modalArtefactId, setModalArtefactId] = useState<string | null>(null);
   const [modalResvId, setModalResvId] = useState<string | null>(null);
   const [pendingArtefactVerdict, setPendingArtefactVerdict] = useState<PendingArtefactVerdict | null>(null);
+  /**
+   * Le modèle écrit un bloc d'artefact. Le texte visible est alors terminé —
+   * l'affichage s'arrête au premier `<!--` — et, sans ce signal, rien ne dit à
+   * l'utilisateur que quelque chose se prépare encore pendant les secondes que
+   * prend un tableau de bord.
+   */
+  const [artefactEnPreparation, setArtefactEnPreparation] = useState(false);
   const [verdictEnVolet, setVerdictEnVolet] = useState(false);
   const declarerVoletVerdict = useCallback((present: boolean) => setVerdictEnVolet(present), []);
   const [viewerArtefactId, setViewerArtefactId] = useState<string | null>(null);
@@ -357,9 +375,24 @@ export function EspaceProvider({
   // persistance tant que cette hydratation n'est pas faite, sinon on écrase
   // un gent publié par le placeholder vide au premier rendu.
   useEffect(() => {
-    // Lien de partage : le destinataire n'a ni cache local ni accès aux routes
-    // /api/gents — l'espace reçu du serveur est la seule source.
+    // Lien de partage : le destinataire n'a pas accès aux routes /api/gents —
+    // l'espace reçu du serveur fait foi. Seule SA part (conversations,
+    // artefacts gardés) est relue depuis son navigateur : sans elle, un
+    // rechargement effaçait tout ce qu'il avait « gardé dans l'espace ».
     if (shareMode) {
+      const diffuse = diffuseRef.current;
+      if (diffuse && shareToken) {
+        let memoire = null;
+        try {
+          memoire = lireMemoireVisiteur(window.localStorage.getItem(cleMemoireVisiteur(shareToken)));
+        } catch {
+          // Stockage refusé (navigation privée stricte) : on repart du fil vierge.
+        }
+        if (memoire) {
+          const restaure = appliquerMemoireVisiteur(diffuse, memoire);
+          setEspaces((prev) => ({ ...prev, [initialId]: restaure }));
+        }
+      }
       setStorageReady(true);
       return;
     }
@@ -382,6 +415,29 @@ export function EspaceProvider({
       cancelled = true;
     };
   }, [shareMode]);
+
+  // Lien de partage : la part du visiteur est réécrite dans SON navigateur.
+  // Regroupée : pendant une réponse, l'espace change à chaque jeton, et
+  // resérialiser toute la conversation à ce rythme ferait ramer la page.
+  useEffect(() => {
+    if (!storageReady || !shareMode || !shareToken) return;
+    const diffuse = diffuseRef.current;
+    const espace = espaces[initialId];
+    if (!diffuse || !espace) return;
+    const minuterie = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(
+          cleMemoireVisiteur(shareToken),
+          JSON.stringify(extraireMemoireVisiteur(espace, diffuse))
+        );
+      } catch (err) {
+        // Quota dépassé (images volumineuses) ou stockage interdit : la
+        // session continue, seul le rechargement perdra l'état.
+        console.warn("[getgents:visiteur] mémoire non enregistrée", (err as Error)?.name);
+      }
+    }, 800);
+    return () => window.clearTimeout(minuterie);
+  }, [espaces, initialId, storageReady, shareMode, shareToken]);
 
   // Persiste l'activité des gents publiés (conversations, artefacts…) dans
   // localStorage : c'est ce qui alimente l'onglet Audit côté builder.
@@ -707,6 +763,7 @@ export function EspaceProvider({
       (fullSoFar, reasoningSoFar) => {
         const displayRaw = fullSoFar.includes("<!--") ? fullSoFar.slice(0, fullSoFar.indexOf("<!--")) : fullSoFar;
         updateLastMessage((m) => ({ ...m, text: renderMarkdown(displayRaw), reasoning: reasoningSoFar || undefined }));
+        setArtefactEnPreparation(artefactEnCoursDEcriture(fullSoFar));
       },
       (ev) => {
         if (ev.status === "running" && ev.call) {
@@ -757,9 +814,13 @@ export function EspaceProvider({
         const afterGeo = extractGeolocRequest(afterTheme.text);
         const afterProfile = extractProfileSignal(afterGeo.text);
         const afterImage = extractImageSignal(afterProfile.text);
+        // Coupée PENDANT l'artefact : le texte, lui, est complet, et « écrivez
+        // continue » ne rendrait pas l'artefact. C'est la carte d'échec, sous
+        // la réponse, qui l'explique et propose de réessayer.
+        const artefactEchec = afterArtefact.echec;
         const finalHtml =
           renderMarkdown(afterImage.text) +
-          (truncated
+          (truncated && artefactEchec !== "tronque"
             ? '<p>⚠️ <em>Réponse tronquée (limite de longueur atteinte) — écrivez « continue » pour obtenir la suite, ou demandez une version plus courte.</em></p>'
             : "");
         const followups = afterFollowups.followups;
@@ -868,6 +929,7 @@ export function EspaceProvider({
                   jeuEtat,
                   followups,
                   reasoning: reasoning || undefined,
+                  artefactEchec,
                 };
               msgs.push({
                 id: proposalId,
@@ -888,6 +950,7 @@ export function EspaceProvider({
             jeuEtat,
             followups,
             reasoning: reasoning || undefined,
+            artefactEchec,
           }));
         }
         // Illustration proposée : carte d'autorisation dans le fil — jamais
@@ -945,6 +1008,7 @@ export function EspaceProvider({
         if (streamAbortRef.current === controller) streamAbortRef.current = null;
         setIsThinking(false);
         setThinkingStatus(null);
+        setArtefactEnPreparation(false);
       });
   }, [shareToken]);
 
@@ -1809,6 +1873,7 @@ export function EspaceProvider({
         storageReady,
         isThinking,
         thinkingStatus,
+        artefactEnPreparation,
         stopGeneration,
         userPosition,
         geoStatus,
