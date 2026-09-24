@@ -159,7 +159,10 @@ describe("ordre du prompt système publié", () => {
       })
     );
     expect(espace.systemPrompt).toContain("Contenu du diagnostic");
-    expect(espace.systemPrompt).toContain("Génère des artefacts");
+    // La décision d'artefact n'est plus figée ici (voir consigneArtefacts) ;
+    // le consentement aux illustrations, lui, reste un bloc de plateforme.
+    expect(espace.systemPrompt).not.toContain("Génère des artefacts");
+    expect(espace.systemPrompt).toContain("Pour les illustrations");
     expect(espace.systemPrompt!.indexOf("Contenu du diagnostic")).toBeLessThan(
       espace.systemPrompt!.indexOf(CREATOR)
     );

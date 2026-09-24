@@ -61,9 +61,9 @@ export type ProfileSummaryStored = Omit<ProfileSummary, "media"> & {
 };
 
 export const PROFILE_SUMMARY_PROMPT_INSTRUCTION =
-  "RÉSUMÉ DE PROFIL : dès que la conversation porte sur le parcours d'une PERSONNE EN PARTICULIER " +
+  "RÉSUMÉ DE PROFIL : quand tu produis un artefact (selon les règles ARTEFACTS ci-dessus) sur le parcours d'une PERSONNE EN PARTICULIER " +
   "(candidat, contact, interlocuteur, personnalité publique, profil LinkedIn/CV analysé — pas un simple métier abstrait), " +
-  "propose un artefact « résumé de profil » façon CV percutant et synthétique. " +
+  "donne-lui la forme « résumé de profil », façon CV percutant et synthétique. Parler d'une personne ne suffit pas à justifier un artefact. " +
   "Termine ta réponse (après le texte visible, sur sa propre ligne) par exactement un bloc : " +
   '<!--ARTEFACT: {"kind":"profile-summary","title":"Prénom Nom — résumé","profileSummary":{' +
   '"name":"Prénom Nom","headline":"Titre percutant","location":"Ville","summary":"Pitch en 2-4 phrases",' +

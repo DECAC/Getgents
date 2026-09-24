@@ -11,6 +11,7 @@ import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import { resolveImageModelId } from "@/lib/imageModels";
 import { downloadableDocumentsFromDraft } from "@/lib/fileDownload";
 import { normaliserNomAffiche } from "@/lib/nomAffiche";
+import { estFrequenceArtefacts } from "@/lib/artefactSignal";
 
 // Persistance des gents publiés : la source de vérité est Supabase (via les
 // routes /api/gents), le localStorage n'est plus qu'un cache local pour un
@@ -535,14 +536,15 @@ export function draftToEspace(draft: GentDraft): Espace {
     platformBlocks.push(visionneuseDocumentBlock(visionneuseDoc, chatModelId));
   }
 
-  // Tous les artefacts (rapport, checklist, graphique, aperçu visuel, carte) sont éligibles
-  // pour tous les gents — pas de configuration côté créateur. Le modèle décide seul, au fil de
-  // la conversation, quand un artefact concret apporte de la valeur (voir ARTEFACT_PROMPT_INSTRUCTION,
-  // toujours injectée côté chat dans EspaceContext).
+  // La DÉCISION de produire un artefact n'est plus figée ici. Ce bloc disait
+  // « uniquement quand le contenu s'y prête » pendant que la consigne injectée
+  // à l'exécution exigeait un artefact « systématiquement » : deux règles
+  // contraires dans un même prompt, que chaque modèle tranchait à sa façon.
+  // Seule `consigneArtefacts` décide désormais, au niveau choisi par le
+  // créateur (`frequenceArtefacts`). Il ne reste ici que le consentement aux
+  // illustrations, qui n'a pas d'équivalent ailleurs.
   platformBlocks.push(
-    "Génère des artefacts (rapport, checklist, graphique, aperçu visuel, carte, image, résumé de profil) automatiquement et intelligemment, uniquement quand le contenu de la conversation s'y prête — n'attends jamais qu'on te le demande explicitement, et ne les propose pas non plus systématiquement hors de propos. " +
-      "L'utilisateur décide s'il ajoute chaque proposition à son espace de travail. " +
-      "Pour les illustrations (générées ou photos web), demande toujours son autorisation avant production."
+    "Pour les illustrations (générées ou photos web), demande toujours son autorisation avant production."
   );
 
   const threadId = newConversationId();
@@ -650,6 +652,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     // l'attribution propre au gent apparaît — ce qui est exact, c'est bien la
     // seule chose décidée à ce stade.
     propulsePar: normaliserNomAffiche(draft.propulsePar) || undefined,
+    frequenceArtefacts: estFrequenceArtefacts(draft.frequenceArtefacts) ? draft.frequenceArtefacts : undefined,
     // Les amorces du créateur priment. `ensureStarters` ne génère que si le
     // champ est vide : les fournir ici suffit à empêcher toute génération, et
     // à remplacer celles qu'un ancien passage avait mémorisées.

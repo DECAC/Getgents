@@ -14,6 +14,7 @@ import type { Espace } from "@/lib/types";
 import { BandeauJeuActif } from "@/components/jeu/BandeauJeu";
 import { PlateauJeu } from "@/components/jeu/PlateauJeu";
 import { BrandIcon } from "@/components/shared/BrandMark";
+import { libelleGarder } from "@/lib/historiqueModele";
 import styles from "./SharedGentShell.module.css";
 
 /**
@@ -308,7 +309,7 @@ function SharedGentBody({ token }: { token: string }) {
                       className={styles.voletGarder}
                       onClick={() => confirmArtefactProposal(apercu.proposalMessageId, "add")}
                     >
-                      Garder dans l&apos;espace
+                      {libelleGarder(currentEspace.artefacts, apercu.preview.title)}
                     </button>
                   </>
                 ) : (

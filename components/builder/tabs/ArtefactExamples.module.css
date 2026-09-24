@@ -80,3 +80,75 @@
   flex: none;
   margin-top: 1px;
 }
+
+/* ── Fréquence des artefacts ─────────────────────────────────────────────── */
+.frequence {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 22px;
+}
+
+.frequenceTitre {
+  font-weight: 600;
+  font-size: 13.5px;
+  margin-bottom: 10px;
+}
+
+.frequenceChoix {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 620px) {
+  .frequenceChoix {
+    grid-template-columns: 1fr;
+  }
+}
+
+.frequenceOption {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  min-height: 44px;
+}
+.frequenceOption:hover {
+  border-color: var(--sage);
+}
+.frequenceOption:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+
+.frequenceOn {
+  border-color: var(--sage);
+  background: var(--sage-tint);
+}
+
+.frequenceLabel {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.frequenceAide {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.frequenceNote {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}

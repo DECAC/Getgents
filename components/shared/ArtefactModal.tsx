@@ -14,6 +14,7 @@ import { ArtefactWorkspaceActions } from "./ArtefactWorkspaceActions";
 import { ArtefactIcon } from "./ArtefactIcon";
 import { hasReportBody } from "@/lib/reportArtefact";
 import type { Artefact } from "@/lib/types";
+import { libelleGarder } from "@/lib/historiqueModele";
 import styles from "./Modal.module.css";
 
 function VisualGrid() {
@@ -274,7 +275,7 @@ export function ArtefactModal() {
               className={styles.btnPrim}
               onClick={() => confirmArtefactProposal(pendingArtefactVerdict.proposalMessageId, "add")}
             >
-              Garder dans l&apos;espace
+              {libelleGarder(currentEspace.artefacts, pendingArtefactVerdict.preview.title)}
             </button>
           </div>
         ) : (

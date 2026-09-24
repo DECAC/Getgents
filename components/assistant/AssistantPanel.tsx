@@ -27,6 +27,7 @@ import { ReportMenu } from "@/components/shared/ReportMenu";
 import { StarterBubbles } from "@/components/center/StarterBubbles";
 import { shouldShowConversationStarters } from "@/lib/starterSignal";
 import { MESSAGE_REESSAI_ARTEFACT } from "@/lib/artefactSignal";
+import { libelleGarder } from "@/lib/historiqueModele";
 import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./AssistantPanel.module.css";
 
@@ -509,7 +510,7 @@ export function AssistantPanel({
               className={styles.proposalAddBtn}
               onClick={() => confirmArtefactProposal(m.id ?? "", "add")}
             >
-              Garder dans l&apos;espace
+              {libelleGarder(currentEspace.artefacts, p.title)}
             </button>
             <button
               type="button"

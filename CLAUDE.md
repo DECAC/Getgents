@@ -59,6 +59,20 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   un chantier pour un défaut que personne n'a. Ne pas le réintroduire sans
   mesure contraire.
 
+- **La décision de produire un artefact a UNE seule source** :
+  `consigneArtefacts` (`lib/artefactSignal.ts`), réglée par le créateur
+  (`frequenceArtefacts` : discret / équilibré / proactif). Deux consignes
+  contraires ont coexisté dans le même prompt (« systématiquement » contre
+  « uniquement quand le contenu s'y prête »), et une troisième se cachait dans
+  la consigne du RÉSUMÉ DE PROFIL (« dès qu'on parle d'une personne,
+  propose ») — sur un gent vitrine, un artefact à chaque tour. **Les consignes
+  de format (dashboard, profil…) choisissent la FORME, jamais la fréquence** ;
+  un test (`decisionArtefact.test.ts`) le garde. La mémoire des verdicts
+  voyage DANS l'historique (`historiquePourModele`), pas dans le prompt
+  système : il est construit par le navigateur sur les deux chemins, donc
+  aucune route n'a à changer. La mesure (`getgents:artefact`) n'est QUE dans
+  les journaux Vercel, qui ne se gardent pas : pour des chiffres sur la durée,
+  il faudra une table ou un drain de journaux.
 - **Facturation LLM** : `lib/server/openRouterKey.ts` est le SEUL endroit qui
   lit `OPENROUTER_API_KEY`. Un `ContexteLlm` explicite est passé en paramètre,
   jamais un `AsyncLocalStorage` : un chemin oublié serait un bug de

@@ -1,6 +1,8 @@
 "use client";
 
 import { ARTEFACT_EXAMPLES } from "@/lib/mock-data/builder";
+import { useBuilder } from "@/lib/context/BuilderContext";
+import { FREQUENCES_ARTEFACTS, type FrequenceArtefacts } from "@/lib/artefactSignal";
 import type { ArtefactKind } from "@/lib/types/builder";
 import styles from "./ArtefactExamples.module.css";
 
@@ -99,19 +101,61 @@ const ARTEFACT_ILLUSTRATION: Record<ArtefactKind, JSX.Element> = {
   ),
 };
 
+const FREQUENCE_META: Record<FrequenceArtefacts, { label: string; aide: string }> = {
+  discret: {
+    label: "Discret",
+    aide: "Seulement quand l'utilisateur le demande. Pour un gent qui converse avant tout.",
+  },
+  equilibre: {
+    label: "Équilibré",
+    aide: "Quand l'artefact apporte ce que le texte seul n'apporte pas : à garder, cocher, comparer.",
+  },
+  proactif: {
+    label: "Proactif",
+    aide: "Dès qu'une réponse contient une liste, des chiffres, des étapes ou des lieux.",
+  },
+};
+
 /**
- * Galerie des formats d'artefacts que le gent peut produire au fil de la
- * conversation. Purement illustratif : rien n'est activable ici, le modèle
- * décide seul. Vit sous « Gent Conversationnel » depuis la disparition de
- * l'onglet Artefacts.
+ * Réglage de la fréquence des artefacts, puis galerie des formats que le gent
+ * peut produire. Le FORMAT n'est pas réglable, à dessein : personne ne sait
+ * d'avance lequel servira. La FRÉQUENCE l'est — un gent vitrine et un gent
+ * de démarches n'ont pas le même besoin de livrables. Vit sous « Gent
+ * Conversationnel » depuis la disparition de l'onglet Artefacts.
  */
 export function ArtefactExamples() {
+  const { currentDraft, updateFrequenceArtefacts } = useBuilder();
+  const frequence = currentDraft.frequenceArtefacts ?? "equilibre";
   return (
     <div className={styles.wrap}>
+      <div className={styles.frequence}>
+        <div className={styles.frequenceTitre} id="frequence-artefacts">
+          Fréquence des artefacts
+        </div>
+        <div className={styles.frequenceChoix} role="radiogroup" aria-labelledby="frequence-artefacts">
+          {FREQUENCES_ARTEFACTS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              role="radio"
+              aria-checked={frequence === f}
+              className={[styles.frequenceOption, frequence === f ? styles.frequenceOn : ""].filter(Boolean).join(" ")}
+              onClick={() => updateFrequenceArtefacts(f)}
+            >
+              <span className={styles.frequenceLabel}>{FREQUENCE_META[f].label}</span>
+              <span className={styles.frequenceAide}>{FREQUENCE_META[f].aide}</span>
+            </button>
+          ))}
+        </div>
+        <p className={styles.frequenceNote}>
+          Quel que soit le réglage, une demande explicite de l&apos;utilisateur produit toujours un
+          artefact, et un artefact jeté n&apos;est jamais reproposé. Pris en compte à la prochaine
+          diffusion.
+        </p>
+      </div>
       <p className={styles.intro}>
-        Ces artefacts sont générés <b>automatiquement</b> par le gent, au moment le plus pertinent
-        de la conversation — aucune activation à faire ici : tous les types sont éligibles pour
-        tous les gents. Voici des exemples illustratifs des formats disponibles.
+        Le gent choisit lui-même le <b>format</b> le plus utile parmi ceux-ci — aucun n&apos;est à
+        activer. Exemples illustratifs :
       </p>
       <div className={styles.grid}>
         {ARTEFACT_EXAMPLES.map((tpl) => (
@@ -133,10 +177,9 @@ export function ArtefactExamples() {
           <path d="M12 8v4M12 16h.01" />
         </svg>
         <span>
-          Le gent décide seul, au fil de la conversation, quel format produire s&apos;il détecte un
-          contenu structurable (liste, chiffres, procédure, lieux…). L&apos;utilisateur final voit
-          toujours une popup pour <b>garder</b> ou <b>jeter</b> l&apos;artefact avant qu&apos;il
-          ne rejoigne son espace — rien n&apos;est jamais ajouté sans son accord.
+          L&apos;utilisateur voit chaque artefact avant de le <b>garder</b> ou de le{" "}
+          <b>jeter</b> — rien n&apos;est ajouté à son espace sans son accord. S&apos;il demande de
+          modifier un artefact gardé, la nouvelle version le remplace au lieu de s&apos;y ajouter.
         </span>
       </div>
     </div>

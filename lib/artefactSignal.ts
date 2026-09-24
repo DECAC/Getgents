@@ -44,24 +44,84 @@ const KIND_LIST: ArtefactKind[] = [
   "profile-summary",
 ];
 
-export const ARTEFACT_PROMPT_INSTRUCTION =
-  "Propose systématiquement un artefact sauvegardable dès que ta réponse contient du contenu structuré exploitable — ne te limite pas aux seuls cas « parfaits ». " +
-  "Dès qu'il y a des étapes, une liste de documents, un modèle de lettre/contrat, des chiffres ou un récapitulatif, termine ta réponse (après le texte visible et après un éventuel bloc QUESTIONS, sur sa propre ligne) par exactement un bloc : " +
-  '<!--ARTEFACT: {"kind":"report","title":"Titre court","body":"Contenu en markdown"}--> ' +
-  "pour une synthèse, un modèle de document, une procédure détaillée ou un texte à réutiliser ; " +
-  '<!--ARTEFACT: {"kind":"checklist","title":"Titre court","items":["Élément 1","Élément 2","Élément 3"]}--> ' +
-  "pour des étapes à cocher, une liste de pièces ou de tâches (items courts, un par élément, sans numérotation) ; ou " +
-  '<!--ARTEFACT: {"kind":"chart","title":"Titre court","chartData":[{"label":"Catégorie A","value":120},{"label":"Catégorie B","value":80}]}--> ' +
-  "dès qu'il y a des montants, pourcentages ou comparaisons chiffrées ; ou " +
-  '<!--ARTEFACT: {"kind":"map","title":"Titre court","points":[{"label":"Lyon","lat":45.7578,"lon":4.832},{"label":"Annecy","lat":45.8992,"lon":6.1294}]}--> ' +
-  "dès que la réponse mentionne des lieux, un itinéraire, des adresses ou des zones géographiques — fournis des coordonnées WGS84 (lat/lon) précises pour chaque point, la carte est rendue sur fond IGN (cartes.gouv.fr). " +
-  "Choisis le kind le plus utile : si plusieurs formats conviennent, privilégie checklist pour l'actionnable et report pour les textes longs — SAUF si la réponse contient un scoring, des indicateurs clés (KPI) ou plusieurs angles chiffrés à comparer, auquel cas privilégie TOUJOURS dashboard (voir instruction dédiée ci-dessous) plutôt qu'un report : un lecteur doit saisir les chiffres clés et leur comparaison en un coup d'œil, pas en lisant un paragraphe. " +
-  "Dès que tu résumes le parcours d'une PERSONNE en particulier, privilégie profile-summary (voir instruction dédiée) plutôt qu'un report générique. " +
-  "Une popup s'ouvre pour que l'utilisateur garde ou jette l'artefact — ne dis jamais qu'il est déjà ajouté à l'espace. " +
-  "Vise à proposer un artefact dans la majorité des réponses substantielles (guides, listes, modèles, budgets, profils). N'en ajoute jamais plus d'un par réponse.\n\n" +
-  DASHBOARD_PROMPT_INSTRUCTION +
-  "\n\n" +
-  PROFILE_SUMMARY_PROMPT_INSTRUCTION;
+/**
+ * Fréquence à laquelle le gent propose des artefacts, réglée par le créateur.
+ *
+ * Un seul réglage, à trois crans, plutôt qu'un interrupteur par type : le
+ * réglage par type avait été retiré à raison — personne ne sait d'avance quel
+ * FORMAT servira. En revanche, un gent vitrine (« parle-moi de Charles ») et
+ * un gent de déclaration fiscale n'ont pas le même besoin de livrables.
+ */
+export type FrequenceArtefacts = "discret" | "equilibre" | "proactif";
+
+export const FREQUENCES_ARTEFACTS: readonly FrequenceArtefacts[] = ["discret", "equilibre", "proactif"];
+
+export function estFrequenceArtefacts(v: unknown): v is FrequenceArtefacts {
+  return typeof v === "string" && (FREQUENCES_ARTEFACTS as readonly string[]).includes(v);
+}
+
+const SEUIL_PAR_FREQUENCE: Record<FrequenceArtefacts, string> = {
+  discret:
+    "5. Sinon, N'EN PROPOSE PAS : ce gent ne produit d'artefact que sur demande explicite.",
+  equilibre:
+    "5. Sinon, propose-en un SEULEMENT s'il apporte ce que le texte seul n'apporte pas : quelque chose à réutiliser, " +
+    "cocher, comparer ou consulter plus tard (procédure, liste de pièces, budget chiffré, comparatif, itinéraire, " +
+    "modèle de document, parcours). Jamais pour une réponse courte, une explication, un échange de conversation ou " +
+    "une question de relance. Dans le doute, n'en propose pas : l'utilisateur peut toujours le demander.",
+  proactif:
+    "5. Sinon, propose-en un dès que ta réponse contient un contenu structuré réutilisable (étapes, liste, chiffres, " +
+    "lieux, récapitulatif) — mais jamais pour une réponse courte ou un simple échange de conversation.",
+};
+
+/**
+ * Consigne UNIQUE qui décide si un artefact est proposé, puis sous quelle
+ * forme.
+ *
+ * Il en existait deux, contradictoires, dans le même prompt : celle-ci
+ * exigeait un artefact « systématiquement », « dans la majorité des
+ * réponses », quand un bloc figé à la diffusion demandait « uniquement quand
+ * le contenu s'y prête ». Chaque modèle tranchait à sa façon.
+ *
+ * L'ordre des règles est l'ordre de priorité : la parole de l'utilisateur,
+ * puis la mémoire des verdicts passés (voir `historiquePourModele`), puis
+ * l'honnêteté, et seulement ensuite le niveau choisi par le créateur.
+ */
+export function consigneArtefacts(frequence: FrequenceArtefacts = "equilibre"): string {
+  return (
+    "ARTEFACTS — un artefact est un livrable que l'utilisateur peut garder dans son espace. " +
+    "Décide s'il en faut un en appliquant ces règles DANS L'ORDRE, la première qui s'applique l'emporte :\n" +
+    "1. L'utilisateur en DEMANDE un (tableau, liste, synthèse, graphique, frise, carte, document…) : produis-le toujours.\n" +
+    "2. L'utilisateur a demandé de ne plus en proposer : n'en propose plus dans cette conversation, sauf demande explicite.\n" +
+    "3. Tes propositions passées figurent dans l'historique sous la forme " +
+    "[Artefact proposé : « titre » (forme) — gardé | jeté | sans réponse]. Ne repropose JAMAIS un artefact jeté, " +
+    "ni un doublon d'un artefact gardé. Si les deux dernières propositions ont été jetées, n'en propose plus sauf " +
+    "demande explicite. Si l'utilisateur veut MODIFIER un artefact gardé, produis sa version complète mise à jour " +
+    "sous EXACTEMENT le même titre : elle remplacera l'ancienne. N'écris jamais toi-même ces annotations entre crochets.\n" +
+    "4. Tu viens de dire que tu n'as pas l'information : pas d'artefact sur ce sujet — un livrable à trous paraîtrait fiable.\n" +
+    SEUIL_PAR_FREQUENCE[frequence] +
+    "\n\nFORMAT — quand tu en produis un, termine ta réponse (après le texte visible et après un éventuel bloc QUESTIONS, " +
+    "sur sa propre ligne) par exactement un bloc : " +
+    '<!--ARTEFACT: {"kind":"report","title":"Titre court","body":"Contenu en markdown"}--> ' +
+    "pour une synthèse, un modèle de document, une procédure détaillée ou un texte à réutiliser ; " +
+    '<!--ARTEFACT: {"kind":"checklist","title":"Titre court","items":["Élément 1","Élément 2","Élément 3"]}--> ' +
+    "pour des étapes à cocher, une liste de pièces ou de tâches (items courts, un par élément, sans numérotation) ; ou " +
+    '<!--ARTEFACT: {"kind":"chart","title":"Titre court","chartData":[{"label":"Catégorie A","value":120},{"label":"Catégorie B","value":80}]}--> ' +
+    "pour des montants, pourcentages ou comparaisons chiffrées ; ou " +
+    '<!--ARTEFACT: {"kind":"map","title":"Titre court","points":[{"label":"Lyon","lat":45.7578,"lon":4.832},{"label":"Annecy","lat":45.8992,"lon":6.1294}]}--> ' +
+    "pour des lieux, un itinéraire, des adresses ou des zones géographiques — fournis des coordonnées WGS84 (lat/lon) précises pour chaque point, la carte est rendue sur fond IGN (cartes.gouv.fr). " +
+    "Le titre nomme le CONTENU (« Parcours professionnel », « Budget du séjour »), jamais la forme (« Tableau de bord »). " +
+    "Choisis la forme la plus utile : checklist pour l'actionnable, report pour les textes longs — SAUF si le contenu comporte un scoring, des indicateurs clés (KPI) ou plusieurs angles chiffrés à comparer, auquel cas privilégie TOUJOURS dashboard (voir instruction dédiée ci-dessous) : un lecteur doit saisir les chiffres clés et leur comparaison en un coup d'œil, pas en lisant un paragraphe. " +
+    "Pour le parcours d'une PERSONNE en particulier, privilégie profile-summary (voir instruction dédiée) plutôt qu'un report générique. " +
+    "L'utilisateur choisit de garder ou de jeter l'artefact — ne dis jamais qu'il est déjà ajouté à l'espace. " +
+    "Jamais plus d'un artefact par réponse.\n\n" +
+    DASHBOARD_PROMPT_INSTRUCTION +
+    "\n\n" +
+    PROFILE_SUMMARY_PROMPT_INSTRUCTION
+  );
+}
+
+/** Niveau par défaut — routines de veille et gents qui n'ont rien réglé. */
+export const ARTEFACT_PROMPT_INSTRUCTION = consigneArtefacts("equilibre");
 
 /**
  * Pourquoi un artefact annoncé n'a pas pu être lu.

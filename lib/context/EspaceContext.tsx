@@ -25,6 +25,8 @@ import {
 import { extractQuestions, extractFollowups, recoverQuestionsFromChoiceList } from "@/lib/suggestions";
 import { extractEtatJeu } from "@/lib/jeuEtat";
 import { extractArtefactSignal, artefactEnCoursDEcriture } from "@/lib/artefactSignal";
+import { artefactHomonyme, historiquePourModele } from "@/lib/historiqueModele";
+import { mesurerArtefact } from "@/lib/telemetrieArtefact";
 import {
   appliquerMemoireVisiteur,
   cleMemoireVisiteur,
@@ -672,12 +674,9 @@ export function EspaceProvider({
     // sans appeler de modèle — ni clé ni quota côté serveur.
     const moteurJeu = espace.moteurJeu;
     const thread = espace.conversations.find((t) => t.id === threadId);
-    const history = [...(thread?.messages ?? []), userMsg]
-      .filter((m) => m.role === "agent" || m.role === "user")
-      .map((m) => ({
-        role: m.role === "agent" ? "assistant" : "user",
-        content: (m.text ?? "").replace(/<[^>]+>/g, ""),
-      }));
+    // Les propositions d'artefact et leur verdict y voyagent : sans elles, le
+    // modèle reproposait ce qu'on venait de jeter (voir lib/historiqueModele).
+    const history = historiquePourModele([...(thread?.messages ?? []), userMsg]);
 
     // Assemblage partagé avec le chemin « lien de partage » : un même gent
     // doit se comporter à l'identique en Preview et chez un destinataire.
@@ -818,6 +817,17 @@ export function EspaceProvider({
         // continue » ne rendrait pas l'artefact. C'est la carte d'échec, sous
         // la réponse, qui l'explique et propose de réessayer.
         const artefactEchec = afterArtefact.echec;
+        const contexteMesure = {
+          mode: shareToken ? ("lien" as const) : ("espace" as const),
+          modele: chatModelId,
+          frequence: espace.frequenceArtefacts,
+          gent: espace.gent,
+        };
+        if (afterArtefact.artefact) {
+          mesurerArtefact({ ...contexteMesure, evenement: "propose", forme: afterArtefact.artefact.kind });
+        } else if (artefactEchec) {
+          mesurerArtefact({ ...contexteMesure, evenement: "perdu", echec: artefactEchec });
+        }
         const finalHtml =
           renderMarkdown(afterImage.text) +
           (truncated && artefactEchec !== "tronque"
@@ -1464,6 +1474,23 @@ export function EspaceProvider({
   const confirmArtefactProposal = useCallback((proposalId: string, decision: "add" | "dismiss") => {
     const id = currentIdRef.current;
     let keptDocumentId: string | undefined;
+    // Verdict relevé sur l'état COURANT, avant la mise à jour : React peut
+    // différer l'exécution d'un updater, et une variable remplie à
+    // l'intérieur serait encore vide au moment d'envoyer la mesure.
+    const avant = espacesRef.current[id];
+    const proposition = avant?.conversations.flatMap((t) => t.messages).find((m) => m.id === proposalId);
+    const verdictMesure =
+      proposition?.proposal && (!proposition.proposalStatus || proposition.proposalStatus === "pending")
+        ? {
+            evenement:
+              decision === "dismiss"
+                ? ("jete" as const)
+                : artefactHomonyme(avant!.artefacts, proposition.proposal.title)
+                  ? ("remplace" as const)
+                  : ("garde" as const),
+            forme: proposition.proposal.kind,
+          }
+        : null;
     setEspaces((prev) => {
       const espace = prev[id];
       let targetMsg: ConversationMessage | undefined;
@@ -1482,12 +1509,22 @@ export function EspaceProvider({
       let artefacts = espace.artefacts;
       let themeTabs = espace.themeTabs ?? [];
       let newArtefactId: string | undefined;
-      if (decision === "add") {
+      // Même titre qu'un artefact gardé : c'est sa version mise à jour, qui le
+      // REMPLACE sur place — même id, donc même onglet. L'ajouter à côté
+      // produisait un doublon à chaque retouche demandée au gent.
+      const homonyme = decision === "add" ? artefactHomonyme(espace.artefacts, targetMsg.proposal.title) : undefined;
+      if (homonyme) {
+        newArtefactId = homonyme.id;
+        const misAJour = artefactFromProposal(targetMsg.proposal, homonyme.id);
+        // En tête, comme un nouvel artefact : c'est lui que l'espace montre.
+        artefacts = [misAJour, ...espace.artefacts.filter((a) => a.id !== homonyme.id)];
+        if (misAJour.document) keptDocumentId = misAJour.id;
+      } else if (decision === "add") {
         newArtefactId = `artef-${Date.now()}`;
         const newArtefact = artefactFromProposal(targetMsg.proposal, newArtefactId);
         artefacts = [newArtefact, ...espace.artefacts];
         if (newArtefact.document) keptDocumentId = newArtefact.id;
-        // Rangé tout seul dans un onglet de son type (Rapport, Checklist…).
+        // Rangé tout seul dans un onglet nommé d'après son contenu.
         // Si le même tour proposait aussi un THEME_TAB, on l'applique ici
         // (sans carte de confirmation) et on y greffe le nouvel artefact.
         if (targetMsg.themeProposal) {
@@ -1527,7 +1564,16 @@ export function EspaceProvider({
     });
     setPendingArtefactVerdict((p) => (p?.proposalMessageId === proposalId ? null : p));
     if (keptDocumentId) setViewerArtefactId(keptDocumentId);
-  }, []);
+    if (verdictMesure) {
+      mesurerArtefact({
+        ...verdictMesure,
+        mode: shareToken ? "lien" : "espace",
+        modele: avant?.chatModelId,
+        frequence: avant?.frequenceArtefacts,
+        gent: avant?.gent,
+      });
+    }
+  }, [shareToken]);
 
   const changeArtefactKind = useCallback((artefactId: string, kind: WorkspaceArtefactKind) => {
     const id = currentIdRef.current;

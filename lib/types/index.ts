@@ -414,6 +414,8 @@ export interface Espace {
    * l'ancien affichage plutôt que de perdre une ligne.
    */
   propulsePar?: string;
+  /** Fréquence des propositions d'artefact, réglée par le créateur. Absent : « équilibré ». */
+  frequenceArtefacts?: import("@/lib/artefactSignal").FrequenceArtefacts;
   version: number;
   status: EspaceStatus;
   statusLabel: string;

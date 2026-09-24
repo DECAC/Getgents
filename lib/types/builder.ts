@@ -135,6 +135,11 @@ export interface GentDraft {
    */
   propulsePar?: string;
   /**
+   * À quelle fréquence le gent propose des artefacts — voir
+   * `consigneArtefacts`. Absent : « équilibré ».
+   */
+  frequenceArtefacts?: import("@/lib/artefactSignal").FrequenceArtefacts;
+  /**
    * Questions d'amorce ÉCRITES PAR LE CRÉATEUR.
    *
    * Absentes ou vides, la plateforme en génère à la première ouverture de

@@ -45,6 +45,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, defaultStatusLabel } from "@/lib/streamChat";
 import { builderTurnBudget, BUILDER_FIRST_TOKEN_DEADLINE_MS } from "@/lib/builderLatency";
 import { attributionPublique } from "@/lib/nomAffiche";
+import type { FrequenceArtefacts } from "@/lib/artefactSignal";
 import {
   DRAFTS_STORAGE_KEY,
   clearStoredPendingBuilderMessage,
@@ -118,6 +119,8 @@ interface BuilderContextValue {
   /** Active ou non le téléchargement de fichiers côté lecteur, et son formulaire. */
   /** Attribution propre à ce gent, sous « Propulsé par ». */
   updatePropulsePar: (valeur: string) => void;
+  /** Fréquence à laquelle le gent propose des artefacts. */
+  updateFrequenceArtefacts: (valeur: FrequenceArtefacts) => void;
   /** Questions d'amorce écrites par le créateur. Liste vide = génération auto. */
   updateStarters: (valeurs: string[]) => void;
   /** Nom affiché du compte, attribution par défaut. Vide si non renseigné. */
@@ -628,6 +631,13 @@ export function BuilderProvider({
     setDrafts((prev) => ({
       ...prev,
       [currentId]: { ...prev[currentId], propulsePar: valeur, updatedAt: "à l'instant" },
+    }));
+  }, [currentId]);
+
+  const updateFrequenceArtefacts = useCallback((valeur: FrequenceArtefacts) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: { ...prev[currentId], frequenceArtefacts: valeur, updatedAt: "à l'instant" },
     }));
   }, [currentId]);
 
@@ -1389,6 +1399,7 @@ export function BuilderProvider({
         toggleAssistant,
         createDraft,
         updatePropulsePar,
+        updateFrequenceArtefacts,
         updateStarters,
         nomCompte,
         updateObjective,

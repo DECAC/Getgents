@@ -47,6 +47,10 @@ const OUVERTES: Record<string, string> = {
   "app/api/collab/[token]/join/route.ts": "authentifiée par le jeton du salon",
   "app/api/collab/[token]/messages/route.ts": "jeton du salon + identité du participant",
   "app/api/collab/[token]/state/route.ts": "jeton du salon + identité du participant",
+  // Mesure des propositions d'artefact : ce sont les VISITEURS, sans compte,
+  // dont on veut connaître les verdicts. N'écrit qu'une ligne de journal aux
+  // valeurs énumérées, sans base ni modèle, plafonnée par adresse.
+  "app/api/telemetrie/artefact/route.ts": "journal seulement, valeurs énumérées, plafond par adresse",
 };
 
 function routes(dir: string, acc: string[] = []): string[] {

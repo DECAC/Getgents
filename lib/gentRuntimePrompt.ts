@@ -1,7 +1,7 @@
 import type { Espace } from "@/lib/types";
 import { sessionContextNote } from "@/lib/sessionContext";
 import { SUGGESTIONS_PROMPT_INSTRUCTION, FOLLOWUPS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
-import { ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
+import { consigneArtefacts } from "@/lib/artefactSignal";
 import { THEME_TAB_PROMPT_INSTRUCTION, describeModulesForPrompt } from "@/lib/themeTabSignal";
 import { GEOLOC_PROMPT_INSTRUCTION } from "@/lib/geolocSignal";
 import { profileContextNote, PROFILE_PROMPT_INSTRUCTION } from "@/lib/profileSignal";
@@ -134,7 +134,7 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
     // Le format exact du bloc <!--ARTEFACT: {…}--> vit ici. Il manquait au chemin
     // « lien de partage » : le gent y était invité à produire des artefacts sans
     // qu'on lui dise jamais comment les encoder — il n'en produisait donc aucun.
-    blocks.push(ARTEFACT_PROMPT_INSTRUCTION);
+    blocks.push(consigneArtefacts(espace.frequenceArtefacts));
 
     // Illustrations : génération (Nanobanana par défaut côté client) et photos web.
     // L'autorisation utilisateur est gérée côté client avant tout appel coûteux.
