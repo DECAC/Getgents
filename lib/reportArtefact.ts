@@ -480,6 +480,31 @@ export function reportSpecToAppBlocks(spec: DashboardSpec): AppBlock[] {
         }
         break;
       }
+      // La frise était PERDUE ici, comme le graphique avant elle : un
+      // « Parcours professionnel » gardé dans un gent à aperçu d'application
+      // s'affichait sans une seule étape. Le canevas n'a pas de bloc frise :
+      // un tableau date / étape en garde l'ordre et le contenu.
+      case "timeline":
+        if (b.title) blocks.push({ kind: "heading", text: b.title });
+        blocks.push({
+          kind: "table",
+          columns: ["Date", "Étape"],
+          rows: b.items.map((i) => [i.date ?? "", i.body ? `${i.label} — ${stripInlineMarkdown(i.body)}` : i.label]),
+        });
+        break;
+      case "checklist":
+        if (b.title) blocks.push({ kind: "heading", text: b.title });
+        blocks.push({ kind: "checklist", items: b.items.map((i) => ({ label: i.label, done: i.checked })) });
+        break;
+      case "map":
+        // Pas de carte dans le canevas : la liste des lieux, dans l'ordre.
+        if (b.title) blocks.push({ kind: "heading", text: b.title });
+        blocks.push({
+          kind: "table",
+          columns: ["Lieu", ""],
+          rows: b.points.map((p) => [p.label, p.description ?? ""]),
+        });
+        break;
       default:
         break;
     }
@@ -551,6 +576,27 @@ export function reportSpecToEmailHtml(spec: DashboardSpec, title: string): strin
         }
         parts.push(`</tr></table>`);
         break;
+      case "timeline":
+      case "checklist":
+      case "map": {
+        // Listes simples : un client de messagerie ne rend ni frise, ni carte,
+        // ni case à cocher — l'ordre et le contenu, eux, passent partout.
+        const titre = b.title
+          ? `<h4 style="font-size:14px;margin:14px 0 6px">${escapeHtml(b.title)}</h4>`
+          : "";
+        const lignes =
+          b.type === "timeline"
+            ? b.items.map((i) => `${i.date ? `<strong>${escapeHtml(i.date)}</strong> — ` : ""}${escapeHtml(i.label)}`)
+            : b.type === "checklist"
+              ? b.items.map((i) => `${i.checked ? "☑" : "☐"} ${escapeHtml(i.label)}`)
+              : b.points.map((p) => `${escapeHtml(p.label)}${p.description ? ` — ${escapeHtml(p.description)}` : ""}`);
+        parts.push(
+          `${titre}<ul style="margin:0 0 14px;padding-left:18px;font-size:13px">${lignes
+            .map((l) => `<li style="margin:3px 0">${l}</li>`)
+            .join("")}</ul>`
+        );
+        break;
+      }
       default:
         break;
     }

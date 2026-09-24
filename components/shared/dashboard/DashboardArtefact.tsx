@@ -29,6 +29,8 @@ import {
   type ChartSeries,
   type CalloutTone,
 } from "@/lib/dashboardArtefact";
+import { ChecklistView } from "@/components/shared/ChecklistView";
+import { MapArtefact } from "@/components/shared/MapArtefact";
 import styles from "./DashboardArtefact.module.css";
 
 const NUM = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
@@ -272,7 +274,13 @@ function TableBlock({ block }: { block: Extract<DashboardBlock, { type: "table" 
   );
 }
 
-function Block({ block }: { block: DashboardBlock }) {
+/**
+ * Coche une case d'un bloc checklist. Absent : lecture seule — aperçu en
+ * attente de verdict, artefact figé, tuile de canevas.
+ */
+type BasculeChecklist = (blocId: string, itemIndex: number) => void;
+
+function Block({ block, onToggleChecklist }: { block: DashboardBlock; onToggleChecklist?: BasculeChecklist }) {
   switch (block.type) {
     case "stats":
       return <StatsBlock items={block.items} />;
@@ -294,6 +302,23 @@ function Block({ block }: { block: DashboardBlock }) {
       return <TableBlock block={block} />;
     case "chart":
       return <ChartBlock block={block} />;
+    case "checklist":
+      return (
+        <div className={styles.card}>
+          {block.title && <h4 className={styles.cardTitle}>{block.title}</h4>}
+          <ChecklistView
+            items={block.items}
+            onToggle={(i) => (onToggleChecklist && block.id ? onToggleChecklist(block.id, i) : undefined)}
+          />
+        </div>
+      );
+    case "map":
+      return (
+        <div className={styles.card}>
+          {block.title && <h4 className={styles.cardTitle}>{block.title}</h4>}
+          <MapArtefact points={block.points} height={320} />
+        </div>
+      );
     default:
       return null;
   }
@@ -306,7 +331,13 @@ function blockSpan(block: DashboardBlock): "full" | "half" {
   return block.type === "chart" || block.type === "kv" ? "half" : "full";
 }
 
-export function DashboardArtefact({ spec }: { spec: DashboardSpec }) {
+export function DashboardArtefact({
+  spec,
+  onToggleChecklist,
+}: {
+  spec: DashboardSpec;
+  onToggleChecklist?: BasculeChecklist;
+}) {
   // Recharts (ResponsiveContainer) a besoin du DOM : on ne rend qu'après le
   // montage client pour éviter les avertissements de largeur nulle en SSR.
   const [mounted, setMounted] = useState(false);
@@ -318,12 +349,13 @@ export function DashboardArtefact({ spec }: { spec: DashboardSpec }) {
       <div className={styles.grid}>
         {spec.blocks.map((block, i) => {
           const span = blockSpan(block) === "half" ? styles.spanHalf : styles.spanFull;
-          if (block.type === "chart" && !mounted) {
-            return <div key={i} className={[span, styles.chartSkeleton].join(" ")} />;
+          // La carte charge Leaflet côté client : même attente que les graphiques.
+          if ((block.type === "chart" || block.type === "map") && !mounted) {
+            return <div key={block.id ?? i} className={[span, styles.chartSkeleton].join(" ")} />;
           }
           return (
-            <div key={i} className={span}>
-              <Block block={block} />
+            <div key={block.id ?? i} className={span}>
+              <Block block={block} onToggleChecklist={onToggleChecklist} />
             </div>
           );
         })}

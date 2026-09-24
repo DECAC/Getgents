@@ -24,7 +24,8 @@ export function WorkspaceArtefactCard({
   artefact: Artefact;
   sizeClass: string;
 }) {
-  const { openArtefactModal, toggleChecklistItem, userPosition, generateProfileSummaryMedia } = useEspace();
+  const { openArtefactModal, toggleChecklistItem, toggleBlocChecklist, userPosition, generateProfileSummaryMedia } =
+    useEspace();
 
   function onCardClick(e: MouseEvent) {
     const t = e.target as HTMLElement;
@@ -56,7 +57,12 @@ export function WorkspaceArtefactCard({
         <ArtefactWorkspaceActions artefact={artefact} />
       </header>
       <div className={`${previewStyles.body} ${styles.body}`}>
-        {artefact.dashboard && <DashboardArtefact spec={artefact.dashboard} />}
+        {artefact.dashboard && (
+          <DashboardArtefact
+            spec={artefact.dashboard}
+            onToggleChecklist={(blocId, i) => toggleBlocChecklist(artefact.id, blocId, i)}
+          />
+        )}
         {artefact.profileSummary && (
           <ProfileSummaryArtefact
             summary={artefact.profileSummary}

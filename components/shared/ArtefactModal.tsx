@@ -68,11 +68,16 @@ export function ArtefactCorps({
   artefact: Artefact;
   interactif: boolean;
 }) {
-  const { toggleChecklistItem, userPosition, generateProfileSummaryMedia } = useEspace();
+  const { toggleChecklistItem, toggleBlocChecklist, userPosition, generateProfileSummaryMedia } = useEspace();
   const isReport = hasReportBody(artefact);
   return (
     <>
-      {artefact.dashboard && <DashboardArtefact spec={artefact.dashboard} />}
+      {artefact.dashboard && (
+        <DashboardArtefact
+          spec={artefact.dashboard}
+          onToggleChecklist={interactif ? (blocId, i) => toggleBlocChecklist(artefact.id, blocId, i) : undefined}
+        />
+      )}
       {artefact.profileSummary && (
         <ProfileSummaryArtefact
           summary={artefact.profileSummary}

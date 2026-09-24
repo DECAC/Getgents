@@ -73,6 +73,15 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   aucune route n'a à changer. La mesure (`getgents:artefact`) n'est QUE dans
   les journaux Vercel, qui ne se gardent pas : pour des chiffres sur la durée,
   il faudra une table ou un drain de journaux.
+- **Un artefact est une suite de BLOCS, pas l'un de 7 types.** Le modèle
+  n'apprend qu'un format, `{title, blocks}`, pris dans un vocabulaire FERMÉ
+  (`VOCABULAIRE_BLOCS`, `lib/dashboardArtefact.ts`) : jamais de HTML ni de
+  code libre — c'est ce qui protège les pages publiques du XSS stocké. Le
+  « type » affiché est DÉDUIT (`formeDeduite`). Les formes historiques
+  (`kind: report/checklist/…`) restent LUES, sans migration. Chaque bloc a un
+  `id` stable : c'est le socle des retouches ciblées et des versions, étape
+  suivante. Tout code qui parcourt les blocs doit traiter chaque type — deux
+  conversions jetaient la frise sans bruit (canevas d'aperçu, e-mail).
 - **Facturation LLM** : `lib/server/openRouterKey.ts` est le SEUL endroit qui
   lit `OPENROUTER_API_KEY`. Un `ContexteLlm` explicite est passé en paramètre,
   jamais un `AsyncLocalStorage` : un chemin oublié serait un bug de

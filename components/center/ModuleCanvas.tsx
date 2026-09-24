@@ -168,6 +168,7 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
   const {
     openArtefactModal,
     toggleChecklistItem,
+    toggleBlocChecklist,
     userPosition,
     removeArtefact,
     generateProfileSummaryMedia,
@@ -246,7 +247,12 @@ export function ModuleCanvas({ espace }: { espace: Espace }) {
       onRemove: () => removeArtefact(a.id),
       render: () => (
         <>
-          {a.dashboard && <DashboardArtefact spec={a.dashboard} />}
+          {a.dashboard && (
+            <DashboardArtefact
+              spec={a.dashboard}
+              onToggleChecklist={(blocId, i) => toggleBlocChecklist(a.id, blocId, i)}
+            />
+          )}
           {a.profileSummary && (
             <ProfileSummaryArtefact
               summary={a.profileSummary}

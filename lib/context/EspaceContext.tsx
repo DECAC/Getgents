@@ -27,6 +27,7 @@ import { extractEtatJeu } from "@/lib/jeuEtat";
 import { extractArtefactSignal, artefactEnCoursDEcriture } from "@/lib/artefactSignal";
 import { artefactHomonyme, historiquePourModele } from "@/lib/historiqueModele";
 import { mesurerArtefact } from "@/lib/telemetrieArtefact";
+import { formeDeduite } from "@/lib/dashboardArtefact";
 import {
   appliquerMemoireVisiteur,
   cleMemoireVisiteur,
@@ -65,7 +66,9 @@ function artefactFromProposal(sig: ArtefactProposal, id: string): Artefact {
   return {
     id,
     title: sig.title,
-    type: meta.type,
+    // Artefact à blocs : son type se DÉDUIT de sa composition (« Frise »,
+    // « Checklist »…) au lieu d'afficher « Tableau de bord » pour tout.
+    type: sig.dashboard ? formeDeduite(sig.dashboard) : meta.type,
     icon: meta.icon,
     kind: sig.kind,
     date: "à l'instant",
@@ -246,6 +249,8 @@ interface EspaceContextValue {
   /** Valide ou ignore le profil utilisateur proposé par le gent. */
   confirmProfileProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
   toggleChecklistItem: (artefactId: string, itemIndex: number) => void;
+  /** Coche une case d'un bloc checklist, dans un artefact à blocs. */
+  toggleBlocChecklist: (artefactId: string, blocId: string, itemIndex: number) => void;
   startNewConversation: () => void;
   switchConversation: (id: string) => void;
   confirmReservation: (itemId: string) => void;
@@ -1778,6 +1783,23 @@ export function EspaceProvider({
     });
   }, []);
 
+  const toggleBlocChecklist = useCallback((artefactId: string, blocId: string, itemIndex: number) => {
+    const id = currentIdRef.current;
+    setEspaces((prev) => {
+      const espace = prev[id];
+      const artefacts = espace.artefacts.map((a) => {
+        if (a.id !== artefactId || !a.dashboard) return a;
+        const blocks = a.dashboard.blocks.map((b) =>
+          b.id === blocId && b.type === "checklist"
+            ? { ...b, items: b.items.map((it, i) => (i === itemIndex ? { ...it, checked: !it.checked } : it)) }
+            : b
+        );
+        return { ...a, dashboard: { ...a.dashboard, blocks } };
+      });
+      return { ...prev, [id]: { ...espace, artefacts } };
+    });
+  }, []);
+
   const startNewConversation = useCallback(() => {
     setEspaces((prev) => {
       const espace = prev[currentId];
@@ -1945,6 +1967,7 @@ export function EspaceProvider({
         generateProfileSummaryMedia,
         confirmProfileProposal,
         toggleChecklistItem,
+        toggleBlocChecklist,
         startNewConversation,
         switchConversation,
         confirmReservation,

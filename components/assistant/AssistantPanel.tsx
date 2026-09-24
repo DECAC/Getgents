@@ -28,6 +28,7 @@ import { StarterBubbles } from "@/components/center/StarterBubbles";
 import { shouldShowConversationStarters } from "@/lib/starterSignal";
 import { MESSAGE_REESSAI_ARTEFACT } from "@/lib/artefactSignal";
 import { libelleGarder } from "@/lib/historiqueModele";
+import { formeDeduite, resumeComposition } from "@/lib/dashboardArtefact";
 import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./AssistantPanel.module.css";
 
@@ -468,12 +469,15 @@ export function AssistantPanel({
       return (
         <div key={i} className={styles.proposalCard}>
           <div className={styles.proposalHead}>
-            <span className={styles.proposalKind}>{PROPOSAL_KIND_LABEL[p.kind] ?? "Artefact"}</span>
+            <span className={styles.proposalKind}>
+              {p.dashboard ? formeDeduite(p.dashboard) : PROPOSAL_KIND_LABEL[p.kind] ?? "Artefact"}
+            </span>
             <span className={styles.proposalTitle}>{p.title}</span>
           </div>
           {p.dashboard && (
             <div className={styles.proposalBody}>
-              Tableau de bord de {p.dashboard.blocks.length} élément{p.dashboard.blocks.length > 1 ? "s" : ""} (indicateurs, graphiques, tableaux) — s&apos;affiche en plein espace.
+              {resumeComposition(p.dashboard)} — {p.dashboard.blocks.length} bloc
+              {p.dashboard.blocks.length > 1 ? "s" : ""}.
             </div>
           )}
           {p.profileSummary && (

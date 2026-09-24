@@ -1,13 +1,13 @@
 // Format demandé au modèle : terminer sa réponse par un bloc caché
-// <!--ARTEFACT: {"kind":"report","title":"...","body":"...markdown..."}-->
-// (ou "kind":"checklist" avec "items":["...","..."], ou "kind":"chart" avec
-// "chartData":[{"label":"...","value":1}]) quand un artefact concret peut
-// être produit à partir de l'échange. On l'extrait pour proposer à
-// l'utilisateur de l'ajouter à son espace — jamais ajouté automatiquement.
+// <!--ARTEFACT: {"title":"...","blocks":[...]}--> composé à partir du
+// vocabulaire de blocs (lib/dashboardArtefact.ts). Les formes historiques
+// ("kind":"report" / "checklist" / "chart" / "map" / "dashboard") restent
+// lues. On l'extrait pour proposer à l'utilisateur de l'ajouter à son
+// espace — jamais ajouté automatiquement.
 const ARTEFACT_RE = /<!--ARTEFACT:\s*(\{[\s\S]*?\})\s*-->/;
 const TRUNCATED_MARKER_RE = /<!--ARTEFACT:[\s\S]*$/;
 
-import { parseDashboard, DASHBOARD_PROMPT_INSTRUCTION, type DashboardSpec } from "@/lib/dashboardArtefact";
+import { parseDashboard, VOCABULAIRE_BLOCS, type DashboardSpec } from "@/lib/dashboardArtefact";
 import {
   parseProfileSummary,
   PROFILE_SUMMARY_PROMPT_INSTRUCTION,
@@ -99,23 +99,19 @@ export function consigneArtefacts(frequence: FrequenceArtefacts = "equilibre"): 
     "sous EXACTEMENT le même titre : elle remplacera l'ancienne. N'écris jamais toi-même ces annotations entre crochets.\n" +
     "4. Tu viens de dire que tu n'as pas l'information : pas d'artefact sur ce sujet — un livrable à trous paraîtrait fiable.\n" +
     SEUIL_PAR_FREQUENCE[frequence] +
-    "\n\nFORMAT — quand tu en produis un, termine ta réponse (après le texte visible et après un éventuel bloc QUESTIONS, " +
-    "sur sa propre ligne) par exactement un bloc : " +
-    '<!--ARTEFACT: {"kind":"report","title":"Titre court","body":"Contenu en markdown"}--> ' +
-    "pour une synthèse, un modèle de document, une procédure détaillée ou un texte à réutiliser ; " +
-    '<!--ARTEFACT: {"kind":"checklist","title":"Titre court","items":["Élément 1","Élément 2","Élément 3"]}--> ' +
-    "pour des étapes à cocher, une liste de pièces ou de tâches (items courts, un par élément, sans numérotation) ; ou " +
-    '<!--ARTEFACT: {"kind":"chart","title":"Titre court","chartData":[{"label":"Catégorie A","value":120},{"label":"Catégorie B","value":80}]}--> ' +
-    "pour des montants, pourcentages ou comparaisons chiffrées ; ou " +
-    '<!--ARTEFACT: {"kind":"map","title":"Titre court","points":[{"label":"Lyon","lat":45.7578,"lon":4.832},{"label":"Annecy","lat":45.8992,"lon":6.1294}]}--> ' +
-    "pour des lieux, un itinéraire, des adresses ou des zones géographiques — fournis des coordonnées WGS84 (lat/lon) précises pour chaque point, la carte est rendue sur fond IGN (cartes.gouv.fr). " +
-    "Le titre nomme le CONTENU (« Parcours professionnel », « Budget du séjour »), jamais la forme (« Tableau de bord »). " +
-    "Choisis la forme la plus utile : checklist pour l'actionnable, report pour les textes longs — SAUF si le contenu comporte un scoring, des indicateurs clés (KPI) ou plusieurs angles chiffrés à comparer, auquel cas privilégie TOUJOURS dashboard (voir instruction dédiée ci-dessous) : un lecteur doit saisir les chiffres clés et leur comparaison en un coup d'œil, pas en lisant un paragraphe. " +
-    "Pour le parcours d'une PERSONNE en particulier, privilégie profile-summary (voir instruction dédiée) plutôt qu'un report générique. " +
+    "\n\nFORMAT — un artefact est une suite de BLOCS que tu composes librement. Quand tu en produis un, termine ta réponse " +
+    "(après le texte visible et après un éventuel bloc QUESTIONS, sur sa propre ligne) par exactement un bloc : " +
+    '<!--ARTEFACT: {"title":"Titre court","subtitle":"Sous-titre optionnel","blocks":[...]}--> ' +
+    "Compose ce qui sert le contenu, sans te limiter à une forme : une checklist seule pour des tâches ; une frise et un " +
+    "encadré pour un historique ; une carte suivie d'une checklist pour un itinéraire ; des indicateurs, deux graphiques " +
+    "côte à côte et un tableau pour une analyse chiffrée ; des titres et du texte pour une synthèse ou un modèle de document. " +
+    "Mets les chiffres clés en blocs stats ou chart plutôt que de les noyer dans un paragraphe.\n" +
+    VOCABULAIRE_BLOCS +
+    "\nLe titre nomme le CONTENU (« Parcours professionnel », « Budget du séjour »), jamais la forme (« Tableau de bord »). " +
+    "Pour la FICHE de synthèse d'une personne (qui elle est, ce qu'elle sait faire), utilise le format résumé de profil " +
+    "décrit ci-dessous ; pour la chronologie de son parcours, une frise (timeline). " +
     "L'utilisateur choisit de garder ou de jeter l'artefact — ne dis jamais qu'il est déjà ajouté à l'espace. " +
     "Jamais plus d'un artefact par réponse.\n\n" +
-    DASHBOARD_PROMPT_INSTRUCTION +
-    "\n\n" +
     PROFILE_SUMMARY_PROMPT_INSTRUCTION
   );
 }
@@ -153,7 +149,15 @@ export function extractArtefactSignal(raw: string): {
   let artefact: ArtefactSignal | null = null;
   try {
     const parsed = JSON.parse(match[1]);
-    if (parsed && typeof parsed.title === "string" && KIND_LIST.includes(parsed.kind)) {
+    // Format unique : { title, subtitle?, blocks }. Le résumé de profil garde
+    // son format propre (rendu dédié, médias à générer).
+    if (parsed && typeof parsed.title === "string" && Array.isArray(parsed.blocks) && parsed.kind !== "profile-summary") {
+      const dashboard = parseDashboard({ subtitle: parsed.subtitle, blocks: parsed.blocks });
+      artefact = dashboard ? { kind: "dashboard", title: parsed.title, dashboard } : null;
+    } else if (parsed && typeof parsed.title === "string" && KIND_LIST.includes(parsed.kind)) {
+      // Formes HISTORIQUES (report, checklist, chart, map, dashboard…) :
+      // toujours lues — un modèle qui ignore la consigne, ou un artefact figé,
+      // ne doit rien perdre.
       const profileSummary =
         parsed.kind === "profile-summary" ? parseProfileSummary(parsed.profileSummary) ?? undefined : undefined;
       // Un profile-summary sans nom valide est ignoré (évite une carte vide).
