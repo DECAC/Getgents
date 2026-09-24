@@ -96,6 +96,9 @@ export function espaceForPublicLink(espace: Espace): Espace {
     // ligne, ce qui donne exactement l'impression que la rediffusion ne prend
     // pas les modifications.
     propulsePar: espace.propulsePar,
+    // Règle d'usage fixée par le créateur : le navigateur du visiteur doit la
+    // connaître pour montrer — ou non — les outils de modification.
+    artefactsModifiables: espace.artefactsModifiables,
     version: espace.version,
     status: espace.status,
     statusLabel: espace.statusLabel,

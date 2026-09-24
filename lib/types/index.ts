@@ -442,6 +442,8 @@ export interface Espace {
   propulsePar?: string;
   /** Fréquence des propositions d'artefact, réglée par le créateur. Absent : « équilibré ». */
   frequenceArtefacts?: import("@/lib/artefactSignal").FrequenceArtefacts;
+  /** Visiteurs autorisés à modifier leurs artefacts à la main. Absent : non. */
+  artefactsModifiables?: boolean;
   version: number;
   status: EspaceStatus;
   statusLabel: string;

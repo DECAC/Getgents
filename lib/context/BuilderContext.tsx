@@ -121,6 +121,8 @@ interface BuilderContextValue {
   updatePropulsePar: (valeur: string) => void;
   /** Fréquence à laquelle le gent propose des artefacts. */
   updateFrequenceArtefacts: (valeur: FrequenceArtefacts) => void;
+  /** Autorise les visiteurs à modifier leurs artefacts à la main. */
+  updateArtefactsModifiables: (valeur: boolean) => void;
   /** Questions d'amorce écrites par le créateur. Liste vide = génération auto. */
   updateStarters: (valeurs: string[]) => void;
   /** Nom affiché du compte, attribution par défaut. Vide si non renseigné. */
@@ -631,6 +633,13 @@ export function BuilderProvider({
     setDrafts((prev) => ({
       ...prev,
       [currentId]: { ...prev[currentId], propulsePar: valeur, updatedAt: "à l'instant" },
+    }));
+  }, [currentId]);
+
+  const updateArtefactsModifiables = useCallback((valeur: boolean) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: { ...prev[currentId], artefactsModifiables: valeur, updatedAt: "à l'instant" },
     }));
   }, [currentId]);
 
@@ -1400,6 +1409,7 @@ export function BuilderProvider({
         createDraft,
         updatePropulsePar,
         updateFrequenceArtefacts,
+        updateArtefactsModifiables,
         updateStarters,
         nomCompte,
         updateObjective,

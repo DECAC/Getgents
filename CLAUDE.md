@@ -104,6 +104,25 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   perdu laisserait l'utilisateur sans rien. Deux demandes depuis le dernier
   « réponds dans le fil » = préférence `[PRÉFÉRENCE]`, déduite de
   l'historique, sans état stocké.
+- **Un ajout du même genre se FOND dans le bloc existant** (`cibleDeFusion`,
+  `lib/operationsBlocs.ts`). Vécu : « ajoute Maltem avant Cegedim » a créé une
+  seconde frise « Parcours ». La consigne demande de modifier le bloc ; le
+  garde-fou rattrape le modèle qui ne le fait pas, en tête ou en fin selon où
+  il voulait placer le bloc.
+- **Un artefact gardé s'ouvre en PLEINE PAGE** (outils, onglet, PDF) ; seul
+  l'aperçu en attente de verdict garde sa fenêtre. **Outils** : édition à la
+  main sur un brouillon, repassé par `parseDashboard` à l'enregistrement, qui
+  crée une version. Couleur d'accent dans une palette FERMÉE (`ACCENTS`) —
+  jamais de couleur libre, ce serait du CSS arbitraire sur une page publique.
+- **« Ouvrir dans un onglet »** : `/artefact/<id>` (slug réservé) reçoit une
+  COPIE par le localStorage et y renvoie ses modifications ; l'onglet
+  d'origine les applique sur l'événement `storage`, qui ne se déclenche que
+  dans les AUTRES onglets. Copies purgées après 7 jours. Rien côté serveur :
+  l'onglet ne fonctionne que dans le navigateur qui l'a ouvert.
+- **`artefactsModifiables`** (studio, faux par défaut) : autorise les
+  VISITEURS à éditer et restaurer leurs artefacts. Chacun modifie SA copie,
+  dans son navigateur — ce n'est PAS de la co-édition, qui exigera des
+  artefacts stockés côté serveur.
 - **Facturation LLM** : `lib/server/openRouterKey.ts` est le SEUL endroit qui
   lit `OPENROUTER_API_KEY`. Un `ContexteLlm` explicite est passé en paramètre,
   jamais un `AsyncLocalStorage` : un chemin oublié serait un bug de

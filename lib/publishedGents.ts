@@ -653,6 +653,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     // seule chose décidée à ce stade.
     propulsePar: normaliserNomAffiche(draft.propulsePar) || undefined,
     frequenceArtefacts: estFrequenceArtefacts(draft.frequenceArtefacts) ? draft.frequenceArtefacts : undefined,
+    artefactsModifiables: draft.artefactsModifiables === true || undefined,
     // Les amorces du créateur priment. `ensureStarters` ne génère que si le
     // champ est vide : les fournir ici suffit à empêcher toute génération, et
     // à remplacer celles qu'un ancien passage avait mémorisées.

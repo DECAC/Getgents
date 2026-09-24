@@ -140,6 +140,11 @@ export interface GentDraft {
    */
   frequenceArtefacts?: import("@/lib/artefactSignal").FrequenceArtefacts;
   /**
+   * Les visiteurs (lien, page publique) peuvent-ils modifier leurs artefacts
+   * à la main (outils, restauration de versions) ? Faux par défaut.
+   */
+  artefactsModifiables?: boolean;
+  /**
    * Questions d'amorce ÉCRITES PAR LE CRÉATEUR.
    *
    * Absentes ou vides, la plateforme en génère à la première ouverture de

@@ -324,6 +324,17 @@ function SharedGentBody({ token }: { token: string }) {
                   </>
                 ) : (
                   <>
+                    {/* Agrandir : l'espace du gent en pleine page — la même vue
+                        que la bascule « Le gent », atteinte depuis le volet. */}
+                    <button
+                      type="button"
+                      className={styles.voletIcone}
+                      onClick={closeAssistant}
+                      title="Agrandir l'espace du gent"
+                      aria-label="Agrandir l'espace du gent"
+                    >
+                      ⤢
+                    </button>
                     <button
                       type="button"
                       className={styles.voletIcone}

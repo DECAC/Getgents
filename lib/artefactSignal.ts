@@ -117,7 +117,10 @@ export function consigneArtefacts(frequence: FrequenceArtefacts = "equilibre"): 
     '{"op":"ajouter","apres":"b2","bloc":{…}},' +
     '{"op":"supprimer","bloc":"b4"},' +
     '{"op":"deplacer","bloc":"b4","apres":"b1"}]}--> ' +
-    '("apres":"debut" pour placer en tête ; sans "apres", à la fin). Utilise EXACTEMENT les identifiants listés, n\'en invente jamais.\n' +
+    '("apres":"debut" pour placer en tête ; sans "apres", à la fin). Utilise EXACTEMENT les identifiants listés, n\'en invente jamais. ' +
+    "COHÉRENCE : pour ajouter une étape à une frise, un élément à une checklist, une ligne à un tableau, un lieu à une " +
+    "carte, MODIFIE ce bloc (op modifier, bloc complet, le nouvel élément inséré À SA PLACE) — n'ajoute JAMAIS un second " +
+    "bloc du même genre. Reprends le style des éléments existants : mêmes champs, même format de date, même ton.\n" +
     "4. Tu viens de dire que tu n'as pas l'information : pas d'artefact sur ce sujet — un livrable à trous paraîtrait fiable.\n" +
     SEUIL_PAR_FREQUENCE[frequence] +
     "\n\nFORMAT — un artefact est une suite de BLOCS que tu composes librement. Quand tu en produis un, termine ta réponse " +
@@ -136,9 +139,11 @@ export function consigneArtefacts(frequence: FrequenceArtefacts = "equilibre"): 
     "QUAND TU PRODUIS UN ARTEFACT, ton texte visible se limite à UNE phrase qui l'annonce (« Voici la frise de son " +
     "parcours. ») : tout le contenu va dans l'artefact, ne le rédige jamais deux fois. Même règle pour une retouche " +
     "(« C'est fait : j'ai ajouté l'étape. »).\n" +
-    "QUAND TU N'EN PRODUIS PAS alors que ta réponse contient un contenu qu'un artefact servirait vraiment (liste, étapes, " +
-    "chiffres, parcours, lieux, comparaison), réponds normalement et termine par " + ARTEFACT_POSSIBLE_MARQUEUR +
-    " sur sa propre ligne : l'utilisateur verra un bouton pour en demander un. Jamais pour une réponse courte ou un simple échange.\n\n" +
+    "QUAND TU N'EN PRODUIS PAS alors que ta réponse contient un contenu qu'un artefact mettrait en valeur — même une " +
+    "courte liste, quelques étapes, des chiffres, un parcours, des lieux, une comparaison — réponds normalement et " +
+    "termine par " + ARTEFACT_POSSIBLE_MARQUEUR + " sur sa propre ligne : l'utilisateur verra un bouton pour en demander " +
+    "un. N'hésite pas : c'est une invitation, pas un artefact imposé. Seulement pas pour une salutation, une question " +
+    "de relance ou une réponse d'une phrase.\n\n" +
     PROFILE_SUMMARY_PROMPT_INSTRUCTION
   );
 }

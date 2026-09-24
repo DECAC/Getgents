@@ -16,6 +16,8 @@ import { hasReportBody } from "@/lib/reportArtefact";
 import type { Artefact } from "@/lib/types";
 import { libelleGarder } from "@/lib/historiqueModele";
 import { numeroVersion } from "@/lib/versionsArtefact";
+import { OutilsArtefact } from "./outils/OutilsArtefact";
+import { clesPerimees, cleOnglet, nouvelIdOnglet, type MessageOnglet } from "@/lib/ongletArtefact";
 import styles from "./Modal.module.css";
 
 function VisualGrid() {
@@ -62,35 +64,42 @@ function VisualGrid() {
  * n'existe pas encore dans l'espace, donc cocher une case ou lancer une
  * generation d'image n'aurait rien a quoi s'accrocher.
  */
-export function ArtefactCorps({
+export interface ActionsCorps {
+  /** Case d'une checklist historique. */
+  cocher?: (itemIndex: number) => void;
+  /** Case d'un bloc checklist. */
+  cocherBloc?: (blocId: string, itemIndex: number) => void;
+  genererMedia?: (mediaId: string) => void;
+  userPosition?: { lat: number; lon: number } | null;
+}
+
+/**
+ * Le rendu PUR d'un artefact, piloté par ses propriétés : aucun contexte.
+ * C'est ce qui lui permet de s'afficher aussi dans un autre onglet, où
+ * n'existe aucun espace. Sans action fournie, l'élément correspondant est en
+ * lecture seule.
+ */
+export function CorpsArtefact({
   artefact,
-  interactif,
+  actions = {},
   blocsTouches,
 }: {
   artefact: Artefact;
-  interactif: boolean;
-  /** Retouche en attente : blocs à mettre en évidence. */
+  actions?: ActionsCorps;
   blocsTouches?: readonly string[];
 }) {
-  const { toggleChecklistItem, toggleBlocChecklist, userPosition, generateProfileSummaryMedia } = useEspace();
   const isReport = hasReportBody(artefact);
   return (
     <>
       {artefact.dashboard && (
-        <DashboardArtefact
-          spec={artefact.dashboard}
-          onToggleChecklist={interactif ? (blocId, i) => toggleBlocChecklist(artefact.id, blocId, i) : undefined}
-          blocsTouches={blocsTouches}
-        />
+        <DashboardArtefact spec={artefact.dashboard} onToggleChecklist={actions.cocherBloc} blocsTouches={blocsTouches} />
       )}
       {artefact.profileSummary && (
         <ProfileSummaryArtefact
           summary={artefact.profileSummary}
           artefactId={artefact.id}
-          canGenerate={interactif}
-          onGenerateMedia={
-            interactif ? (mediaId) => generateProfileSummaryMedia(artefact.id, mediaId) : undefined
-          }
+          canGenerate={!!actions.genererMedia}
+          onGenerateMedia={actions.genererMedia}
         />
       )}
       {artefact.imageUrl && (
@@ -108,22 +117,54 @@ export function ArtefactCorps({
       )}
       {artefact.chartData && <MiniBarChart data={artefact.chartData} />}
       {artefact.mapPoints && (
-        <MapArtefact points={artefact.mapPoints} height={380} userPosition={userPosition} />
+        <MapArtefact points={artefact.mapPoints} height={380} userPosition={actions.userPosition ?? null} />
       )}
       {artefact.checklistItems && (
-        <ChecklistView
-          items={artefact.checklistItems}
-          onToggle={interactif ? (i) => toggleChecklistItem(artefact.id, i) : () => undefined}
-        />
+        <ChecklistView items={artefact.checklistItems} onToggle={actions.cocher ?? (() => undefined)} />
       )}
       {isReport ? (
         <ReportArtefact artefact={artefact} />
       ) : (
-        artefact.body && !artefact.imageUrl && !artefact.profileSummary && (
-          <SafeHTMLDoc html={artefact.body} />
-        )
+        artefact.body && !artefact.imageUrl && !artefact.profileSummary && <SafeHTMLDoc html={artefact.body} />
       )}
     </>
+  );
+}
+
+/**
+ * Le corps d'un artefact DANS un espace : `CorpsArtefact` branché sur les
+ * actions du contexte.
+ *
+ * `interactif` a false pour un APERÇU en attente de verdict : l'artefact
+ * n'existe pas encore dans l'espace, donc cocher une case ou lancer une
+ * generation d'image n'aurait rien a quoi s'accrocher.
+ */
+export function ArtefactCorps({
+  artefact,
+  interactif,
+  blocsTouches,
+}: {
+  artefact: Artefact;
+  interactif: boolean;
+  /** Retouche en attente : blocs à mettre en évidence. */
+  blocsTouches?: readonly string[];
+}) {
+  const { toggleChecklistItem, toggleBlocChecklist, userPosition, generateProfileSummaryMedia } = useEspace();
+  return (
+    <CorpsArtefact
+      artefact={artefact}
+      blocsTouches={blocsTouches}
+      actions={
+        interactif
+          ? {
+              cocher: (i) => toggleChecklistItem(artefact.id, i),
+              cocherBloc: (blocId, i) => toggleBlocChecklist(artefact.id, blocId, i),
+              genererMedia: (mediaId) => generateProfileSummaryMedia(artefact.id, mediaId),
+              userPosition,
+            }
+          : { userPosition }
+      }
+    />
   );
 }
 
@@ -140,8 +181,24 @@ export function ArtefactModal() {
     confirmArtefactProposal,
     verdictEnVolet,
     restaurerVersionArtefact,
+    modifierArtefact,
+    currentId,
+    shareMode,
   } = useEspace();
+  // Le créateur, dans son espace, modifie toujours ; un visiteur seulement si
+  // le créateur l'a autorisé dans le studio.
+  const peutModifier = !shareMode || currentEspace.artefactsModifiables === true;
   const [historiqueOuvert, setHistoriqueOuvert] = useState(false);
+  const [outilsOuverts, setOutilsOuverts] = useState(false);
+  // Brouillon des outils, montré à la place de l'artefact tant qu'on édite.
+  const [brouillon, setBrouillon] = useState<Artefact | null>(null);
+  const suivreBrouillon = useCallback((b: Artefact | null) => setBrouillon(b), []);
+  // Un autre artefact : ni outils ni historique ouverts d'office.
+  useEffect(() => {
+    setOutilsOuverts(false);
+    setHistoriqueOuvert(false);
+    setBrouillon(null);
+  }, [modalArtefactId]);
 
   const isVerdict = !!pendingArtefactVerdict;
 
@@ -240,20 +297,61 @@ export function ArtefactModal() {
 
   const isDashboard = !!artefact.dashboard;
   const isReport = hasReportBody(artefact);
+  /**
+   * Un artefact GARDÉ s'ouvre en PLEINE PAGE, pas en fenêtre superposée : on
+   * vient y travailler — lire, éditer, imprimer — et une fenêtre flottante
+   * sur un fond grisé laissait la moitié de l'écran inutilisée. L'aperçu en
+   * attente de verdict garde sa fenêtre : c'est une décision, pas un travail.
+   */
+  const pleinePage = !isVerdict;
+  const affiche = pleinePage && outilsOuverts && brouillon ? brouillon : artefact;
+
+  /** Copie dans le navigateur, puis nouvel onglet — voir lib/ongletArtefact. */
+  function ouvrirDansUnOnglet() {
+    if (!artefact) return;
+    const id = nouvelIdOnglet();
+    const maintenant = Date.now();
+    try {
+      const entrees: [string, string | null][] = Object.keys(window.localStorage).map((k) => [
+        k,
+        window.localStorage.getItem(k),
+      ]);
+      for (const k of clesPerimees(entrees, maintenant)) window.localStorage.removeItem(k);
+      const message: MessageOnglet = {
+        v: 1,
+        espaceId: currentId,
+        artefact,
+        source: "espace",
+        maj: maintenant,
+        cree: maintenant,
+        modifiable: peutModifier,
+      };
+      window.localStorage.setItem(cleOnglet(id), JSON.stringify(message));
+    } catch {
+      // Stockage refusé : l'onglet s'ouvrira et dira qu'il ne trouve rien.
+    }
+    window.open(`/artefact/${id}`, "_blank", "noopener");
+  }
 
   return (
     <div
-      className={styles.overlay}
+      className={pleinePage ? styles.overlayPage : styles.overlay}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      onClick={(e) => { if (e.target === e.currentTarget) dismissOrClose(); }}
+      onClick={(e) => { if (!pleinePage && e.target === e.currentTarget) dismissOrClose(); }}
     >
       <div
         // Repère pour l'impression : seul ce sous-arbre reste visible quand le
         // navigateur imprime — voir `@media print` dans globals.css.
         data-impression="artefact"
-        className={[styles.modal, isDashboard || isReport ? styles.modalWide : ""].filter(Boolean).join(" ")}
+        className={[
+          styles.modal,
+          isDashboard || isReport ? styles.modalWide : "",
+          pleinePage ? styles.modalPage : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
         <div className={styles.head}>
           <ArtefactIcon icon={artefact.icon} className={styles.ti} />
@@ -286,6 +384,28 @@ export function ArtefactModal() {
               </p>
             )}
           </div>
+          {pleinePage && (
+            <div className={styles.pageActions}>
+              {peutModifier && (
+                <button
+                  type="button"
+                  className={[styles.btnGhost, outilsOuverts ? styles.btnActif : ""].filter(Boolean).join(" ")}
+                  onClick={() => setOutilsOuverts((o) => !o)}
+                  aria-pressed={outilsOuverts}
+                >
+                  Outils
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.btnGhost}
+                onClick={ouvrirDansUnOnglet}
+                title="Travailler sur l'artefact dans un nouvel onglet — les modifications reviennent ici"
+              >
+                Ouvrir dans un onglet ↗
+              </button>
+            </div>
+          )}
           <button className={styles.closeBtn} onClick={dismissOrClose} aria-label="Fermer">
             ✕
           </button>
@@ -304,7 +424,7 @@ export function ArtefactModal() {
                   <b>Version {v.n}</b> · {v.date}
                   <span className={styles.versionSuite}> — ensuite : {v.resume}</span>
                 </span>
-                <button
+                {peutModifier && <button
                   type="button"
                   className={styles.btnGhost}
                   onClick={() => {
@@ -314,20 +434,42 @@ export function ArtefactModal() {
                   title="L'état actuel est conservé dans l'historique : rien n'est perdu"
                 >
                   Restaurer
-                </button>
+                </button>}
               </div>
             ))}
           </div>
         )}
 
-        <div className={styles.body}>
-          <ArtefactCorps
-            key={cleRendu}
-            artefact={artefact}
-            interactif={!isVerdict}
-            blocsTouches={pendingArtefactVerdict?.modification?.blocsTouches}
-          />
-        </div>
+        {pleinePage ? (
+          <div className={styles.pageCorps}>
+            <div className={styles.body}>
+              <div className={styles.pageColonne}>
+                <ArtefactCorps key={cleRendu} artefact={affiche} interactif={!(outilsOuverts && brouillon)} />
+              </div>
+            </div>
+            {outilsOuverts && peutModifier && (
+              <OutilsArtefact
+                key={artefact.id}
+                artefact={artefact}
+                onApercu={suivreBrouillon}
+                onEnregistrer={(apres, resume) => {
+                  modifierArtefact(artefact.id, apres, resume);
+                  setOutilsOuverts(false);
+                }}
+                onFermer={() => setOutilsOuverts(false)}
+              />
+            )}
+          </div>
+        ) : (
+          <div className={styles.body}>
+            <ArtefactCorps
+              key={cleRendu}
+              artefact={artefact}
+              interactif={false}
+              blocsTouches={pendingArtefactVerdict?.modification?.blocsTouches}
+            />
+          </div>
+        )}
 
         {isVerdict && pendingArtefactVerdict ? (
           <div className={[styles.foot, styles.footVerdict].join(" ")}>

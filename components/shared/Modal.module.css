@@ -244,3 +244,71 @@
 .versionSuite {
   color: var(--muted);
 }
+
+/* ── Artefact en pleine page ───────────────────────────────────────────────
+   Un artefact gardé s'ouvre comme une PAGE : il occupe toute la fenêtre du
+   navigateur, sans fond grisé ni fenêtre flottante. */
+.overlayPage {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg);
+  display: flex;
+}
+
+.modal.modalPage {
+  max-width: none;
+  width: 100%;
+  max-height: none;
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.pageActions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btnActif {
+  background: var(--sage-tint);
+  border-color: var(--sage);
+  color: var(--ink);
+}
+
+/* Contenu + colonne d'outils, côte à côte. */
+.pageCorps {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.pageCorps > .body {
+  flex: 1;
+  min-width: 0;
+}
+.pageCorps > aside {
+  flex: 0 0 min(400px, 42vw);
+}
+
+/* La lecture reste confortable : le contenu ne s'étire pas au-delà d'une
+   largeur de page, même sur un grand écran. */
+.pageColonne {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+@media (max-width: 860px) {
+  .pageCorps {
+    flex-direction: column;
+  }
+  .pageCorps > aside {
+    flex: 0 0 55%;
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+  .pageActions {
+    flex-wrap: wrap;
+  }
+}

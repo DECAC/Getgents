@@ -223,3 +223,60 @@ describe("versions", () => {
     expect(numeroVersion(a)).toBe(MAX_VERSIONS + 6);
   });
 });
+
+describe("cohérence : un ajout du même genre se fond dans le bloc existant", () => {
+  // Vécu : « ajoute Maltem avant Cegedim » a produit une SECONDE frise
+  // « Parcours » au lieu d'une étape de plus.
+  const parcours = parseDashboard({
+    blocks: [
+      { id: "b1", type: "timeline", title: "Parcours", items: [{ label: "Cegedim" }, { label: "Talentsoft" }] },
+      { id: "b2", type: "callout", body: "Note" },
+    ],
+  })!;
+
+  it("placé en tête, l'ajout met ses étapes en tête de la frise existante", () => {
+    const r = appliquerOperations(
+      parcours,
+      lireOperations([{ op: "ajouter", apres: "debut", bloc: { type: "timeline", title: "Parcours", items: [{ label: "Maltem", tag: "Non vérifié" }] } }])!
+    )!;
+    expect(r.spec.blocks).toHaveLength(2);
+    const frise = r.spec.blocks[0];
+    expect(frise.type === "timeline" ? frise.items.map((i) => i.label) : []).toEqual(["Maltem", "Cegedim", "Talentsoft"]);
+    expect(r.resume).toBe("« Parcours » complété");
+    expect(r.blocsTouches).toEqual(["b1"]);
+  });
+
+  it("placé après, l'ajout complète à la fin, sans doublon", () => {
+    const r = appliquerOperations(
+      parcours,
+      lireOperations([{ op: "ajouter", bloc: { type: "timeline", items: [{ label: "Talentsoft" }, { label: "Getgents" }] } }])!
+    )!;
+    const frise = r.spec.blocks[0];
+    expect(frise.type === "timeline" ? frise.items.map((i) => i.label) : []).toEqual(["Cegedim", "Talentsoft", "Getgents"]);
+  });
+
+  it("un autre titre reste un bloc distinct : la fusion ne devine pas", () => {
+    const r = appliquerOperations(
+      parcours,
+      lireOperations([{ op: "ajouter", bloc: { type: "timeline", title: "Formation", items: [{ label: "ESCP" }] } }])!
+    )!;
+    expect(r.spec.blocks).toHaveLength(3);
+  });
+
+  it("un tableau aux mêmes colonnes reçoit des lignes, pas un second tableau", () => {
+    const t = parseDashboard({ blocks: [{ id: "t", type: "table", columns: ["Poste", "Coût"], rows: [["Vol", "300"]] }] })!;
+    const r = appliquerOperations(
+      t,
+      lireOperations([{ op: "ajouter", bloc: { type: "table", columns: ["poste", "coût"], rows: [["Hôtel", "500"]] } }])!
+    )!;
+    expect(r.spec.blocks).toHaveLength(1);
+    const tab = r.spec.blocks[0];
+    expect(tab.type === "table" ? tab.rows : []).toEqual([["Vol", "300"], ["Hôtel", "500"]]);
+  });
+
+  it("la consigne demande de modifier le bloc, pas d'en ajouter un second", () => {
+    expect(extractArtefactSignal).toBeDefined();
+    const { consigneArtefacts } = jest.requireActual("@/lib/artefactSignal");
+    expect(consigneArtefacts()).toContain("n'ajoute JAMAIS un second bloc du même genre");
+  });
+});

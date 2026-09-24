@@ -39,6 +39,7 @@ import {
 } from "@/lib/historiqueModele";
 import { contexteArtefacts, resoudreRetouche } from "@/lib/operationsBlocs";
 import { avecNouvelleVersion, restaurerVersion } from "@/lib/versionsArtefact";
+import { lireMessageOnglet, PREFIXE_ONGLET } from "@/lib/ongletArtefact";
 import { mesurerArtefact } from "@/lib/telemetrieArtefact";
 import { formeDeduite } from "@/lib/dashboardArtefact";
 import {
@@ -284,6 +285,8 @@ interface EspaceContextValue {
   toggleBlocChecklist: (artefactId: string, blocId: string, itemIndex: number) => void;
   /** Revient à une version antérieure d'un artefact — en rangeant l'actuelle. */
   restaurerVersionArtefact: (artefactId: string, n: number) => void;
+  /** Remplace un artefact modifié à la main ; `resume` présent = nouvelle version. */
+  modifierArtefact: (artefactId: string, apres: Artefact, resume?: string) => void;
   startNewConversation: () => void;
   switchConversation: (id: string) => void;
   confirmReservation: (itemId: string) => void;
@@ -1855,6 +1858,40 @@ export function EspaceProvider({
     });
   }, []);
 
+  /**
+   * Remplace un artefact par sa version modifiée (outils, autre onglet).
+   * `resume` présent : une ÉDITION, qui range l'état précédent dans
+   * l'historique. Absent : un simple état (case cochée), sans version.
+   */
+  const modifierArtefact = useCallback((artefactId: string, apres: Artefact, resume?: string) => {
+    const id = currentIdRef.current;
+    setEspaces((prev) => {
+      const espace = prev[id];
+      if (!espace) return prev;
+      const artefacts = espace.artefacts.map((a) => {
+        if (a.id !== artefactId) return a;
+        return resume
+          ? avecNouvelleVersion(a, { ...apres, id: a.id }, resume, horodatage())
+          : { ...apres, id: a.id, versions: a.versions };
+      });
+      return { ...prev, [id]: { ...espace, artefacts } };
+    });
+  }, []);
+
+  // Un artefact ouvert dans un AUTRE ONGLET renvoie ses modifications par le
+  // localStorage. L'événement `storage` ne se déclenche que dans les autres
+  // onglets : celui qui écrit ne se relit jamais, pas de boucle possible.
+  useEffect(() => {
+    function recevoir(e: StorageEvent) {
+      if (!e.key?.startsWith(PREFIXE_ONGLET)) return;
+      const m = lireMessageOnglet(e.newValue);
+      if (!m || m.source !== "onglet" || m.espaceId !== currentIdRef.current) return;
+      modifierArtefact(m.artefact.id, m.artefact, m.resume);
+    }
+    window.addEventListener("storage", recevoir);
+    return () => window.removeEventListener("storage", recevoir);
+  }, [modifierArtefact]);
+
   const restaurerVersionArtefact = useCallback((artefactId: string, n: number) => {
     const id = currentIdRef.current;
     setEspaces((prev) => {
@@ -2051,6 +2088,7 @@ export function EspaceProvider({
         toggleChecklistItem,
         toggleBlocChecklist,
         restaurerVersionArtefact,
+        modifierArtefact,
         startNewConversation,
         switchConversation,
         confirmReservation,

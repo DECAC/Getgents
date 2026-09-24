@@ -23,6 +23,7 @@ import {
 import { SafeHTMLDoc } from "@/components/shared/SafeHTML";
 import { renderMarkdown } from "@/lib/markdown";
 import {
+  ACCENTS,
   CHART_CATEGORICAL,
   type DashboardSpec,
   type DashboardBlock,
@@ -61,11 +62,13 @@ function ChartTooltip({ active, payload, label, unit }: { active?: boolean; payl
   );
 }
 
-function seriesColor(i: number): string {
+/** Avec un accent choisi, la PREMIÈRE série le prend ; les suivantes gardent la palette sûre. */
+function seriesColor(i: number, accent?: string): string {
+  if (i === 0 && accent) return accent;
   return CHART_CATEGORICAL[i % CHART_CATEGORICAL.length];
 }
 
-function ChartBlock({ block }: { block: Extract<DashboardBlock, { type: "chart" }> }) {
+function ChartBlock({ block, accent }: { block: Extract<DashboardBlock, { type: "chart" }>; accent?: string }) {
   const { variant, data, series, xKey = "label", unit, stacked, title } = block;
   const height = 240;
 
@@ -97,7 +100,7 @@ function ChartBlock({ block }: { block: Extract<DashboardBlock, { type: "chart" 
               labelLine={false}
             >
               {data.map((_, i) => (
-                <Cell key={i} fill={seriesColor(i)} />
+                <Cell key={i} fill={seriesColor(i, accent)} />
               ))}
             </Pie>
             <Tooltip content={<ChartTooltip unit={unit} />} />
@@ -110,7 +113,7 @@ function ChartBlock({ block }: { block: Extract<DashboardBlock, { type: "chart" 
 
   const renderSeries = (s: ChartSeries, i: number) => {
     const t = variant === "composed" ? s.type ?? "bar" : variant;
-    const color = seriesColor(i);
+    const color = seriesColor(i, accent);
     if (t === "line")
       return <Line key={s.key} type="monotone" dataKey={s.key} name={s.label} stroke={color} strokeWidth={2} dot={{ r: 3, fill: color, strokeWidth: 0 }} activeDot={{ r: 5 }} />;
     if (t === "area")
@@ -280,7 +283,15 @@ function TableBlock({ block }: { block: Extract<DashboardBlock, { type: "table" 
  */
 type BasculeChecklist = (blocId: string, itemIndex: number) => void;
 
-function Block({ block, onToggleChecklist }: { block: DashboardBlock; onToggleChecklist?: BasculeChecklist }) {
+function Block({
+  block,
+  onToggleChecklist,
+  accent,
+}: {
+  block: DashboardBlock;
+  onToggleChecklist?: BasculeChecklist;
+  accent?: string;
+}) {
   switch (block.type) {
     case "stats":
       return <StatsBlock items={block.items} />;
@@ -301,7 +312,7 @@ function Block({ block, onToggleChecklist }: { block: DashboardBlock; onToggleCh
     case "table":
       return <TableBlock block={block} />;
     case "chart":
-      return <ChartBlock block={block} />;
+      return <ChartBlock block={block} accent={accent} />;
     case "checklist":
       return (
         <div className={styles.card}>
@@ -349,8 +360,15 @@ export function DashboardArtefact({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // Accent choisi dans les outils : porté par deux variables CSS (couleur et
+  // teinte légère), lues par les titres, indicateurs, tableaux et frises.
+  const accent = spec.accent ? ACCENTS[spec.accent].couleur : undefined;
+  const style = accent
+    ? ({ "--accent-artefact": accent, "--accent-artefact-tint": `${accent}1f` } as React.CSSProperties)
+    : undefined;
+
   return (
-    <div className={styles.dashboard}>
+    <div className={styles.dashboard} style={style}>
       {spec.subtitle && <p className={styles.subtitle}>{spec.subtitle}</p>}
       <div className={styles.grid}>
         {spec.blocks.map((block, i) => {
@@ -363,7 +381,7 @@ export function DashboardArtefact({
           return (
             <div key={block.id ?? i} className={[span, touche ? styles.blocTouche : ""].filter(Boolean).join(" ")}>
               {touche && <span className={styles.blocToucheMarque}>Modifié</span>}
-              <Block block={block} onToggleChecklist={onToggleChecklist} />
+              <Block block={block} onToggleChecklist={onToggleChecklist} accent={accent} />
             </div>
           );
         })}

@@ -4,6 +4,7 @@ import {
   formeDeduite,
   ID_BLOC,
   lireBloc,
+  parseDashboard,
   type DashboardBlock,
   type DashboardSpec,
 } from "@/lib/dashboardArtefact";
@@ -103,6 +104,68 @@ export interface ResultatOperations {
   ignorees: number;
 }
 
+function normal(t: string | undefined): string {
+  return (t ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function titreDe(b: DashboardBlock): string | undefined {
+  return "title" in b ? b.title : undefined;
+}
+
+/**
+ * Le bloc existant dans lequel un AJOUT doit se fondre, s'il y en a un.
+ *
+ * Vécu : « ajoute Maltem avant Cegedim » a produit une SECONDE frise
+ * « Parcours » au-dessus de la première, au lieu d'une étape de plus. La
+ * consigne demande de modifier le bloc existant ; ce garde-fou rattrape le
+ * modèle qui ne l'a pas fait. Seulement pour les blocs-listes (frise,
+ * checklist, carte, fiche, tableau aux mêmes colonnes), et seulement sans
+ * ambiguïté : même titre, ou pas de titre face à un unique bloc de ce genre.
+ */
+function cibleDeFusion(blocs: DashboardBlock[], nouveau: DashboardBlock): number {
+  const LISTES = new Set(["timeline", "checklist", "map", "kv", "table"]);
+  if (!LISTES.has(nouveau.type)) return -1;
+  const memes = blocs
+    .map((b, i) => ({ b, i }))
+    .filter(({ b }) => b.type === nouveau.type)
+    .filter(({ b }) =>
+      b.type === "table" && nouveau.type === "table"
+        ? b.columns.map(normal).join("|") === nouveau.columns.map(normal).join("|")
+        : true
+    );
+  const titre = normal(titreDe(nouveau));
+  if (titre) {
+    const homonymes = memes.filter(({ b }) => normal(titreDe(b)) === titre);
+    return homonymes.length === 1 ? homonymes[0].i : -1;
+  }
+  return memes.length === 1 ? memes[0].i : -1;
+}
+
+/** Fond les éléments de `ajout` dans `cible`, en tête ou à la fin, sans doublon d'intitulé. */
+function fusionner(cible: DashboardBlock, ajout: DashboardBlock, enTete: boolean): DashboardBlock {
+  const joindre = <T,>(existants: T[], nouveaux: T[], cle: (x: T) => string, max: number): T[] => {
+    const deja = new Set(existants.map(cle));
+    const frais = nouveaux.filter((x) => !deja.has(cle(x)));
+    return (enTete ? [...frais, ...existants] : [...existants, ...frais]).slice(0, max);
+  };
+  if (cible.type === "timeline" && ajout.type === "timeline") {
+    return { ...cible, items: joindre(cible.items, ajout.items, (x) => normal(x.label), 12) };
+  }
+  if (cible.type === "checklist" && ajout.type === "checklist") {
+    return { ...cible, items: joindre(cible.items, ajout.items, (x) => normal(x.label), 30) };
+  }
+  if (cible.type === "map" && ajout.type === "map") {
+    return { ...cible, points: joindre(cible.points, ajout.points, (x) => normal(x.label), 25) };
+  }
+  if (cible.type === "kv" && ajout.type === "kv") {
+    return { ...cible, items: joindre(cible.items, ajout.items, (x) => normal(x.label), 24) };
+  }
+  if (cible.type === "table" && ajout.type === "table") {
+    return { ...cible, rows: joindre(cible.rows, ajout.rows, (r) => r.map(normal).join("|"), 40) };
+  }
+  return cible;
+}
+
 function inserer(blocs: DashboardBlock[], bloc: DashboardBlock, apres?: string): DashboardBlock[] | null {
   if (apres === "debut") return [bloc, ...blocs];
   if (!apres) return [...blocs, bloc];
@@ -135,6 +198,18 @@ export function appliquerOperations(spec: DashboardSpec, ops: OperationBloc[]): 
       touches.add(op.bloc);
       faits.push(`${nomDuBloc(blocs[i])} modifié`);
     } else if (op.op === "ajouter") {
+      const iFusion = cibleDeFusion(blocs, op.bloc);
+      if (iFusion >= 0) {
+        // Placé AVANT le bloc existant, l'ajout voulait ses éléments en tête
+        // (« avant Cegedim ») ; après, à la fin.
+        const iAncre = op.apres === "debut" ? -1 : op.apres ? blocs.findIndex((b) => b.id === op.apres) : blocs.length;
+        const enTete = iAncre < iFusion;
+        const cible = blocs[iFusion];
+        blocs = blocs.map((b, j) => (j === iFusion ? fusionner(cible, op.bloc, enTete) : b));
+        touches.add(cible.id!);
+        faits.push(`${nomDuBloc(cible)} complété`);
+        continue;
+      }
       if (blocs.length >= MAX_BLOCS) {
         ignorees += 1;
         continue;
@@ -294,5 +369,26 @@ export function resoudreRetouche(
       blocsTouches: res.blocsTouches,
       ignorees: res.ignorees,
     },
+  };
+}
+
+/**
+ * L'artefact après une édition À LA MAIN : ses blocs remplacent tout format
+ * historique (checklist, graphique, carte, rapport), repassés par la même
+ * validation que ce que produit le modèle — la main de l'utilisateur n'est
+ * pas plus fiable qu'un modèle pour les bornes et les identifiants.
+ */
+export function artefactDepuisBlocs(a: Artefact, spec: DashboardSpec, titre: string): Artefact | null {
+  const propre = parseDashboard(JSON.parse(JSON.stringify(spec)));
+  if (!propre) return null;
+  return {
+    id: a.id,
+    title: titre.replace(/\s+/g, " ").trim().slice(0, 140) || a.title,
+    type: formeDeduite(propre),
+    icon: a.icon,
+    date: a.date,
+    kind: "dashboard",
+    dashboard: propre,
+    versions: a.versions,
   };
 }

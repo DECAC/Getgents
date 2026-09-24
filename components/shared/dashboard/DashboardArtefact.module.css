@@ -74,7 +74,7 @@
   width: 4px;
   height: 17px;
   border-radius: 3px;
-  background: linear-gradient(180deg, var(--sage), var(--sage));
+  background: var(--accent-artefact, var(--sage));
   flex: none;
 }
 
@@ -85,7 +85,7 @@
   gap: 12px;
 }
 .stat {
-  background: linear-gradient(160deg, var(--sage-tint), var(--card) 70%);
+  background: linear-gradient(160deg, var(--accent-artefact-tint, var(--sage-tint)), var(--card) 70%);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 13px 15px;
@@ -215,7 +215,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--sage);
+  color: var(--accent-artefact, var(--sage));
   padding: 8px 10px;
   border-bottom: 1.5px solid var(--line);
   white-space: nowrap;
@@ -400,7 +400,7 @@
   font-variant-numeric: tabular-nums;
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--sage-700);
+  color: var(--accent-artefact, var(--sage-700));
 }
 
 /* États : ils empruntent au SÉMANTIQUE, jamais à l'accent, qui reste

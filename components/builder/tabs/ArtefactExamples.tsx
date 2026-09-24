@@ -124,7 +124,7 @@ const FREQUENCE_META: Record<FrequenceArtefacts, { label: string; aide: string }
  * Conversationnel » depuis la disparition de l'onglet Artefacts.
  */
 export function ArtefactExamples() {
-  const { currentDraft, updateFrequenceArtefacts } = useBuilder();
+  const { currentDraft, updateFrequenceArtefacts, updateArtefactsModifiables } = useBuilder();
   const frequence = currentDraft.frequenceArtefacts ?? "equilibre";
   return (
     <div className={styles.wrap}>
@@ -152,6 +152,21 @@ export function ArtefactExamples() {
           artefact, et un artefact jeté n&apos;est jamais reproposé. Pris en compte à la prochaine
           diffusion.
         </p>
+        <label className={styles.autorisation}>
+          <input
+            type="checkbox"
+            checked={currentDraft.artefactsModifiables === true}
+            onChange={(e) => updateArtefactsModifiables(e.target.checked)}
+          />
+          <span>
+            <b>Autoriser les utilisateurs à modifier les artefacts</b>
+            <span className={styles.autorisationAide}>
+              Outils d&apos;édition (textes, lignes, colonnes, couleur) et restauration des versions, pour les
+              personnes qui utilisent le gent par un lien ou sa page publique. Chacun modifie sa propre copie : vos
+              artefacts et ceux des autres utilisateurs ne changent pas.
+            </span>
+          </span>
+        </label>
       </div>
       <p className={styles.intro}>
         Le gent choisit lui-même le <b>format</b> le plus utile parmi ceux-ci — aucun n&apos;est à

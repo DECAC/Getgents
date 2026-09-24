@@ -107,9 +107,30 @@ type BlocSansId =
 
 export type DashboardBlock = BlocSansId & { id?: string };
 
+/**
+ * Couleur d'accent d'un artefact, choisie dans les outils. Palette FERMÉE :
+ * une couleur libre serait du CSS arbitraire écrit par l'utilisateur, rendu
+ * sur des pages publiques.
+ */
+export type AccentArtefact = "sauge" | "prune" | "ocre" | "bleu" | "ardoise" | "corail";
+
+export const ACCENTS: Record<AccentArtefact, { nom: string; couleur: string }> = {
+  sauge: { nom: "Sauge", couleur: "#4f8a76" },
+  prune: { nom: "Prune", couleur: "#8a4f7d" },
+  ocre: { nom: "Ocre", couleur: "#b7862e" },
+  bleu: { nom: "Bleu", couleur: "#2f6ea8" },
+  ardoise: { nom: "Ardoise", couleur: "#4b5563" },
+  corail: { nom: "Corail", couleur: "#d0654e" },
+};
+
+export function estAccent(v: unknown): v is AccentArtefact {
+  return typeof v === "string" && v in ACCENTS;
+}
+
 export interface DashboardSpec {
   subtitle?: string;
   blocks: DashboardBlock[];
+  accent?: AccentArtefact;
 }
 
 /**
@@ -382,7 +403,7 @@ export function parseDashboard(raw: unknown): DashboardSpec | null {
     lus.map((l) => l.bloc),
     lus.map((l) => l.id)
   );
-  return { subtitle: str(d.subtitle, 200), blocks };
+  return { subtitle: str(d.subtitle, 200), blocks, ...(estAccent(d.accent) ? { accent: d.accent } : {}) };
 }
 
 /**
