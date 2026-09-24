@@ -26,7 +26,7 @@ import { buildEspaceReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
 import { StarterBubbles } from "@/components/center/StarterBubbles";
 import { shouldShowConversationStarters } from "@/lib/starterSignal";
-import { MESSAGE_REESSAI_ARTEFACT } from "@/lib/artefactSignal";
+import { MESSAGE_REESSAI_ARTEFACT, MESSAGE_REPONSE_TEXTE } from "@/lib/artefactSignal";
 import { libelleGarder } from "@/lib/historiqueModele";
 import { formeDeduite, resumeComposition } from "@/lib/dashboardArtefact";
 import { BrandIcon } from "@/components/shared/BrandMark";
@@ -109,6 +109,7 @@ export function AssistantPanel({
     isThinking,
     thinkingStatus,
     artefactEnPreparation,
+    demanderArtefact,
     stopGeneration,
     geoStatus,
     confirmGeoRequest,
@@ -947,15 +948,39 @@ export function AssistantPanel({
                     : "Le gent a préparé un artefact, mais il n'a pas pu être lu."}
               </span>
               {isLastMessage && !isThinking && (
-                <button
-                  type="button"
-                  className={styles.artefactEchecBtn}
-                  onClick={() => sendMessage(MESSAGE_REESSAI_ARTEFACT[m.artefactEchec!])}
-                >
-                  Réessayer
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className={styles.artefactEchecBtn}
+                    onClick={() => sendMessage(MESSAGE_REESSAI_ARTEFACT[m.artefactEchec!])}
+                  >
+                    Réessayer
+                  </button>
+                  {/* Quand le texte s'est réduit à une phrase, l'artefact perdu
+                      laisserait l'utilisateur sans rien : on lui rend la
+                      réponse complète, dans le fil. */}
+                  <button
+                    type="button"
+                    className={styles.artefactEchecBtn}
+                    onClick={() => sendMessage(MESSAGE_REPONSE_TEXTE)}
+                  >
+                    Répondre dans le fil
+                  </button>
+                </>
               )}
             </div>
+          )}
+          {/* Le gent juge qu'un artefact servirait, sans l'avoir produit : le
+              choix revient à l'utilisateur, d'un clic, sans question posée
+              avant chaque réponse. */}
+          {isAgent && isLastMessage && !isThinking && m.artefactPossible && (
+            <button type="button" className={styles.enArtefactBtn} onClick={demanderArtefact}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="3" />
+                <path d="M8 9h8M8 13h8M8 17h5" />
+              </svg>
+              En faire un artefact
+            </button>
           )}
           {/* Les réponses rapides sont DANS la scène quand il y a une scène :
               les afficher en plus donnerait deux jeux de boutons. */}

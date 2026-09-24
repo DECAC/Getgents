@@ -1,5 +1,6 @@
 import type { Artefact, ConversationMessage } from "@/lib/types";
 import { ARTEFACT_KIND_META } from "@/lib/artefactKind";
+import { MESSAGE_EN_ARTEFACT, MESSAGE_REPONSE_TEXTE } from "@/lib/artefactSignal";
 
 /**
  * Historique envoyé au modèle, avec la MÉMOIRE de ses propositions d'artefact.
@@ -111,6 +112,42 @@ export function avecContexteEspace(historique: MessageModele[], contexte: string
   copie[i] = {
     role: "user",
     content: `[ESPACE]\nArtefacts gardés, avec l'identifiant de chaque bloc :\n${contexte}\n[/ESPACE]\n\n${historique[i].content}`,
+  };
+  return copie;
+}
+
+/**
+ * L'utilisateur a demandé DEUX fois « en faire un artefact » depuis son
+ * dernier « réponds dans le fil » : il préfère les artefacts dans cette
+ * conversation, on cesse de lui faire cliquer. Déduit de l'historique, sans
+ * état à stocker ni à synchroniser.
+ */
+export const SEUIL_PREFERENCE_ARTEFACT = 2;
+
+export function preferenceArtefact(messages: readonly ConversationMessage[]): boolean {
+  let demandes = 0;
+  for (const m of messages) {
+    if (m.role !== "user") continue;
+    const texte = sansBalises(m.text).trim();
+    if (texte === MESSAGE_EN_ARTEFACT) demandes += 1;
+    else if (texte === MESSAGE_REPONSE_TEXTE) demandes = 0;
+  }
+  return demandes >= SEUIL_PREFERENCE_ARTEFACT;
+}
+
+/** Joint la préférence au dernier message de l'utilisateur, comme le contexte [ESPACE]. */
+export function avecPreferenceArtefact(historique: MessageModele[], actif: boolean): MessageModele[] {
+  if (!actif) return historique;
+  let i = historique.length - 1;
+  while (i >= 0 && historique[i].role !== "user") i -= 1;
+  if (i < 0) return historique;
+  const copie = historique.slice();
+  copie[i] = {
+    role: "user",
+    content:
+      "[PRÉFÉRENCE] Dans cette conversation, l'utilisateur préfère les artefacts : dès que ta réponse s'y prête, " +
+      "produis directement l'artefact (une phrase de texte au plus), sans attendre qu'il le demande. [/PRÉFÉRENCE]\n\n" +
+      historique[i].content,
   };
   return copie;
 }

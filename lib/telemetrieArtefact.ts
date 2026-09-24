@@ -16,9 +16,10 @@ import { estFrequenceArtefacts, type FrequenceArtefacts } from "@/lib/artefactSi
  * Module PUR : la validation est testable, la route ne fait qu'écrire.
  */
 
-export type EvenementArtefact = "propose" | "garde" | "remplace" | "jete" | "perdu";
+/** `demande` : l'utilisateur a cliqué « En faire un artefact ». */
+export type EvenementArtefact = "propose" | "garde" | "remplace" | "jete" | "perdu" | "demande";
 
-const EVENEMENTS: readonly EvenementArtefact[] = ["propose", "garde", "remplace", "jete", "perdu"];
+const EVENEMENTS: readonly EvenementArtefact[] = ["propose", "garde", "remplace", "jete", "perdu", "demande"];
 const FORMES = ["report", "checklist", "chart", "visual", "map", "dashboard", "profile-summary", "image"] as const;
 const ECHECS = ["tronque", "illisible", "cible"] as const;
 

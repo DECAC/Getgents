@@ -24,8 +24,19 @@ import {
 } from "@/lib/conversationUtils";
 import { extractQuestions, extractFollowups, recoverQuestionsFromChoiceList } from "@/lib/suggestions";
 import { extractEtatJeu } from "@/lib/jeuEtat";
-import { extractArtefactSignal, artefactEnCoursDEcriture } from "@/lib/artefactSignal";
-import { artefactHomonyme, avecContexteEspace, historiquePourModele } from "@/lib/historiqueModele";
+import {
+  extractArtefactSignal,
+  extractArtefactPossible,
+  artefactEnCoursDEcriture,
+  MESSAGE_EN_ARTEFACT,
+} from "@/lib/artefactSignal";
+import {
+  artefactHomonyme,
+  avecContexteEspace,
+  avecPreferenceArtefact,
+  historiquePourModele,
+  preferenceArtefact,
+} from "@/lib/historiqueModele";
 import { contexteArtefacts, resoudreRetouche } from "@/lib/operationsBlocs";
 import { avecNouvelleVersion, restaurerVersion } from "@/lib/versionsArtefact";
 import { mesurerArtefact } from "@/lib/telemetrieArtefact";
@@ -214,6 +225,8 @@ interface EspaceContextValue {
   closeDocumentViewer: () => void;
   updateMemory: (text: string) => void;
   sendMessage: (text: string) => void;
+  /** « En faire un artefact » : demande l'artefact que le gent a jugé possible. */
+  demanderArtefact: () => void;
   /** Envoie une demande composée à partir d'un formulaire jump (voir jumpFormSignal). */
   submitJumpForm: (values: Record<string, string>) => void;
   /** Déploie la conversation et envoie la question d'amorce cliquée. */
@@ -703,9 +716,10 @@ export function EspaceProvider({
     // modèle reproposait ce qu'on venait de jeter (voir lib/historiqueModele).
     // Les artefacts gardés et leurs blocs accompagnent le message : c'est ce
     // qui permet au gent de RETOUCHER un bloc au lieu de tout régénérer.
-    const history = avecContexteEspace(
-      historiquePourModele([...(thread?.messages ?? []), userMsg]),
-      contexteArtefacts(espace.artefacts)
+    const filComplet = [...(thread?.messages ?? []), userMsg];
+    const history = avecPreferenceArtefact(
+      avecContexteEspace(historiquePourModele(filComplet), contexteArtefacts(espace.artefacts)),
+      preferenceArtefact(filComplet)
     );
 
     // Assemblage partagé avec le chemin « lien de partage » : un même gent
@@ -839,7 +853,10 @@ export function EspaceProvider({
           : recoverQuestionsFromChoiceList(extracted.text, { requireQuestion: true });
         const afterFollowups = extractFollowups(afterQuestions.text);
         const afterArtefact = extractArtefactSignal(afterFollowups.text);
-        const afterTheme = extractThemeTabSignal(afterArtefact.text);
+        // « Un artefact servirait ici » : bouton sous la réponse, sauf si un
+        // artefact a été produit ou annoncé (échec) — il n'y a alors rien à proposer.
+        const afterPossible = extractArtefactPossible(afterArtefact.text);
+        const afterTheme = extractThemeTabSignal(afterPossible.text);
         const afterGeo = extractGeolocRequest(afterTheme.text);
         const afterProfile = extractProfileSignal(afterGeo.text);
         const afterImage = extractImageSignal(afterProfile.text);
@@ -978,6 +995,7 @@ export function EspaceProvider({
                   followups,
                   reasoning: reasoning || undefined,
                   artefactEchec,
+                  artefactPossible: afterPossible.possible && !proposition && !artefactEchec,
                 };
               msgs.push({
                 id: proposalId,
@@ -999,6 +1017,7 @@ export function EspaceProvider({
             followups,
             reasoning: reasoning || undefined,
             artefactEchec,
+            artefactPossible: afterPossible.possible && !proposition && !artefactEchec,
           }));
         }
         // Illustration proposée : carte d'autorisation dans le fil — jamais
@@ -1059,6 +1078,19 @@ export function EspaceProvider({
         setArtefactEnPreparation(false);
       });
   }, [shareToken]);
+
+  /** Bouton « En faire un artefact » : un message visible, et une mesure. */
+  const demanderArtefact = useCallback(() => {
+    const e = espacesRef.current[currentIdRef.current];
+    mesurerArtefact({
+      evenement: "demande",
+      mode: shareToken ? "lien" : "espace",
+      modele: e?.chatModelId,
+      frequence: e?.frequenceArtefacts,
+      gent: e?.gent,
+    });
+    sendMessage(MESSAGE_EN_ARTEFACT);
+  }, [sendMessage, shareToken]);
 
   /**
    * Clic sur un déclencheur : la conversation se déploie et la question part
@@ -1984,6 +2016,7 @@ export function EspaceProvider({
         closeDocumentViewer,
         updateMemory,
         sendMessage,
+        demanderArtefact,
         submitJumpForm,
         runStarter,
         ensureStarters,

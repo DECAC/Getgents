@@ -95,6 +95,15 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   au vol (`versBlocs`) : tous sont retouchables. Chaque changement range
   l'état précédent (`versions`, 8 au plus) ; restaurer est lui-même un
   changement — rien n'est jamais détruit.
+- **« Réponse ou artefact » se choisit APRÈS, jamais avant.** Poser la
+  question avant chaque réponse coûterait un appel au modèle de plus à chaque
+  tour. Le gent qui juge un artefact utile sans le produire émet
+  `<!--ARTEFACT_POSSIBLE-->` → bouton « En faire un artefact ». Quand il en
+  produit un, son texte se réduit à UNE phrase (plus de double rédaction) ;
+  la carte d'échec offre alors « Répondre dans le fil », sinon un artefact
+  perdu laisserait l'utilisateur sans rien. Deux demandes depuis le dernier
+  « réponds dans le fil » = préférence `[PRÉFÉRENCE]`, déduite de
+  l'historique, sans état stocké.
 - **Facturation LLM** : `lib/server/openRouterKey.ts` est le SEUL endroit qui
   lit `OPENROUTER_API_KEY`. Un `ContexteLlm` explicite est passé en paramètre,
   jamais un `AsyncLocalStorage` : un chemin oublié serait un bug de

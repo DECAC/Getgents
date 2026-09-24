@@ -224,6 +224,8 @@ export interface ConversationMessage {
    * `EchecArtefact`.
    */
   artefactEchec?: import("@/lib/artefactSignal").EchecArtefact;
+  /** Le gent juge qu'un artefact servirait ici : bouton « En faire un artefact ». */
+  artefactPossible?: boolean;
   /**
    * État d'une partie en cours, émis par un moteur de jeu déterministe
    * (bloc `ETAT_JEU`). Porté par le MESSAGE et non par l'espace : il suit

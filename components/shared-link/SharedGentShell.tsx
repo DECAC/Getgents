@@ -54,10 +54,6 @@ function SharedGentBody({ token }: { token: string }) {
    * dans l'espace, `openArtefactModal` ne saurait pas le retrouver.
    */
   const [agrandi, setAgrandi] = useState(false);
-  useEffect(() => {
-    declarerVoletVerdict(!agrandi);
-    return () => declarerVoletVerdict(false);
-  }, [declarerVoletVerdict, agrandi]);
 
   /**
    * Écran étroit : le canevas est masqué par la feuille de style, et c'est lui
@@ -77,6 +73,16 @@ function SharedGentBody({ token }: { token: string }) {
     mq.addEventListener("change", suivre);
     return () => mq.removeEventListener("change", suivre);
   }, []);
+
+  /**
+   * Sur écran étroit, le volet est MASQUÉ : un artefact en attente de verdict
+   * y était pourtant envoyé, et n'apparaissait donc nulle part — le visiteur
+   * mobile ne voyait que le résumé du fil. La fenêtre reprend la main.
+   */
+  useEffect(() => {
+    declarerVoletVerdict(!agrandi && !etroit);
+    return () => declarerVoletVerdict(false);
+  }, [declarerVoletVerdict, agrandi, etroit]);
 
   /**
    * La conversation est ouverte DES LE DEPART — voir `assistantOuvertAuDepart`

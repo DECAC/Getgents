@@ -928,3 +928,33 @@
   background: var(--sage-tint);
   border-color: var(--sage);
 }
+
+/* « En faire un artefact » : proposé, pas imposé — une pastille discrète sous
+   la réponse, du même poids que les relances. */
+.enArtefactBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 7px 13px;
+  border: 1px solid var(--sage);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.enArtefactBtn:hover {
+  background: var(--sage-tint);
+}
+.enArtefactBtn:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .enArtefactBtn {
+    min-height: 40px;
+  }
+}

@@ -7,6 +7,15 @@
 const ARTEFACT_RE = /<!--ARTEFACT:\s*(\{[\s\S]*?\})\s*-->/;
 const TRUNCATED_MARKER_RE = /<!--ARTEFACT:[\s\S]*$/;
 
+/**
+ * « Un artefact servirait ici, mais je n'en ai pas produit » : le gent le
+ * signale au lieu de le produire d'office, et l'utilisateur choisit d'un
+ * clic. C'est le choix « réponse ou artefact », sans question posée avant
+ * chaque réponse — qui aurait coûté un appel au modèle de plus à chaque fois.
+ */
+export const ARTEFACT_POSSIBLE_MARQUEUR = "<!--ARTEFACT_POSSIBLE-->";
+
+
 import { parseDashboard, VOCABULAIRE_BLOCS, type DashboardSpec } from "@/lib/dashboardArtefact";
 import { lireOperations, type OperationBloc } from "@/lib/operationsBlocs";
 import {
@@ -123,7 +132,13 @@ export function consigneArtefacts(frequence: FrequenceArtefacts = "equilibre"): 
     "Pour la FICHE de synthèse d'une personne (qui elle est, ce qu'elle sait faire), utilise le format résumé de profil " +
     "décrit ci-dessous ; pour la chronologie de son parcours, une frise (timeline). " +
     "L'utilisateur choisit de garder ou de jeter l'artefact — ne dis jamais qu'il est déjà ajouté à l'espace. " +
-    "Jamais plus d'un artefact par réponse.\n\n" +
+    "Jamais plus d'un artefact par réponse.\n" +
+    "QUAND TU PRODUIS UN ARTEFACT, ton texte visible se limite à UNE phrase qui l'annonce (« Voici la frise de son " +
+    "parcours. ») : tout le contenu va dans l'artefact, ne le rédige jamais deux fois. Même règle pour une retouche " +
+    "(« C'est fait : j'ai ajouté l'étape. »).\n" +
+    "QUAND TU N'EN PRODUIS PAS alors que ta réponse contient un contenu qu'un artefact servirait vraiment (liste, étapes, " +
+    "chiffres, parcours, lieux, comparaison), réponds normalement et termine par " + ARTEFACT_POSSIBLE_MARQUEUR +
+    " sur sa propre ligne : l'utilisateur verra un bouton pour en demander un. Jamais pour une réponse courte ou un simple échange.\n\n" +
     PROFILE_SUMMARY_PROMPT_INSTRUCTION
   );
 }
@@ -238,6 +253,19 @@ export const MESSAGE_REESSAI_ARTEFACT: Record<EchecArtefact, string> = {
   illisible: "Redonne-moi l'artefact de ta réponse précédente, sans répéter le texte.",
   cible: "Refais cette modification sur l'artefact concerné, en utilisant les identifiants de ses blocs.",
 };
+
+export function extractArtefactPossible(raw: string): { text: string; possible: boolean } {
+  if (!raw.includes(ARTEFACT_POSSIBLE_MARQUEUR)) return { text: raw, possible: false };
+  return { text: raw.split(ARTEFACT_POSSIBLE_MARQUEUR).join("").trim(), possible: true };
+}
+
+/**
+ * Messages envoyés par les boutons, VISIBLES dans le fil comme tout message :
+ * l'utilisateur voit ce qu'on demande en son nom, et la préférence qui en
+ * découle se lit dans l'historique (voir `preferenceArtefact`).
+ */
+export const MESSAGE_EN_ARTEFACT = "Fais-en un artefact, sans répéter le texte.";
+export const MESSAGE_REPONSE_TEXTE = "Réponds-moi directement dans la conversation, sans artefact.";
 
 /** Le flux est-il en train d'écrire un bloc d'artefact ? */
 export function artefactEnCoursDEcriture(fluxPartiel: string): boolean {
