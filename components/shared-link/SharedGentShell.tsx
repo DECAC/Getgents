@@ -281,7 +281,11 @@ function SharedGentBody({ token }: { token: string }) {
           {chatOpen && (
             <div className={styles.voletBarre}>
               <span className={styles.voletTitre}>
-                {apercu ? apercu.preview.title : "Ce que le gent a produit"}
+                {apercu
+                  ? apercu.modification
+                    ? `Modification — ${apercu.preview.title}`
+                    : apercu.preview.title
+                  : "Ce que le gent a produit"}
               </span>
               <div className={styles.voletActions}>
                 {apercu ? (
@@ -309,7 +313,7 @@ function SharedGentBody({ token }: { token: string }) {
                       className={styles.voletGarder}
                       onClick={() => confirmArtefactProposal(apercu.proposalMessageId, "add")}
                     >
-                      {libelleGarder(currentEspace.artefacts, apercu.preview.title)}
+                      {libelleGarder(currentEspace.artefacts, apercu.preview.title, !!apercu.modification)}
                     </button>
                   </>
                 ) : (
@@ -350,7 +354,19 @@ function SharedGentBody({ token }: { token: string }) {
             ) : apercu ? (
               /* Aperçu en attente : le MÊME rendu que la fenêtre, par le
                  composant partagé — ce qu'on garde doit être ce qu'on a vu. */
-              <ArtefactCorps artefact={apercu.preview} interactif={false} />
+              <>
+                {apercu.modification && (
+                  <p className={styles.modifResume}>
+                    {apercu.modification.resume.charAt(0).toUpperCase() + apercu.modification.resume.slice(1)}. Le
+                    reste est conservé à l&apos;identique.
+                  </p>
+                )}
+                <ArtefactCorps
+                  artefact={apercu.preview}
+                  interactif={false}
+                  blocsTouches={apercu.modification?.blocsTouches}
+                />
+              </>
             ) : espaceGarni ? (
               <WorkspaceCanvas espace={currentEspace} />
             ) : (

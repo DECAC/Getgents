@@ -36,6 +36,7 @@ const VERDICT: Record<"pending" | "added" | "dismissed", string> = {
 const PERTE: Record<NonNullable<ConversationMessage["artefactEchec"]>, string> = {
   tronque: "réponse coupée",
   illisible: "illisible",
+  cible: "artefact ou bloc visé introuvable",
 };
 
 function sansBalises(html: string | undefined): string {
@@ -55,9 +56,14 @@ export function historiquePourModele(messages: readonly ConversationMessage[]): 
       // Rattachée à la DERNIÈRE réponse du gent : c'est elle qui l'a émise.
       const precedente = [...sortie].reverse().find((x) => x.role === "assistant");
       if (!precedente) continue;
-      const forme = ARTEFACT_KIND_META[m.proposal.kind]?.type ?? m.proposal.kind;
       const verdict = VERDICT[m.proposalStatus ?? "pending"];
-      precedente.content += `\n[Artefact proposé : « ${m.proposal.title} » (${forme}) — ${verdict}]`;
+      if (m.proposal.modification) {
+        const etat = m.proposalStatus === "added" ? "appliquée" : m.proposalStatus === "dismissed" ? "jetée" : "sans réponse";
+        precedente.content += `\n[Modification proposée de « ${m.proposal.title} » : ${m.proposal.modification.resume} — ${etat}]`;
+      } else {
+        const forme = ARTEFACT_KIND_META[m.proposal.kind]?.type ?? m.proposal.kind;
+        precedente.content += `\n[Artefact proposé : « ${m.proposal.title} » (${forme}) — ${verdict}]`;
+      }
     }
   }
   return sortie;
@@ -81,7 +87,30 @@ export function artefactHomonyme(artefacts: readonly Artefact[], titre: string):
   return artefacts.find((a) => a.id !== "visionneuse-doc" && normaliserTitre(a.title) === cible);
 }
 
-/** Libellé du bouton « garder » : il annonce un remplacement quand c'en est un. */
-export function libelleGarder(artefacts: readonly Artefact[], titre: string): string {
+/** Libellé du bouton « garder » : il annonce un remplacement ou une retouche quand c'en est un. */
+export function libelleGarder(artefacts: readonly Artefact[], titre: string, retouche = false): string {
+  if (retouche) return "Appliquer la modification";
   return artefactHomonyme(artefacts, titre) ? "Mettre à jour dans l'espace" : "Garder dans l'espace";
+}
+
+/**
+ * Joint au DERNIER message de l'utilisateur la description des artefacts
+ * gardés et de leurs blocs, pour que le modèle puisse les retoucher.
+ *
+ * Dans le message et non dans le prompt système : sur un lien public, le
+ * prompt est assemblé côté serveur, qui ignore ce que le visiteur a gardé
+ * dans son navigateur. Le message, lui, est construit ici sur les deux
+ * chemins. Le dernier, parce que la route ne transmet que les 20 derniers.
+ */
+export function avecContexteEspace(historique: MessageModele[], contexte: string): MessageModele[] {
+  if (!contexte.trim()) return historique;
+  let i = historique.length - 1;
+  while (i >= 0 && historique[i].role !== "user") i -= 1;
+  if (i < 0) return historique;
+  const copie = historique.slice();
+  copie[i] = {
+    role: "user",
+    content: `[ESPACE]\nArtefacts gardés, avec l'identifiant de chaque bloc :\n${contexte}\n[/ESPACE]\n\n${historique[i].content}`,
+  };
+  return copie;
 }

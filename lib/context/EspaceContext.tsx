@@ -25,7 +25,9 @@ import {
 import { extractQuestions, extractFollowups, recoverQuestionsFromChoiceList } from "@/lib/suggestions";
 import { extractEtatJeu } from "@/lib/jeuEtat";
 import { extractArtefactSignal, artefactEnCoursDEcriture } from "@/lib/artefactSignal";
-import { artefactHomonyme, historiquePourModele } from "@/lib/historiqueModele";
+import { artefactHomonyme, avecContexteEspace, historiquePourModele } from "@/lib/historiqueModele";
+import { contexteArtefacts, resoudreRetouche } from "@/lib/operationsBlocs";
+import { avecNouvelleVersion, restaurerVersion } from "@/lib/versionsArtefact";
 import { mesurerArtefact } from "@/lib/telemetrieArtefact";
 import { formeDeduite } from "@/lib/dashboardArtefact";
 import {
@@ -57,6 +59,17 @@ import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel, humanToolCal
 import { supportsReasoningStream } from "@/lib/openRouterReasoning";
 import { buildJumpFormPrompt } from "@/lib/jumpFormSignal";
 import { buildGentSystemPrompt } from "@/lib/gentRuntimePrompt";
+
+/**
+ * L'artefact qu'une proposition REMPLACE : celui qu'une retouche vise par son
+ * identifiant, sinon celui qui porte le même titre (version complète).
+ */
+function cibleDuRemplacement(artefacts: Artefact[], proposition: ArtefactProposal): Artefact | undefined {
+  if (proposition.modification) {
+    return artefacts.find((a) => a.id === proposition.modification!.artefactId);
+  }
+  return artefactHomonyme(artefacts, proposition.title);
+}
 
 function artefactFromProposal(sig: ArtefactProposal, id: string): Artefact {
   const meta = ARTEFACT_KIND_META[sig.kind] ?? { type: "Artefact", icon: "📄" };
@@ -113,6 +126,11 @@ type ActiveTab = number | "map";
 /** Heure réelle du message (HH:MM) — utilisée par les rapports et l'audit. */
 function nowTime(): string {
   return new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+/** Jour et heure : un historique de versions s'étale sur plusieurs jours. */
+function horodatage(): string {
+  return new Date().toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 export type GeoStatus = "idle" | "pending" | "granted" | "denied";
@@ -251,6 +269,8 @@ interface EspaceContextValue {
   toggleChecklistItem: (artefactId: string, itemIndex: number) => void;
   /** Coche une case d'un bloc checklist, dans un artefact à blocs. */
   toggleBlocChecklist: (artefactId: string, blocId: string, itemIndex: number) => void;
+  /** Revient à une version antérieure d'un artefact — en rangeant l'actuelle. */
+  restaurerVersionArtefact: (artefactId: string, n: number) => void;
   startNewConversation: () => void;
   switchConversation: (id: string) => void;
   confirmReservation: (itemId: string) => void;
@@ -681,7 +701,12 @@ export function EspaceProvider({
     const thread = espace.conversations.find((t) => t.id === threadId);
     // Les propositions d'artefact et leur verdict y voyagent : sans elles, le
     // modèle reproposait ce qu'on venait de jeter (voir lib/historiqueModele).
-    const history = historiquePourModele([...(thread?.messages ?? []), userMsg]);
+    // Les artefacts gardés et leurs blocs accompagnent le message : c'est ce
+    // qui permet au gent de RETOUCHER un bloc au lieu de tout régénérer.
+    const history = avecContexteEspace(
+      historiquePourModele([...(thread?.messages ?? []), userMsg]),
+      contexteArtefacts(espace.artefacts)
+    );
 
     // Assemblage partagé avec le chemin « lien de partage » : un même gent
     // doit se comporter à l'identique en Preview et chez un destinataire.
@@ -821,15 +846,23 @@ export function EspaceProvider({
         // Coupée PENDANT l'artefact : le texte, lui, est complet, et « écrivez
         // continue » ne rendrait pas l'artefact. C'est la carte d'échec, sous
         // la réponse, qui l'explique et propose de réessayer.
-        const artefactEchec = afterArtefact.echec;
+        // Une retouche se résout contre les artefacts gardés : elle devient la
+        // proposition de leur nouvelle version, ou un échec « cible » annoncé.
+        const signal = afterArtefact.artefact;
+        let proposition: ArtefactProposal | null = signal;
+        let artefactEchec = afterArtefact.echec;
+        if (signal?.operations && signal.cible) {
+          proposition = resoudreRetouche(espace.artefacts, signal.cible, signal.operations);
+          if (!proposition) artefactEchec = "cible";
+        }
         const contexteMesure = {
           mode: shareToken ? ("lien" as const) : ("espace" as const),
           modele: chatModelId,
           frequence: espace.frequenceArtefacts,
           gent: espace.gent,
         };
-        if (afterArtefact.artefact) {
-          mesurerArtefact({ ...contexteMesure, evenement: "propose", forme: afterArtefact.artefact.kind });
+        if (proposition) {
+          mesurerArtefact({ ...contexteMesure, evenement: "propose", forme: proposition.kind });
         } else if (artefactEchec) {
           mesurerArtefact({ ...contexteMesure, evenement: "perdu", echec: artefactEchec });
         }
@@ -890,8 +923,8 @@ export function EspaceProvider({
           });
         }
 
-        if (afterArtefact.artefact) {
-          const sig = afterArtefact.artefact;
+        if (proposition) {
+          const sig = proposition;
           const proposalId = `prop-${Date.now()}`;
           const attachedTheme = afterTheme.themeAction ?? undefined;
           // Prévisualisation seulement : l'artefact n'entre dans l'espace qu'au Garder.
@@ -926,7 +959,7 @@ export function EspaceProvider({
           });
           setModalArtefactId(null);
           setModalResvId(null);
-          setPendingArtefactVerdict({ proposalMessageId: proposalId, preview });
+          setPendingArtefactVerdict({ proposalMessageId: proposalId, preview, modification: sig.modification });
         } else if (afterTheme.themeAction) {
           const action = afterTheme.themeAction;
           const proposalId = `theme-prop-${Date.now()}`;
@@ -1490,7 +1523,7 @@ export function EspaceProvider({
             evenement:
               decision === "dismiss"
                 ? ("jete" as const)
-                : artefactHomonyme(avant!.artefacts, proposition.proposal.title)
+                : cibleDuRemplacement(avant!.artefacts, proposition.proposal)
                   ? ("remplace" as const)
                   : ("garde" as const),
             forme: proposition.proposal.kind,
@@ -1517,10 +1550,17 @@ export function EspaceProvider({
       // Même titre qu'un artefact gardé : c'est sa version mise à jour, qui le
       // REMPLACE sur place — même id, donc même onglet. L'ajouter à côté
       // produisait un doublon à chaque retouche demandée au gent.
-      const homonyme = decision === "add" ? artefactHomonyme(espace.artefacts, targetMsg.proposal.title) : undefined;
+      const homonyme = decision === "add" ? cibleDuRemplacement(espace.artefacts, targetMsg.proposal) : undefined;
       if (homonyme) {
         newArtefactId = homonyme.id;
-        const misAJour = artefactFromProposal(targetMsg.proposal, homonyme.id);
+        // L'état précédent rejoint l'historique : une retouche appliquée, ou
+        // une version complète qui remplace, n'écrase plus rien.
+        const misAJour = avecNouvelleVersion(
+          homonyme,
+          artefactFromProposal(targetMsg.proposal, homonyme.id),
+          targetMsg.proposal.modification?.resume ?? "nouvelle version complète",
+          horodatage()
+        );
         // En tête, comme un nouvel artefact : c'est lui que l'espace montre.
         artefacts = [misAJour, ...espace.artefacts.filter((a) => a.id !== homonyme.id)];
         if (misAJour.document) keptDocumentId = misAJour.id;
@@ -1783,6 +1823,15 @@ export function EspaceProvider({
     });
   }, []);
 
+  const restaurerVersionArtefact = useCallback((artefactId: string, n: number) => {
+    const id = currentIdRef.current;
+    setEspaces((prev) => {
+      const espace = prev[id];
+      const artefacts = espace.artefacts.map((a) => (a.id === artefactId ? restaurerVersion(a, n, horodatage()) ?? a : a));
+      return { ...prev, [id]: { ...espace, artefacts } };
+    });
+  }, []);
+
   const toggleBlocChecklist = useCallback((artefactId: string, blocId: string, itemIndex: number) => {
     const id = currentIdRef.current;
     setEspaces((prev) => {
@@ -1968,6 +2017,7 @@ export function EspaceProvider({
         confirmProfileProposal,
         toggleChecklistItem,
         toggleBlocChecklist,
+        restaurerVersionArtefact,
         startNewConversation,
         switchConversation,
         confirmReservation,

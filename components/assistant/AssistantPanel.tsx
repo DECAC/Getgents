@@ -448,7 +448,9 @@ export function AssistantPanel({
           <button key={i} className={styles.artefPointer} onClick={() => viewArtefact(m.id ?? "")}>
             <div className={[styles.pic, styles.picSent].join(" ")}>✓</div>
             <div className={styles.ptext}>
-              <div className={styles.ptitle}>Gardé dans l&apos;espace — {p.title}</div>
+              <div className={styles.ptitle}>
+                {p.modification ? "Modification appliquée" : "Gardé dans l'espace"} — {p.title}
+              </div>
             </div>
             <div className={styles.plink}>
               Voir
@@ -462,7 +464,7 @@ export function AssistantPanel({
       if (m.proposalStatus === "dismissed") {
         return (
           <div key={i} className={styles.proposalDismissed}>
-            Jeté — {p.title}
+            {p.modification ? "Modification jetée" : "Jeté"} — {p.title}
           </div>
         );
       }
@@ -470,15 +472,26 @@ export function AssistantPanel({
         <div key={i} className={styles.proposalCard}>
           <div className={styles.proposalHead}>
             <span className={styles.proposalKind}>
-              {p.dashboard ? formeDeduite(p.dashboard) : PROPOSAL_KIND_LABEL[p.kind] ?? "Artefact"}
+              {p.modification
+                ? "Modification"
+                : p.dashboard
+                  ? formeDeduite(p.dashboard)
+                  : PROPOSAL_KIND_LABEL[p.kind] ?? "Artefact"}
             </span>
             <span className={styles.proposalTitle}>{p.title}</span>
           </div>
-          {p.dashboard && (
+          {p.modification ? (
             <div className={styles.proposalBody}>
-              {resumeComposition(p.dashboard)} — {p.dashboard.blocks.length} bloc
-              {p.dashboard.blocks.length > 1 ? "s" : ""}.
+              {p.modification.resume.charAt(0).toUpperCase() + p.modification.resume.slice(1)}. Le reste est conservé
+              à l&apos;identique.
             </div>
+          ) : (
+            p.dashboard && (
+              <div className={styles.proposalBody}>
+                {resumeComposition(p.dashboard)} — {p.dashboard.blocks.length} bloc
+                {p.dashboard.blocks.length > 1 ? "s" : ""}.
+              </div>
+            )
           )}
           {p.profileSummary && (
             <div className={styles.proposalBody}>
@@ -514,7 +527,7 @@ export function AssistantPanel({
               className={styles.proposalAddBtn}
               onClick={() => confirmArtefactProposal(m.id ?? "", "add")}
             >
-              {libelleGarder(currentEspace.artefacts, p.title)}
+              {libelleGarder(currentEspace.artefacts, p.title, !!p.modification)}
             </button>
             <button
               type="button"
@@ -929,7 +942,9 @@ export function AssistantPanel({
               <span>
                 {m.artefactEchec === "tronque"
                   ? "L'artefact que le gent préparait a été coupé : la réponse a atteint sa longueur maximale."
-                  : "Le gent a préparé un artefact, mais il n'a pas pu être lu."}
+                  : m.artefactEchec === "cible"
+                    ? "Le gent a voulu modifier un artefact, mais ni l'artefact ni les blocs visés n'ont été trouvés dans l'espace."
+                    : "Le gent a préparé un artefact, mais il n'a pas pu être lu."}
               </span>
               {isLastMessage && !isThinking && (
                 <button

@@ -82,6 +82,19 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   `id` stable : c'est le socle des retouches ciblées et des versions, étape
   suivante. Tout code qui parcourt les blocs doit traiter chaque type — deux
   conversions jetaient la frise sans bruit (canevas d'aperçu, e-mail).
+- **Retoucher = des OPÉRATIONS sur des blocs, jamais une régénération.**
+  `{cible, operations:[modifier|ajouter|supprimer|deplacer]}`
+  (`lib/operationsBlocs.ts`) : tout bloc non visé reste identique, un bloc
+  introuvable est ignoré ET compté, jamais deviné. Le modèle voit les
+  artefacts gardés et leurs `id` dans un bloc `[ESPACE]…[/ESPACE]` joint au
+  DERNIER message utilisateur — pas au prompt système, que le serveur
+  assemble sur un lien public sans connaître ce que le visiteur a gardé ; le
+  dernier, parce que la route ne transmet que 20 messages. Coût : jusqu'à
+  8 000 caractères par tour quand des artefacts sont gardés. Les artefacts
+  historiques (checklist, graphique, carte, rapport) sont convertis en blocs
+  au vol (`versBlocs`) : tous sont retouchables. Chaque changement range
+  l'état précédent (`versions`, 8 au plus) ; restaurer est lui-même un
+  changement — rien n'est jamais détruit.
 - **Facturation LLM** : `lib/server/openRouterKey.ts` est le SEUL endroit qui
   lit `OPENROUTER_API_KEY`. Un `ContexteLlm` explicite est passé en paramètre,
   jamais un `AsyncLocalStorage` : un chemin oublié serait un bug de

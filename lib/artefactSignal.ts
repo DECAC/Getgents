@@ -8,6 +8,7 @@ const ARTEFACT_RE = /<!--ARTEFACT:\s*(\{[\s\S]*?\})\s*-->/;
 const TRUNCATED_MARKER_RE = /<!--ARTEFACT:[\s\S]*$/;
 
 import { parseDashboard, VOCABULAIRE_BLOCS, type DashboardSpec } from "@/lib/dashboardArtefact";
+import { lireOperations, type OperationBloc } from "@/lib/operationsBlocs";
 import {
   parseProfileSummary,
   PROFILE_SUMMARY_PROMPT_INSTRUCTION,
@@ -32,6 +33,9 @@ export interface ArtefactSignal {
   mapPoints?: { label: string; lat: number; lon: number }[];
   dashboard?: DashboardSpec;
   profileSummary?: ProfileSummary;
+  /** Retouche : artefact visé (identifiant ou titre) et opérations à appliquer. */
+  cible?: string;
+  operations?: OperationBloc[];
 }
 
 const KIND_LIST: ArtefactKind[] = [
@@ -95,8 +99,16 @@ export function consigneArtefacts(frequence: FrequenceArtefacts = "equilibre"): 
     "3. Tes propositions passées figurent dans l'historique sous la forme " +
     "[Artefact proposé : « titre » (forme) — gardé | jeté | sans réponse]. Ne repropose JAMAIS un artefact jeté, " +
     "ni un doublon d'un artefact gardé. Si les deux dernières propositions ont été jetées, n'en propose plus sauf " +
-    "demande explicite. Si l'utilisateur veut MODIFIER un artefact gardé, produis sa version complète mise à jour " +
-    "sous EXACTEMENT le même titre : elle remplacera l'ancienne. N'écris jamais toi-même ces annotations entre crochets.\n" +
+    "demande explicite. N'écris jamais toi-même ces annotations entre crochets.\n" +
+    "3 bis. L'utilisateur veut MODIFIER un artefact gardé : n'en produis PAS un nouveau. Les artefacts gardés et leurs " +
+    "blocs figurent au début de son message, entre [ESPACE] et [/ESPACE] (ce passage n'est pas écrit par lui). Émets " +
+    "des opérations sur les seuls blocs concernés — tout le reste est conservé à l'identique : " +
+    '<!--ARTEFACT: {"cible":"<identifiant de l\'artefact>","operations":[' +
+    '{"op":"modifier","bloc":"b3","avec":{…le bloc complet, modifié…}},' +
+    '{"op":"ajouter","apres":"b2","bloc":{…}},' +
+    '{"op":"supprimer","bloc":"b4"},' +
+    '{"op":"deplacer","bloc":"b4","apres":"b1"}]}--> ' +
+    '("apres":"debut" pour placer en tête ; sans "apres", à la fin). Utilise EXACTEMENT les identifiants listés, n\'en invente jamais.\n' +
     "4. Tu viens de dire que tu n'as pas l'information : pas d'artefact sur ce sujet — un livrable à trous paraîtrait fiable.\n" +
     SEUIL_PAR_FREQUENCE[frequence] +
     "\n\nFORMAT — un artefact est une suite de BLOCS que tu composes librement. Quand tu en produis un, termine ta réponse " +
@@ -125,14 +137,16 @@ export const ARTEFACT_PROMPT_INSTRUCTION = consigneArtefacts("equilibre");
  *   - `tronque`   : le bloc a commencé mais la réponse s'est arrêtée avant sa
  *                   fin (plafond de longueur) ;
  *   - `illisible` : le bloc est complet mais son contenu est inexploitable
- *                   (JSON invalide, type inconnu, titre ou nom manquant).
+ *                   (JSON invalide, type inconnu, titre ou nom manquant) ;
+ *   - `cible`     : une retouche vise un artefact qui n'est pas (ou plus) dans
+ *                   l'espace, ou dont aucun bloc visé n'existe.
  *
  * Absent quand aucun artefact n'était annoncé — le cas normal. Les deux
  * premiers étaient autrefois confondus avec lui : l'artefact disparaissait
  * sans un mot, alors que le modèle venait de passer de longues secondes à
  * l'écrire.
  */
-export type EchecArtefact = "tronque" | "illisible";
+export type EchecArtefact = "tronque" | "illisible" | "cible";
 
 export function extractArtefactSignal(raw: string): {
   text: string;
@@ -149,6 +163,17 @@ export function extractArtefactSignal(raw: string): {
   let artefact: ArtefactSignal | null = null;
   try {
     const parsed = JSON.parse(match[1]);
+    // Retouche d'un artefact gardé : { cible, operations }. L'artefact visé
+    // n'est connu que de l'espace — la résolution se fait à l'arrivée.
+    if (parsed && typeof parsed.cible === "string" && parsed.cible.trim() && Array.isArray(parsed.operations)) {
+      const operations = lireOperations(parsed.operations);
+      artefact = operations
+        ? { kind: "dashboard", title: parsed.cible.trim(), cible: parsed.cible.trim(), operations }
+        : null;
+      const start = match.index ?? 0;
+      const text = (raw.slice(0, start) + raw.slice(start + match[0].length)).trim();
+      return artefact ? { text, artefact } : { text, artefact: null, echec: "illisible" };
+    }
     // Format unique : { title, subtitle?, blocks }. Le résumé de profil garde
     // son format propre (rendu dédié, médias à générer).
     if (parsed && typeof parsed.title === "string" && Array.isArray(parsed.blocks) && parsed.kind !== "profile-summary") {
@@ -211,6 +236,7 @@ export function extractArtefactSignal(raw: string): {
 export const MESSAGE_REESSAI_ARTEFACT: Record<EchecArtefact, string> = {
   tronque: "Redonne-moi l'artefact de ta réponse précédente, en version plus compacte, sans répéter le texte.",
   illisible: "Redonne-moi l'artefact de ta réponse précédente, sans répéter le texte.",
+  cible: "Refais cette modification sur l'artefact concerné, en utilisant les identifiants de ses blocs.",
 };
 
 /** Le flux est-il en train d'écrire un bloc d'artefact ? */

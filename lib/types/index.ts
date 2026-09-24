@@ -153,6 +153,26 @@ export interface ArtefactProposal {
   imageUrl?: string;
   imageCaption?: string;
   imageSource?: "generated" | "web";
+  /**
+   * Retouche d'un artefact GARDÉ : `dashboard` porte alors son contenu APRÈS
+   * application des opérations, et ceci dit lequel, et ce qui a changé.
+   */
+  modification?: {
+    artefactId: string;
+    resume: string;
+    blocsTouches: string[];
+    /** Opérations écartées (bloc introuvable) — annoncées, jamais devinées. */
+    ignorees: number;
+  };
+}
+
+/** Un état antérieur d'un artefact — voir lib/versionsArtefact.ts. */
+export interface VersionArtefact {
+  n: number;
+  date: string;
+  /** Ce qui a changé ENSUITE (« « Parcours » modifié »). */
+  resume: string;
+  contenu: Omit<Artefact, "id" | "versions">;
 }
 
 /**
@@ -301,6 +321,8 @@ export interface Artefact {
   profileSummary?: import("@/lib/profileSummaryArtefact").ProfileSummaryStored;
   /** Visionneuse de document : lecture immersive paginée, avec sommaire. */
   document?: DocumentViewerSpec;
+  /** États antérieurs, le plus récent en tête — voir lib/versionsArtefact.ts. */
+  versions?: VersionArtefact[];
 }
 
 /**
@@ -311,6 +333,8 @@ export interface Artefact {
 export interface PendingArtefactVerdict {
   proposalMessageId: string;
   preview: Artefact;
+  /** Retouche : ce qui change, pour le dire et le mettre en évidence dans l'aperçu. */
+  modification?: ArtefactProposal["modification"];
 }
 
 /** Une entrée de sommaire, cliquable, pointant vers une page du document. */

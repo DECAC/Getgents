@@ -491,3 +491,26 @@
     margin-left: 8px;
   }
 }
+
+/* Bloc changé par une retouche en attente de verdict. Un liseré et une
+   étiquette discrète : on doit voir d'un coup d'œil ce qui change, sans que
+   le reste paraisse moins important. */
+.blocTouche {
+  position: relative;
+  border-radius: var(--r, 12px);
+  box-shadow: 0 0 0 2px var(--sage);
+}
+
+.blocToucheMarque {
+  position: absolute;
+  top: -9px;
+  right: 12px;
+  z-index: 1;
+  padding: 1px 8px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--sage);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}

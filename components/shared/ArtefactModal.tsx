@@ -15,6 +15,7 @@ import { ArtefactIcon } from "./ArtefactIcon";
 import { hasReportBody } from "@/lib/reportArtefact";
 import type { Artefact } from "@/lib/types";
 import { libelleGarder } from "@/lib/historiqueModele";
+import { numeroVersion } from "@/lib/versionsArtefact";
 import styles from "./Modal.module.css";
 
 function VisualGrid() {
@@ -64,9 +65,12 @@ function VisualGrid() {
 export function ArtefactCorps({
   artefact,
   interactif,
+  blocsTouches,
 }: {
   artefact: Artefact;
   interactif: boolean;
+  /** Retouche en attente : blocs à mettre en évidence. */
+  blocsTouches?: readonly string[];
 }) {
   const { toggleChecklistItem, toggleBlocChecklist, userPosition, generateProfileSummaryMedia } = useEspace();
   const isReport = hasReportBody(artefact);
@@ -76,6 +80,7 @@ export function ArtefactCorps({
         <DashboardArtefact
           spec={artefact.dashboard}
           onToggleChecklist={interactif ? (blocId, i) => toggleBlocChecklist(artefact.id, blocId, i) : undefined}
+          blocsTouches={blocsTouches}
         />
       )}
       {artefact.profileSummary && (
@@ -134,7 +139,9 @@ export function ArtefactModal() {
     generateProfileSummaryMedia,
     confirmArtefactProposal,
     verdictEnVolet,
+    restaurerVersionArtefact,
   } = useEspace();
+  const [historiqueOuvert, setHistoriqueOuvert] = useState(false);
 
   const isVerdict = !!pendingArtefactVerdict;
 
@@ -253,17 +260,73 @@ export function ArtefactModal() {
           <div>
             <h3 className={styles.title} id="modal-title">{artefact.title}</h3>
             <div className={styles.meta}>
-              <span className={styles.typePill}>{artefact.type}</span>
+              <span className={styles.typePill}>
+                {pendingArtefactVerdict?.modification ? "Modification" : artefact.type}
+              </span>
               <span>{artefact.date}</span>
+              {/* L'historique n'a de sens que sur un artefact GARDÉ. */}
+              {!isVerdict && !!artefact.versions?.length && (
+                <button
+                  type="button"
+                  className={styles.versionsBtn}
+                  onClick={() => setHistoriqueOuvert((o) => !o)}
+                  aria-expanded={historiqueOuvert}
+                >
+                  Version {numeroVersion(artefact)} · historique
+                </button>
+              )}
             </div>
+            {pendingArtefactVerdict?.modification && (
+              <p className={styles.modifResume}>
+                {pendingArtefactVerdict.modification.resume}
+                {pendingArtefactVerdict.modification.ignorees > 0 &&
+                  ` — ${pendingArtefactVerdict.modification.ignorees} opération${
+                    pendingArtefactVerdict.modification.ignorees > 1 ? "s" : ""
+                  } ignorée${pendingArtefactVerdict.modification.ignorees > 1 ? "s" : ""} (bloc introuvable)`}
+              </p>
+            )}
           </div>
           <button className={styles.closeBtn} onClick={dismissOrClose} aria-label="Fermer">
             ✕
           </button>
         </div>
 
+        {!isVerdict && historiqueOuvert && !!artefact.versions?.length && (
+          <div className={styles.versions}>
+            <div className={styles.versionLigne}>
+              <span>
+                <b>Version {numeroVersion(artefact)}</b> — actuelle
+              </span>
+            </div>
+            {artefact.versions.map((v) => (
+              <div key={v.n} className={styles.versionLigne}>
+                <span>
+                  <b>Version {v.n}</b> · {v.date}
+                  <span className={styles.versionSuite}> — ensuite : {v.resume}</span>
+                </span>
+                <button
+                  type="button"
+                  className={styles.btnGhost}
+                  onClick={() => {
+                    restaurerVersionArtefact(artefact.id, v.n);
+                    setHistoriqueOuvert(false);
+                  }}
+                  title="L'état actuel est conservé dans l'historique : rien n'est perdu"
+                >
+                  Restaurer
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className={styles.body}>
-          <ArtefactCorps key={cleRendu} artefact={artefact} interactif={!isVerdict} />
+          <ArtefactCorps
+            key={cleRendu}
+            artefact={artefact}
+            interactif={!isVerdict}
+            blocsTouches={pendingArtefactVerdict?.modification?.blocsTouches}
+          />
         </div>
 
         {isVerdict && pendingArtefactVerdict ? (
@@ -280,7 +343,11 @@ export function ArtefactModal() {
               className={styles.btnPrim}
               onClick={() => confirmArtefactProposal(pendingArtefactVerdict.proposalMessageId, "add")}
             >
-              {libelleGarder(currentEspace.artefacts, pendingArtefactVerdict.preview.title)}
+              {libelleGarder(
+                currentEspace.artefacts,
+                pendingArtefactVerdict.preview.title,
+                !!pendingArtefactVerdict.modification
+              )}
             </button>
           </div>
         ) : (

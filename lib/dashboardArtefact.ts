@@ -336,7 +336,12 @@ function parseBlock(raw: unknown): DashboardBlock | null {
   }
 }
 
-const ID_BLOC = /^[a-z][a-z0-9_-]{0,23}$/i;
+/** Lit et valide UN bloc — pour les opérations de retouche. */
+export function lireBloc(raw: unknown): DashboardBlock | null {
+  return parseBlock(raw);
+}
+
+export const ID_BLOC = /^[a-z][a-z0-9_-]{0,23}$/i;
 
 /**
  * Identifiants stables : celui que le modèle a donné s'il est propre et

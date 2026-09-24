@@ -334,9 +334,15 @@ function blockSpan(block: DashboardBlock): "full" | "half" {
 export function DashboardArtefact({
   spec,
   onToggleChecklist,
+  blocsTouches,
 }: {
   spec: DashboardSpec;
   onToggleChecklist?: BasculeChecklist;
+  /**
+   * Blocs changés par une retouche en attente : mis en évidence, pour qu'on
+   * voie CE QUI change avant d'appliquer — et que le reste n'a pas bougé.
+   */
+  blocsTouches?: readonly string[];
 }) {
   // Recharts (ResponsiveContainer) a besoin du DOM : on ne rend qu'après le
   // montage client pour éviter les avertissements de largeur nulle en SSR.
@@ -353,8 +359,10 @@ export function DashboardArtefact({
           if ((block.type === "chart" || block.type === "map") && !mounted) {
             return <div key={block.id ?? i} className={[span, styles.chartSkeleton].join(" ")} />;
           }
+          const touche = !!block.id && !!blocsTouches?.includes(block.id);
           return (
-            <div key={block.id ?? i} className={span}>
+            <div key={block.id ?? i} className={[span, touche ? styles.blocTouche : ""].filter(Boolean).join(" ")}>
+              {touche && <span className={styles.blocToucheMarque}>Modifié</span>}
               <Block block={block} onToggleChecklist={onToggleChecklist} />
             </div>
           );

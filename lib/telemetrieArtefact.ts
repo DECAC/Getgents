@@ -20,7 +20,7 @@ export type EvenementArtefact = "propose" | "garde" | "remplace" | "jete" | "per
 
 const EVENEMENTS: readonly EvenementArtefact[] = ["propose", "garde", "remplace", "jete", "perdu"];
 const FORMES = ["report", "checklist", "chart", "visual", "map", "dashboard", "profile-summary", "image"] as const;
-const ECHECS = ["tronque", "illisible"] as const;
+const ECHECS = ["tronque", "illisible", "cible"] as const;
 
 export interface MesureArtefact {
   evenement: EvenementArtefact;

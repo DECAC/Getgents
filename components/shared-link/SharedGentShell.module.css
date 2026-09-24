@@ -574,3 +574,11 @@
     animation: none;
   }
 }
+
+/* Retouche en attente : ce qui change, en une phrase, au-dessus de l'aperçu. */
+.modifResume {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
