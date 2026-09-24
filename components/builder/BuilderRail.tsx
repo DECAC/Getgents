@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBuilder, type BuilderTab } from "@/lib/context/BuilderContext";
 import { hasCustomName, isDirtySincePublish } from "@/lib/builderSnapshot";
@@ -17,6 +17,8 @@ interface NavEntry {
   blue?: boolean;
   /** Format activé sur ce gent : une pastille le signale dans le rail. */
   actif?: boolean;
+  /** Un filet la sépare de l'entrée précédente, dans la même section. */
+  separe?: boolean;
 }
 
 interface NavSection {
@@ -138,13 +140,11 @@ function navGent(formats: { miniapp: boolean; visionneuse: boolean; collaboratif
         { id: "conversationnel", label: "Options", icon: ICON.options },
         { id: "knowledge", label: "Connaissances", icon: ICON.knowledge },
         { id: "connectors", label: "Connecteurs", icon: ICON.connectors },
-      ],
-    },
-    {
-      // Des FACETTES du gent ouvert, cumulables — jamais des créations.
-      title: "Formats",
-      entries: [
-        { id: "miniapp", label: "Mini App", icon: ICON.miniapp, actif: formats.miniapp },
+        // Les formats sont des réglages comme les autres — chacun ouvre
+        // l'écran où il se paramètre. Une section « Formats » à part se
+        // lisait comme une information, plantée entre deux blocs d'action.
+        // Un filet suffit à les grouper ; la pastille dit lesquels sont actifs.
+        { id: "miniapp", label: "Mini App", icon: ICON.miniapp, actif: formats.miniapp, separe: true },
         { id: "visionneuse", label: "Visionneuse", icon: ICON.visionneuse, actif: formats.visionneuse },
         { id: "collaboratif", label: "Event Manager", icon: ICON.collaboratif, actif: formats.collaboratif },
       ],
@@ -323,7 +323,7 @@ function RailChrome({
 
   function entree(entry: NavEntry) {
     const on = activeTab === entry.id;
-    return (
+    const bouton = (
       <button
         key={entry.id}
         className={[
@@ -341,6 +341,13 @@ function RailChrome({
         <span className={styles.navLabel}>{entry.label}</span>
         {entry.actif && <span className={styles.actif} aria-label="activé" />}
       </button>
+    );
+    if (!entry.separe) return bouton;
+    return (
+      <Fragment key={entry.id}>
+        <div className={styles.filet} role="separator" />
+        {bouton}
+      </Fragment>
     );
   }
 

@@ -137,8 +137,9 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   propositions. Mesuré : 82-91 % du temps d'un tick est l'appel au modèle.
 - **Créer et configurer ne partagent plus aucune entrée de menu.** Le rail a
   deux étages : GLOBAL (« + Nouveau gent », Accueil, Mes gents) et, sous le
-  nom du gent ouvert, SES réglages (Configurer / Formats / Diffuser et
-  suivre). L'ancien menu « Créer » créait un gent depuis la liste et changeait
+  nom du gent ouvert, SES réglages : Configurer (dont les formats Mini App,
+  Visionneuse, Event Manager, sous un filet — une section « Formats » à part
+  se lisait comme une information) puis Diffuser et suivre. L'ancien menu « Créer » créait un gent depuis la liste et changeait
   d'onglet depuis un gent : une fois sur deux, on voulait régler son gent et
   on en fabriquait un. Créer passe par UN formulaire (`NouveauGentDialog` →
   `creerGent`, `lib/builderDraftStorage.ts`) : une phrase facultative et un
