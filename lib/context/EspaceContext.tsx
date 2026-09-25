@@ -63,6 +63,7 @@ import { materializeProfileMedia } from "@/lib/profileSummaryArtefact";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import { langueDeLEnTete } from "@/lib/langue";
 import { modeleConversationEffectif } from "@/lib/modeleConversation";
+import { noteDepuisReponse } from "@/lib/noteDepuisReponse";
 import {
   estCoupureReseau,
   estReponseVide,
@@ -229,6 +230,12 @@ interface EspaceContextValue {
   toggleAsideCollapsed: () => void;
   selectDay: (day: number | null) => void;
   openArtefactModal: (id: string) => void;
+  /**
+   * « Garder en note » : la réponse n° `indexMessage` du fil actif devient un
+   * artefact, telle quelle (copie fidèle, aucun appel au modèle). Déjà
+   * gardée : ouvre la note au lieu d'en créer une seconde.
+   */
+  garderEnNote: (indexMessage: number) => void;
   openResvModal: (id: string) => void;
   closeModal: () => void;
   /** Ferme la visionneuse sans toucher à un éventuel artefact ouvert par-dessus. */
@@ -611,6 +618,54 @@ export function EspaceProvider({
     setModalArtefactId(id);
     setModalResvId(null);
   }, []);
+
+  const garderEnNote = useCallback(
+    (indexMessage: number) => {
+      const id = currentIdRef.current;
+      const espace = espacesRef.current[id];
+      if (!espace) return;
+      const fil = getActiveConversation(espace.conversations, espace.activeConversationId);
+      const message = fil.messages[indexMessage];
+      if (!message || message.role !== "agent") return;
+      // Déjà gardée, et la note existe encore : on l'ouvre. Supprimée depuis :
+      // on la recrée — le bouton ne doit pas mentir.
+      if (message.noteId && espace.artefacts.some((a) => a.id === message.noteId)) {
+        openArtefactModal(message.noteId);
+        return;
+      }
+      const note = noteDepuisReponse(message.text ?? "");
+      if (!note) return;
+      const noteId = `note-${Date.now()}`;
+      const artefact: Artefact = {
+        id: noteId,
+        title: note.title,
+        type: "Note",
+        icon: "📝",
+        kind: "dashboard",
+        date: "à l'instant",
+        dashboard: note.dashboard,
+      };
+      setEspaces((prev) => {
+        const e = prev[id];
+        if (!e) return prev;
+        const conversations = e.conversations.map((t) =>
+          t.id === fil.id
+            ? { ...t, messages: t.messages.map((m, i) => (i === indexMessage ? { ...m, noteId } : m)) }
+            : t
+        );
+        return {
+          ...prev,
+          [id]: {
+            ...e,
+            artefacts: [artefact, ...e.artefacts],
+            themeTabs: upsertArtefactThemeTab(e.themeTabs ?? [], artefact, [e.gent, e.name]),
+            conversations,
+          },
+        };
+      });
+    },
+    [openArtefactModal]
+  );
 
   const closeDocumentViewer = useCallback(() => setViewerArtefactId(null), []);
 
@@ -2113,6 +2168,7 @@ export function EspaceProvider({
         toggleAsideCollapsed,
         selectDay,
         openArtefactModal,
+        garderEnNote,
         openResvModal,
         closeModal,
         closeDocumentViewer,

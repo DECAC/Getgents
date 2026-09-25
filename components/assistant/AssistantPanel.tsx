@@ -97,6 +97,7 @@ export function AssistantPanel({
     closeAssistant,
     switchTab,
     openArtefactModal,
+    garderEnNote,
     viewArtefact,
     sendMessage,
     submitJumpForm,
@@ -870,6 +871,9 @@ export function AssistantPanel({
     const tourDeJeu = m.jeuEtat?.decision || m.jeuEtat?.consequence ? m.jeuEtat : null;
     const canCopy = isAgent && !!m.text?.trim();
     const isCopied = copiedIndex === i;
+    // Pas pendant l'écriture : la note figerait une réponse inachevée.
+    const peutGarder = canCopy && !(isLastMessage && isThinking);
+    const noteGardee = !!m.noteId && currentEspace.artefacts.some((a) => a.id === m.noteId);
     return (
       <div key={i} className={[styles.msg, isAgent ? styles.msgAgent : styles.msgUser].join(" ")}>
         <div className={styles.av}>{isAgent ? "🤖" : "CL"}</div>
@@ -897,6 +901,36 @@ export function AssistantPanel({
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                     </svg>
                     Copier
+                  </>
+                )}
+              </button>
+            )}
+            {peutGarder && (
+              <button
+                type="button"
+                className={[styles.copyBtn, noteGardee ? styles.copyBtnDone : ""].filter(Boolean).join(" ")}
+                onClick={() => garderEnNote(i)}
+                aria-label={noteGardee ? "Ouvrir la note gardée" : "Garder cette réponse en note dans l'espace"}
+                title={
+                  noteGardee
+                    ? "Ouvrir la note gardée"
+                    : "Garder cette réponse telle quelle, en note dans l'espace"
+                }
+              >
+                {noteGardee ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    Note gardée
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M6 3h9l4 4v14H6z" />
+                      <path d="M14 3v5h5M9 13h7M9 17h5" />
+                    </svg>
+                    Garder en note
                   </>
                 )}
               </button>

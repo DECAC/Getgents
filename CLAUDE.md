@@ -121,6 +121,18 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   d'origine les applique sur l'événement `storage`, qui ne se déclenche que
   dans les AUTRES onglets. Copies purgées après 7 jours. Rien côté serveur :
   l'onglet ne fonctionne que dans le navigateur qui l'a ouvert.
+- **« Garder en note » = COPIE FIDÈLE, sans modèle.** Le bouton, à côté de
+  « Copier » sous chaque réponse, transforme la réponse TELLE QUELLE en
+  artefact (`noteDepuisReponse`, `lib/noteDepuisReponse.ts`) : titres → blocs
+  `heading`, tableaux → `table`, le reste en markdown dans des blocs `text`.
+  Instantané et gratuit ; garder une réponse, c'est vouloir CE texte, pas une
+  réécriture qui pourrait résumer ou inventer. Aucun HTML n'entre dans la
+  note (vocabulaire fermé) ; `&lt;`/`&gt;` restent des entités dans le
+  markdown pour qu'un « <script> » écrit en toutes lettres reste lisible.
+  Choisie parmi trois pistes (maquette : bouton, surlignage d'un passage,
+  assemblage de plusieurs réponses) : le surlignage vient ensuite, il
+  réutilise la même conversion. « Mettre en forme » par le modèle n'est PAS
+  fait — prévu comme nouvelle version de la note, l'originale restaurable.
 - **`artefactsModifiables`** (studio, faux par défaut) : autorise les
   VISITEURS à éditer et restaurer leurs artefacts. Chacun modifie SA copie,
   dans son navigateur — ce n'est PAS de la co-édition, qui exigera des

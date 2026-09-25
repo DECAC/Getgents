@@ -204,6 +204,8 @@ export interface ConversationMessage {
   /** Détail du résultat d'un appel d'outil en échec (diagnostic). */
   toolDetail?: string;
   ref?: string;
+  /** Réponse gardée en note (« Garder en note ») : l'artefact qu'elle a produit. */
+  noteId?: string;
   tab?: string;
   icon?: string;
   status?: "pending" | "sent";
