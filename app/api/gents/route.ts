@@ -28,15 +28,20 @@ export async function GET() {
 
   const { data: possedes, error } = await supabase
     .from("published_gents")
-    .select("id, espace")
+    .select("id, espace, diffused")
     .eq("owner_id", auth.user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const gents: Record<string, unknown> = {};
   const roles: Record<string, GentRole> = {};
+  // Version DIFFUSÉE de chaque gent possédé : c'est elle que l'espace
+  // personnel fait tourner (voir lib/versionPersonnelle.ts). La version de
+  // travail reste dans `gents` — le studio et l'aperçu s'en servent.
+  const diffuses: Record<string, unknown> = {};
   for (const row of possedes ?? []) {
     gents[row.id] = row.espace;
     roles[row.id] = "owner";
+    if (row.diffused && typeof row.diffused === "object") diffuses[row.id] = row.diffused;
   }
 
   // Invitations reçues : résolues par identifiant une fois scellées, et par
@@ -71,5 +76,5 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({ gents, roles });
+  return NextResponse.json({ gents, roles, diffuses });
 }

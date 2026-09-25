@@ -41,7 +41,7 @@ import { contexteArtefacts, resoudreRetouche } from "@/lib/operationsBlocs";
 import { avecNouvelleVersion, restaurerVersion } from "@/lib/versionsArtefact";
 import { lireMessageOnglet, PREFIXE_ONGLET } from "@/lib/ongletArtefact";
 import { mesurerArtefact } from "@/lib/telemetrieArtefact";
-import { formeDeduite } from "@/lib/dashboardArtefact";
+import { formeDeduite, parseDashboard } from "@/lib/dashboardArtefact";
 import {
   appliquerMemoireVisiteur,
   cleMemoireVisiteur,
@@ -60,10 +60,17 @@ import { extractProfileSignal } from "@/lib/profileSignal";
 import { extractImageSignal, IMAGES_THEME_LABEL, type ImageProposal } from "@/lib/imageSignal";
 import { resolveImageModelId } from "@/lib/imageModels";
 import { materializeProfileMedia } from "@/lib/profileSummaryArtefact";
-import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
+import {
+  lireVersionsDiffusees,
+  readPublishedGents,
+  writePublishedGent,
+  syncPublishedGentsFromRemote,
+} from "@/lib/publishedGents";
+import { composerVersionPersonnelle, fusionnerUsage } from "@/lib/versionPersonnelle";
 import { langueDeLEnTete } from "@/lib/langue";
 import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import { noteDepuisReponse } from "@/lib/noteDepuisReponse";
+import { noteEnTexte, TYPE_NOTE, TYPE_NOTE_MISE_EN_FORME } from "@/lib/miseEnForme";
 import {
   estCoupureReseau,
   estReponseVide,
@@ -236,6 +243,20 @@ interface EspaceContextValue {
    * gardée : ouvre la note au lieu d'en créer une seconde.
    */
   garderEnNote: (indexMessage: number) => void;
+  /**
+   * Version que fait tourner l'espace personnel : la DIFFUSÉE, ou la version
+   * de travail pour un gent jamais diffusé. Sans objet sur un lien ou un aperçu.
+   */
+  versionPersonnelle: "diffusee" | "travail";
+  /**
+   * « Mettre en forme » une note : un appel au modèle, dont le résultat devient
+   * une NOUVELLE VERSION (la copie fidèle reste restaurable). Réservé à un
+   * compte connecté — pas au visiteur d'un lien, qui n'a personne à facturer.
+   */
+  mettreEnForme: (artefactId: string) => Promise<{ ok: boolean; erreur?: string }>;
+  miseEnFormeDisponible: boolean;
+  /** Note en cours de mise en forme (une à la fois). */
+  miseEnFormeEnCours: string | null;
   openResvModal: (id: string) => void;
   closeModal: () => void;
   /** Ferme la visionneuse sans toucher à un éventuel artefact ouvert par-dessus. */
@@ -399,6 +420,9 @@ export function EspaceProvider({
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
   const [storageReady, setStorageReady] = useState(false);
+  // Gents dont l'espace personnel tourne sur la version DIFFUSÉE (les autres,
+  // jamais diffusés ou hors ligne, sur leur version de travail).
+  const [versionsDiffuseesIds, setVersionsDiffuseesIds] = useState<Set<string>>(() => new Set());
   const [userPosition, setUserPosition] = useState<{ lat: number; lon: number } | null>(null);
   const [geoStatus, setGeoStatus] = useState<GeoStatus>("idle");
   const [pinnedRefreshing, setPinnedRefreshing] = useState(false);
@@ -475,7 +499,15 @@ export function EspaceProvider({
       .then((merged) => {
         if (cancelled) return;
         if (merged && merged !== "unauthorized" && Object.keys(merged).length) {
-          setEspaces((prev) => ({ ...prev, ...merged }));
+          // L'espace personnel tourne sur la version DIFFUSÉE, avec l'usage
+          // de la version de travail (voir lib/versionPersonnelle.ts).
+          const diffuses = lireVersionsDiffusees();
+          const personnels: EspacesMap = {};
+          for (const [gid, travail] of Object.entries(merged)) {
+            personnels[gid] = composerVersionPersonnelle(diffuses[gid], travail);
+          }
+          setVersionsDiffuseesIds(new Set(Object.keys(diffuses)));
+          setEspaces((prev) => ({ ...prev, ...personnels }));
         }
       })
       .finally(() => {
@@ -517,8 +549,11 @@ export function EspaceProvider({
     if (!storageReady || shareMode) return;
     const espace = espaces[currentId];
     if (!espace) return;
-    if (readPublishedGents()[currentId]) {
-      writePublishedGent(currentId, espace);
+    const travail = readPublishedGents()[currentId];
+    if (travail) {
+      // Seul l'USAGE est reporté : la configuration affichée ici peut être la
+      // version diffusée, et l'écrire écraserait le travail en cours du studio.
+      writePublishedGent(currentId, fusionnerUsage(travail, espace));
     }
   }, [espaces, currentId, storageReady, shareMode]);
 
@@ -535,7 +570,7 @@ export function EspaceProvider({
     setAsideCollapsed(true);
     const published = readPublishedGents()[id];
     if (published) {
-      setEspaces((prev) => ({ ...prev, [id]: published }));
+      setEspaces((prev) => ({ ...prev, [id]: composerVersionPersonnelle(lireVersionsDiffusees()[id], published) }));
     }
   }, []);
 
@@ -639,7 +674,7 @@ export function EspaceProvider({
       const artefact: Artefact = {
         id: noteId,
         title: note.title,
-        type: "Note",
+        type: TYPE_NOTE,
         icon: "📝",
         kind: "dashboard",
         date: "à l'instant",
@@ -666,6 +701,56 @@ export function EspaceProvider({
     },
     [openArtefactModal]
   );
+
+  const [miseEnFormeEnCours, setMiseEnFormeEnCours] = useState<string | null>(null);
+  const mettreEnForme = useCallback(async (artefactId: string): Promise<{ ok: boolean; erreur?: string }> => {
+    const id = currentIdRef.current;
+    const espace = espacesRef.current[id];
+    const note = espace?.artefacts.find((a) => a.id === artefactId);
+    if (!note?.dashboard) return { ok: false, erreur: "Cette note n'a pas de contenu à mettre en forme." };
+    setMiseEnFormeEnCours(artefactId);
+    try {
+      const res = await fetch("/api/artefact/mise-en-forme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          titre: note.title,
+          contenu: noteEnTexte(note.dashboard),
+          modele: modeleConversationEffectif(espace.chatModelId).id,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; dashboard?: unknown; erreur?: string; error?: string };
+      const dashboard = data.ok ? parseDashboard(data.dashboard) : null;
+      if (!dashboard) {
+        return { ok: false, erreur: data.erreur ?? (res.status === 401 ? "Session expirée : reconnectez-vous." : "La mise en forme a échoué. La note est inchangée.") };
+      }
+      setEspaces((prev) => {
+        const e = prev[id];
+        if (!e) return prev;
+        return {
+          ...prev,
+          [id]: {
+            ...e,
+            artefacts: e.artefacts.map((a) =>
+              a.id === artefactId
+                ? avecNouvelleVersion(
+                    a,
+                    { ...a, dashboard, type: TYPE_NOTE_MISE_EN_FORME, date: "à l'instant" },
+                    "mise en forme par le gent",
+                    horodatage()
+                  )
+                : a
+            ),
+          },
+        };
+      });
+      return { ok: true };
+    } catch {
+      return { ok: false, erreur: "Connexion interrompue. La note est inchangée ; réessayez." };
+    } finally {
+      setMiseEnFormeEnCours(null);
+    }
+  }, []);
 
   const closeDocumentViewer = useCallback(() => setViewerArtefactId(null), []);
 
@@ -2169,6 +2254,10 @@ export function EspaceProvider({
         selectDay,
         openArtefactModal,
         garderEnNote,
+        versionPersonnelle: versionsDiffuseesIds.has(currentId) ? "diffusee" : "travail",
+        mettreEnForme,
+        miseEnFormeDisponible: !shareToken,
+        miseEnFormeEnCours,
         openResvModal,
         closeModal,
         closeDocumentViewer,

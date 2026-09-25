@@ -277,30 +277,48 @@
   margin-bottom: 4px;
   min-height: 22px;
 }
+/* Pied d'une réponse : l'heure, puis les actions, groupées à gauche. */
+.piedReponse {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.piedReponse .t {
+  margin: 0 4px 0 0;
+}
 .copyBtn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 7px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--faint);
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
   flex: none;
-  opacity: 0.5;
-  transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
-}
-.msgAgent:hover .copyBtn,
-.copyBtn:focus-visible,
-.copyBtnDone {
-  opacity: 1;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
 .copyBtn:hover {
-  color: var(--muted);
-  background: var(--bg);
+  color: var(--ink);
+  border-color: var(--faint);
+}
+/* « Garder en note » : l'action qu'on veut faire trouver, en couleur. */
+.noteBtn {
+  color: var(--sage-700);
+  border-color: var(--sage-tint);
+  background: var(--sage-tint);
+}
+.noteBtn:hover {
+  color: var(--sage-700);
+  border-color: var(--sage);
 }
 .copyBtnDone {
-  color: var(--sage-700);
+  color: var(--success, #57a45b);
+  background: var(--success-tint, #d4f1d4);
+  border-color: transparent;
 }
 .copyBtn svg {
   flex: none;

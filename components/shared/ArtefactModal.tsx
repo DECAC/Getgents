@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { TYPE_NOTE } from "@/lib/miseEnForme";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTMLDoc } from "./SafeHTML";
 import { MiniBarChart } from "./MiniBarChart";
@@ -184,7 +185,11 @@ export function ArtefactModal() {
     modifierArtefact,
     currentId,
     shareMode,
+    mettreEnForme,
+    miseEnFormeDisponible,
+    miseEnFormeEnCours,
   } = useEspace();
+  const [erreurMiseEnForme, setErreurMiseEnForme] = useState<string | null>(null);
   // Le créateur, dans son espace, modifie toujours ; un visiteur seulement si
   // le créateur l'a autorisé dans le studio.
   const peutModifier = !shareMode || currentEspace.artefactsModifiables === true;
@@ -198,6 +203,7 @@ export function ArtefactModal() {
     setOutilsOuverts(false);
     setHistoriqueOuvert(false);
     setBrouillon(null);
+    setErreurMiseEnForme(null);
   }, [modalArtefactId]);
 
   const isVerdict = !!pendingArtefactVerdict;
@@ -386,6 +392,24 @@ export function ArtefactModal() {
           </div>
           {pleinePage && (
             <div className={styles.pageActions}>
+              {/* Une note gardée telle quelle peut être remise en forme par le
+                  gent ; le résultat est une nouvelle version, la copie fidèle
+                  reste dans l'historique. */}
+              {artefact.type === TYPE_NOTE && miseEnFormeDisponible && peutModifier && (
+                <button
+                  type="button"
+                  className={styles.btnGhost}
+                  disabled={miseEnFormeEnCours === artefact.id}
+                  onClick={async () => {
+                    setErreurMiseEnForme(null);
+                    const r = await mettreEnForme(artefact.id);
+                    if (!r.ok) setErreurMiseEnForme(r.erreur ?? "La mise en forme a échoué.");
+                  }}
+                  title="Le gent choisit une présentation plus riche. La note telle quelle reste restaurable."
+                >
+                  {miseEnFormeEnCours === artefact.id ? "Mise en forme…" : "Mettre en forme"}
+                </button>
+              )}
               {peutModifier && (
                 <button
                   type="button"
@@ -410,6 +434,12 @@ export function ArtefactModal() {
             ✕
           </button>
         </div>
+
+        {erreurMiseEnForme && (
+          <p className={styles.modifResume} role="alert">
+            {erreurMiseEnForme}
+          </p>
+        )}
 
         {!isVerdict && historiqueOuvert && !!artefact.versions?.length && (
           <div className={styles.versions}>

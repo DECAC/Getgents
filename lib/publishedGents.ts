@@ -66,6 +66,20 @@ export function cancelPendingPushes(): void {
 /** À appeler quand la clé APP_ACCESS_SECRET est (re)saisie — relance les syncs. */
 export function resetPublishedRemoteAvailability(): void {
   remoteAvailable = null;
+  // Changement de compte : les versions diffusées du précédent s'effacent.
+  versionsDiffusees = {};
+}
+
+/**
+ * Versions DIFFUSÉES des gents du compte, relues à chaque synchronisation.
+ * En mémoire seulement : elles doublent le poids des gents, et le cache local
+ * est déjà proche du quota. Sans réseau, l'espace retombe sur la version de
+ * travail — le comportement d'avant.
+ */
+let versionsDiffusees: EspacesMap = {};
+
+export function lireVersionsDiffusees(): EspacesMap {
+  return versionsDiffusees;
 }
 
 /** Récupère les gents publiés depuis le serveur — null si indisponible, 'unauthorized' si 401. */
@@ -91,7 +105,8 @@ export async function fetchRemoteGents(): Promise<EspacesMap | null | "unauthori
     }
     if (!res.ok) return null;
     remoteAvailable = true;
-    const data = (await res.json()) as { gents?: EspacesMap };
+    const data = (await res.json()) as { gents?: EspacesMap; diffuses?: EspacesMap };
+    versionsDiffusees = data.diffuses ?? {};
     return data.gents ?? {};
   } catch {
     return null;

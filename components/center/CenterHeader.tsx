@@ -21,7 +21,7 @@ const DOT_CLASS: Record<string, string> = {
 };
 
 export function CenterHeader() {
-  const { currentEspace, currentId } = useEspace();
+  const { currentEspace, currentId, versionPersonnelle } = useEspace();
   const e = currentEspace;
   // Bascule vers le gent studio : uniquement pour les gents publiés depuis ce
   // navigateur (le brouillon correspondant existe côté builder).
@@ -50,7 +50,18 @@ export function CenterHeader() {
                 diffusés avant ce champ n'en ont pas : on retombe alors sur
                 l'ancien affichage — le nom du gent — plutôt que de faire
                 disparaître une ligne de leur en-tête sans prévenir. */}
-            Propulsé par <b>{e.propulsePar?.trim() || e.gent}</b> · version {e.version}
+            Propulsé par <b>{e.propulsePar?.trim() || e.gent}</b> ·{" "}
+            {/* Dit QUELLE version tourne : la diffusée, ou le brouillon d'un
+                gent jamais diffusé — sinon on ne sait pas ce qu'on utilise. */}
+            {versionPersonnelle === "diffusee" ? (
+              <span title="Vos modifications du studio arrivent ici quand vous cliquez « Diffuser le gent ».">
+                version diffusée {e.version}
+              </span>
+            ) : (
+              <span title="Ce gent n'a jamais été diffusé : c'est sa version de travail qui tourne ici.">
+                version de travail (jamais diffusée)
+              </span>
+            )}
           </div>
         </div>
         <div className={styles.headActions}>

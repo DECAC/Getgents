@@ -33,7 +33,16 @@ import styles from "./SharedGentShell.module.css";
  * Une mise en page propre au partage désorientait — le destinataire découvrait
  * une interface que le créateur n'avait jamais vue en Preview.
  */
-function SharedGentBody({ token, apercuDe }: { token?: string; apercuDe?: string }) {
+export function SharedGentBody({
+  token,
+  apercuDe,
+  personnelDe,
+}: {
+  token?: string;
+  apercuDe?: string;
+  /** Espace PERSONNEL du créateur (`/espace/<id>`) : la même page que ses visiteurs, avec ses données et ses raccourcis. */
+  personnelDe?: string;
+}) {
   const {
     currentEspace,
     assistantOpen,
@@ -46,6 +55,7 @@ function SharedGentBody({ token, apercuDe }: { token?: string; apercuDe?: string
     confirmArtefactProposal,
     declarerVoletVerdict,
     storageReady,
+    versionPersonnelle,
   } = useEspace();
 
   /**
@@ -206,6 +216,13 @@ function SharedGentBody({ token, apercuDe }: { token?: string; apercuDe?: string
         </div>
       )}
       <header className={styles.head}>
+        {/* Espace personnel : l'ancienne coquille avait la colonne de tous les
+            gents ; ici, un retour vers la liste en tient lieu. */}
+        {personnelDe && (
+          <a href="/myspace" className={styles.retour} title="Tous mes gents">
+            ‹ <span className={styles.retourTexte}>Mes gents</span>
+          </a>
+        )}
         <span className={styles.icon} aria-hidden="true">
           <BrandIcon variant="fill" />
         </span>
@@ -223,6 +240,22 @@ function SharedGentBody({ token, apercuDe }: { token?: string; apercuDe?: string
             {currentEspace.propulsePar?.trim() && (
               <span className={styles.subAuteur}>
                 Propulsé par <b>{currentEspace.propulsePar}</b>
+              </span>
+            )}
+            {/* Quelle version tourne : sans cela, on ne sait pas si une
+                modification du studio est déjà là. */}
+            {personnelDe && (
+              <span
+                className={styles.subAuteur}
+                title={
+                  versionPersonnelle === "diffusee"
+                    ? "Vos modifications du studio arrivent ici quand vous cliquez « Diffuser le gent »."
+                    : "Ce gent n'a jamais été diffusé : c'est sa version de travail qui tourne ici."
+                }
+              >
+                {versionPersonnelle === "diffusee"
+                  ? `Version diffusée ${currentEspace.version}`
+                  : "Version de travail (jamais diffusée)"}
               </span>
             )}
           </div>
@@ -259,6 +292,11 @@ function SharedGentBody({ token, apercuDe }: { token?: string; apercuDe?: string
             </div>
           )}
           <FileDownloadControl variant="shared" />
+          {personnelDe && (
+            <a href={`/builder/${encodeURIComponent(personnelDe)}`} className={styles.lienStudio}>
+              Ouvrir dans GetStudio
+            </a>
+          )}
           {/* Signaler vise le créateur : sans objet quand c'est lui qui regarde. */}
           {token && <SignalerIncident token={token} />}
         </div>

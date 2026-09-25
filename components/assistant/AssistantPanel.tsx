@@ -880,61 +880,6 @@ export function AssistantPanel({
         <div className={styles.msgBody}>
           <div className={styles.msgAuthorRow}>
             <div className={styles.msgAuthor}>{isAgent ? currentEspace.gent : "Vous"}</div>
-            {canCopy && (
-              <button
-                type="button"
-                className={[styles.copyBtn, isCopied ? styles.copyBtnDone : ""].filter(Boolean).join(" ")}
-                onClick={() => copyAgentMessage(i, m.text ?? "")}
-                aria-label={isCopied ? "Réponse copiée" : "Copier la réponse"}
-              >
-                {isCopied ? (
-                  <>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                      <path d="M20 6L9 17l-5-5" />
-                    </svg>
-                    Copié
-                  </>
-                ) : (
-                  <>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" />
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
-                    Copier
-                  </>
-                )}
-              </button>
-            )}
-            {peutGarder && (
-              <button
-                type="button"
-                className={[styles.copyBtn, noteGardee ? styles.copyBtnDone : ""].filter(Boolean).join(" ")}
-                onClick={() => garderEnNote(i)}
-                aria-label={noteGardee ? "Ouvrir la note gardée" : "Garder cette réponse en note dans l'espace"}
-                title={
-                  noteGardee
-                    ? "Ouvrir la note gardée"
-                    : "Garder cette réponse telle quelle, en note dans l'espace"
-                }
-              >
-                {noteGardee ? (
-                  <>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                      <path d="M20 6L9 17l-5-5" />
-                    </svg>
-                    Note gardée
-                  </>
-                ) : (
-                  <>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M6 3h9l4 4v14H6z" />
-                      <path d="M14 3v5h5M9 13h7M9 17h5" />
-                    </svg>
-                    Garder en note
-                  </>
-                )}
-              </button>
-            )}
           </div>
           {isAgent && renderReasoning(m, i)}
           {/*
@@ -958,7 +903,72 @@ export function AssistantPanel({
                 style={{ maxWidth: "100%", borderRadius: 12, marginTop: 8, display: "block" }}
               />
             )}
-            <div className={styles.t}>{m.t}</div>
+            {/* Les actions SOUS la réponse, à côté de l'heure : dans la ligne
+                du nom, elles s'étiraient d'un bord à l'autre sur grand écran
+                (« Copier » au milieu, « Garder en note » tout à droite) et
+                passaient inaperçues. */}
+            {isAgent && (canCopy || peutGarder) ? (
+              <div className={styles.piedReponse}>
+                <span className={styles.t}>{m.t}</span>
+              {canCopy && (
+                <button
+                  type="button"
+                  className={[styles.copyBtn, isCopied ? styles.copyBtnDone : ""].filter(Boolean).join(" ")}
+                  onClick={() => copyAgentMessage(i, m.text ?? "")}
+                  aria-label={isCopied ? "Réponse copiée" : "Copier la réponse"}
+                >
+                  {isCopied ? (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                      Copié
+                    </>
+                  ) : (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                      Copier
+                    </>
+                  )}
+                </button>
+              )}
+              {peutGarder && (
+                <button
+                  type="button"
+                  className={[styles.copyBtn, noteGardee ? styles.copyBtnDone : styles.noteBtn].filter(Boolean).join(" ")}
+                  onClick={() => garderEnNote(i)}
+                  aria-label={noteGardee ? "Ouvrir la note gardée" : "Garder cette réponse en note dans l'espace"}
+                  title={
+                    noteGardee
+                      ? "Ouvrir la note gardée"
+                      : "Garder cette réponse telle quelle, en note dans l'espace"
+                  }
+                >
+                  {noteGardee ? (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                      Note gardée
+                    </>
+                  ) : (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M6 3h9l4 4v14H6z" />
+                        <path d="M14 3v5h5M9 13h7M9 17h5" />
+                      </svg>
+                      Garder en note
+                    </>
+                  )}
+                </button>
+              )}
+              </div>
+            ) : (
+              <div className={styles.t}>{m.t}</div>
+            )}
           </div>
           )}
           {/* Le texte est fini, mais le modèle écrit encore l'artefact — ce

@@ -619,3 +619,42 @@
     row-gap: 6px;
   }
 }
+
+/* Espace personnel : retour vers la liste des gents, et accès au studio. */
+.retour {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.retour:hover {
+  color: var(--ink);
+  background: var(--card);
+}
+.lienStudio {
+  flex: none;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.lienStudio:hover {
+  color: var(--ink);
+  border-color: var(--faint);
+}
+@media (max-width: 860px) {
+  .retourTexte,
+  .lienStudio {
+    display: none;
+  }
+}

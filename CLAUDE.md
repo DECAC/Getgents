@@ -131,8 +131,12 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   markdown pour qu'un « <script> » écrit en toutes lettres reste lisible.
   Choisie parmi trois pistes (maquette : bouton, surlignage d'un passage,
   assemblage de plusieurs réponses) : le surlignage vient ensuite, il
-  réutilise la même conversion. « Mettre en forme » par le modèle n'est PAS
-  fait — prévu comme nouvelle version de la note, l'originale restaurable.
+  réutilise la même conversion. **« Mettre en forme »** (vue pleine page
+  d'une note) : un appel au modèle (`/api/artefact/mise-en-forme`, consigne
+  « ne rien ajouter, ne rien perdre »), sortie repassée par le vocabulaire
+  fermé, rangée en NOUVELLE VERSION — la copie fidèle reste restaurable.
+  Réservé aux comptes connectés : le visiteur d'un lien n'a personne à qui
+  facturer l'appel.
 - **`artefactsModifiables`** (studio, faux par défaut) : autorise les
   VISITEURS à éditer et restaurer leurs artefacts. Chacun modifie SA copie,
   dans son navigateur — ce n'est PAS de la co-édition, qui exigera des
@@ -172,6 +176,21 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   écraserait la version de travail. Les appels passent par les routes du
   créateur, cette version n'étant pas en base. `/espace/<id>` reste l'usage
   personnel du gent, plus un banc d'essai.
+- **L'espace personnel (`/espace/<id>`) tourne sur la version DIFFUSÉE**, avec
+  l'usage (conversations, notes, mémoire) de la version de travail —
+  `composerVersionPersonnelle` pour lire, `fusionnerUsage` pour écrire
+  (`lib/versionPersonnelle.ts`). Il tournait sur la version de travail : un
+  essai raté dans le studio cassait l'usage quotidien. L'écriture ne reporte
+  QUE l'usage : écrire l'espace entier réécrirait la configuration diffusée
+  par-dessus le travail en cours du studio. Les versions diffusées viennent de
+  `GET /api/gents` (`diffuses`), en mémoire seulement (quota du cache local) ;
+  hors ligne, l'espace retombe sur la version de travail. Un gent jamais
+  diffusé tourne sur sa version de travail, et l'en-tête le dit.
+- **L'espace personnel a la MÊME interface que les visiteurs**
+  (`SharedGentBody` avec `personnelDe`) : retour « Mes gents », « Ouvrir
+  dans GetStudio », version affichée. L'ancienne coquille (rail des gents,
+  `Center`, `Aside`, `ResvModal`) n'est plus servie : ces composants sont du
+  code mort, à retirer dans un passage dédié.
 - **Ouvrir un onglet ne modifie JAMAIS le gent.** L'onglet Event Manager
   posait son gabarit à l'ouverture sur tout gent sans salon : prompt, nom et
   emblème d'un gent conversationnel étaient remplacés au simple passage.
