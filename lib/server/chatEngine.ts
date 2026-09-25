@@ -38,7 +38,12 @@ import { messageCleOpenRouter } from "@/lib/openRouterKey";
 import { DECLARATION_RECHERCHE_WEB, creerOutilRechercheWeb } from "@/lib/server/webTool";
 import { MOTEUR_ELYSEE } from "@/lib/elysee2027/moteur";
 import { reponseSseElysee } from "@/lib/elysee2027/serveur";
-import { MAX_TOURS_OUTILS, outilsEncoreAutorises } from "@/lib/boucleOutils";
+import {
+  CONSIGNE_DERNIER_TOUR,
+  MAX_TOURS_OUTILS,
+  MESSAGE_REPONSE_FINALE_MANQUANTE,
+  outilsEncoreAutorises,
+} from "@/lib/boucleOutils";
 import {
   applyToolCallDelta,
   flattenToolRoundForRetry,
@@ -718,6 +723,12 @@ function toolLoopResponse(
         let flattenRetries = 0;
         let pendingToolFlatten: { beforeLen: number; userContent: string } | null = null;
         const debutBoucle = Date.now();
+        // Vrai quand un tour s'est terminé SANS appel d'outil et AVEC du
+        // texte : c'est la seule fin normale. Une phrase d'attente écrite
+        // pendant un tour d'outils ne compte pas.
+        let reponseFinale = false;
+        let outilsUtilises = false;
+        let consigneFinalePosee = false;
 
         // 2. Boucle d'appels : le modèle décide quand utiliser les outils.
         // Au dernier tour, les outils sont retirés pour forcer une réponse.
@@ -733,6 +744,12 @@ function toolLoopResponse(
         for (let round = 0; round < MAX_TOURS_OUTILS; round++) {
           const autorises = outilsEncoreAutorises(round, Date.now() - debutBoucle);
           const withTools = registry.size > 0 && autorises;
+          if (outilsUtilises && !withTools && !consigneFinalePosee) {
+            // Outils retirés après usage : on le DIT au modèle, sinon il
+            // attend un outil qui ne vient pas et rend une réponse vide.
+            messages.push({ role: "user", content: CONSIGNE_DERNIER_TOUR });
+            consigneFinalePosee = true;
+          }
           if (registry.size > 0 && !autorises && round < MAX_TOURS_OUTILS - 1) {
             // Budget de temps épuisé AVANT la limite de tours : on le dit dans
             // les journaux, c'est la trace d'une réponse raccourcie.
@@ -785,11 +802,14 @@ function toolLoopResponse(
               messages.push({ role: "user", content: pendingToolFlatten.userContent });
               pendingToolFlatten = null;
               flattenRetries += 1;
+              // La consigne du dernier tour a pu partir avec la troncature.
+              consigneFinalePosee = false;
               round -= 1;
               continue;
             }
             sendContent(userFacingToolLoopError(errText));
             sentContent = true;
+            reponseFinale = true;
             break;
           }
 
@@ -869,6 +889,7 @@ function toolLoopResponse(
           );
 
           if (!toolCalls.length) {
+            reponseFinale = content.trim().length > 0;
             if (finishReason === "length") {
               send({ choices: [{ finish_reason: "length" }] });
               // Le drapeau seul laissait le visiteur devant une phrase coupée
@@ -881,6 +902,7 @@ function toolLoopResponse(
             break;
           }
 
+          outilsUtilises = true;
           const beforeToolRound = messages.length;
           messages.push({ role: "assistant", content: content || null, tool_calls: toolCalls });
           const resultTexts: string[] = [];
@@ -963,7 +985,12 @@ function toolLoopResponse(
           };
         }
 
-        if (!sentContent) {
+        if (sentContent && !reponseFinale) {
+          console.log(
+            JSON.stringify({ tag: "getgents:chat", event: "reponse_finale_vide", model: body.model })
+          );
+          sendContent(`\n\n${MESSAGE_REPONSE_FINALE_MANQUANTE}`);
+        } else if (!sentContent) {
           sendContent(
             "Je n'ai pas pu finaliser une réponse (réponse vide ou limite d'appels d'outils atteinte). Réessayez ou reformulez votre question."
           );

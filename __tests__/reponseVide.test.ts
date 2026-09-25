@@ -1,6 +1,12 @@
 import { estCoupureReseau, estReponseVide, MESSAGE_CONNEXION_COUPEE, MESSAGE_REPONSE_VIDE } from "@/lib/reponseVide";
 import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
-import { BUDGET_OUTILS_MS, MAX_TOURS_OUTILS, outilsEncoreAutorises } from "@/lib/boucleOutils";
+import {
+  BUDGET_OUTILS_MS,
+  CONSIGNE_DERNIER_TOUR,
+  MAX_TOURS_OUTILS,
+  MESSAGE_REPONSE_FINALE_MANQUANTE,
+  outilsEncoreAutorises,
+} from "@/lib/boucleOutils";
 
 describe("réponse vide du gent", () => {
   it("un HTML sans texte visible est vide", () => {
@@ -56,5 +62,22 @@ describe("consigne Gmail", () => {
     expect(GMAIL_PROMPT_INSTRUCTION).toContain("CHERCHE D'ABORD");
     expect(GMAIL_PROMPT_INSTRUCTION).toContain("category:promotions");
     expect(GMAIL_PROMPT_INSTRUCTION).toContain(" OR ");
+  });
+});
+
+describe("dernier tour sans outils", () => {
+  it("laisse 7 tours d'outils avant la rédaction — un bilan à trois expéditeurs en a pris 5", () => {
+    expect(MAX_TOURS_OUTILS).toBe(8);
+    expect(outilsEncoreAutorises(6, 0)).toBe(true);
+    expect(outilsEncoreAutorises(7, 0)).toBe(false);
+  });
+
+  it("dit au modèle que les outils sont retirés et qu'il doit conclure", () => {
+    expect(CONSIGNE_DERNIER_TOUR).toMatch(/Plus aucun outil/);
+    expect(CONSIGNE_DERNIER_TOUR).toMatch(/réponse finale/);
+  });
+
+  it("le message de réponse manquante propose quoi faire", () => {
+    expect(MESSAGE_REPONSE_FINALE_MANQUANTE).toMatch(/Réessayez/);
   });
 });

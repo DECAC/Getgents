@@ -234,7 +234,7 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   « connecté ». Reconnecter répare ; passer l'application en « Production »
   (Google Cloud → écran de consentement OAuth) empêche la récidive.
 - **Des intégrations qui défilent puis une bulle VIDE = fonction coupée à
-  300 s avant que le modèle n'écrive.** La boucle d'outils (6 tours) pouvait
+  300 s avant que le modèle n'écrive.** La boucle d'outils pouvait
   consommer tout le temps en appels Gmail. Depuis : budget de 170 s pour les
   outils (`lib/boucleOutils.ts`), après quoi le modèle rédige avec ce qu'il a
   (`getgents:chat budget_outils_atteint`), et une réponse sans rien de
@@ -242,6 +242,14 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   vérifie au DÉBUT d'un tour : un tour d'outils très long peut encore
   déborder. Pour diagnostiquer, lire `getgents:chat tour_outils` (tours,
   outils appelés, `finishReason`, longueur du contenu).
+- **Retirer les outils ne dit pas au modèle de conclure.** Vécu (Claude,
+  bilan Gmail sur trois expéditeurs) : cinq tours d'outils, puis un dernier
+  tour sans outils → `finishReason: stop`, 0 caractère. Le visiteur restait
+  devant « je cherche aussi… », sans suite, et le repli ne partait pas
+  puisqu'une phrase avait déjà été envoyée. Depuis : `CONSIGNE_DERNIER_TOUR`
+  est jointe au tour sans outils, 8 tours au lieu de 6 (le budget de TEMPS
+  protège déjà des 300 s), et une fin sans texte final envoie
+  `MESSAGE_REPONSE_FINALE_MANQUANTE` (`getgents:chat reponse_finale_vide`).
 - **Un verrou sans expiration est une panne en attente.** `orchestrating` est
   resté bloqué à `true` après une fonction tuée par un déploiement, rendant un
   salon muet définitivement. Expiration à 3 minutes depuis la migration 015.
