@@ -169,12 +169,23 @@ export interface ShareLinkReportEntry {
   stats?: ShareLinkStats;
 }
 
-export function buildEspaceReport(espace: Espace, links?: ShareLinkReportEntry[]): string {
+/**
+ * `version: "travail"` : rapport tiré de l'APERÇU, qui tourne sur la version
+ * de travail. Le titrer « publiée » faisait croire que la configuration
+ * testée était celle que voient les visiteurs.
+ */
+export function buildEspaceReport(
+  espace: Espace,
+  links?: ShareLinkReportEntry[],
+  options: { version?: "publiee" | "travail" } = {}
+): string {
+  const travail = options.version === "travail";
   const lines: string[] = [];
-  lines.push(`# Rapport de test — Espace « ${espace.name} »`);
+  lines.push(`# Rapport de test — ${travail ? "Aperçu" : "Espace"} « ${espace.name} »`);
   lines.push(`Généré le ${new Date().toLocaleString("fr-FR")} · gent : ${espace.gent} · statut : ${espace.statusLabel}`);
+  if (travail) lines.push("Version de TRAVAIL, non diffusée — ce que verra un visiteur après la prochaine diffusion.");
   lines.push("");
-  lines.push("## Configuration publiée");
+  lines.push(travail ? "## Configuration (version de travail)" : "## Configuration publiée");
   lines.push(`- **Modèle conversationnel** : ${modelLabel(espace.chatModelId)}`);
   lines.push(`- **Recherche web** : ${espace.webSearch ? "activée" : "désactivée"}`);
   lines.push(`- **Serveurs MCP** : ${espace.mcpServers?.map((s) => `${s.name} (${s.url})`).join(", ") || "aucun"}`);
@@ -185,6 +196,7 @@ export function buildEspaceReport(espace: Espace, links?: ShareLinkReportEntry[]
     }`
   );
   lines.push(`- **Connecteur IDFM PRIM** : ${espace.prim ? "actif (transit temps réel, clé côté serveur)" : "inactif"}`);
+  lines.push(`- **Connecteur Gmail** : ${espace.gmail ? "actif (compte Google du créateur)" : "inactif"}`);
   lines.push(`- **Connecteur Powens** : ${espace.powens ? "actif — MODE SANDBOX (agrégation bancaire de test, secrets côté serveur)" : "inactif"}`);
   lines.push(
     `- **Formulaire jump** : ${
@@ -197,7 +209,7 @@ export function buildEspaceReport(espace: Espace, links?: ShareLinkReportEntry[]
   lines.push(`- **Artefacts présents** : ${espace.artefacts.map((a) => `${a.type} « ${a.title} »`).join(", ") || "aucun"}`);
   lines.push("");
   if (espace.systemPrompt) {
-    lines.push("## Prompt système publié");
+    lines.push(travail ? "## Prompt système (version de travail)" : "## Prompt système publié");
     lines.push("```");
     lines.push(espace.systemPrompt);
     lines.push("```");

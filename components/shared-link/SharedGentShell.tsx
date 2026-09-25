@@ -15,6 +15,8 @@ import { BandeauJeuActif } from "@/components/jeu/BandeauJeu";
 import { PlateauJeu } from "@/components/jeu/PlateauJeu";
 import { BrandIcon } from "@/components/shared/BrandMark";
 import { libelleGarder } from "@/lib/historiqueModele";
+import { ReportMenu } from "@/components/shared/ReportMenu";
+import { buildEspaceReport } from "@/lib/testReport";
 import styles from "./SharedGentShell.module.css";
 
 /**
@@ -182,9 +184,18 @@ function SharedGentBody({ token, apercuDe }: { token?: string; apercuDe?: string
             <b>Aperçu</b> — ce que verra un visiteur, sur votre version de travail (non diffusée). Conversation neuve à
             chaque ouverture.
           </span>
-          <a href={`/builder/${encodeURIComponent(apercuDe)}`} className={styles.bandeauLien}>
-            Retour au studio
-          </a>
+          <span className={styles.bandeauActions}>
+            {/* Le rapport de test (configuration + transcript) : un outil du
+                créateur, retiré de l'écran visiteur — l'aperçu le rend ici. */}
+            <ReportMenu
+              getMarkdown={() => buildEspaceReport(currentEspace, undefined, { version: "travail" })}
+              baseName={currentEspace.name}
+              libelle="Générer un rapport"
+            />
+            <a href={`/builder/${encodeURIComponent(apercuDe)}`} className={styles.bandeauLien}>
+              Retour au studio
+            </a>
+          </span>
         </div>
       )}
       <header className={styles.head}>

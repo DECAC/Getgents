@@ -8,10 +8,12 @@ interface Props {
   /** Construit le markdown au moment du clic (état le plus frais). */
   getMarkdown: () => string;
   baseName: string;
+  /** Libellé du bouton — « 📄 Rapport » par défaut. */
+  libelle?: string;
 }
 
 /** Bouton « 📄 Rapport » avec deux options : télécharger (.md) ou copier. */
-export function ReportMenu({ getMarkdown, baseName }: Props) {
+export function ReportMenu({ getMarkdown, baseName, libelle = "📄 Rapport" }: Props) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
@@ -42,7 +44,7 @@ export function ReportMenu({ getMarkdown, baseName }: Props) {
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        {copied ? "✓ Copié" : "📄 Rapport"}
+        {copied ? "✓ Copié" : libelle}
       </button>
       {open && (
         <div className={styles.menu} role="menu">

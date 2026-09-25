@@ -597,6 +597,13 @@
   line-height: 1.45;
 }
 
+.bandeauActions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .bandeauLien {
   flex: none;
   color: var(--ink);
@@ -608,5 +615,7 @@
 @media (max-width: 860px) {
   .bandeauApercu {
     padding: 8px 16px;
+    flex-wrap: wrap;
+    row-gap: 6px;
   }
 }
