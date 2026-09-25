@@ -1,5 +1,8 @@
 .wrap {
-  max-width: 760px;
+  max-width: var(--largeur-studio);
+  /* Dans la colonne flexible de l'onglet Prompt, `margin: auto` seul centrait
+     le bloc ET le réduisait à la largeur de son contenu. */
+  width: 100%;
   margin: 0 auto;
 }
 

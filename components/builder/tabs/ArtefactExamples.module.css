@@ -1,5 +1,5 @@
 .wrap {
-  max-width: 760px;
+  max-width: var(--largeur-studio);
   margin: 0 auto;
 }
 

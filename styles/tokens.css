@@ -40,6 +40,13 @@
   --blue-700: #3a5fa3;
   --blue-tint: #dbe7fb;
 
+  /* Largeur des pages de réglage du studio. Elle était de 760-820 px par
+   * onglet : sur un grand moniteur, le contenu tenait dans une colonne
+   * étroite au milieu d'un écran vide. Les textes d'aide gardent une
+   * longueur de ligne lisible (--ligne-lisible), quelle que soit la page. */
+  --largeur-studio: 1240px;
+  --ligne-lisible: 88ch;
+
   --r: 18px;
   --r-pill: 999px;
 
