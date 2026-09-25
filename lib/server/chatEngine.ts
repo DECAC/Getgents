@@ -96,7 +96,7 @@ export interface ChatBody {
  * faisant autorité. Volontairement borné : ni le prompt entier ni le contenu
  * de la conversation ne sont écrits dans les journaux.
  */
-function traceChatRequest(source: string, body: ChatBody) {
+function traceChatRequest(source: string, body: ChatBody, modeleDemande?: unknown) {
   const messages = body.messages ?? [];
   const system = messages.find((m) => m.role === "system")?.content ?? "";
   console.log(
@@ -104,6 +104,11 @@ function traceChatRequest(source: string, body: ChatBody) {
       tag: "getgents:chat",
       source,
       model: body.model,
+      // Présent SEULEMENT quand le modèle demandé a été remplacé (hors du
+      // catalogue de la plateforme) : la substitution était silencieuse, et
+      // le créateur testait un autre modèle que celui qu'il avait choisi.
+      ...(modeleDemande !== body.model ? { modeleDemande: modeleDemande ?? null } : {}),
+      gentId: body.gentId ?? null,
       maxTokens: body.max_tokens,
       systemMessages: messages.filter((m) => m.role === "system").length,
       systemChars: system.length,
@@ -153,9 +158,10 @@ export async function chatResponseFor(
   // chemin en aval ne puisse le contourner. Avec une clé personnelle, la
   // question ne se pose plus : le builder paie ses appels, rien ne justifie de
   // le restreindre à notre sélection.
+  const modeleDemande = body.model;
   if (ctx.source === "plateforme") body.model = resolveModelId(body.model);
 
-  traceChatRequest(source, body);
+  traceChatRequest(source, body, modeleDemande);
 
   const mcpServers = (body.mcpServers ?? []).filter(
     (s) => typeof s?.url === "string" && /^https?:\/\//.test(s.url)

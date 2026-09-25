@@ -17,6 +17,7 @@ import { BrandIcon } from "@/components/shared/BrandMark";
 import { libelleGarder } from "@/lib/historiqueModele";
 import { ReportMenu } from "@/components/shared/ReportMenu";
 import { buildEspaceReport } from "@/lib/testReport";
+import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import styles from "./SharedGentShell.module.css";
 
 /**
@@ -174,6 +175,11 @@ function SharedGentBody({ token, apercuDe }: { token?: string; apercuDe?: string
         ? "bande"
         : "vide";
 
+  // Le modèle qui répond VRAIMENT : un créateur a testé Claude en croyant
+  // tester Gemini. L'aperçu est une photo de la version de travail au clic
+  // sur Preview — un changement fait ensuite dans le studio n'y est pas.
+  const modeleApercu = modeleConversationEffectif(currentEspace.chatModelId);
+
   return (
     <div className={styles.page}>
       {/* Aperçu du créateur : la page du visiteur, à un bandeau près. Il dit
@@ -182,7 +188,8 @@ function SharedGentBody({ token, apercuDe }: { token?: string; apercuDe?: string
         <div className={styles.bandeauApercu} role="note">
           <span>
             <b>Aperçu</b> — ce que verra un visiteur, sur votre version de travail (non diffusée). Conversation neuve à
-            chaque ouverture.
+            chaque ouverture. Modèle : <b>{modeleApercu.libelle}</b>
+            {modeleApercu.parDefaut ? " (par défaut — aucun choisi)" : ""}.
           </span>
           <span className={styles.bandeauActions}>
             {/* Le rapport de test (configuration + transcript) : un outil du

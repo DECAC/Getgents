@@ -3,6 +3,7 @@
 // réponse et l'espace mis à jour (le fil de conversation reçoit le message
 // utilisateur + la réponse). Utilisé par le webhook WhatsApp entrant — même
 // « cerveau » que la conversation dans l'app, sur un autre canal.
+import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import type { Espace, ConversationMessage } from "@/lib/types";
 import { profileContextNote } from "@/lib/profileSignal";
 import { renderMarkdown } from "@/lib/markdown";
@@ -68,7 +69,7 @@ export async function replyAsGent(
       method: "POST",
       headers: enTetesOpenRouter(key),
       body: JSON.stringify({
-        model: espace.chatModelId ?? "anthropic/claude-sonnet-5",
+        model: modeleConversationEffectif(espace.chatModelId).id,
         messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: userText }],
         max_tokens: REPLY_MAX_TOKENS,
         ...(espace.webSearch ? { plugins: [{ id: "web" }] } : {}),

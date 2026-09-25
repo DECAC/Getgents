@@ -3,6 +3,7 @@
 // qui sélectionne les gents dont la routine est due, fait produire la note
 // par le modèle (recherche web incluse si activée), et écrit le résultat
 // (artefact + messages de conversation) directement dans l'espace en base.
+import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import type { Espace, Routine, Artefact, ConversationMessage } from "@/lib/types";
 export { isRoutineDue } from "@/lib/routineSchedule";
 import { extractArtefactSignal, ARTEFACT_PROMPT_INSTRUCTION } from "@/lib/artefactSignal";
@@ -107,7 +108,7 @@ export async function runRoutine(
       method: "POST",
       headers: enTetesOpenRouter(key),
       body: JSON.stringify({
-        model: espace.chatModelId ?? "anthropic/claude-sonnet-5",
+        model: modeleConversationEffectif(espace.chatModelId).id,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: routine.mission },

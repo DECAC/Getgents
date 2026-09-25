@@ -1,5 +1,6 @@
 "use client";
 
+import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
@@ -105,10 +106,12 @@ export function BuilderAssistantPanel() {
     };
   }, []);
 
-  const gentChatModelId =
-    currentDraft.modelAssignments.find((a) => a.capability === "chat")?.modelId ??
-    CHAT_MODELS[0]?.id ??
-    "";
+  // Le défaut AFFICHÉ est celui qui RÉPOND : le premier du catalogue (Kimi
+  // K3) s'affichait ici quand rien n'était choisi, pendant que le gent
+  // tournait sur Claude Sonnet 5.
+  const gentChatModelId = modeleConversationEffectif(
+    currentDraft.modelAssignments.find((a) => a.capability === "chat")?.modelId
+  ).id;
   const assistantModelLabel =
     MODEL_CATALOG.find((m) => m.id === BUILDER_ASSISTANT_MODEL_ID)?.label ?? "Kimi K3";
 

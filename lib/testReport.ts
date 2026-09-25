@@ -2,6 +2,7 @@
 // (builder ou espace) — configuration, transcript, appels d'outils,
 // propositions et décisions — pour analyse a posteriori des tests.
 import type { Espace, ConversationMessage } from "@/lib/types";
+import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import type { GentDraft } from "@/lib/types/builder";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
@@ -186,7 +187,8 @@ export function buildEspaceReport(
   if (travail) lines.push("Version de TRAVAIL, non diffusée — ce que verra un visiteur après la prochaine diffusion.");
   lines.push("");
   lines.push(travail ? "## Configuration (version de travail)" : "## Configuration publiée");
-  lines.push(`- **Modèle conversationnel** : ${modelLabel(espace.chatModelId)}`);
+  const modele = modeleConversationEffectif(espace.chatModelId);
+  lines.push(`- **Modèle conversationnel** : ${modele.libelle}${modele.parDefaut ? " (par défaut — aucun choisi)" : ""}`);
   lines.push(`- **Recherche web** : ${espace.webSearch ? "activée" : "désactivée"}`);
   lines.push(`- **Serveurs MCP** : ${espace.mcpServers?.map((s) => `${s.name} (${s.url})`).join(", ") || "aucun"}`);
   lines.push(`- **Datasets** : ${espace.datasets?.map((d) => `${d.name} (${d.url})`).join(", ") || "aucun"}`);

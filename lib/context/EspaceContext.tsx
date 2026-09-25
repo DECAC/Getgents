@@ -62,6 +62,7 @@ import { resolveImageModelId } from "@/lib/imageModels";
 import { materializeProfileMedia } from "@/lib/profileSummaryArtefact";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import { langueDeLEnTete } from "@/lib/langue";
+import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import { estCoupureReseau, estReponseVide, MESSAGE_CONNEXION_COUPEE, MESSAGE_REPONSE_VIDE } from "@/lib/reponseVide";
 import {
   espaceForPinnedRefresh,
@@ -751,7 +752,7 @@ export function EspaceProvider({
             typeof navigator !== "undefined" ? langueDeLEnTete((navigator.languages ?? []).join(",")) : null,
         })
       : buildGentSystemPrompt(espace, { variant: "espace", position });
-    const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
+    const chatModelId = modeleConversationEffectif(espace.chatModelId).id;
 
     setEspaces((prev) => {
       const e = prev[id];

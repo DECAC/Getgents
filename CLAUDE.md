@@ -250,6 +250,16 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   est jointe au tour sans outils, 8 tours au lieu de 6 (le budget de TEMPS
   protège déjà des 300 s), et une fin sans texte final envoie
   `MESSAGE_REPONSE_FINALE_MANQUANTE` (`getgents:chat reponse_finale_vide`).
+- **Le modèle testé n'était pas toujours celui affiché.** Deux défauts
+  coexistaient : le sélecteur du studio montrait Kimi K3 (premier du
+  catalogue) quand rien n'était choisi, pendant que le gent tournait sur
+  Claude Sonnet 5 ; et la clé plateforme remplace EN SILENCE un modèle hors
+  catalogue (`resolveModelId`). Depuis : un seul défaut
+  (`MODELE_CHAT_PAR_DEFAUT`, `lib/modeleConversation.ts`), le modèle réel
+  est écrit dans le bandeau de l'aperçu et le rapport, et
+  `getgents:chat` porte `gentId` et `modeleDemande` quand il y a eu
+  substitution. Rappel : l'aperçu est une PHOTO prise au clic sur Preview —
+  changer le modèle ensuite dans le studio n'agit pas sur un aperçu ouvert.
 - **Un verrou sans expiration est une panne en attente.** `orchestrating` est
   resté bloqué à `true` après une fonction tuée par un déploiement, rendant un
   salon muet définitivement. Expiration à 3 minutes depuis la migration 015.
