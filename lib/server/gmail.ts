@@ -204,6 +204,32 @@ export async function disconnectGmail(gentId: string): Promise<void> {
   await deleteCredential(gentId, GMAIL_PROVIDER);
 }
 
+/**
+ * `invalid_grant` au renouvellement : Google a retiré le jeton — accès révoqué
+ * par l'utilisateur, mot de passe changé, ou application OAuth en mode
+ * « Test », dont les jetons expirent après 7 jours. Aucune nouvelle tentative
+ * n'y changera rien : seule une reconnexion en délivre un neuf.
+ */
+export function renouvellementRefuseDefinitivement(reponse: { error?: string }): boolean {
+  return reponse.error === "invalid_grant";
+}
+
+/**
+ * Google répond `{"error":"invalid_grant","error_description":"Bad Request"}`.
+ * Seule la description était affichée : « Bad Request » ne disait ni la
+ * cause, ni que réessayer était inutile.
+ */
+export function messageRenouvellement(reponse: { error?: string; error_description?: string }): string {
+  if (renouvellementRefuseDefinitivement(reponse)) {
+    return (
+      "Google a retiré l'accès Gmail de ce gent (jeton révoqué ou expiré). " +
+      "Le créateur doit reconnecter le compte Google dans l'onglet Connecteurs du studio."
+    );
+  }
+  const cause = [reponse.error, reponse.error_description].filter(Boolean).join(" — ") || "erreur inconnue";
+  return `Impossible de renouveler l'accès Gmail (${cause}). Réessayez ; si l'erreur persiste, reconnectez le compte Google.`;
+}
+
 async function validAccessToken(gentId: string): Promise<{ token: string } | { error: string }> {
   const cred = await getCredential(gentId, GMAIL_PROVIDER);
   if (!cred) {
@@ -227,11 +253,25 @@ async function validAccessToken(gentId: string): Promise<{ token: string } | { e
 
   const refreshed = await refreshAccessToken(cred.refreshToken);
   if (refreshed.error || !refreshed.access_token) {
-    return {
-      error: JSON.stringify({
-        error: `Impossible de renouveler l'accès Gmail : ${refreshed.error_description ?? refreshed.error ?? "erreur inconnue"}. Reconnectez le compte Google.`,
-      }),
-    };
+    const definitif = renouvellementRefuseDefinitivement(refreshed);
+    console.error(
+      JSON.stringify({
+        tag: "getgents:oauth",
+        event: definitif ? "refresh_revoque" : "refresh_echec",
+        gentId,
+        // Le CODE, jamais le jeton : c'est lui qui dit quoi faire.
+        code: refreshed.error ?? null,
+        detail: refreshed.error_description ?? null,
+      })
+    );
+    if (definitif) {
+      // Jeton mort pour de bon : le garder ferait afficher « connecté » dans
+      // l'onglet Connecteurs, et chaque question échouerait sans que rien ne
+      // le signale au créateur. Le retirer rend l'état honnête — l'onglet
+      // repropose « Connecter un compte Google ».
+      await deleteCredential(gentId, GMAIL_PROVIDER).catch(() => undefined);
+    }
+    return { error: JSON.stringify({ error: messageRenouvellement(refreshed) }) };
   }
   const expiresAt =
     typeof refreshed.expires_in === "number" ? new Date(Date.now() + refreshed.expires_in * 1000) : null;

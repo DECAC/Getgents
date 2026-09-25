@@ -1,5 +1,10 @@
 import { createHmac } from "node:crypto";
-import { decodeOAuthState, encodeOAuthState } from "@/lib/server/gmail";
+import {
+  decodeOAuthState,
+  encodeOAuthState,
+  messageRenouvellement,
+  renouvellementRefuseDefinitivement,
+} from "@/lib/server/gmail";
 
 /**
  * Le `state` OAuth portait un gentId en base64 non signé : forgeable à la
@@ -60,5 +65,21 @@ describe("état OAuth Gmail", () => {
     );
     const sig = createHmac("sha256", "secret-de-test").update(sansUser).digest("base64url");
     expect(decodeOAuthState(`${sansUser}.${sig}`)).toBeNull();
+  });
+});
+
+describe("renouvellement du jeton Gmail refusé", () => {
+  it("invalid_grant est définitif et le dit, au lieu de « Bad Request »", () => {
+    const r = { error: "invalid_grant", error_description: "Bad Request" };
+    expect(renouvellementRefuseDefinitivement(r)).toBe(true);
+    const m = messageRenouvellement(r);
+    expect(m).not.toContain("Bad Request");
+    expect(m).toContain("reconnecter le compte Google");
+  });
+
+  it("une autre erreur n'est pas définitive et garde son code", () => {
+    const r = { error: "temporarily_unavailable", error_description: "Try again" };
+    expect(renouvellementRefuseDefinitivement(r)).toBe(false);
+    expect(messageRenouvellement(r)).toContain("temporarily_unavailable");
   });
 });

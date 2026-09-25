@@ -224,6 +224,15 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   Supabase sans la reporter sur Vercel reproduit exactement ce symptôme ; et
   `NEXT_PUBLIC_SUPABASE_URL` est figée À LA CONSTRUCTION, donc toute correction
   exige un REDÉPLOIEMENT, pas un redémarrage.
+- **Gmail « Bad Request — reconnecter le compte Google » = `invalid_grant`.**
+  Google refuse le jeton de renouvellement : accès révoqué, mot de passe
+  changé, ou — cause la plus probable pour un projet perso — écran de
+  consentement OAuth en statut « Test », dont les jetons meurent au bout de
+  7 JOURS. Seule la description (« Bad Request ») était affichée. Depuis, le
+  message nomme la cause, `getgents:oauth refresh_revoque` le journalise, et
+  le jeton mort est SUPPRIMÉ pour que l'onglet Connecteurs cesse d'afficher
+  « connecté ». Reconnecter répare ; passer l'application en « Production »
+  (Google Cloud → écran de consentement OAuth) empêche la récidive.
 - **Un verrou sans expiration est une panne en attente.** `orchestrating` est
   resté bloqué à `true` après une fonction tuée par un déploiement, rendant un
   salon muet définitivement. Expiration à 3 minutes depuis la migration 015.
