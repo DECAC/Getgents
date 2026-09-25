@@ -342,6 +342,16 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   sont connus. Ils restent dans le code pour les tests. Même endroit : la
   persistance écrivait le cache sous la clé COMMUNE à tous les comptes ; elle
   passe par `writeStoredDrafts` (clé du compte) et efface l'ancienne copie.
+  **Ils sont REVENUS après ce correctif** : la synchronisation renvoyait au
+  serveur TOUT gent du cache local absent du serveur (« publié hors ligne »).
+  Le cache d'un autre navigateur (autre machine, téléphone) les recréait donc
+  à chaque ouverture — comme n'importe quel gent supprimé ailleurs. Depuis
+  (`reconcilier`, `lib/reconciliation.ts`, studio ET GetSpace) : absent du
+  serveur APRÈS y avoir été = supprimé, écarté ; seul un gent que le serveur
+  n'a jamais confirmé est envoyé. La liste des confirmés (`…:connus`, clé du
+  compte) n'est CRÉÉE que par une liste du serveur ; un vieux cache sans
+  liste n'envoie rien. Les identifiants de démonstration ne sont PAS
+  bloqués : un gent réellement utilisé (Élysée) cesserait d'être enregistré.
 - **Un gent Gmail qui « n'a pas le contenu » d'une newsletter.** Vécu sur
   MyClaw et The Batch : trois défauts empilés. `gmail_get_message` ne lisait
   que la partie `text/plain`, VIDE ou réduite à « voir en ligne » dans une

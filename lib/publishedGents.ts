@@ -6,6 +6,7 @@ import { formatConversationStartedAt, newConversationId } from "@/lib/conversati
 import { parseDatasetUrl } from "@/lib/opendatasoft";
 import { apiFetchInit, signalerSessionExpiree } from "@/lib/apiFetch";
 import { cacheKey } from "@/lib/session/currentUser";
+import { ajouterConnu, ecrireConnus, lireConnus, reconcilier } from "@/lib/reconciliation";
 import { MAX_CHARS as DOC_MAX_CHARS } from "@/lib/extractDocumentText";
 import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import { resolveImageModelId } from "@/lib/imageModels";
@@ -125,8 +126,10 @@ function sendRemoteGent(id: string, espace: Espace, diffuse = false): Promise<vo
   })
     .then(async (res) => {
       if (res.status === 503 || res.status === 401) remoteAvailable = false;
-      else if (res.ok) remoteAvailable = true;
-      else if (diffuse) {
+      else if (res.ok) {
+        remoteAvailable = true;
+        ajouterConnu(cleConnus(), id);
+      } else if (diffuse) {
         // Une diffusion qui échoue en silence est le pire cas : le créateur
         // croit son gent à jour alors que ses destinataires lisent toujours
         // l'ancienne version. Cause la plus fréquente : la migration 004
@@ -180,7 +183,10 @@ export async function flushPublishedGent(
     if (res.status === 503 || res.status === 401) remoteAvailable = false;
     else if (res.ok) remoteAvailable = true;
 
-    if (res.ok) return { ok: true, status: res.status };
+    if (res.ok) {
+      ajouterConnu(cleConnus(), id);
+      return { ok: true, status: res.status };
+    }
 
     let error = `http_${res.status}`;
     try {
@@ -264,7 +270,16 @@ export async function syncPublishedGentsFromRemote(): Promise<EspacesMap | null 
   if (remote === null) return null;
 
   const local = readPublishedGents();
+  // Absent du serveur : publié ici hors ligne (à envoyer) ou supprimé
+  // ailleurs (à oublier) — voir lib/reconciliation.ts.
+  const { aEnvoyer, ecartes } = reconcilier(local, remote, lireConnus(cleConnus()));
+  ecrireConnus(cleConnus(), Object.keys(remote));
   const merged: EspacesMap = { ...local };
+  for (const id of ecartes) delete merged[id];
+  if (ecartes.length) {
+    console.info(JSON.stringify({ tag: "getgents:gents", event: "supprimes_ailleurs_ecartes", ids: ecartes }));
+  }
+  gentsEcartes = ecartes;
   const stale: string[] = [];
 
   for (const [id, remoteEspace] of Object.entries(remote)) {
@@ -282,12 +297,22 @@ export async function syncPublishedGentsFromRemote(): Promise<EspacesMap | null 
 
   writeLocalCache(merged);
 
-  // Réconciliation : gents absents du serveur (publiés hors ligne ou avant la
-  // config Supabase) et versions locales en avance remontent vers le serveur.
+  // Réconciliation : gents jamais vus par le serveur (publiés hors ligne) et
+  // versions locales en avance remontent vers le serveur.
   for (const [id, espace] of Object.entries(merged)) {
-    if (!(id in remote) || stale.includes(id)) pushRemoteGent(id, espace, true);
+    if (aEnvoyer.includes(id) || stale.includes(id)) pushRemoteGent(id, espace, true);
   }
   return merged;
+}
+
+function cleConnus(): string {
+  return cacheKey(`${STORAGE_BASE}:connus`);
+}
+
+/** Écartés par la dernière synchronisation (supprimés ailleurs) : l'état en mémoire les tient encore. */
+let gentsEcartes: string[] = [];
+export function derniersGentsEcartes(): readonly string[] {
+  return gentsEcartes;
 }
 
 /**

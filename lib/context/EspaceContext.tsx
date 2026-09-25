@@ -65,6 +65,7 @@ import {
   readPublishedGents,
   writePublishedGent,
   syncPublishedGentsFromRemote,
+  derniersGentsEcartes,
 } from "@/lib/publishedGents";
 import { composerVersionPersonnelle, fusionnerUsage } from "@/lib/versionPersonnelle";
 import { langueDeLEnTete } from "@/lib/langue";
@@ -528,7 +529,11 @@ export function EspaceProvider({
           else if (retirerAmorce && currentIdRef.current === initialId) setCurrentId(idsDuCompte[0]);
           setEspaces((prev) => {
             const gardes: EspacesMap = {};
+            // Supprimés sur une autre machine : lus du cache avant la réponse
+            // du serveur, ils sortent de la liste (lib/reconciliation.ts).
+            const ecartes = new Set(derniersGentsEcartes());
             for (const [gid, e] of Object.entries(prev)) {
+              if (ecartes.has(gid) && gid !== initialId) continue;
               const demo = gid in INITIAL_ESPACES && !(gid in personnels);
               // L'emplacement provisoire créé pour l'adresse part aussi.
               if (gid === initialId && parAdresse) continue;

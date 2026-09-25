@@ -58,6 +58,7 @@ import {
   readStoredDrafts,
   seedDrafts,
   syncDraftsFromRemote,
+  dernierBrouillonsEcartes,
   pushRemoteDraft,
   writeStoredDrafts,
 } from "@/lib/builderDraftStorage";
@@ -330,8 +331,15 @@ export function BuilderProvider({
     let cancelled = false;
     syncDraftsFromRemote()
       .then((merged) => {
-        if (cancelled || merged === "unauthorized" || !merged || !Object.keys(merged).length) return;
-        setDrafts((prev) => ({ ...prev, ...merged }));
+        if (cancelled || merged === "unauthorized" || !merged) return;
+        // Les gents supprimés ailleurs, lus du cache avant la réponse du
+        // serveur, sortent de l'état : la persistance les renverrait sinon.
+        const ecartes = dernierBrouillonsEcartes();
+        setDrafts((prev) => {
+          const next = { ...prev, ...merged };
+          for (const id of ecartes) delete next[id];
+          return next;
+        });
       })
       .finally(() => {
         if (!cancelled) setStorageReady(true);

@@ -3,6 +3,7 @@ import type { Espace } from "@/lib/types";
 import { GENT_DRAFTS } from "@/lib/mock-data/builder";
 import { apiFetchInit, signalerSessionExpiree } from "@/lib/apiFetch";
 import { cacheKey } from "@/lib/session/currentUser";
+import { ajouterConnu, ecrireConnus, lireConnus, reconcilier } from "@/lib/reconciliation";
 import { suggestGentIcon } from "@/lib/gentIcons";
 import { applyEventManagerTemplate } from "@/lib/eventManagerTemplate";
 
@@ -218,6 +219,7 @@ function envoyerMaintenant(id: string, draft: GentDraft): void {
       } else if (res.ok) {
         remoteAvailable = true;
         echecs.delete(id);
+        ajouterConnu(cleConnus(), id);
         poserEtat("enregistre");
       } else {
         echecs.add(id);
@@ -267,12 +269,35 @@ export async function syncDraftsFromRemote(): Promise<GentDraftsMap | null | "un
   const remote = await fetchRemoteDrafts();
   if (remote === "unauthorized") return "unauthorized";
   if (remote === null) return null;
-  const merged = { ...readStoredDrafts(), ...remote };
+  const local = readStoredDrafts();
+  // Absent du serveur : créé ici (à envoyer) ou supprimé ailleurs (à oublier)
+  // — voir lib/reconciliation.ts. On renvoyait tout : les gents supprimés
+  // revenaient depuis le cache d'un autre navigateur.
+  const { aEnvoyer, ecartes } = reconcilier(local, remote, lireConnus(cleConnus()));
+  ecrireConnus(cleConnus(), Object.keys(remote));
+  const merged: GentDraftsMap = { ...remote };
+  for (const id of aEnvoyer) merged[id] = local[id];
   writeStoredDrafts(merged);
-  for (const [id, draft] of Object.entries(merged)) {
-    if (!(id in remote)) pushRemoteDraft(id, draft);
+  for (const id of aEnvoyer) pushRemoteDraft(id, local[id]);
+  if (ecartes.length) {
+    console.info(JSON.stringify({ tag: "getgents:brouillons", event: "supprimes_ailleurs_ecartes", ids: ecartes }));
   }
+  brouillonsEcartes = ecartes;
   return merged;
+}
+
+/**
+ * Identifiants écartés par la dernière synchronisation : l'état en mémoire du
+ * studio les tient encore (chargés du cache AVANT la réponse du serveur), et
+ * sa persistance automatique les renverrait aussitôt.
+ */
+let brouillonsEcartes: string[] = [];
+export function dernierBrouillonsEcartes(): readonly string[] {
+  return brouillonsEcartes;
+}
+
+function cleConnus(): string {
+  return cacheKey(`${DRAFTS_STORAGE_KEY}:connus`);
 }
 
 /**
