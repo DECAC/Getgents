@@ -30,7 +30,7 @@ import styles from "./SharedGentShell.module.css";
  * Une mise en page propre au partage désorientait — le destinataire découvrait
  * une interface que le créateur n'avait jamais vue en Preview.
  */
-function SharedGentBody({ token }: { token: string }) {
+function SharedGentBody({ token, apercuDe }: { token?: string; apercuDe?: string }) {
   const {
     currentEspace,
     assistantOpen,
@@ -174,6 +174,19 @@ function SharedGentBody({ token }: { token: string }) {
 
   return (
     <div className={styles.page}>
+      {/* Aperçu du créateur : la page du visiteur, à un bandeau près. Il dit
+          ce qui diffère du lien — la version — et ce qui n'en diffère pas. */}
+      {apercuDe && (
+        <div className={styles.bandeauApercu} role="note">
+          <span>
+            <b>Aperçu</b> — ce que verra un visiteur, sur votre version de travail (non diffusée). Conversation neuve à
+            chaque ouverture.
+          </span>
+          <a href={`/builder/${encodeURIComponent(apercuDe)}`} className={styles.bandeauLien}>
+            Retour au studio
+          </a>
+        </div>
+      )}
       <header className={styles.head}>
         <span className={styles.icon} aria-hidden="true">
           <BrandIcon variant="fill" />
@@ -228,7 +241,8 @@ function SharedGentBody({ token }: { token: string }) {
             </div>
           )}
           <FileDownloadControl variant="shared" />
-          <SignalerIncident token={token} />
+          {/* Signaler vise le créateur : sans objet quand c'est lui qui regarde. */}
+          {token && <SignalerIncident token={token} />}
         </div>
       </header>
 
@@ -422,6 +436,18 @@ export function SharedGentShell({ token, espace }: { token: string; espace: Espa
       assistantOuvertAuDepart
     >
       <SharedGentBody token={token} />
+    </EspaceProvider>
+  );
+}
+
+/**
+ * Aperçu du créateur : la même page que le visiteur, sur la version de
+ * travail. Voir `espacePourApercu` et le mode `apercu` du fournisseur.
+ */
+export function ApercuGentShell({ gentId, espace }: { gentId: string; espace: Espace }) {
+  return (
+    <EspaceProvider initialId={gentId} apercu initialEspaces={{ [gentId]: espace }} assistantOuvertAuDepart>
+      <SharedGentBody apercuDe={gentId} />
     </EspaceProvider>
   );
 }

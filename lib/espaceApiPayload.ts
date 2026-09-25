@@ -152,6 +152,43 @@ export function espaceForPublicLink(espace: Espace): Espace {
 }
 
 /**
+ * La version de travail telle qu'un VISITEUR la découvrirait — pour l'aperçu
+ * du créateur (`/apercu/<id>`).
+ *
+ * Preview ouvrait l'espace du créateur : ses conversations passées, ses
+ * artefacts gardés, sa mémoire, son profil. Le gent y répondait donc en
+ * tenant compte de tout ce qui s'était dit lors des essais précédents, et ne
+ * se comportait pas comme devant un inconnu.
+ *
+ * Tout ce que voit le visiteur vient de la projection publique, champ pour
+ * champ — c'est elle qui fait foi. Le reste (prompt, connaissances,
+ * connecteurs, mission de la mini-app) est conservé : sur le lien, le serveur
+ * le relit dans la version diffusée ; ici, le navigateur du créateur l'envoie
+ * lui-même, puisque cette version n'est pas encore en base.
+ */
+export function espacePourApercu(travail: Espace): Espace {
+  const visiteur = espaceForPublicLink(travail);
+  return {
+    ...travail,
+    metrics: visiteur.metrics,
+    integrations: visiteur.integrations,
+    tools: visiteur.tools,
+    tabs: visiteur.tabs,
+    map: visiteur.map,
+    memory: visiteur.memory,
+    conversations: visiteur.conversations,
+    activeConversationId: visiteur.activeConversationId,
+    files: visiteur.files,
+    artefacts: visiteur.artefacts,
+    downloadableDocuments: visiteur.downloadableDocuments,
+    profile: undefined,
+    pinnedArtefact: travail.pinnedArtefact
+      ? { ...travail.pinnedArtefact, dashboard: undefined, generatedAt: undefined }
+      : undefined,
+  };
+}
+
+/**
  * Neutralise la mémoire et les documents avant une génération déclenchée par
  * quelqu'un d'autre que l'utilisateur auquel ils appartiennent.
  *

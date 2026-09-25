@@ -37,6 +37,8 @@ import { politiqueCsp, nouveauNonce } from "@/lib/csp";
 const CHEMINS_PRIVES = [
   /^\/builder(\/|$)/,
   /^\/espace(\/|$)/,
+  // Aperçu d'une version de travail : le créateur seul.
+  /^\/apercu(\/|$)/,
   /^\/accueil$/,
   /^\/myspace$/,
   /^\/compte(\/|$)/,

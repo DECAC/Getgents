@@ -59,7 +59,7 @@ describe("adresses refusées", () => {
   it("réserve toutes les routes de premier niveau existantes", () => {
     // Une route ajoutée sans être réservée casserait l'adresse d'un gent déjà
     // publié — et déjà indexé par les moteurs.
-    for (const route of ["builder", "espace", "api", "auth", "l", "compte", "accueil", "annuaire"]) {
+    for (const route of ["builder", "espace", "api", "auth", "l", "compte", "accueil", "annuaire", "apercu"]) {
       expect(SLUGS_RESERVES.has(route)).toBe(true);
     }
   });

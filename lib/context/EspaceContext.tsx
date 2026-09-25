@@ -61,6 +61,7 @@ import { extractImageSignal, IMAGES_THEME_LABEL, type ImageProposal } from "@/li
 import { resolveImageModelId } from "@/lib/imageModels";
 import { materializeProfileMedia } from "@/lib/profileSummaryArtefact";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
+import { langueDeLEnTete } from "@/lib/langue";
 import {
   espaceForPinnedRefresh,
   espaceForStarters,
@@ -322,6 +323,7 @@ export function EspaceProvider({
   children,
   initialId,
   shareToken,
+  apercu = false,
   initialEspaces,
   assistantOuvertAuDepart = false,
 }: {
@@ -342,9 +344,19 @@ export function EspaceProvider({
    * appels chat/refresh passent par les routes tokenisées.
    */
   shareToken?: string;
+  /**
+   * Aperçu du créateur (`/apercu/<id>`) : l'écran et la consigne du VISITEUR,
+   * sur la version de travail fournie par `initialEspaces`. Rien n'est relu
+   * ni réécrit — surtout pas la version de travail, qu'un fil d'essai
+   * écraserait. Les appels passent par les routes du créateur : cette version
+   * n'est pas encore en base, aucun lien ne pourrait la relire.
+   */
+  apercu?: boolean;
   initialEspaces?: EspacesMap;
 }) {
-  const shareMode = !!shareToken;
+  // `shareMode` dit à l'INTERFACE qu'elle s'adresse à un visiteur ; les routes,
+  // elles, se choisissent sur `shareToken`.
+  const shareMode = !!shareToken || apercu;
   const [espaces, setEspaces] = useState<EspacesMap>(() => initialEspaces ?? seedEspaces(initialId));
   // L'espace tel que le serveur l'a servi : ce qui s'y trouve appartient au
   // créateur, tout ajout ultérieur au visiteur (voir lib/memoireVisiteur).
@@ -727,7 +739,17 @@ export function EspaceProvider({
 
     // Assemblage partagé avec le chemin « lien de partage » : un même gent
     // doit se comporter à l'identique en Preview et chez un destinataire.
-    const systemPrompt = buildGentSystemPrompt(espace, { variant: "espace", position });
+    // Aperçu : la consigne de l'INVITÉ, comme sur le lien — sans mémoire ni
+    // documents de session, et amorcée par la langue du navigateur, comme la
+    // route du lien l'est par l'en-tête Accept-Language.
+    const systemPrompt = apercu
+      ? buildGentSystemPrompt(espace, {
+          variant: "sharedLink",
+          position,
+          langueNavigateur:
+            typeof navigator !== "undefined" ? langueDeLEnTete((navigator.languages ?? []).join(",")) : null,
+        })
+      : buildGentSystemPrompt(espace, { variant: "espace", position });
     const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
 
     setEspaces((prev) => {

@@ -20,7 +20,7 @@
 export const SLUGS_RESERVES = new Set([
   // Routes existantes
   "api", "auth", "builder", "espace", "accueil", "myspace", "compte", "annuaire", "l",
-  "prototype", "connexion", "inscription", "confirmation", "artefact",
+  "prototype", "connexion", "inscription", "confirmation", "artefact", "apercu",
   "mot-de-passe-oublie", "nouveau-mot-de-passe",
   // Fichiers servis à la racine
   "favicon.ico", "robots.txt", "sitemap.xml", "manifest.json", "_next", "pdfjs",

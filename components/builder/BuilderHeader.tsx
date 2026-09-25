@@ -36,7 +36,10 @@ export function BuilderHeader() {
     // lise bien la version qu'on vient d'écrire (surtout juste après le
     // gabarit Event Manager).
     window.setTimeout(() => {
-      window.open(`/espace/${currentDraft.id}`, "_blank", "noopener,noreferrer");
+      // L'APERÇU, pas l'espace du créateur : ce que verra un visiteur, sur la
+      // version de travail — sans les conversations ni les artefacts des
+      // essais précédents, qui faisaient répondre le gent autrement.
+      window.open(`/apercu/${encodeURIComponent(currentDraft.id)}`, "_blank", "noopener,noreferrer");
     }, 0);
   }
 

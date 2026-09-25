@@ -582,3 +582,31 @@
   line-height: 1.5;
   color: var(--muted);
 }
+
+/* Bandeau de l'aperçu du créateur — jamais vu par un visiteur. */
+.bandeauApercu {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 28px;
+  background: var(--gold-tint);
+  color: var(--ink);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.bandeauLien {
+  flex: none;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 860px) {
+  .bandeauApercu {
+    padding: 8px 16px;
+  }
+}

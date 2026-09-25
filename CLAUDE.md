@@ -33,7 +33,9 @@ un test (`__tests__/legal.test.ts`) l'interdit.
   (`/opt/pw-browsers/chromium`), pas par des tests de composants.
 - **Ne jamais `pkill -f "next start"`** : le motif correspond au shell de
   l'agent, qui se tue lui-même (sortie 144). Utiliser `nohup`, un port unique
-  par essai, et une boucle `curl` d'attente.
+  par essai, et une boucle `curl` d'attente. Même piège avec une boucle sur
+  `/proc` qui filtre la ligne de commande : le shell qui l'exécute contient le
+  motif. Exclure `$$` et les lignes qui commencent par `/bin/bash`.
 - **Nettoyer AVANT de committer**, et relire `git status`. Un `playwright`
   s'est déjà glissé dans `package.json` de production.
 - **Une migration dont le code dépend se passe AVANT le déploiement.** Sinon
@@ -147,6 +149,17 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (`ONGLET_PAR_DEFAUT`) ; l'écran « que voulez-vous construire ? »
   (AccueilTab) est supprimé — il posait la question de la création à un gent
   déjà créé. Ne rien remettre qui crée depuis une entrée de navigation.
+- **Preview = ce que voit un VISITEUR, pas l'espace du créateur.** Le bouton
+  ouvre `/apercu/<id>` (privé, slug réservé) : l'écran du lien
+  (`SharedGentShell`), la consigne « invité » (`variant: "sharedLink"`), sur
+  la version de TRAVAIL projetée par `espacePourApercu` — fil vierge, ni
+  artefacts gardés, ni mémoire, ni fichiers, ni profil. Il ouvrait
+  `/espace/<id>` : autre coquille, et un gent qui tenait compte de tous les
+  essais précédents — il ne répondait donc pas comme devant un inconnu. Le
+  mode `apercu` du fournisseur ne relit ni ne RÉÉCRIT rien : un fil d'essai
+  écraserait la version de travail. Les appels passent par les routes du
+  créateur, cette version n'étant pas en base. `/espace/<id>` reste l'usage
+  personnel du gent, plus un banc d'essai.
 - **Ouvrir un onglet ne modifie JAMAIS le gent.** L'onglet Event Manager
   posait son gabarit à l'ouverture sur tout gent sans salon : prompt, nom et
   emblème d'un gent conversationnel étaient remplacés au simple passage.
