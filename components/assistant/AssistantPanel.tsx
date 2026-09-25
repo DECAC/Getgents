@@ -30,6 +30,8 @@ import { MESSAGE_REESSAI_ARTEFACT, MESSAGE_REPONSE_TEXTE } from "@/lib/artefactS
 import { libelleGarder } from "@/lib/historiqueModele";
 import { formeDeduite, resumeComposition } from "@/lib/dashboardArtefact";
 import { BrandIcon } from "@/components/shared/BrandMark";
+import { BulleSelection } from "./BulleSelection";
+import { demandeEnSavoirPlus } from "@/lib/enSavoirPlus";
 import styles from "./AssistantPanel.module.css";
 
 const PROPOSAL_KIND_LABEL: Record<string, string> = {
@@ -891,7 +893,7 @@ export function AssistantPanel({
           {isAgent && tourDeJeu ? (
             <SceneTour etat={tourDeJeu} onRepondre={sendMessage} actif={isLastMessage} />
           ) : (
-          <div className={styles.bubble}>
+          <div className={styles.bubble} data-reponse-gent={isAgent ? "" : undefined}>
             <SafeHTML html={m.text ?? ""} />
             {m.imageStatus === "pending" && (
               <div className={styles.proposalBody}>🎨 Génération de l'image…</div>
@@ -1184,6 +1186,12 @@ export function AssistantPanel({
         </button>
       </div>
 
+      {/* Surligner un passage d'une réponse du gent : « En savoir plus ». */}
+      <BulleSelection
+        conteneur={bodyRef}
+        desactive={isThinking}
+        onEnSavoirPlus={(extrait) => sendMessage(demandeEnSavoirPlus(extrait))}
+      />
       <div className={styles.body} ref={bodyRef} onClick={handleBodyClick}>
         {cdView === "hist" ? (
           renderHist()

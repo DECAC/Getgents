@@ -137,6 +137,14 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   fermé, rangée en NOUVELLE VERSION — la copie fidèle reste restaurable.
   Réservé aux comptes connectés : le visiteur d'un lien n'a personne à qui
   facturer l'appel.
+- **« En savoir plus » sur un passage SURLIGNÉ** d'une réponse du gent
+  (`BulleSelection`, `lib/enSavoirPlus.ts`) : une bulle propose d'approfondir,
+  et part comme un message ordinaire qui cite le passage — le gent y répond
+  avec ses outils, aucune route nouvelle. La bulle n'apparaît que si la
+  sélection tient dans UNE réponse du gent (`data-reponse-gent`) ; rendue en
+  portail (le panneau est un tiroir transformé sur téléphone), SOUS la
+  sélection sur écran tactile, où le menu natif occupe le dessus. La même
+  bulle accueillera « En faire une note » (surlignage → note).
 - **`artefactsModifiables`** (studio, faux par défaut) : autorise les
   VISITEURS à éditer et restaurer leurs artefacts. Chacun modifie SA copie,
   dans son navigateur — ce n'est PAS de la co-édition, qui exigera des
@@ -330,6 +338,18 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   sont connus. Ils restent dans le code pour les tests. Même endroit : la
   persistance écrivait le cache sous la clé COMMUNE à tous les comptes ; elle
   passe par `writeStoredDrafts` (clé du compte) et efface l'ancienne copie.
+- **Un gent Gmail qui « n'a pas le contenu » d'une newsletter.** Vécu sur
+  MyClaw et The Batch : trois défauts empilés. `gmail_get_message` ne lisait
+  que la partie `text/plain`, VIDE ou réduite à « voir en ligne » dans une
+  newsletter HTML — le gent résumait l'aperçu. `gmail_search` rendait des
+  IDENTIFIANTS seuls — le gent annonçait des newsletters « qui parlent d'IA »
+  sans en avoir lu une. Et les résultats d'outils ne voyagent PAS d'un tour à
+  l'autre (l'historique n'a que le texte) : à « plus de détails ? », il
+  répondait qu'il n'avait rien. Depuis : corps tiré du HTML
+  (`corpsDuMessage`, `lib/gmailContenu.ts`), recherche enrichie
+  d'expéditeur/objet/date/aperçu, conseil d'ÉLARGIR joint à une recherche
+  vide (la consigne du prompt seule ne suffisait pas), et consigne de RELIRE
+  un e-mail pour une question de suivi.
 - **Un verrou sans expiration est une panne en attente.** `orchestrating` est
   resté bloqué à `true` après une fonction tuée par un déploiement, rendant un
   salon muet définitivement. Expiration à 3 minutes depuis la migration 015.
