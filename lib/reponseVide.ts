@@ -31,7 +31,26 @@ export const MESSAGE_CONNEXION_COUPEE =
   "<p><em>La connexion avec le gent a été coupée avant la fin de sa réponse (réseau, ou traitement trop long " +
   "côté serveur). Réessayez ; si cela se répète, restreignez la demande.</em></p>";
 
-/** Une coupure réseau se reconnaît à son type : `fetch` la signale par un TypeError. */
+/**
+ * Une coupure réseau : un TypeError AVEC le message d'un navigateur.
+ *
+ * Le type seul ne suffit pas. Un bug dans le traitement de la réponse
+ * (« Cannot read properties of undefined… ») est lui aussi un TypeError : il
+ * s'affichait comme une coupure, ce qui envoyait chercher du côté du réseau
+ * alors que le serveur avait terminé normalement.
+ */
+const MESSAGES_RESEAU = /failed to fetch|network ?error|load failed|fetch failed|networkerror|connection (reset|closed)|terminated/i;
+
 export function estCoupureReseau(err: unknown): boolean {
-  return err instanceof TypeError;
+  return err instanceof TypeError && MESSAGES_RESEAU.test(err.message);
+}
+
+/** Erreur du navigateur qui n'est PAS une coupure : on la montre telle quelle. */
+export function messageErreurTraitement(err: unknown): string {
+  const detail = err instanceof Error && err.message ? err.message : "erreur inconnue";
+  return (
+    "<p><em>La réponse du gent est arrivée, mais son affichage a échoué (" +
+    detail.replace(/[<>&]/g, "") +
+    "). Réessayez ; si cela se répète, envoyez ce message à l'éditeur.</em></p>"
+  );
 }

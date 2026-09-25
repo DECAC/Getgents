@@ -63,7 +63,13 @@ import { materializeProfileMedia } from "@/lib/profileSummaryArtefact";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import { langueDeLEnTete } from "@/lib/langue";
 import { modeleConversationEffectif } from "@/lib/modeleConversation";
-import { estCoupureReseau, estReponseVide, MESSAGE_CONNEXION_COUPEE, MESSAGE_REPONSE_VIDE } from "@/lib/reponseVide";
+import {
+  estCoupureReseau,
+  estReponseVide,
+  messageErreurTraitement,
+  MESSAGE_CONNEXION_COUPEE,
+  MESSAGE_REPONSE_VIDE,
+} from "@/lib/reponseVide";
 import {
   espaceForPinnedRefresh,
   espaceForStarters,
@@ -1094,6 +1100,10 @@ export function EspaceProvider({
         pushImageProposalIfAny();
       })
       .catch((err: Error) => {
+        // Toute erreur finit ici — y compris un BUG du traitement de la
+        // réponse, qui ressemblait alors à une coupure réseau. La console
+        // garde la vraie cause.
+        console.error("[getgents:chat] réponse non traitée", err);
         if (err?.name === "AbortError") {
           updateLastMessage((m) => ({
             ...m,
@@ -1108,6 +1118,17 @@ export function EspaceProvider({
             ...m,
             role: "agent" as const,
             text: (estReponseVide(m.text) ? "" : m.text) + MESSAGE_CONNEXION_COUPEE,
+            t: m.t ?? nowTime(),
+          }));
+          return;
+        }
+        if (err instanceof TypeError) {
+          // Un bug de traitement, pas le réseau : le texte reçu reste, suivi de
+          // la vraie cause.
+          updateLastMessage((m) => ({
+            ...m,
+            role: "agent" as const,
+            text: (estReponseVide(m.text) ? "" : m.text) + messageErreurTraitement(err),
             t: m.t ?? nowTime(),
           }));
           return;

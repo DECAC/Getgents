@@ -1,4 +1,10 @@
-import { estCoupureReseau, estReponseVide, MESSAGE_CONNEXION_COUPEE, MESSAGE_REPONSE_VIDE } from "@/lib/reponseVide";
+import {
+  estCoupureReseau,
+  estReponseVide,
+  messageErreurTraitement,
+  MESSAGE_CONNEXION_COUPEE,
+  MESSAGE_REPONSE_VIDE,
+} from "@/lib/reponseVide";
 import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import {
   BUDGET_OUTILS_MS,
@@ -46,6 +52,22 @@ describe("budget de la boucle d'outils", () => {
 describe("connexion coupée pendant la réponse", () => {
   it("un TypeError de fetch est une coupure réseau", () => {
     expect(estCoupureReseau(new TypeError("Failed to fetch"))).toBe(true);
+  });
+
+  it("les messages réseau des navigateurs sont reconnus", () => {
+    for (const m of ["network error", "Load failed", "NetworkError when attempting to fetch resource.", "fetch failed"]) {
+      expect(estCoupureReseau(new TypeError(m))).toBe(true);
+    }
+  });
+
+  it("un bug de traitement, bien que TypeError, n'est PAS une coupure — et sa cause est montrée", () => {
+    const bug = new TypeError("Cannot read properties of undefined (reading 'map')");
+    expect(estCoupureReseau(bug)).toBe(false);
+    expect(messageErreurTraitement(bug)).toContain("reading 'map'");
+  });
+
+  it("le détail affiché ne peut pas injecter de balise", () => {
+    expect(messageErreurTraitement(new TypeError("<img src=x onerror=alert(1)>"))).not.toContain("<img");
   });
 
   it("un refus du service (quota, clé) n'en est pas une : son message reste affiché", () => {
