@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { generateImageFromPrompt } from "@/lib/server/generateImage";
 import type { ContexteLlm } from "@/lib/server/openRouterKey";
+import { corpsDuMessage, reponseRecherche, type ResultatRecherche } from "@/lib/gmailContenu";
 // Les jetons sont stockés par gent dans Supabase (integration_credentials).
 // Secrets plateforme : GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
 
@@ -311,32 +312,43 @@ async function gmailGet(gentId: string, path: string): Promise<string> {
   return text.slice(0, 12_000);
 }
 
-function decodeBase64Url(data: string): string {
-  const normalized = data.replace(/-/g, "+").replace(/_/g, "/");
-  return Buffer.from(normalized, "base64").toString("utf8");
-}
-
-function extractPlainText(payload: {
-  mimeType?: string;
-  body?: { data?: string };
-  parts?: { mimeType?: string; body?: { data?: string }; parts?: unknown[] }[];
-}): string {
-  if (payload.mimeType === "text/plain" && payload.body?.data) {
-    return decodeBase64Url(payload.body.data);
-  }
-  for (const part of payload.parts ?? []) {
-    const text = extractPlainText(part as typeof payload);
-    if (text) return text;
-  }
-  return "";
-}
-
-/** Recherche de messages Gmail (syntaxe de recherche Gmail). */
-export function searchMessages(gentId: string, query?: string, maxResults = 10): Promise<string> {
+/**
+ * Recherche de messages Gmail (syntaxe de recherche Gmail). Chaque résultat
+ * porte son expéditeur, son objet, sa date et son aperçu : des identifiants
+ * seuls laissaient le modèle deviner de quoi parlaient les messages.
+ */
+export async function searchMessages(gentId: string, query?: string, maxResults = 10): Promise<string> {
   const n = Math.min(Math.max(Math.round(maxResults), 1), 25);
   const params = new URLSearchParams({ maxResults: String(n) });
   if (query?.trim()) params.set("q", query.trim());
-  return gmailGet(gentId, `/users/me/messages?${params}`);
+  const brut = await gmailGet(gentId, `/users/me/messages?${params}`);
+  let ids: string[];
+  try {
+    const data = JSON.parse(brut) as { messages?: { id: string }[]; error?: unknown };
+    if (data.error) return brut;
+    ids = (data.messages ?? []).map((m) => m.id);
+  } catch {
+    // Jeton invalide, API muette : le texte d'erreur passe tel quel.
+    return brut;
+  }
+  const auth = await validAccessToken(gentId);
+  if ("error" in auth) return auth.error;
+  const resultats = await Promise.all(
+    ids.map(async (id): Promise<ResultatRecherche> => {
+      const res = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
+        { headers: { Authorization: `Bearer ${auth.token}`, Accept: "application/json" } }
+      ).catch(() => null);
+      if (!res?.ok) return { id };
+      const data = (await res.json().catch(() => ({}))) as {
+        snippet?: string;
+        payload?: { headers?: { name: string; value: string }[] };
+      };
+      const h = Object.fromEntries((data.payload?.headers ?? []).map((x) => [x.name.toLowerCase(), x.value]));
+      return { id, from: h.from, subject: h.subject, date: h.date, snippet: data.snippet };
+    })
+  );
+  return reponseRecherche(query, resultats);
 }
 
 /**
@@ -398,7 +410,7 @@ export async function getMessage(gentId: string, messageId: string): Promise<str
     const headers = Object.fromEntries(
       (data.payload?.headers ?? []).map((h) => [h.name.toLowerCase(), h.value])
     );
-    const body = data.payload ? extractPlainText(data.payload as Parameters<typeof extractPlainText>[0]) : "";
+    const body = corpsDuMessage(data.payload);
     return JSON.stringify({
       id: data.id,
       from: headers.from,
@@ -406,7 +418,7 @@ export async function getMessage(gentId: string, messageId: string): Promise<str
       subject: headers.subject,
       date: headers.date,
       snippet: data.snippet,
-      body: body.slice(0, 8000),
+      body,
     }).slice(0, 12_000);
   } catch {
     return text.slice(0, 12_000);
