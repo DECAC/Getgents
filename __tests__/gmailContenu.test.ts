@@ -73,3 +73,62 @@ describe("réponse de gmail_search", () => {
     expect(GMAIL_PROMPT_INSTRUCTION).toContain("relis-le");
   });
 });
+
+import { demandePorteSurLaBoite, requetesElargies } from "@/lib/gmailContenu";
+import { dernierTexteUtilisateur } from "@/lib/boucleOutils";
+
+describe("question sur la boîte mail : recherche imposée au premier tour", () => {
+  it("reconnaît les questions vécues", () => {
+    expect(demandePorteSurLaBoite("Quel est le sujet principal de la newsletter The Batch de cette semaine ?")).toBe(true);
+    expect(demandePorteSurLaBoite("Résume mes mails non lus")).toBe(true);
+    expect(demandePorteSurLaBoite("Qu'ai-je reçu dans ma boîte de réception ?")).toBe(true);
+    expect(demandePorteSurLaBoite("Quels expéditeurs m'écrivent le plus ?")).toBe(true);
+  });
+
+  it("n'impose rien sur une question sans rapport", () => {
+    expect(demandePorteSurLaBoite("merci")).toBe(false);
+    expect(demandePorteSurLaBoite("Explique-moi le Build on Buy")).toBe(false);
+    expect(demandePorteSurLaBoite("")).toBe(false);
+  });
+
+  it("ignore les titres de notes du bloc [ESPACE]", () => {
+    expect(demandePorteSurLaBoite("merci\n\n[ESPACE]\n- Newsletters IA de la semaine (id a1)\n[/ESPACE]")).toBe(false);
+  });
+
+  it("lit le dernier message utilisateur, contenu multimodal compris", () => {
+    expect(
+      dernierTexteUtilisateur([
+        { role: "system", content: "S" },
+        { role: "user", content: "vieux" },
+        { role: "assistant", content: "A" },
+        { role: "user", content: [{ type: "text", text: "la newsletter" }, { type: "image_url", image_url: { url: "x" } }] },
+      ])
+    ).toBe("la newsletter");
+    expect(dernierTexteUtilisateur([])).toBe("");
+  });
+});
+
+describe("élargissement d'une recherche vide, par le serveur", () => {
+  it("retire les filtres, libère les champs, puis retire les dates", () => {
+    expect(requetesElargies('subject:"The Batch" category:promotions newer_than:7d')).toEqual([
+      '"The Batch" newer_than:7d',
+      '"The Batch"',
+    ]);
+  });
+
+  it("from: devient du texte libre", () => {
+    expect(requetesElargies("from:thebatch is:unread")).toEqual(["thebatch"]);
+  });
+
+  it("rien à élargir : aucune requête de repli", () => {
+    expect(requetesElargies("The Batch")).toEqual([]);
+    expect(requetesElargies("")).toEqual([]);
+    expect(requetesElargies(undefined)).toEqual([]);
+  });
+
+  it("la réponse dit quand les résultats viennent de la requête élargie", () => {
+    const r = JSON.parse(reponseRecherche("subject:x", [{ id: "a" }], "x"));
+    expect(r.requeteElargie).toBe("x");
+    expect(r.note).toMatch(/requête élargie/);
+  });
+});

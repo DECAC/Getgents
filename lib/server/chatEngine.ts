@@ -41,9 +41,11 @@ import { reponseSseElysee } from "@/lib/elysee2027/serveur";
 import {
   CONSIGNE_DERNIER_TOUR,
   MAX_TOURS_OUTILS,
+  dernierTexteUtilisateur,
   MESSAGE_REPONSE_FINALE_MANQUANTE,
   outilsEncoreAutorises,
 } from "@/lib/boucleOutils";
+import { demandePorteSurLaBoite } from "@/lib/gmailContenu";
 import {
   applyToolCallDelta,
   flattenToolRoundForRetry,
@@ -747,9 +749,18 @@ function toolLoopResponse(
         // déjà terminé. Ici le contenu et le raisonnement partent au fil de
         // l'eau ; seuls les tool_calls (nécessairement structurés) sont
         // accumulés jusqu'à la fin du tour avant d'être exécutés.
+        // Question sur la boîte mail d'un gent Gmail : le premier tour IMPOSE
+        // une recherche (voir `demandePorteSurLaBoite`). Un seul essai : si le
+        // fournisseur refuse le forçage, le tour repart sans. Pas de forçage
+        // avec le raisonnement : Anthropic refuse les deux ensemble.
+        let forcerRechercheMail =
+          registry.has("gmail_search") &&
+          !(body.reasoning?.enabled && supportsReasoningStream(body.model)) &&
+          demandePorteSurLaBoite(dernierTexteUtilisateur(messages));
         for (let round = 0; round < MAX_TOURS_OUTILS; round++) {
           const autorises = outilsEncoreAutorises(round, Date.now() - debutBoucle);
           const withTools = registry.size > 0 && autorises;
+          const forcer = round === 0 && withTools && forcerRechercheMail;
           if (outilsUtilises && !withTools && !consigneFinalePosee) {
             // Outils retirés après usage : on le DIT au modèle, sinon il
             // attend un outil qui ne vient pas et rend une réponse vide.
@@ -779,6 +790,7 @@ function toolLoopResponse(
               max_tokens: body.max_tokens ?? 12_288,
               stream: true,
               ...(withTools ? { tools: openaiTools } : {}),
+              ...(forcer ? { tool_choice: { type: "function", function: { name: "gmail_search" } } } : {}),
               // Plus de plugin ici : la recherche est un outil declare
               // ci-dessus. Le laisser ferait payer une recherche AVANT chaque
               // tour, en plus de celle que le modele demande — exactement ce
@@ -792,6 +804,19 @@ function toolLoopResponse(
           if (!res.ok || !res.body) {
             const data = await res.json().catch(() => ({}));
             const errText = formatOpenRouterError(data);
+            if (forcer) {
+              console.warn(
+                JSON.stringify({
+                  tag: "getgents:chat",
+                  event: "forcage_outil_refuse",
+                  model: body.model,
+                  detail: errText.slice(0, 200),
+                })
+              );
+              forcerRechercheMail = false;
+              round -= 1;
+              continue;
+            }
             if (
               pendingToolFlatten &&
               flattenRetries < 1 &&
@@ -888,6 +913,7 @@ function toolLoopResponse(
               tag: "getgents:chat",
               event: "tour_outils",
               round,
+              ...(forcer ? { force: "gmail_search" } : {}),
               finishReason: finishReason ?? null,
               contenuChars: content.length,
               outils: toolCalls.map((t) => t.function.name),

@@ -43,3 +43,20 @@ export const CONSIGNE_DERNIER_TOUR =
 export const MESSAGE_REPONSE_FINALE_MANQUANTE =
   "Je n'ai pas réussi à rédiger la réponse finale après mes recherches. Réessayez, ou restreignez la demande " +
   "(moins d'expéditeurs, période plus courte).";
+
+/** Texte du DERNIER message utilisateur, contenu multimodal compris. */
+export function dernierTexteUtilisateur(messages: readonly Record<string, unknown>[]): string {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role !== "user") continue;
+    if (typeof m.content === "string") return m.content;
+    if (Array.isArray(m.content)) {
+      return m.content
+        .map((p) => (p && typeof p === "object" && typeof (p as { text?: unknown }).text === "string" ? (p as { text: string }).text : ""))
+        .filter(Boolean)
+        .join(" ");
+    }
+    return "";
+  }
+  return "";
+}

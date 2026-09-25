@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { generateImageFromPrompt } from "@/lib/server/generateImage";
 import type { ContexteLlm } from "@/lib/server/openRouterKey";
-import { corpsDuMessage, reponseRecherche, type ResultatRecherche } from "@/lib/gmailContenu";
+import { corpsDuMessage, reponseRecherche, requetesElargies, type ResultatRecherche } from "@/lib/gmailContenu";
 // Les jetons sont stockés par gent dans Supabase (integration_credentials).
 // Secrets plateforme : GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
 
@@ -319,18 +319,43 @@ async function gmailGet(gentId: string, path: string): Promise<string> {
  */
 export async function searchMessages(gentId: string, query?: string, maxResults = 10): Promise<string> {
   const n = Math.min(Math.max(Math.round(maxResults), 1), 25);
-  const params = new URLSearchParams({ maxResults: String(n) });
-  if (query?.trim()) params.set("q", query.trim());
-  const brut = await gmailGet(gentId, `/users/me/messages?${params}`);
-  let ids: string[];
-  try {
-    const data = JSON.parse(brut) as { messages?: { id: string }[]; error?: unknown };
-    if (data.error) return brut;
-    ids = (data.messages ?? []).map((m) => m.id);
-  } catch {
-    // Jeton invalide, API muette : le texte d'erreur passe tel quel.
-    return brut;
+  const lister = async (q: string | undefined): Promise<{ ids: string[] } | { erreur: string }> => {
+    const params = new URLSearchParams({ maxResults: String(n) });
+    if (q?.trim()) params.set("q", q.trim());
+    const brut = await gmailGet(gentId, `/users/me/messages?${params}`);
+    try {
+      const data = JSON.parse(brut) as { messages?: { id: string }[]; error?: unknown };
+      if (data.error) return { erreur: brut };
+      return { ids: (data.messages ?? []).map((m) => m.id) };
+    } catch {
+      // Jeton invalide, API muette : le texte d'erreur passe tel quel.
+      return { erreur: brut };
+    }
+  };
+  const premier = await lister(query);
+  if ("erreur" in premier) return premier.erreur;
+  let ids = premier.ids;
+  let requeteElargie: string | undefined;
+  // Rien pour la requête exacte : le serveur élargit lui-même (voir
+  // `requetesElargies`) plutôt que de compter sur le modèle.
+  for (const repli of ids.length ? [] : requetesElargies(query)) {
+    const essai = await lister(repli);
+    if ("erreur" in essai) break;
+    if (essai.ids.length) {
+      ids = essai.ids;
+      requeteElargie = repli;
+      break;
+    }
   }
+  console.log(
+    JSON.stringify({
+      tag: "getgents:gmail",
+      event: "recherche",
+      requete: query ?? "",
+      requeteElargie: requeteElargie ?? null,
+      resultats: ids.length,
+    })
+  );
   const auth = await validAccessToken(gentId);
   if ("error" in auth) return auth.error;
   const resultats = await Promise.all(
@@ -348,7 +373,7 @@ export async function searchMessages(gentId: string, query?: string, maxResults 
       return { id, from: h.from, subject: h.subject, date: h.date, snippet: data.snippet };
     })
   );
-  return reponseRecherche(query, resultats);
+  return reponseRecherche(query, resultats, requeteElargie);
 }
 
 /**

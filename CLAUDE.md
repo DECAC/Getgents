@@ -353,7 +353,17 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (`corpsDuMessage`, `lib/gmailContenu.ts`), recherche enrichie
   d'expéditeur/objet/date/aperçu, conseil d'ÉLARGIR joint à une recherche
   vide (la consigne du prompt seule ne suffisait pas), et consigne de RELIRE
-  un e-mail pour une question de suivi.
+  un e-mail pour une question de suivi. Même le conseil joint au résultat n'a
+  pas suffi (journaux du 25/09, Gemini 2.5 Flash) : tour 0 sans aucun outil
+  sur « la newsletter The Batch de cette semaine », puis une recherche vide
+  conclue en 88 caractères. D'où deux gestes qui ne dépendent PLUS du
+  modèle : le premier tour IMPOSE `gmail_search` quand la question porte sur
+  la boîte (`demandePorteSurLaBoite` ; `tool_choice`, repli sans forçage si
+  le fournisseur refuse — `forcage_outil_refuse` ; jamais avec le
+  raisonnement, qu'Anthropic refuse avec un outil imposé), et le SERVEUR
+  élargit une recherche vide (`requetesElargies` ; `getgents:gmail
+  recherche`). Non vérifié en réel depuis l'agent : ni Gmail ni clé
+  OpenRouter ici — lire `force` dans `tour_outils`.
 - **Un verrou sans expiration est une panne en attente.** `orchestrating` est
   resté bloqué à `true` après une fonction tuée par un déploiement, rendant un
   salon muet définitivement. Expiration à 3 minutes depuis la migration 015.

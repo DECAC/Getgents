@@ -99,7 +99,11 @@ export interface ResultatRecherche {
  * du prompt ne suffisait pas (« rien trouvé avec le sujet exact The Batch »,
  * puis une question à l'utilisateur au lieu d'un `from:deeplearning`).
  */
-export function reponseRecherche(requete: string | undefined, resultats: ResultatRecherche[]): string {
+export function reponseRecherche(
+  requete: string | undefined,
+  resultats: ResultatRecherche[],
+  requeteElargie?: string
+): string {
   if (!resultats.length) {
     return JSON.stringify({
       requete: requete ?? "",
@@ -112,7 +116,58 @@ export function reponseRecherche(requete: string | undefined, resultats: Resulta
   }
   return JSON.stringify({
     requete: requete ?? "",
+    ...(requeteElargie
+      ? {
+          requeteElargie,
+          note: "Rien pour la requête exacte : ces résultats viennent de la requête élargie. Vérifie leurs dates et expéditeurs.",
+        }
+      : {}),
     resultats,
     suite: "Lis un message avec gmail_get_message(id) avant d'en décrire le contenu.",
   });
+}
+
+/**
+ * La question porte-t-elle sur la BOÎTE MAIL ? Vécu (Gemini 2.5 Flash, gent
+ * Gmail) : « Quel est le sujet principal de la newsletter The Batch de cette
+ * semaine ? » → « je n'ai pas accès aux newsletters, transférez-la-moi »,
+ * outils disponibles et consigne « CHERCHE D'ABORD » sous les yeux. Sur ces
+ * questions, le premier tour IMPOSE `gmail_search` : la consigne ne suffisait
+ * pas. Le bloc [ESPACE] joint au message (titres des notes gardées) est
+ * ignoré — un titre de note ne fait pas une question sur la boîte.
+ */
+const MOTS_BOITE =
+  /\b(e-?mails?|mails?|courriels?|newsletters?|infolettres?|bo[iî]te (?:mail|de r[ée]ception|aux lettres)|inbox|gmail|exp[ée]diteurs?|non lus?|promotions)\b/i;
+
+export function demandePorteSurLaBoite(message: string | null | undefined): boolean {
+  const texte = (message ?? "").replace(/\[ESPACE\][\s\S]*?\[\/ESPACE\]/g, " ");
+  return MOTS_BOITE.test(texte);
+}
+
+/** Opérateurs qui RESTREIGNENT sans rien dire du contenu : retirés en premier. */
+const FILTRES = /\b(?:category|in|label|is|has):(?:"[^"]*"|\([^)]*\)|\S+)/gi;
+/** Opérateurs de champ : leur valeur devient du texte libre, cherché partout. */
+const CHAMPS = /\b(?:from|subject|to|cc):("[^"]*"|\([^)]*\)|\S+)/gi;
+const DATES = /\b(?:newer_than|older_than|after|before):\S+/gi;
+
+function net(q: string): string {
+  return q.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Requêtes de repli pour une recherche VIDE, de la plus proche à la plus
+ * large. Le serveur les essaie lui-même : un modèle qui reçoit « aucun
+ * résultat » conclut plus souvent qu'il n'élargit (vécu : « aucune newsletter
+ * The Batch avec le sujet exact », puis une question à l'utilisateur).
+ */
+export function requetesElargies(requete: string | undefined): string[] {
+  const q = net(requete ?? "");
+  if (!q) return [];
+  const sansFiltres = net(q.replace(FILTRES, " ").replace(CHAMPS, " $1 "));
+  const sansDates = net(sansFiltres.replace(DATES, " "));
+  const sorties: string[] = [];
+  for (const r of [sansFiltres, sansDates]) {
+    if (r && r !== q && !sorties.includes(r)) sorties.push(r);
+  }
+  return sorties;
 }
