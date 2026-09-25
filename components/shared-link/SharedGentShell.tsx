@@ -327,16 +327,17 @@ export function SharedGentBody({
           .filter(Boolean)
           .join(" ")}
       >
-        {/* `starters` : sur téléphone le canevas est masqué, et c'est lui qui
-            porte d'ordinaire les questions d'amorce. Sans cela, le
-            destinataire d'un lien arrivait sur un fil vide — rien à lire,
-            rien à toucher, aucune idée de ce qu'on peut demander. La bande
-            ne montre pas le canevas non plus : même règle. */}
+        {/* `starters` : ici, les questions d'amorce vivent dans la
+            CONVERSATION, toujours. Le volet de cette coquille ne les montre
+            jamais — espace vide : un message ; espace garni : les artefacts.
+            Réservées au téléphone et à la bande, elles disparaissaient dès
+            que le volet était ouvert sur des notes gardées : « Nouvel
+            échange » ouvrait un fil vide, sans rien à quoi se raccrocher. */}
         {/* `embedded` sur écran étroit : la grille lui donne déjà toute la
             place, il ne doit pas se comporter en tiroir superposé. Sur grand
             écran il reste une colonne redimensionnable. */}
         {chatOpen && <AssistantPanel
-            starters={etroit || !voletVisible}
+            starters
             embedded={etroit || !voletVisible}
             // L'en-tête de la page porte déjà le nom du gent.
             sansEntete

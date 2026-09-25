@@ -80,7 +80,9 @@ export function AssistantPanel({
    * partage MASQUE ce canevas sur téléphone pour laisser toute la place à la
    * conversation : le fil s'ouvrait alors vide, sans rien à quoi se
    * raccrocher. C'est un fait de MISE EN PAGE, pas une propriété du gent, d'où
-   * cette prop plutôt qu'un assouplissement de la règle.
+   * cette prop plutôt qu'un assouplissement de la règle. La coquille des
+   * visiteurs (et de l'espace personnel) la passe TOUJOURS : son volet ne
+   * montre jamais les amorces.
    */
   starters = false,
   /**

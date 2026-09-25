@@ -207,6 +207,10 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   espace rouvert sur son dernier échange ne les produisait jamais. Réglage
   `amorcesAuto` (studio, section Questions d'amorce ; absent = activé) avec
   « Tester maintenant », qui montre les questions ou la cause de l'échec.
+  Dans la coquille des visiteurs (et de l'espace personnel), les amorces
+  vivent dans la CONVERSATION, sur tout fil vide : le volet ne les montre
+  jamais. Réservées au téléphone et à la bande, elles manquaient après
+  « Nouvel échange » dès que le volet était ouvert sur des notes gardées.
 - **Diffusion PRIVÉE** (studio → Diffusion, `diffusionPrivee`) : le gent est
   réservé à son créateur, dans GetSpace, à une adresse lisible
   `/espace/<adressePrivee>` — sans `draft-…`, résolue dans le navigateur
