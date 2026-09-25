@@ -38,6 +38,7 @@ import { messageCleOpenRouter } from "@/lib/openRouterKey";
 import { DECLARATION_RECHERCHE_WEB, creerOutilRechercheWeb } from "@/lib/server/webTool";
 import { MOTEUR_ELYSEE } from "@/lib/elysee2027/moteur";
 import { reponseSseElysee } from "@/lib/elysee2027/serveur";
+import { MAX_TOURS_OUTILS, outilsEncoreAutorises } from "@/lib/boucleOutils";
 import {
   applyToolCallDelta,
   flattenToolRoundForRetry,
@@ -55,7 +56,6 @@ import {
 
 // Surchargeable en test/dev pour pointer vers un mock local.
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
-const MAX_TOOL_ROUNDS = 6;
 const TOOL_RESULT_MAX_CHARS = 12_000;
 
 export interface ChatBody {
@@ -717,6 +717,7 @@ function toolLoopResponse(
         // (call_id orphelin), on les réinjecte en message utilisateur.
         let flattenRetries = 0;
         let pendingToolFlatten: { beforeLen: number; userContent: string } | null = null;
+        const debutBoucle = Date.now();
 
         // 2. Boucle d'appels : le modèle décide quand utiliser les outils.
         // Au dernier tour, les outils sont retirés pour forcer une réponse.
@@ -729,8 +730,22 @@ function toolLoopResponse(
         // déjà terminé. Ici le contenu et le raisonnement partent au fil de
         // l'eau ; seuls les tool_calls (nécessairement structurés) sont
         // accumulés jusqu'à la fin du tour avant d'être exécutés.
-        for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-          const withTools = registry.size > 0 && round < MAX_TOOL_ROUNDS - 1;
+        for (let round = 0; round < MAX_TOURS_OUTILS; round++) {
+          const autorises = outilsEncoreAutorises(round, Date.now() - debutBoucle);
+          const withTools = registry.size > 0 && autorises;
+          if (registry.size > 0 && !autorises && round < MAX_TOURS_OUTILS - 1) {
+            // Budget de temps épuisé AVANT la limite de tours : on le dit dans
+            // les journaux, c'est la trace d'une réponse raccourcie.
+            console.log(
+              JSON.stringify({
+                tag: "getgents:chat",
+                event: "budget_outils_atteint",
+                round,
+                ecouleMs: Date.now() - debutBoucle,
+                model: body.model,
+              })
+            );
+          }
           sendStatus("thinking");
           const res = await fetch(OPENROUTER_API, {
             method: "POST",

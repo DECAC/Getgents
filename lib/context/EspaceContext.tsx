@@ -62,6 +62,7 @@ import { resolveImageModelId } from "@/lib/imageModels";
 import { materializeProfileMedia } from "@/lib/profileSummaryArtefact";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import { langueDeLEnTete } from "@/lib/langue";
+import { estReponseVide, MESSAGE_REPONSE_VIDE } from "@/lib/reponseVide";
 import {
   espaceForPinnedRefresh,
   espaceForStarters,
@@ -1034,9 +1035,20 @@ export function EspaceProvider({
             return { ...p, [id]: { ...e, conversations: convs } };
           });
         } else {
+          // Rien à montrer — ni texte, ni artefact, ni carte : sans ce
+          // repli, la bulle restait vide et le visiteur ne savait pas si le
+          // gent réfléchissait encore.
+          const muet =
+            estReponseVide(finalHtml) &&
+            !artefactEchec &&
+            !afterQuestions.questions.length &&
+            !jeuEtat &&
+            !afterGeo.geoRequest &&
+            !afterProfile.profile &&
+            !afterImage.image;
           updateLastMessage((m) => ({
             ...m,
-            text: finalHtml,
+            text: muet ? MESSAGE_REPONSE_VIDE : finalHtml,
             questions: afterQuestions.questions,
             jeuEtat,
             followups,
