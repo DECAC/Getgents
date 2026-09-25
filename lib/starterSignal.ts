@@ -241,7 +241,9 @@ export function fallbackStarters(espace: Espace): string[] {
  * celles du gent.
  */
 export function amorcesDuGent(espace: Espace): string[] {
-  return espace.amorcesContextuelles?.items?.length ? espace.amorcesContextuelles.items : espace.starters ?? [];
+  // Option coupée dans le studio : les amorces déjà tirées de la boîte s'effacent.
+  const tirees = espace.amorcesAuto === false ? undefined : espace.amorcesContextuelles?.items;
+  return tirees?.length ? tirees : espace.starters ?? [];
 }
 
 export function displayedStarters(espace: Espace): string[] {

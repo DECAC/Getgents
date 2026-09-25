@@ -26,8 +26,23 @@ export async function POST(req: Request) {
   if (!ID_RE.test(gentId)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
 
   const acces = await requireGentAccess(gentId, "read");
-  if (!acces.ok) return acces.response;
-  if (acces.value.role !== "owner") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!acces.ok) {
+    // Le gent n'existe côté serveur qu'après un premier Preview ou une
+    // diffusion : on le dit, plutôt qu'un 404 sans explication.
+    if (acces.response.status === 404) {
+      return NextResponse.json(
+        { ok: false, erreur: "Ce gent n'est pas encore enregistré : cliquez d'abord sur Preview ou « Diffuser le gent »." },
+        { status: 404 }
+      );
+    }
+    return acces.response;
+  }
+  if (acces.value.role !== "owner") {
+    return NextResponse.json(
+      { ok: false, erreur: "Seul le créateur du gent peut tirer des amorces de sa boîte mail." },
+      { status: 403 }
+    );
+  }
 
   const garde = await requireUserWithQuota("llm");
   if (!garde.ok) return garde.response;
@@ -35,5 +50,5 @@ export async function POST(req: Request) {
   const espace = acces.value.row.espace as Espace | null;
   const resultat = await genererAmorcesGmail(gentId, espace?.name || "Assistant", garde.value.ctx);
   if (!resultat.ok) return NextResponse.json({ ok: false, erreur: resultat.erreur }, { status: 502 });
-  return NextResponse.json({ ok: true, amorces: resultat.amorces });
+  return NextResponse.json({ ok: true, amorces: resultat.amorces, messages: resultat.messages });
 }

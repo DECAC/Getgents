@@ -43,3 +43,18 @@ describe("amorces tirées de la boîte mail", () => {
     expect(amorcesAJour(undefined, maintenant)).toBe(false);
   });
 });
+
+import { amorcesDuGent } from "@/lib/starterSignal";
+import type { Espace } from "@/lib/types";
+
+describe("amorces affichées", () => {
+  const base = { starters: ["Question générique ?"], amorcesContextuelles: { at: "2026-09-25T09:00:00Z", items: ["Que dit The Batch ?"] } } as unknown as Espace;
+
+  it("celles de la boîte mail d'abord", () => {
+    expect(amorcesDuGent(base)).toEqual(["Que dit The Batch ?"]);
+  });
+
+  it("option coupée dans le studio : retour aux amorces du gent", () => {
+    expect(amorcesDuGent({ ...base, amorcesAuto: false })).toEqual(["Question générique ?"]);
+  });
+});

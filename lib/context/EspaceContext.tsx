@@ -623,32 +623,6 @@ export function EspaceProvider({
   const ensureStarters = useCallback(async () => {
     const id = currentIdRef.current;
     const espace = espacesRef.current[id];
-    // Espace PERSONNEL d'un gent Gmail : des amorces tirées de la boîte mail,
-    // renouvelées toutes les six heures. Jamais sur un lien ni dans l'aperçu :
-    // elles montrent l'activité de la boîte du propriétaire.
-    if (espace?.gmail && !shareToken && !apercu && !amorcesAJour(espace.amorcesContextuelles)) {
-      if (!amorcesDemandeesRef.current.has(id)) {
-        amorcesDemandeesRef.current.add(id);
-        void fetch("/api/amorces/gmail", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ gentId: id }),
-        })
-          .then((r) => (r.ok ? r.json() : null))
-          .then((data: { amorces?: string[] } | null) => {
-            const items = data?.amorces?.filter((x) => typeof x === "string") ?? [];
-            if (!items.length) return;
-            setEspaces((prev) => {
-              const e = prev[id];
-              if (!e) return prev;
-              return { ...prev, [id]: { ...e, amorcesContextuelles: { at: new Date().toISOString(), items } } };
-            });
-          })
-          .catch(() => {
-            // Hors ligne ou Gmail déconnecté : les amorces du gent restent.
-          });
-      }
-    }
     if (!espace || espace.pinnedArtefact?.enabled) return;
     if (espace.starters?.length) return;
     if (startersRequestedRef.current.has(id)) return;
@@ -678,6 +652,44 @@ export function EspaceProvider({
       // Réseau indisponible : pas de déclencheurs, l'espace reste utilisable.
     }
   }, [shareToken]);
+
+  // Espace PERSONNEL d'un gent Gmail : des amorces tirées de la boîte mail,
+  // renouvelées toutes les six heures — dès l'ouverture, et non plus à
+  // l'affichage des bulles : celles-ci n'apparaissent que sur une
+  // conversation vide, si bien qu'un espace rouvert sur son dernier échange
+  // ne les produisait jamais. Jamais sur un lien ni dans l'aperçu : elles
+  // montrent l'activité de la boîte du propriétaire.
+  useEffect(() => {
+    if (!storageReady || shareToken || apercu) return;
+    const id = currentId;
+    const espace = espaces[id];
+    if (!espace?.gmail || espace.amorcesAuto === false) return;
+    if (amorcesAJour(espace.amorcesContextuelles) || amorcesDemandeesRef.current.has(id)) return;
+    amorcesDemandeesRef.current.add(id);
+    void fetch("/api/amorces/gmail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gentId: id }),
+    })
+      .then(async (r) => {
+        const data = (await r.json().catch(() => null)) as { amorces?: string[]; erreur?: string } | null;
+        if (!r.ok) {
+          // Visible pour le diagnostic ; l'espace garde ses amorces habituelles.
+          console.warn("[getgents:amorces]", data?.erreur ?? r.status);
+          return;
+        }
+        const items = data?.amorces?.filter((x) => typeof x === "string") ?? [];
+        if (!items.length) return;
+        setEspaces((prev) => {
+          const e = prev[id];
+          if (!e) return prev;
+          return { ...prev, [id]: { ...e, amorcesContextuelles: { at: new Date().toISOString(), items } } };
+        });
+      })
+      .catch(() => {
+        // Hors ligne : les amorces du gent restent.
+      });
+  }, [storageReady, shareToken, apercu, currentId, espaces]);
 
   const toggleAsideCollapsed = useCallback(() => setAsideCollapsed((v) => !v), []);
 

@@ -126,6 +126,8 @@ interface BuilderContextValue {
   updateArtefactsModifiables: (valeur: boolean) => void;
   /** Questions d'amorce écrites par le créateur. Liste vide = génération auto. */
   updateStarters: (valeurs: string[]) => void;
+  /** Gent Gmail : amorces mises à jour automatiquement depuis la boîte mail. */
+  updateAmorcesAuto: (actif: boolean) => void;
   /**
    * Retire le formulaire d'amorce (« jump form »). L'assistant du builder
    * savait en ajouter un, rien ne permettait de l'enlever.
@@ -675,6 +677,13 @@ export function BuilderProvider({
     setDrafts((prev) => ({
       ...prev,
       [currentId]: { ...prev[currentId], frequenceArtefacts: valeur, updatedAt: "à l'instant" },
+    }));
+  }, [currentId]);
+
+  const updateAmorcesAuto = useCallback((actif: boolean) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: { ...prev[currentId], amorcesAuto: actif, updatedAt: "à l'instant" },
     }));
   }, [currentId]);
 
@@ -1446,6 +1455,7 @@ export function BuilderProvider({
         updateFrequenceArtefacts,
         updateArtefactsModifiables,
         updateStarters,
+        updateAmorcesAuto,
         retirerJumpForm,
         nomCompte,
         updateObjective,

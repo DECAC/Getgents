@@ -710,6 +710,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     prim: prim || undefined,
     powens: powens || undefined,
     gmail: gmail || undefined,
+    amorcesAuto: draft.amorcesAuto,
     restApis: restApis.length ? restApis : undefined,
     jumpForm: draft.jumpForm,
     moteurJeu: draft.moteurJeu,

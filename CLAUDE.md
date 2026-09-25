@@ -193,7 +193,12 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   6 h. Rangées dans `amorcesContextuelles` (usage), JAMAIS dans `starters`
   que reçoivent les visiteurs ; retirées de l'aperçu, de la projection
   publique et de la version diffusée. Un formulaire d'amorce (« jump form »)
-  les masque : il se retire désormais dans Configurer → Options.
+  les masque : il se retire désormais dans Configurer → Options. Produites à
+  l'OUVERTURE de l'espace (effet du fournisseur), pas à l'affichage des
+  bulles : celles-ci ne s'affichent que sur une conversation vide, et un
+  espace rouvert sur son dernier échange ne les produisait jamais. Réglage
+  `amorcesAuto` (studio, section Questions d'amorce ; absent = activé) avec
+  « Tester maintenant », qui montre les questions ou la cause de l'échec.
 - **L'espace personnel a la MÊME interface que les visiteurs**
   (`SharedGentBody` avec `personnelDe`) : retour « Mes gents », « Ouvrir
   dans GetStudio », version affichée. L'ancienne coquille (rail des gents,

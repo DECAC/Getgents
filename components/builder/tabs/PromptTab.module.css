@@ -561,3 +561,39 @@
   color: var(--plum);
   border-color: var(--plum);
 }
+
+/* Amorces tirées de la boîte mail (gent Gmail). */
+.amorcesAuto {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.amorcesAutoLigne {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  cursor: pointer;
+}
+.amorcesAutoLigne input {
+  margin-top: 3px;
+  accent-color: var(--sage);
+}
+.amorcesAutoLigne b {
+  color: var(--ink);
+}
+.amorcesTest {
+  margin: 0;
+  padding: 10px 14px 10px 30px;
+  background: var(--bg);
+  border-radius: 10px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

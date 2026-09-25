@@ -25,8 +25,49 @@ import styles from "./PromptTab.module.css";
  * automatique.
  */
 export function Amorces() {
-  const { currentDraft, updateStarters } = useBuilder();
+  const { currentDraft, currentId, updateStarters, updateAmorcesAuto } = useBuilder();
   const amorces = currentDraft.starters ?? [];
+  const aGmail = currentDraft.connectors.some((c) => c.toolKind === "gmail");
+  const auto = currentDraft.amorcesAuto !== false;
+  const [test, setTest] = useState<{ amorces?: string[]; erreur?: string; messages?: number } | null>(null);
+  const [testEnCours, setTestEnCours] = useState(false);
+
+  // Ce que verra le créateur dans SON espace, tout de suite : sans ce test, le
+  // seul moyen de vérifier était d'ouvrir une conversation vide et d'attendre.
+  async function tester() {
+    setTestEnCours(true);
+    setTest(null);
+    try {
+      const res = await fetch("/api/amorces/gmail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gentId: currentId }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        amorces?: string[];
+        erreur?: string;
+        error?: string;
+        messages?: number;
+      };
+      if (!res.ok) {
+        setTest({
+          erreur:
+            data.erreur ??
+            (res.status === 401
+              ? "Session expirée : reconnectez-vous."
+              : data.error === "quota"
+                ? "Votre quota horaire est atteint. Réessayez plus tard."
+                : `Le test a échoué (${res.status}).`),
+        });
+        return;
+      }
+      setTest({ amorces: data.amorces ?? [], messages: data.messages });
+    } catch {
+      setTest({ erreur: "Le serveur n'a pas répondu. Réessayez." });
+    } finally {
+      setTestEnCours(false);
+    }
+  }
 
   const [occupe, setOccupe] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -110,6 +151,49 @@ export function Amorces() {
       </div>
 
       {erreur && <p className={styles.amorceErreur}>{erreur}</p>}
+
+      {aGmail && (
+        <div className={styles.amorcesAuto}>
+          <label className={styles.amorcesAutoLigne}>
+            <input
+              type="checkbox"
+              id="amorces-auto"
+              checked={auto}
+              onChange={(e) => updateAmorcesAuto(e.target.checked)}
+            />
+            <span>
+              <b>Mise à jour automatique depuis ma boîte mail</b> — dans votre espace personnel, des questions qui
+              citent vos expéditeurs et newsletters des 7 derniers jours (objet et expéditeur seulement, jamais le
+              contenu), renouvelées toutes les 6 heures. Vos visiteurs ne les voient jamais.
+            </span>
+          </label>
+          <div className={styles.amorceActions}>
+            <button type="button" className={styles.amorceAjouter} disabled={testEnCours} onClick={tester}>
+              {testEnCours ? "Lecture de la boîte…" : "Tester maintenant"}
+            </button>
+          </div>
+          {test?.erreur && <p className={styles.amorceErreur}>{test.erreur}</p>}
+          {test?.amorces && (
+            test.amorces.length ? (
+              <ul className={styles.amorcesTest}>
+                {test.amorces.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.amorceErreur}>
+                {test.messages === 0
+                  ? "Aucun message reçu ces 7 derniers jours : les amorces habituelles du gent restent affichées."
+                  : "Le modèle n'a proposé aucune question exploitable. Réessayez."}
+              </p>
+            )
+          )}
+          <p className={styles.sub}>
+            Elles apparaissent dans votre espace sur une conversation vide : cliquez « + Nouvel échange ».
+            Diffusez le gent pour appliquer ce réglage.
+          </p>
+        </div>
+      )}
 
       <div className={styles.footRow}>
         <span>

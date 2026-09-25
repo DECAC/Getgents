@@ -155,6 +155,11 @@ export interface GentDraft {
    * Renseignées, elles font foi et le générateur ne s'exécute pas.
    */
   starters?: string[];
+  /**
+   * Gent Gmail : amorces de l'espace personnel tirées de la boîte mail et
+   * mises à jour automatiquement. Absent = activé.
+   */
+  amorcesAuto?: boolean;
   /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
   jumpForm?: JumpForm;
   /**
