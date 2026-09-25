@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
+import { espacePourVisiteur, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { describeShareLinksFailure, getShareLink, recordShareEvent, TOKEN_RE } from "@/lib/server/shareLinks";
 import { canChat } from "@/lib/shareLink";
@@ -73,7 +73,7 @@ export async function POST(req: Request, { params }: Params) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   // Le destinataire d'un lien voit la version DIFFUSÉE, jamais la version de
   // travail que le créateur remue en Preview.
-  const espace = diffusedEspace(data);
+  const espace = espacePourVisiteur(data);
   if (!espace) return NextResponse.json({ error: "gent_not_found" }, { status: 404 });
 
   // On ne garde que l'échange utilisateur/assistant venant du client.

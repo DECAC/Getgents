@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { cheminEspace } from "@/lib/diffusionPrivee";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
 import { BrandIcon } from "@/components/shared/BrandMark";
@@ -22,7 +23,8 @@ export function Rail() {
 
   function handleSwitch(id: string) {
     switchEspace(id);
-    router.push(`/espace/${id}`);
+    // Diffusion privée : l'adresse lisible, sans `draft-…`.
+    router.push(cheminEspace(id, espaces[id]));
   }
 
   return (
@@ -83,7 +85,7 @@ export function Rail() {
                 <span className={styles.name}>{e.name}</span>
                 <span className={styles.sub}>
                   <span className={[styles.dot, STATUS_DOT_CLASS[e.status]].filter(Boolean).join(" ")} />
-                  {e.statusLabel} · {e.gent}
+                  {e.diffusionPrivee ? "Privé" : e.statusLabel} · {e.gent}
                 </span>
               </span>
             </button>

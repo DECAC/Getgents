@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { gentPrive } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { requireUser, type SessionUser } from "@/lib/server/session";
 import { resolveAccess, canRead, canWrite, canAdminister, type GentRole, type GentGrant } from "@/lib/gentAccess";
@@ -81,6 +82,10 @@ export async function requireGentAccess(
   // 404 plutôt que 403 sur une lecture refusée : confirmer l'existence d'un
   // gent qu'on n'a pas le droit de voir renseigne déjà l'appelant.
   if (!autorise) return refus(role === "none" ? 404 : 403, role === "none" ? "not_found" : "forbidden");
+
+  // Diffusion PRIVÉE : les invitations existantes sont suspendues — seul le
+  // propriétaire garde l'accès. Décocher les rétablit.
+  if (role !== "owner" && gentPrive(data)) return refus(404, "not_found");
 
   return { ok: true, value: { user: auth.user, role, row: data } };
 }

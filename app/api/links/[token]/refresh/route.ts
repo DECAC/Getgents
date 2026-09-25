@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
+import { espacePourVisiteur, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import {
   describeShareLinksFailure,
@@ -78,7 +78,7 @@ export async function POST(req: Request, { params }: Params) {
     .eq("id", link.gentId)
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  const diffused = diffusedEspace(data);
+  const diffused = espacePourVisiteur(data);
   if (!diffused) return NextResponse.json({ error: "gent_not_found" }, { status: 404 });
 
   let espace = diffused;

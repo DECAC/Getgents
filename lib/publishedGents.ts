@@ -711,6 +711,10 @@ export function draftToEspace(draft: GentDraft): Espace {
     powens: powens || undefined,
     gmail: gmail || undefined,
     amorcesAuto: draft.amorcesAuto,
+    // Explicite, `false` compris : décocher doit pouvoir dire « plus privé »
+    // à un serveur dont la version diffusée dit encore le contraire.
+    diffusionPrivee: typeof draft.diffusionPrivee === "boolean" ? draft.diffusionPrivee : undefined,
+    adressePrivee: draft.adressePrivee,
     restApis: restApis.length ? restApis : undefined,
     jumpForm: draft.jumpForm,
     moteurJeu: draft.moteurJeu,

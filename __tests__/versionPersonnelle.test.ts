@@ -104,3 +104,15 @@ describe("écriture depuis l'espace personnel", () => {
     expect(aller).toEqual({ ...travail, routine: undefined, channel: undefined, pinnedArtefact: undefined });
   });
 });
+
+describe("diffusion privée dans l'espace personnel", () => {
+  it("suit la case de la version de travail, sans attendre la diffusion", () => {
+    const e = composerVersionPersonnelle({ ...diffusee, diffusionPrivee: false }, { ...travail, diffusionPrivee: true, adressePrivee: "assistant-email" });
+    expect(e.diffusionPrivee).toBe(true);
+    expect(e.adressePrivee).toBe("assistant-email");
+  });
+  it("n'est jamais réécrite par l'espace", () => {
+    const vu = composerVersionPersonnelle(diffusee, { ...travail, diffusionPrivee: false });
+    expect(fusionnerUsage({ ...travail, diffusionPrivee: true }, vu).diffusionPrivee).toBe(true);
+  });
+});

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
+import { espacePourVisiteur, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { describeShareLinksFailure, getShareLink, TOKEN_RE } from "@/lib/server/shareLinks";
 import { canOpen } from "@/lib/shareLink";
@@ -50,7 +50,7 @@ export async function POST(_req: Request, { params }: Params) {
     .maybeSingle();
   if (error) return NextResponse.json({ starters: [] });
 
-  const espace = diffusedEspace(data);
+  const espace = espacePourVisiteur(data);
   if (!espace || espace.pinnedArtefact?.enabled) return NextResponse.json({ starters: [] });
   if (espace.starters?.length) return NextResponse.json({ starters: espace.starters });
 

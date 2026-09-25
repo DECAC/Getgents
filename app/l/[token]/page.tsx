@@ -1,6 +1,6 @@
 import { getShareLink, recordShareEvent, TOKEN_RE } from "@/lib/server/shareLinks";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
-import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
+import { diffusedEspace, gentPrive, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { canOpen } from "@/lib/shareLink";
 import { espaceForPublicLink } from "@/lib/espaceApiPayload";
 import { SharedGentShell } from "@/components/shared-link/SharedGentShell";
@@ -68,6 +68,16 @@ export default async function SharedLinkPage({ params }: { params: { token: stri
     .maybeSingle();
   // Version DIFFUSÉE uniquement : la version de travail du créateur peut
   // contenir une configuration à moitié réécrite, jamais destinée au public.
+  // Diffusion PRIVÉE : le créateur a réservé le gent à son usage. Le lien
+  // reste en base (décocher le rouvre), mais ne donne plus accès à rien.
+  if (!error && gentPrive(data)) {
+    return (
+      <Refus
+        titre="Gent privé"
+        message="Son créateur l'a réservé à son usage personnel : ce lien ne donne plus accès au gent."
+      />
+    );
+  }
   const diffused = error ? null : diffusedEspace(data);
   if (!diffused) {
     return <Refus titre="Contenu indisponible" message="Le gent associé à ce lien n'a pas encore été diffusé." />;

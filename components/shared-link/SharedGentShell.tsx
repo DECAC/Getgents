@@ -18,6 +18,7 @@ import { libelleGarder } from "@/lib/historiqueModele";
 import { ReportMenu } from "@/components/shared/ReportMenu";
 import { buildEspaceReport } from "@/lib/testReport";
 import { modeleConversationEffectif } from "@/lib/modeleConversation";
+import { cheminEspace } from "@/lib/diffusionPrivee";
 import styles from "./SharedGentShell.module.css";
 
 /**
@@ -184,6 +185,14 @@ export function SharedGentBody({
       : espaceGarni
         ? "bande"
         : "vide";
+
+  // Espace personnel d'un gent en diffusion privée : la barre d'adresse montre
+  // son adresse lisible, sans `draft-…` — c'est elle qu'on met en favori.
+  useEffect(() => {
+    if (!personnelDe || typeof window === "undefined") return;
+    const chemin = cheminEspace(personnelDe, currentEspace);
+    if (window.location.pathname !== chemin) window.history.replaceState(window.history.state, "", chemin);
+  }, [personnelDe, currentEspace]);
 
   // Le modèle qui répond VRAIMENT : un créateur a testé Claude en croyant
   // tester Gemini. L'aperçu est une photo de la version de travail au clic

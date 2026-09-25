@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireGentAccess } from "@/lib/server/gentGuard";
+import { gentPrive } from "@/lib/server/gentVersions";
 import {
   createShareLink,
   describeShareLinksFailure,
@@ -63,6 +64,13 @@ export async function POST(req: Request) {
   // sur le gent d'un autre.
   const acces = await requireGentAccess(gentId, "admin");
   if (!acces.ok) return acces.response;
+  // Diffusion PRIVÉE : aucun autre mode de publication n'est ouvert.
+  if (gentPrive(acces.value.row)) {
+    return NextResponse.json(
+      { error: "Ce gent est en diffusion privée : décochez-la dans Diffusion pour le partager." },
+      { status: 409 }
+    );
+  }
 
   try {
     const link = await createShareLink({

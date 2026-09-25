@@ -1,5 +1,5 @@
 import { getSupabaseAdmin, missingSupabaseEnvVars } from "@/lib/server/supabase";
-import { diffusedEspace } from "@/lib/server/gentVersions";
+import { diffusedEspace, gentPrive, type GentRow } from "@/lib/server/gentVersions";
 import { espaceForPublicLink } from "@/lib/espaceApiPayload";
 import type { Espace } from "@/lib/types";
 
@@ -73,6 +73,13 @@ export async function lireGentPublic(slug: string): Promise<GentPublic | null> {
   }
   if (!data) {
     tracerAbsence(slug, "aucune_ligne_publique");
+    return null;
+  }
+
+  // Diffusion PRIVÉE cochée après une publication : la page se ferme sans
+  // attendre qu'on dépublie — et le journal dit pourquoi.
+  if (gentPrive(data as GentRow)) {
+    tracerAbsence(slug, "gent_prive");
     return null;
   }
 

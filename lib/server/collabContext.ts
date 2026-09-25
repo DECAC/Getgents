@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
-import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
+import { espacePourVisiteur, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { describeShareLinksFailure, getShareLink, TOKEN_RE } from "@/lib/server/shareLinks";
 import { canOpen, type ShareLink } from "@/lib/shareLink";
 import type { CollabConfig, Espace } from "@/lib/types";
@@ -51,7 +51,7 @@ export async function resolveCollabLink(token: string): Promise<CollabLinkOutcom
     .eq("id", link.gentId)
     .maybeSingle();
   if (error) return refus(500, error.message);
-  const espace = diffusedEspace(data);
+  const espace = espacePourVisiteur(data);
   if (!espace) return refus(404, "gent_not_found");
 
   // Un lien ordinaire vers un gent NON collaboratif n'ouvre pas de salon :

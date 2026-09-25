@@ -2,7 +2,7 @@ import { contexteForUser } from "@/lib/server/openRouterKey";
 import { consommerPourVisiteur } from "@/lib/server/gentGuard";
 import { MESSAGE_VISITEUR_INDISPONIBLE } from "@/lib/openRouterKey";
 import { NextResponse } from "next/server";
-import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
+import { espacePourVisiteur, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { replyAsGent } from "@/lib/server/gentReply";
 import { sendWhatsAppText } from "@/lib/server/whatsapp";
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
   const { data } = await supabase.from("published_gents").select(`id, owner_id, ${DIFFUSED_COLUMNS}`);
   const match = (data ?? [])
     .map((row) => {
-      const espace = diffusedEspace(row as { espace?: unknown; diffused?: unknown });
+      const espace = espacePourVisiteur(row as { espace?: unknown; diffused?: unknown });
       const r = row as { id: string; owner_id?: string | null };
       return espace ? { id: r.id, ownerId: r.owner_id ?? null, espace } : null;
     })

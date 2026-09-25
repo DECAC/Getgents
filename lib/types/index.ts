@@ -486,6 +486,9 @@ export interface Espace {
   amorcesContextuelles?: import("@/lib/amorcesContextuelles").AmorcesContextuelles;
   /** Réglage du créateur (studio) : `false` coupe les amorces tirées de la boîte mail. */
   amorcesAuto?: boolean;
+  /** Diffusion PRIVÉE (voir lib/diffusionPrivee.ts). */
+  diffusionPrivee?: boolean;
+  adressePrivee?: string;
   startersGeneratedAt?: string;
   /** Serveurs MCP (transport Streamable HTTP) configurés dans le builder. */
   mcpServers?: { name: string; url: string }[];

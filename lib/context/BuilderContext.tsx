@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
+import { adressePriveePour } from "@/lib/diffusionPrivee";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
 import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine, NotificationChannel, Espace } from "@/lib/types";
 import { cacheKey } from "@/lib/session/currentUser";
@@ -128,6 +129,12 @@ interface BuilderContextValue {
   updateStarters: (valeurs: string[]) => void;
   /** Gent Gmail : amorces mises à jour automatiquement depuis la boîte mail. */
   updateAmorcesAuto: (actif: boolean) => void;
+  /**
+   * Diffusion PRIVÉE. Écrit AUSSITÔT la version de travail : c'est elle que
+   * le serveur lit pour fermer liens, page publique et invitations, sans
+   * attendre la prochaine diffusion.
+   */
+  updateDiffusionPrivee: (actif: boolean) => void;
   /**
    * Retire le formulaire d'amorce (« jump form »). L'assistant du builder
    * savait en ajouter un, rien ne permettait de l'enlever.
@@ -523,6 +530,27 @@ export function BuilderProvider({
    * de la configuration à l'instant — une nouvelle entrée de mini-app, un
    * prompt modifié — au lieu de recharger la dernière version publiée.
    */
+  const updateDiffusionPrivee = useCallback(
+    (actif: boolean) => {
+      const draft = draftsRef.current[currentId];
+      if (!draft) return;
+      const prises = Object.values(draftsRef.current)
+        .filter((d) => d.id !== currentId && d.adressePrivee)
+        .map((d) => d.adressePrivee as string);
+      const suivant: GentDraft = {
+        ...draft,
+        diffusionPrivee: actif,
+        // L'adresse est gardée une fois attribuée : décocher puis recocher ne
+        // doit pas casser un favori.
+        adressePrivee: draft.adressePrivee ?? adressePriveePour(draft.name, prises),
+        updatedAt: "à l'instant",
+      };
+      setDrafts((prev) => ({ ...prev, [currentId]: suivant }));
+      writePublishedGent(currentId, buildEspaceFromDraft(suivant), true);
+    },
+    [currentId, buildEspaceFromDraft]
+  );
+
   const syncWorkingVersion = useCallback(() => {
     const draft = draftsRef.current[currentId];
     if (!draft) return;
@@ -1456,6 +1484,7 @@ export function BuilderProvider({
         updateArtefactsModifiables,
         updateStarters,
         updateAmorcesAuto,
+        updateDiffusionPrivee,
         retirerJumpForm,
         nomCompte,
         updateObjective,

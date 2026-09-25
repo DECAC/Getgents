@@ -199,6 +199,22 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   espace rouvert sur son dernier échange ne les produisait jamais. Réglage
   `amorcesAuto` (studio, section Questions d'amorce ; absent = activé) avec
   « Tester maintenant », qui montre les questions ou la cause de l'échec.
+- **Diffusion PRIVÉE** (studio → Diffusion, `diffusionPrivee`) : le gent est
+  réservé à son créateur, dans GetSpace, à une adresse lisible
+  `/espace/<adressePrivee>` — sans `draft-…`, résolue dans le navigateur
+  parmi les gents du compte (`lib/diffusionPrivee.ts`) ; ouvert par
+  `/espace/draft-…`, la barre d'adresse est réécrite. Tous les autres modes
+  sont fermés CÔTÉ SERVEUR (`gentPrive`, `espacePourVisiteur`,
+  lib/server/gentVersions.ts) : page publique, liens et salon, WhatsApp
+  entrant, invitations suspendues (`requireGentAccess`), création de
+  publication/lien/invitation refusée (409). Rien n'est supprimé : décocher
+  rouvre tout tel quel. La case s'applique TOUT DE SUITE dans les deux sens :
+  la cocher écrit la version de travail, qui fait foi dès qu'elle porte le
+  réglage (booléen explicite, `false` compris) — la version diffusée ne
+  décide que si la version de travail n'en dit rien. L'espace personnel LIT
+  ce réglage sur la version de travail mais ne le RÉÉCRIT jamais (absent de
+  `fusionnerUsage`). La note de routine reste envoyée : c'est un envoi, pas
+  un accès au gent.
 - **L'espace personnel a la MÊME interface que les visiteurs**
   (`SharedGentBody` avec `personnelDe`) : retour « Mes gents », « Ouvrir
   dans GetStudio », version affichée. L'ancienne coquille (rail des gents,

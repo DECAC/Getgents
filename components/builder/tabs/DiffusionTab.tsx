@@ -4,13 +4,17 @@ import { useBuilder } from "@/lib/context/BuilderContext";
 import { ShareLinksSection } from "./ShareLinksSection";
 import { CollabSuiviSection } from "./CollabSuiviSection";
 import { PanneauPartage } from "@/components/partage/PanneauPartage";
+import { cheminPrive } from "@/lib/diffusionPrivee";
 import styles from "./DiffusionTab.module.css";
 
 const E164 = /^\+[1-9]\d{6,14}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function DiffusionTab() {
-  const { currentDraft, updateChannel } = useBuilder();
+  const { currentDraft, updateChannel, updateDiffusionPrivee } = useBuilder();
+  const prive = !!currentDraft.diffusionPrivee;
+  const cheminPerso = currentDraft.adressePrivee ? cheminPrive(currentDraft.adressePrivee) : null;
+  const origine = typeof window !== "undefined" ? window.location.origin : "https://getgents.ai";
   const channel = currentDraft.channel;
   const isEmail = channel?.kind === "email";
   const to = channel?.to?.trim() ?? "";
@@ -18,6 +22,36 @@ export function DiffusionTab() {
 
   return (
     <div className={styles.wrap}>
+      <div className={[styles.card, prive ? styles.cardPrive : ""].filter(Boolean).join(" ")}>
+        <label className={styles.priveLigne} htmlFor="diffusion-privee">
+          <input
+            type="checkbox"
+            id="diffusion-privee"
+            checked={prive}
+            onChange={(e) => updateDiffusionPrivee(e.target.checked)}
+          />
+          <span>
+            <b>Diffusion privée</b> — le gent est réservé à votre usage, dans votre espace GetSpace. Page publique,
+            liens de partage, salon et invitations sont fermés tant que la case est cochée ; les décocher les
+            rétablit tels quels.
+          </span>
+        </label>
+        {prive && cheminPerso && (
+          <div className={styles.priveAdresse}>
+            Votre adresse : <code>{`${origine.replace(/^https?:\/\//, "")}${cheminPerso}`}</code>
+            <a href={cheminPerso} target="_blank" rel="noopener noreferrer" className={styles.priveLien}>
+              Ouvrir ↗
+            </a>
+          </div>
+        )}
+        {prive && (
+          <p className={styles.priveNote}>
+            « Diffuser le gent » met à jour la version que vous utilisez dans votre espace. La note de routine
+            (ci-dessous) reste envoyée à l&apos;adresse choisie.
+          </p>
+        )}
+      </div>
+
       <div className={styles.card}>
         <div className={styles.headRow}>
           <div>
@@ -153,9 +187,15 @@ export function DiffusionTab() {
         )}
       </div>
 
-      <PanneauPartage />
-      <ShareLinksSection />
-      <CollabSuiviSection />
+      {/* Diffusion privée : les autres modes restent visibles (on voit ce qui
+          est fermé et ce qui reviendra), mais inactifs — et le serveur les
+          refuse de toute façon. */}
+      <fieldset className={prive ? styles.ferme : styles.ouvert} disabled={prive} aria-disabled={prive}>
+        {prive && <p className={styles.fermeNote}>Fermé : ce gent est en diffusion privée.</p>}
+        <PanneauPartage />
+        <ShareLinksSection />
+        <CollabSuiviSection />
+      </fieldset>
 
       <div className={styles.card}>
         <h4 className={styles.title}>Autres canaux</h4>

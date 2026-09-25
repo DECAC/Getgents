@@ -35,3 +35,28 @@ export function diffusedEspace(row: GentRow | null | undefined): Espace | null {
 
 /** Colonnes à sélectionner pour pouvoir résoudre la version diffusée. */
 export const DIFFUSED_COLUMNS = "espace, diffused";
+
+/**
+ * Diffusion PRIVÉE (studio → Diffusion) : le gent est réservé à l'usage de
+ * son créateur. La case s'applique TOUT DE SUITE, dans les deux sens : la
+ * cocher ou la décocher écrit aussitôt la version de travail, qui fait donc
+ * foi dès qu'elle porte le réglage. Attendre la prochaine diffusion laisserait
+ * un lien ouvert après « privé », ou fermé après l'avoir décoché. La version
+ * diffusée ne sert que pour un gent dont la version de travail n'en dit rien.
+ */
+export function gentPrive(row: GentRow | null | undefined): boolean {
+  if (!row) return false;
+  const travail = row.espace as { diffusionPrivee?: unknown } | null | undefined;
+  if (typeof travail?.diffusionPrivee === "boolean") return travail.diffusionPrivee;
+  const diffuse = row.diffused as { diffusionPrivee?: unknown } | null | undefined;
+  return diffuse?.diffusionPrivee === true;
+}
+
+/**
+ * La version à servir à un VISITEUR (lien, page publique, salon, WhatsApp) :
+ * rien du tout si le gent est privé. Les chemins du créateur (routines, son
+ * espace) gardent `diffusedEspace`.
+ */
+export function espacePourVisiteur(row: GentRow | null | undefined): Espace | null {
+  return gentPrive(row) ? null : diffusedEspace(row);
+}

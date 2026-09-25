@@ -518,11 +518,20 @@ export function EspaceProvider({
           const idsDuCompte = Object.keys(personnels);
           const demoAmorce = initialId in INITIAL_ESPACES && !(initialId in personnels);
           const retirerAmorce = demoAmorce && idsDuCompte.length > 0;
-          if (retirerAmorce && currentIdRef.current === initialId) setCurrentId(idsDuCompte[0]);
+          // Adresse PRIVÉE (`/espace/assistant-email`) : l'identifiant de la
+          // page n'est pas celui du gent, on le retrouve parmi ceux du compte.
+          const parAdresse =
+            initialId in personnels
+              ? undefined
+              : idsDuCompte.find((gid) => personnels[gid].diffusionPrivee && personnels[gid].adressePrivee === initialId);
+          if (parAdresse && currentIdRef.current === initialId) setCurrentId(parAdresse);
+          else if (retirerAmorce && currentIdRef.current === initialId) setCurrentId(idsDuCompte[0]);
           setEspaces((prev) => {
             const gardes: EspacesMap = {};
             for (const [gid, e] of Object.entries(prev)) {
               const demo = gid in INITIAL_ESPACES && !(gid in personnels);
+              // L'emplacement provisoire créé pour l'adresse part aussi.
+              if (gid === initialId && parAdresse) continue;
               if (!demo || (gid === initialId && !retirerAmorce)) gardes[gid] = e;
             }
             return { ...gardes, ...personnels };

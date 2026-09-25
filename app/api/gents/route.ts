@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { requireUser } from "@/lib/server/session";
 import type { GentRole } from "@/lib/gentAccess";
 import { espaceForPublicLink } from "@/lib/espaceApiPayload";
+import { gentPrive } from "@/lib/server/gentVersions";
 import type { Espace } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -61,9 +62,12 @@ export async function GET() {
   if (partages.length) {
     const { data: recus } = await supabase
       .from("published_gents")
-      .select("id, espace")
+      .select("id, espace, diffused")
       .in("id", partages.map((g) => g.gent_id));
     for (const row of recus ?? []) {
+      // Diffusion PRIVÉE : l'invitation est suspendue, le gent disparaît de
+      // la liste de l'invité.
+      if (gentPrive(row)) continue;
       const invitation = partages.find((g) => g.gent_id === row.id);
       const role = invitation?.role === "editor" ? "editor" : "viewer";
       roles[row.id] = role;

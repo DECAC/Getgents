@@ -160,6 +160,10 @@ export interface GentDraft {
    * mises à jour automatiquement. Absent = activé.
    */
   amorcesAuto?: boolean;
+  /** Diffusion PRIVÉE : réservé au créateur, tous les autres modes fermés (lib/diffusionPrivee.ts). */
+  diffusionPrivee?: boolean;
+  /** Adresse lisible de l'espace personnel (`/espace/<adresse>`), sans `draft-…`. */
+  adressePrivee?: string;
   /** Formulaire jump pour lancer le gent dès la première saisie (optionnel). */
   jumpForm?: JumpForm;
   /**

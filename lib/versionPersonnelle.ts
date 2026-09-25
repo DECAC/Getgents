@@ -83,7 +83,15 @@ function reporterUsage(base: Espace, source: Espace): Espace {
 /** L'espace personnel : configuration diffusée + usage de la version de travail. */
 export function composerVersionPersonnelle(diffusee: Espace | null | undefined, travail: Espace): Espace {
   if (!diffusee || typeof diffusee !== "object") return travail;
-  return reporterUsage(diffusee, travail);
+  return {
+    ...reporterUsage(diffusee, travail),
+    // La diffusion privée s'applique dès la case cochée, comme côté serveur :
+    // lue sur la version de travail. Jamais RÉÉCRITE par l'espace (absente de
+    // `fusionnerUsage`) : un onglet resté ouvert rouvrirait sinon un gent
+    // qu'on vient de rendre privé.
+    diffusionPrivee: travail.diffusionPrivee,
+    adressePrivee: travail.adressePrivee,
+  };
 }
 
 /**

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { requireGentAccess } from "@/lib/server/gentGuard";
+import { gentPrive } from "@/lib/server/gentVersions";
 import { slugMessage, slugProbleme, slugSuivant, toSlug } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
@@ -81,6 +82,14 @@ export async function POST(req: Request, { params }: Params) {
       .eq("id", params.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true, visibility: "private" });
+  }
+
+  // Diffusion PRIVÉE : aucun autre mode de publication n'est ouvert.
+  if (gentPrive(acces.value.row)) {
+    return NextResponse.json(
+      { error: "Ce gent est en diffusion privée : décochez-la dans Diffusion pour le partager." },
+      { status: 409 }
+    );
   }
 
   const espace = acces.value.row.espace as { name?: string } | null;

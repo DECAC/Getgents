@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { requireGentAccess } from "@/lib/server/gentGuard";
+import { gentPrive } from "@/lib/server/gentVersions";
 import { estEmailPlausible, estSoiMeme, normalizeEmail } from "@/lib/emailIdentity";
 import { envoyerInvitation } from "@/lib/server/invitations";
 import { createShareLink, lienInvitePour } from "@/lib/server/shareLinks";
@@ -44,6 +45,13 @@ export async function POST(req: Request, { params }: Params) {
   // travaille dessus, il n'élargit pas le cercle.
   const acces = await requireGentAccess(params.id, "admin");
   if (!acces.ok) return acces.response;
+  // Diffusion PRIVÉE : aucun autre mode de publication n'est ouvert.
+  if (gentPrive(acces.value.row)) {
+    return NextResponse.json(
+      { error: "Ce gent est en diffusion privée : décochez-la dans Diffusion pour le partager." },
+      { status: 409 }
+    );
+  }
 
   let body: { email?: string; role?: string };
   try {
