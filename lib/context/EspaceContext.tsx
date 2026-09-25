@@ -62,7 +62,7 @@ import { resolveImageModelId } from "@/lib/imageModels";
 import { materializeProfileMedia } from "@/lib/profileSummaryArtefact";
 import { readPublishedGents, writePublishedGent, syncPublishedGentsFromRemote } from "@/lib/publishedGents";
 import { langueDeLEnTete } from "@/lib/langue";
-import { estReponseVide, MESSAGE_REPONSE_VIDE } from "@/lib/reponseVide";
+import { estCoupureReseau, estReponseVide, MESSAGE_CONNEXION_COUPEE, MESSAGE_REPONSE_VIDE } from "@/lib/reponseVide";
 import {
   espaceForPinnedRefresh,
   espaceForStarters,
@@ -1099,6 +1099,15 @@ export function EspaceProvider({
             text: (m.text?.trim()
               ? m.text
               : "") + '<p><em>Génération interrompue.</em></p>',
+          }));
+          return;
+        }
+        if (estCoupureReseau(err)) {
+          updateLastMessage((m) => ({
+            ...m,
+            role: "agent" as const,
+            text: (estReponseVide(m.text) ? "" : m.text) + MESSAGE_CONNEXION_COUPEE,
+            t: m.t ?? nowTime(),
           }));
           return;
         }

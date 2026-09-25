@@ -20,3 +20,18 @@ export function estReponseVide(html: string | undefined): boolean {
     .replace(/&nbsp;/g, " ")
     .trim();
 }
+
+/**
+ * Connexion coupée PENDANT la réponse (« Failed to fetch », « network error ») :
+ * ce n'est pas le service IA qui refuse, c'est le flux qui s'interrompt. Le
+ * texte déjà reçu est GARDÉ — il était remplacé par l'erreur, et une réponse
+ * à moitié écrite disparaissait.
+ */
+export const MESSAGE_CONNEXION_COUPEE =
+  "<p><em>La connexion avec le gent a été coupée avant la fin de sa réponse (réseau, ou traitement trop long " +
+  "côté serveur). Réessayez ; si cela se répète, restreignez la demande.</em></p>";
+
+/** Une coupure réseau se reconnaît à son type : `fetch` la signale par un TypeError. */
+export function estCoupureReseau(err: unknown): boolean {
+  return err instanceof TypeError;
+}

@@ -1,4 +1,5 @@
-import { estReponseVide, MESSAGE_REPONSE_VIDE } from "@/lib/reponseVide";
+import { estCoupureReseau, estReponseVide, MESSAGE_CONNEXION_COUPEE, MESSAGE_REPONSE_VIDE } from "@/lib/reponseVide";
+import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import { BUDGET_OUTILS_MS, MAX_TOURS_OUTILS, outilsEncoreAutorises } from "@/lib/boucleOutils";
 
 describe("réponse vide du gent", () => {
@@ -33,5 +34,27 @@ describe("budget de la boucle d'outils", () => {
 
   it("laisse au moins deux minutes pour rédiger avant la coupure à 300 s", () => {
     expect(300_000 - BUDGET_OUTILS_MS).toBeGreaterThanOrEqual(120_000);
+  });
+});
+
+describe("connexion coupée pendant la réponse", () => {
+  it("un TypeError de fetch est une coupure réseau", () => {
+    expect(estCoupureReseau(new TypeError("Failed to fetch"))).toBe(true);
+  });
+
+  it("un refus du service (quota, clé) n'en est pas une : son message reste affiché", () => {
+    expect(estCoupureReseau(new Error("Quota atteint"))).toBe(false);
+  });
+
+  it("le message de coupure est visible", () => {
+    expect(estReponseVide(MESSAGE_CONNEXION_COUPEE)).toBe(false);
+  });
+});
+
+describe("consigne Gmail", () => {
+  it("fait chercher avant de demander, avec la syntaxe qui trouve les newsletters", () => {
+    expect(GMAIL_PROMPT_INSTRUCTION).toContain("CHERCHE D'ABORD");
+    expect(GMAIL_PROMPT_INSTRUCTION).toContain("category:promotions");
+    expect(GMAIL_PROMPT_INSTRUCTION).toContain(" OR ");
   });
 });
