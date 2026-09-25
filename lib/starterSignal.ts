@@ -235,6 +235,16 @@ export function fallbackStarters(espace: Espace): string[] {
 }
 
 /** Déclencheurs persistés s'ils existent, sinon le repli d'accueil. */
+/**
+ * Amorces à montrer : celles tirées de la boîte mail quand l'espace personnel
+ * en a (même un peu anciennes, le temps qu'elles se renouvellent), sinon
+ * celles du gent.
+ */
+export function amorcesDuGent(espace: Espace): string[] {
+  return espace.amorcesContextuelles?.items?.length ? espace.amorcesContextuelles.items : espace.starters ?? [];
+}
+
 export function displayedStarters(espace: Espace): string[] {
-  return espace.starters?.length ? espace.starters : fallbackStarters(espace);
+  const amorces = amorcesDuGent(espace);
+  return amorces.length ? amorces : fallbackStarters(espace);
 }

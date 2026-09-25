@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useEspace } from "@/lib/context/EspaceContext";
-import { STARTER_COUNT, displayedStarters } from "@/lib/starterSignal";
+import { STARTER_COUNT, amorcesDuGent, displayedStarters } from "@/lib/starterSignal";
 import type { Espace } from "@/lib/types";
 import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./StarterBubbles.module.css";
@@ -26,7 +26,7 @@ export function StarterBubbles({
   variant?: "canvas" | "compact";
 }) {
   const { runStarter, ensureStarters, isThinking, storageReady } = useEspace();
-  const generated = espace.starters ?? [];
+  const generated = amorcesDuGent(espace);
   const questions = variant === "compact" ? displayedStarters(espace) : generated;
   const loading = variant === "canvas" && generated.length === 0;
 

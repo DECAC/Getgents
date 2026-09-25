@@ -479,6 +479,11 @@ export interface Espace {
    * la conversation. Générées une fois, puis persistées.
    */
   starters?: string[];
+  /**
+   * Amorces tirées de la boîte mail du PROPRIÉTAIRE (gent Gmail) — espace
+   * personnel seulement ; jamais dans la projection publique ni l'aperçu.
+   */
+  amorcesContextuelles?: import("@/lib/amorcesContextuelles").AmorcesContextuelles;
   startersGeneratedAt?: string;
   /** Serveurs MCP (transport Streamable HTTP) configurés dans le builder. */
   mcpServers?: { name: string; url: string }[];

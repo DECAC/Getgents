@@ -429,8 +429,17 @@ export function clearStoredPendingBuilderMessage(id: string): void {
   writeStoredDrafts(stored);
 }
 
+/**
+ * État initial du studio : le gabarit, et le gent ouvert.
+ *
+ * Les gents de DÉMONSTRATION du code (`GENT_DRAFTS` : voyage, succession,
+ * toilettes publiques, Radar Emploi, Élysée…) n'y entrent plus. Chargés ici,
+ * ils étaient ensuite ENREGISTRÉS par la persistance automatique du studio
+ * comme des gents du compte — sur le serveur — à chaque ouverture : on les
+ * supprimait, ils revenaient. Ils restent dans le code pour les tests.
+ */
 export function seedDrafts(initialId: string): GentDraftsMap {
-  const drafts: GentDraftsMap = JSON.parse(JSON.stringify(GENT_DRAFTS));
+  const drafts: GentDraftsMap = {};
   drafts[NOUVEAU_GENT_TEMPLATE_ID] = JSON.parse(JSON.stringify(GENT_DRAFTS[NOUVEAU_GENT_TEMPLATE_ID]));
   if (!drafts[initialId] && initialId !== NOUVEAU_GENT_TEMPLATE_ID) {
     drafts[initialId] = freshDraftFromTemplate(initialId);
@@ -446,11 +455,13 @@ export function mergeStoredDrafts(prev: GentDraftsMap): GentDraftsMap {
   return merged;
 }
 
-/** Liste tous les brouillons visibles (mock + localStorage), hors gabarits système. */
+/**
+ * Les gents du compte (cache local, synchronisé avec le serveur), hors
+ * gabarits système. Les démonstrations du code n'y figurent plus : elles
+ * réapparaissaient après chaque suppression.
+ */
 export function listVisibleDrafts(): GentDraft[] {
-  const base: GentDraftsMap = JSON.parse(JSON.stringify(GENT_DRAFTS));
-  for (const reserved of RESERVED_DRAFT_IDS) delete base[reserved];
-  const merged = mergeStoredDrafts(base);
+  const merged = mergeStoredDrafts({});
   for (const reserved of RESERVED_DRAFT_IDS) delete merged[reserved];
   return Object.values(merged)
     .filter((d) => isPersistableDraftId(d.id))

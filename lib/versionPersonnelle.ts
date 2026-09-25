@@ -36,6 +36,8 @@ const CHAMPS_USAGE = [
   "tools",
   "tabs",
   "map",
+  // Tirées de la boîte mail du propriétaire : à lui, pas à la configuration.
+  "amorcesContextuelles",
 ] as const satisfies readonly (keyof Espace)[];
 
 function usagePinned(travail: PinnedArtefact | undefined, config: PinnedArtefact | undefined): PinnedArtefact | undefined {

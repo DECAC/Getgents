@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import type { GentDraft, GentDraftsMap, ModelCapability, ConnectorToolKind, KnowledgeSourceKind } from "@/lib/types/builder";
 import type { ConversationMessage, RestApiToolConfig, JumpForm, Routine, NotificationChannel, Espace } from "@/lib/types";
+import { cacheKey } from "@/lib/session/currentUser";
 import { GENT_DRAFTS, CONNECTOR_TOOL_TYPES, BUILDER_ASSISTANT_MODEL_ID, BUILDER_FAST_MODEL_ID } from "@/lib/mock-data/builder";
 import { supportsReasoningStream } from "@/lib/openRouterReasoning";
 import { extractQuestions, recoverQuestionsFromChoiceList, stripVisibleChoiceList } from "@/lib/suggestions";
@@ -125,6 +126,11 @@ interface BuilderContextValue {
   updateArtefactsModifiables: (valeur: boolean) => void;
   /** Questions d'amorce écrites par le créateur. Liste vide = génération auto. */
   updateStarters: (valeurs: string[]) => void;
+  /**
+   * Retire le formulaire d'amorce (« jump form »). L'assistant du builder
+   * savait en ajouter un, rien ne permettait de l'enlever.
+   */
+  retirerJumpForm: () => void;
   /** Nom affiché du compte, attribution par défaut. Vide si non renseigné. */
   nomCompte: string;
   updateFileDownload: (patch: {
@@ -332,10 +338,18 @@ export function BuilderProvider({
   useEffect(() => {
     if (!storageReady || typeof window === "undefined") return;
     const persistable = draftsForPersistence(drafts);
-    try {
-      window.localStorage.setItem(DRAFTS_STORAGE_KEY, JSON.stringify(persistable));
-    } catch {
-      // quota dépassé / navigation privée : le studio reste utilisable en mémoire
+    // Clé PROPRE AU COMPTE (via writeStoredDrafts) : l'écriture directe sous la
+    // clé de base laissait les brouillons lisibles par le compte suivant sur
+    // une machine partagée, et désynchronisait le cache que lit le reste du
+    // studio.
+    writeStoredDrafts(persistable);
+    // L'ancienne copie sous la clé commune : effacée dès qu'un compte est connu.
+    if (cacheKey(DRAFTS_STORAGE_KEY) !== DRAFTS_STORAGE_KEY) {
+      try {
+        window.localStorage.removeItem(DRAFTS_STORAGE_KEY);
+      } catch {
+        // stockage indisponible
+      }
     }
     // N'envoie au serveur que les brouillons réellement modifiés (l'effet se
     // déclenche à chaque frappe, mais un seul brouillon change à la fois).
@@ -469,6 +483,7 @@ export function BuilderProvider({
         // liste d'artefacts d'avant, et la visionneuse n'avait rien à ouvrir.
         artefacts: mergeVisionneuseArtefact(existing.artefacts ?? fresh.artefacts, fresh.artefacts),
         themeTabs: existing.themeTabs,
+        amorcesContextuelles: existing.amorcesContextuelles,
         memory: existing.memory || fresh.memory,
         profile: existing.profile,
         routine: fresh.routine
@@ -538,7 +553,13 @@ export function BuilderProvider({
     // dans l'écran : renommer son compte n'agit sur les gents déjà diffusés
     // qu'à la rediffusion.
     const attribution = attributionPublique(published.propulsePar, nomCompte);
-    const espace = { ...buildEspaceFromDraft(published), propulsePar: attribution ?? undefined };
+    // Les amorces tirées de la boîte mail du créateur restent dans SA version
+    // de travail : la version diffusée est celle que lisent les visiteurs.
+    const espace = {
+      ...buildEspaceFromDraft(published),
+      propulsePar: attribution ?? undefined,
+      amorcesContextuelles: undefined,
+    };
     return flushPublishedGent(currentId, espace, true);
   }, [currentId, buildEspaceFromDraft, nomCompte]);
 
@@ -654,6 +675,13 @@ export function BuilderProvider({
     setDrafts((prev) => ({
       ...prev,
       [currentId]: { ...prev[currentId], frequenceArtefacts: valeur, updatedAt: "à l'instant" },
+    }));
+  }, [currentId]);
+
+  const retirerJumpForm = useCallback(() => {
+    setDrafts((prev) => ({
+      ...prev,
+      [currentId]: { ...prev[currentId], jumpForm: undefined, updatedAt: "à l'instant" },
     }));
   }, [currentId]);
 
@@ -1418,6 +1446,7 @@ export function BuilderProvider({
         updateFrequenceArtefacts,
         updateArtefactsModifiables,
         updateStarters,
+        retirerJumpForm,
         nomCompte,
         updateObjective,
         updateSystemPrompt,

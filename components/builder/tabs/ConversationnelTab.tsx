@@ -23,6 +23,7 @@ export function ConversationnelTab() {
     toggleWebSearch,
     updateFileDownload,
     updateRoutine,
+    retirerJumpForm,
   } = useBuilder();
   const disponibles = documentsDisponiblesDuBrouillon(currentDraft);
   // `undefined` veut dire « tous » : on le déplie en cases cochées, sinon le
@@ -73,6 +74,27 @@ export function ConversationnelTab() {
 
   return (
     <div className={styles.wrap}>
+      {/* Le formulaire d'amorce remplace les questions d'amorce à l'ouverture
+          d'une conversation. Seul l'assistant du builder savait en poser un,
+          et rien ne permettait de l'enlever. */}
+      {currentDraft.jumpForm && (
+        <div className={styles.card}>
+          <div className={styles.webSearchRow}>
+            <div>
+              <h4 className={styles.title}>Formulaire d&apos;amorce : « {currentDraft.jumpForm.title} »</h4>
+              <div className={styles.sub}>
+                Affiché à l&apos;ouverture d&apos;une conversation, à la place des questions d&apos;amorce (
+                {currentDraft.jumpForm.fields.map((f) => f.label).join(", ")}). Le retirer fait revenir les questions
+                d&apos;amorce.
+              </div>
+            </div>
+            <button type="button" className={styles.btnSecondaire} onClick={retirerJumpForm}>
+              Retirer
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={styles.card}>
         <div className={styles.webSearchRow}>
           <div>

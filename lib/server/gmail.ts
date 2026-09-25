@@ -339,6 +339,39 @@ export function searchMessages(gentId: string, query?: string, maxResults = 10):
   return gmailGet(gentId, `/users/me/messages?${params}`);
 }
 
+/**
+ * Expéditeur et objet des messages récents de la boîte de réception — rien
+ * d'autre, ni corps ni destinataires. Sert aux amorces contextuelles de
+ * l'espace personnel (lib/amorcesContextuelles.ts).
+ */
+export async function enTetesRecents(
+  gentId: string,
+  jours = 7,
+  max = 20
+): Promise<{ ok: true; entetes: { from: string; subject: string }[] } | { ok: false; erreur: string }> {
+  const auth = await validAccessToken(gentId);
+  if ("error" in auth) return { ok: false, erreur: auth.error };
+  const q = new URLSearchParams({ maxResults: String(Math.min(max, 25)), q: `in:inbox newer_than:${jours}d` });
+  const liste = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${q}`, {
+    headers: { Authorization: `Bearer ${auth.token}`, Accept: "application/json" },
+  });
+  if (!liste.ok) return { ok: false, erreur: `Gmail a répondu ${liste.status}` };
+  const { messages = [] } = (await liste.json()) as { messages?: { id: string }[] };
+  const entetes = await Promise.all(
+    messages.map(async ({ id }) => {
+      const res = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`,
+        { headers: { Authorization: `Bearer ${auth.token}`, Accept: "application/json" } }
+      );
+      if (!res.ok) return null;
+      const data = (await res.json()) as { payload?: { headers?: { name: string; value: string }[] } };
+      const h = Object.fromEntries((data.payload?.headers ?? []).map((x) => [x.name.toLowerCase(), x.value]));
+      return h.from ? { from: String(h.from), subject: String(h.subject ?? "") } : null;
+    })
+  );
+  return { ok: true, entetes: entetes.filter((e): e is { from: string; subject: string } => e !== null) };
+}
+
 /** Contenu d'un message (en-têtes + corps texte). */
 export async function getMessage(gentId: string, messageId: string): Promise<string> {
   if (!messageId?.trim()) {

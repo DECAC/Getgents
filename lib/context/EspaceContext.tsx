@@ -70,6 +70,7 @@ import { composerVersionPersonnelle, fusionnerUsage } from "@/lib/versionPersonn
 import { langueDeLEnTete } from "@/lib/langue";
 import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import { noteDepuisReponse } from "@/lib/noteDepuisReponse";
+import { amorcesAJour } from "@/lib/amorcesContextuelles";
 import { noteEnTexte, TYPE_NOTE, TYPE_NOTE_MISE_EN_FORME } from "@/lib/miseEnForme";
 import {
   estCoupureReseau,
@@ -437,6 +438,7 @@ export function EspaceProvider({
   const espacesRef = useRef(espaces);
   // Un seul appel de génération des déclencheurs par gent et par session, même
   // si l'espace se remonte plusieurs fois (changement d'onglet, re-render).
+  const amorcesDemandeesRef = useRef<Set<string>>(new Set());
   const startersRequestedRef = useRef<Set<string>>(new Set());
   espacesRef.current = espaces;
   const streamAbortRef = useRef<AbortController | null>(null);
@@ -498,7 +500,7 @@ export function EspaceProvider({
     syncPublishedGentsFromRemote()
       .then((merged) => {
         if (cancelled) return;
-        if (merged && merged !== "unauthorized" && Object.keys(merged).length) {
+        if (merged && merged !== "unauthorized") {
           // L'espace personnel tourne sur la version DIFFUSÉE, avec l'usage
           // de la version de travail (voir lib/versionPersonnelle.ts).
           const diffuses = lireVersionsDiffusees();
@@ -507,7 +509,24 @@ export function EspaceProvider({
             personnels[gid] = composerVersionPersonnelle(diffuses[gid], travail);
           }
           setVersionsDiffuseesIds(new Set(Object.keys(diffuses)));
-          setEspaces((prev) => ({ ...prev, ...personnels }));
+          // Les espaces de DÉMONSTRATION du code (voyage, succession…)
+          // s'effacent dès que les vrais gents du compte sont connus : ils
+          // encombraient la liste, ne pouvaient pas être supprimés, et
+          // l'accueil GetSpace pouvait leur confier une question. Celui qui
+          // amorce la page (`/myspace` démarre sur « voyage ») part aussi : on
+          // se place alors sur un vrai gent.
+          const idsDuCompte = Object.keys(personnels);
+          const demoAmorce = initialId in INITIAL_ESPACES && !(initialId in personnels);
+          const retirerAmorce = demoAmorce && idsDuCompte.length > 0;
+          if (retirerAmorce && currentIdRef.current === initialId) setCurrentId(idsDuCompte[0]);
+          setEspaces((prev) => {
+            const gardes: EspacesMap = {};
+            for (const [gid, e] of Object.entries(prev)) {
+              const demo = gid in INITIAL_ESPACES && !(gid in personnels);
+              if (!demo || (gid === initialId && !retirerAmorce)) gardes[gid] = e;
+            }
+            return { ...gardes, ...personnels };
+          });
         }
       })
       .finally(() => {
@@ -604,6 +623,32 @@ export function EspaceProvider({
   const ensureStarters = useCallback(async () => {
     const id = currentIdRef.current;
     const espace = espacesRef.current[id];
+    // Espace PERSONNEL d'un gent Gmail : des amorces tirées de la boîte mail,
+    // renouvelées toutes les six heures. Jamais sur un lien ni dans l'aperçu :
+    // elles montrent l'activité de la boîte du propriétaire.
+    if (espace?.gmail && !shareToken && !apercu && !amorcesAJour(espace.amorcesContextuelles)) {
+      if (!amorcesDemandeesRef.current.has(id)) {
+        amorcesDemandeesRef.current.add(id);
+        void fetch("/api/amorces/gmail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gentId: id }),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data: { amorces?: string[] } | null) => {
+            const items = data?.amorces?.filter((x) => typeof x === "string") ?? [];
+            if (!items.length) return;
+            setEspaces((prev) => {
+              const e = prev[id];
+              if (!e) return prev;
+              return { ...prev, [id]: { ...e, amorcesContextuelles: { at: new Date().toISOString(), items } } };
+            });
+          })
+          .catch(() => {
+            // Hors ligne ou Gmail déconnecté : les amorces du gent restent.
+          });
+      }
+    }
     if (!espace || espace.pinnedArtefact?.enabled) return;
     if (espace.starters?.length) return;
     if (startersRequestedRef.current.has(id)) return;

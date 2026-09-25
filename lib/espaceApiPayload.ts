@@ -182,6 +182,8 @@ export function espacePourApercu(travail: Espace): Espace {
     artefacts: visiteur.artefacts,
     downloadableDocuments: visiteur.downloadableDocuments,
     profile: undefined,
+    // Tirées de la boîte mail du créateur : un visiteur ne les verrait pas.
+    amorcesContextuelles: undefined,
     pinnedArtefact: travail.pinnedArtefact
       ? { ...travail.pinnedArtefact, dashboard: undefined, generatedAt: undefined }
       : undefined,

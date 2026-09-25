@@ -186,6 +186,14 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   `GET /api/gents` (`diffuses`), en mémoire seulement (quota du cache local) ;
   hors ligne, l'espace retombe sur la version de travail. Un gent jamais
   diffusé tourne sur sa version de travail, et l'en-tête le dit.
+- **Amorces tirées de la boîte mail** (gent Gmail, espace personnel) :
+  `/api/amorces/gmail`, PROPRIÉTAIRE seulement, lit l'expéditeur et l'objet
+  des messages des 7 derniers jours — jamais le corps — et un modèle rapide
+  en tire 4 questions (`lib/amorcesContextuelles.ts`), renouvelées toutes les
+  6 h. Rangées dans `amorcesContextuelles` (usage), JAMAIS dans `starters`
+  que reçoivent les visiteurs ; retirées de l'aperçu, de la projection
+  publique et de la version diffusée. Un formulaire d'amorce (« jump form »)
+  les masque : il se retire désormais dans Configurer → Options.
 - **L'espace personnel a la MÊME interface que les visiteurs**
   (`SharedGentBody` avec `personnelDe`) : retour « Mes gents », « Ouvrir
   dans GetStudio », version affichée. L'ancienne coquille (rail des gents,
@@ -291,6 +299,16 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   `getgents:chat` porte `gentId` et `modeleDemande` quand il y a eu
   substitution. Rappel : l'aperçu est une PHOTO prise au clic sur Preview —
   changer le modèle ensuite dans le studio n'agit pas sur un aperçu ouvert.
+- **Des gents impossibles à supprimer = les DÉMONSTRATIONS du code.**
+  `GENT_DRAFTS` (voyage, succession, toilettes publiques, Radar Emploi,
+  Élysée) était chargé dans l'état du studio, puis ENREGISTRÉ par sa
+  persistance automatique — sur le serveur — comme des gents du compte, à
+  chaque ouverture ; « Mes gents » les listait aussi d'office. Depuis, ni
+  `seedDrafts` ni `listVisibleDrafts` ne les incluent, et GetSpace écarte les
+  espaces de démonstration (`INITIAL_ESPACES`) dès que les gents du compte
+  sont connus. Ils restent dans le code pour les tests. Même endroit : la
+  persistance écrivait le cache sous la clé COMMUNE à tous les comptes ; elle
+  passe par `writeStoredDrafts` (clé du compte) et efface l'ancienne copie.
 - **Un verrou sans expiration est une panne en attente.** `orchestrating` est
   resté bloqué à `true` après une fonction tuée par un déploiement, rendant un
   salon muet définitivement. Expiration à 3 minutes depuis la migration 015.
