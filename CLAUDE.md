@@ -380,7 +380,8 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   Depuis (`doitImposerRechercheMail`) : sur un gent dont Gmail est le SEUL
   outil, la recherche est imposée à toute question sauf une politesse
   (« merci », « ok »…) ; le filtre par mots-clés ne sert plus qu'aux gents
-  qui ont d'autres outils. Coût : 1 à 3 s par question.
+  qui ont d'autres outils. Coût : 1 à 3 s par question. VÉRIFIÉ en
+  production le 26/09 par l'utilisateur (question Dialange rejouée).
 - **Un verrou sans expiration est une panne en attente.** `orchestrating` est
   resté bloqué à `true` après une fonction tuée par un déploiement, rendant un
   salon muet définitivement. Expiration à 3 minutes depuis la migration 015.
