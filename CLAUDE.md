@@ -374,6 +374,13 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   élargit une recherche vide (`requetesElargies` ; `getgents:gmail
   recherche`). Non vérifié en réel depuis l'agent : ni Gmail ni clé
   OpenRouter ici — lire `force` dans `tour_outils`.
+  Les MOTS-CLÉS ne suffisaient pas (26/09) : « Résume-moi les deux VERBATIM
+  de Dialange » n'en contenait aucun, et Gemini a répondu « je n'ai pas
+  trouvé d'e-mails de Dialange » SANS avoir cherché — une recherche inventée.
+  Depuis (`doitImposerRechercheMail`) : sur un gent dont Gmail est le SEUL
+  outil, la recherche est imposée à toute question sauf une politesse
+  (« merci », « ok »…) ; le filtre par mots-clés ne sert plus qu'aux gents
+  qui ont d'autres outils. Coût : 1 à 3 s par question.
 - **Un verrou sans expiration est une panne en attente.** `orchestrating` est
   resté bloqué à `true` après une fonction tuée par un déploiement, rendant un
   salon muet définitivement. Expiration à 3 minutes depuis la migration 015.

@@ -45,7 +45,7 @@ import {
   MESSAGE_REPONSE_FINALE_MANQUANTE,
   outilsEncoreAutorises,
 } from "@/lib/boucleOutils";
-import { demandePorteSurLaBoite } from "@/lib/gmailContenu";
+import { doitImposerRechercheMail } from "@/lib/gmailContenu";
 import {
   applyToolCallDelta,
   flattenToolRoundForRetry,
@@ -750,13 +750,16 @@ function toolLoopResponse(
         // l'eau ; seuls les tool_calls (nécessairement structurés) sont
         // accumulés jusqu'à la fin du tour avant d'être exécutés.
         // Question sur la boîte mail d'un gent Gmail : le premier tour IMPOSE
-        // une recherche (voir `demandePorteSurLaBoite`). Un seul essai : si le
+        // une recherche (voir `doitImposerRechercheMail`). Un seul essai : si le
         // fournisseur refuse le forçage, le tour repart sans. Pas de forçage
         // avec le raisonnement : Anthropic refuse les deux ensemble.
         let forcerRechercheMail =
           registry.has("gmail_search") &&
           !(body.reasoning?.enabled && supportsReasoningStream(body.model)) &&
-          demandePorteSurLaBoite(dernierTexteUtilisateur(messages));
+          doitImposerRechercheMail(
+            dernierTexteUtilisateur(messages),
+            Array.from(registry.keys()).every((nom) => nom.startsWith("gmail_"))
+          );
         for (let round = 0; round < MAX_TOURS_OUTILS; round++) {
           const autorises = outilsEncoreAutorises(round, Date.now() - debutBoucle);
           const withTools = registry.size > 0 && autorises;

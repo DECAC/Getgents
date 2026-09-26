@@ -132,3 +132,31 @@ describe("élargissement d'une recherche vide, par le serveur", () => {
     expect(r.note).toMatch(/requête élargie/);
   });
 });
+
+import { doitImposerRechercheMail, simplePolitesse } from "@/lib/gmailContenu";
+
+describe("recherche imposée sur un gent dont Gmail est le seul outil", () => {
+  it("toute question, même sans mot-clé (vécu : les VERBATIM de Dialange)", () => {
+    for (const q of [
+      "Résume-moi les deux VERBATIM de Dialange.",
+      "Qu'a publié MyClaw ce matin ?",
+      "Quoi de neuf aujourd'hui ?",
+      "Qu'est-ce qui demande une action de ma part ?",
+      "Y a-t-il des factures à payer ?",
+    ]) {
+      expect(doitImposerRechercheMail(q, true)).toBe(true);
+    }
+  });
+
+  it("pas sur une politesse", () => {
+    for (const q of ["merci", "Merci beaucoup !", "ok", "Super 👍", "d'accord.", "Bonne journée"]) {
+      expect(simplePolitesse(q)).toBe(true);
+      expect(doitImposerRechercheMail(q, true)).toBe(false);
+    }
+  });
+
+  it("un gent qui a d'autres outils garde le filtre par mots-clés", () => {
+    expect(doitImposerRechercheMail("Résume-moi les deux VERBATIM de Dialange.", false)).toBe(false);
+    expect(doitImposerRechercheMail("Résume mes mails de Dialange", false)).toBe(true);
+  });
+});

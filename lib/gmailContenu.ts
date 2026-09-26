@@ -171,3 +171,34 @@ export function requetesElargies(requete: string | undefined): string[] {
   }
   return sorties;
 }
+
+/** Politesses et accusés de réception : rien à chercher. */
+const POLITESSE =
+  /^(merci( beaucoup| bien| infiniment)?|ok(ay)?|d'?accord|super|parfait|top|g[ée]nial|cool|tr[èe]s bien|bien re[çc]u|entendu|not[ée]|oui|non|bonjour|salut|hello|au revoir|bonne (journ[ée]e|soir[ée]e))$/i;
+
+export function simplePolitesse(message: string | null | undefined): boolean {
+  const texte = (message ?? "")
+    .replace(/\[ESPACE\][\s\S]*?\[\/ESPACE\]/g, " ")
+    // Lettres (accents compris), chiffres, apostrophe : le reste (ponctuation,
+    // émojis) ne change pas le sens d'un « merci ! 👍 ».
+    .replace(/[^A-Za-z\u00C0-\u017F0-9' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return !texte || POLITESSE.test(texte);
+}
+
+/**
+ * Faut-il IMPOSER `gmail_search` au premier tour ?
+ *
+ * Sur un gent dont Gmail est le SEUL outil, oui, à toute question : c'est
+ * son métier. Les mots-clés ne suffisaient pas — vécu (26/09, Gemini 2.5
+ * Flash) : « Résume-moi les deux VERBATIM de Dialange », aucun mot de la
+ * liste, pas d'outil appelé, et la réponse « je n'ai pas trouvé d'e-mails de
+ * Dialange » : une recherche INVENTÉE. Seules les politesses y échappent.
+ * Un gent qui a d'autres outils garde le filtre par mots-clés : forcer la
+ * boîte mail sur une question météo ou de transport serait absurde.
+ */
+export function doitImposerRechercheMail(message: string | null | undefined, gmailSeulOutil: boolean): boolean {
+  if (simplePolitesse(message)) return false;
+  return gmailSeulOutil || demandePorteSurLaBoite(message);
+}
