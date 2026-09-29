@@ -4,6 +4,7 @@ import { APP_ACCESS_COOKIE } from "@/lib/appAccessConstants";
 import { createAuthClient } from "@/lib/server/supabaseAuth";
 import { isAuthConfigured } from "@/lib/authConfig";
 import { politiqueCsp, nouveauNonce } from "@/lib/csp";
+import { authInjoignable } from "@/lib/delaiFetch";
 
 /**
  * Rafraîchit la session et garde les pages privées.
@@ -109,7 +110,17 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const user = client ? (await client.auth.getUser()).data.user : null;
+  const resultat = client ? await client.auth.getUser() : null;
+  const user = resultat?.data.user ?? null;
+
+  // Supabase injoignable (délai dépassé, panne, projet en pause) : on ne sait
+  // PAS qui est là. Renvoyer vers /connexion mentirait — la connexion
+  // échouerait aussi. Une page privée le dit ; une page publique passe.
+  if (!user && authInjoignable(resultat?.error)) {
+    console.error(JSON.stringify({ tag: "getgents:auth", event: "supabase_injoignable", pathname }));
+    if (estPrive(pathname)) return avecCsp(pageIndisponible());
+    return avecCsp(response);
+  }
 
   if (!user && estPrive(pathname)) {
     const connexion = request.nextUrl.clone();
@@ -131,6 +142,19 @@ export async function middleware(request: NextRequest) {
   }
 
   return avecCsp(response);
+}
+
+/** Réponse honnête quand l'authentification ne répond pas — jamais une attente sans fin. */
+function pageIndisponible(): NextResponse {
+  return new NextResponse(
+    '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      "<title>Connexion indisponible — Getgents</title></head>" +
+      '<body style="font-family:system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 16px;line-height:1.5;color:#2a211c;background:#faf5f0">' +
+      "<h1 style=\"font-size:1.3rem\">Le service de connexion ne répond pas</h1>" +
+      "<p>Getgents n'arrive pas à vérifier votre session pour l'instant. Vos gents et vos données ne sont pas touchés.</p>" +
+      '<p><a href="" style="color:#c2410c">Réessayer</a> dans une minute.</p></body></html>',
+    { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Retry-After": "60" } }
+  );
 }
 
 export const config = {

@@ -382,6 +382,19 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (« merci », « ok »…) ; le filtre par mots-clés ne sert plus qu'aux gents
   qui ont d'autres outils. Coût : 1 à 3 s par question. VÉRIFIÉ en
   production le 26/09 par l'utilisateur (question Dialange rejouée).
+- **getgents.ai « tourne sans fin » = Supabase qui ne répond pas.** Vécu
+  (29/09), sans aucun déploiement depuis trois jours. Le middleware demande à
+  Supabase qui est connecté, à CHAQUE page, et attendait sans limite : un
+  utilisateur CONNECTÉ restait devant une page blanche (un anonyme n'a pas
+  de session, donc pas d'appel — le test le plus rapide est une fenêtre de
+  navigation privée). Reproduit ici avec un serveur muet : plus de 45 s sans
+  réponse. Depuis : tout appel d'authentification est borné à 6 s
+  (`fetchAvecDelai`, `lib/delaiFetch.ts`, dans `createAuthClient`), et le
+  middleware répond 503 « Le service de connexion ne répond pas » sur une
+  page privée (`getgents:auth supabase_injoignable`) au lieu de renvoyer vers
+  /connexion, qui échouerait aussi. Ça rend la panne VISIBLE, pas réparée :
+  la cause est chez Supabase (projet en pause, incident) — tableau de bord
+  Supabase d'abord.
 - **Un verrou sans expiration est une panne en attente.** `orchestrating` est
   resté bloqué à `true` après une fonction tuée par un déploiement, rendant un
   salon muet définitivement. Expiration à 3 minutes depuis la migration 015.

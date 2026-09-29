@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { readAuthConfig } from "@/lib/authConfig";
+import { DELAI_AUTH_MS, fetchAvecDelai } from "@/lib/delaiFetch";
 
 /**
  * Client Supabase SERVEUR lié aux cookies, clé anon.
@@ -42,6 +43,8 @@ export function createAuthClient(bridge: CookieBridge): SupabaseClient | null {
       getAll: () => bridge.getAll(),
       setAll: (cookies) => bridge.setAll(cookies),
     },
+    // Borné : un Supabase muet suspendait tout le site (voir lib/delaiFetch.ts).
+    global: { fetch: fetchAvecDelai(DELAI_AUTH_MS) },
   });
 }
 
