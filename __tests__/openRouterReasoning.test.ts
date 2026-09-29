@@ -2,7 +2,7 @@ import { formatOpenRouterError, supportsReasoningStream } from "@/lib/openRouter
 
 describe("supportsReasoningStream", () => {
   it("accepte Claude et les modèles reasoning du catalogue", () => {
-    expect(supportsReasoningStream("anthropic/claude-sonnet-5")).toBe(true);
+    expect(supportsReasoningStream("anthropic/claude-sonnet-5.5")).toBe(true);
     expect(supportsReasoningStream("deepseek/deepseek-r1")).toBe(true);
     expect(supportsReasoningStream("openai/o4-mini")).toBe(true);
   });

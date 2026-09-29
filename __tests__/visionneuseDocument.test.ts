@@ -28,7 +28,7 @@ function spec(pageCount: number): DocumentViewerSpec {
   };
 }
 
-function draft(document: DocumentViewerSpec, chatModelId = "anthropic/claude-sonnet-5"): GentDraft {
+function draft(document: DocumentViewerSpec, chatModelId = "anthropic/claude-sonnet-5.5"): GentDraft {
   return {
     id: "visionneuse-test",
     name: "Lecteur de livre blanc",

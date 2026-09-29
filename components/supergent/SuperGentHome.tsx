@@ -19,6 +19,7 @@ import {
 import type { Espace } from "@/lib/types";
 import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./SuperGentHome.module.css";
+import { modeleConversationEffectif } from "@/lib/modeleConversation";
 
 interface Turn {
   role: "user" | "gent" | "none";
@@ -128,7 +129,7 @@ export function SuperGentHome() {
     }
 
     currentGentIdRef.current = gentId;
-    const model = espace.chatModelId ?? "anthropic/claude-sonnet-5";
+    const model = modeleConversationEffectif(espace.chatModelId).id;
     setStatus(`${espace.gent || espace.name} rédige sa réponse…`);
     setTurns((t) => [
       ...t,

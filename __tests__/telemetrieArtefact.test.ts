@@ -7,7 +7,7 @@ describe("mesure des propositions d'artefact", () => {
         evenement: "jete",
         mode: "lien",
         forme: "dashboard",
-        modele: "anthropic/claude-sonnet-5",
+        modele: "anthropic/claude-sonnet-5.5",
         frequence: "equilibre",
         gent: "Talk to Charles",
       })
@@ -15,7 +15,7 @@ describe("mesure des propositions d'artefact", () => {
       evenement: "jete",
       mode: "lien",
       forme: "dashboard",
-      modele: "anthropic/claude-sonnet-5",
+      modele: "anthropic/claude-sonnet-5.5",
       frequence: "equilibre",
       gent: "Talk to Charles",
     });

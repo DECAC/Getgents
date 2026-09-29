@@ -10,14 +10,14 @@ describe("modelePourPhase", () => {
   it("allège la phase de collecte", () => {
     // La phase longue et pauvre en décisions ne mérite pas le modèle des
     // propositions : mesuré à 12,6-16,7 s par tick, soit 82-91 % du total.
-    expect(modelePourPhase("collecting", "anthropic/claude-sonnet-5")).toBe(MODELE_COLLECTE);
+    expect(modelePourPhase("collecting", "anthropic/claude-sonnet-5.5")).toBe(MODELE_COLLECTE);
   });
 
   it("rend au créateur son modèle là où ça décide", () => {
     // Propositions et synthèse : c'est là que la qualité se voit, et c'est le
     // créateur qui a choisi.
-    expect(modelePourPhase("proposing", "anthropic/claude-sonnet-5")).toBe(
-      "anthropic/claude-sonnet-5"
+    expect(modelePourPhase("proposing", "anthropic/claude-sonnet-5.5")).toBe(
+      "anthropic/claude-sonnet-5.5"
     );
     expect(modelePourPhase("done", "openai/gpt-4.1")).toBe("openai/gpt-4.1");
   });

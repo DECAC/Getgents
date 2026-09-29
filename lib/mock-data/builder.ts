@@ -44,12 +44,12 @@ export const MODEL_CATALOG: OpenRouterModel[] = [
     tagline: "Généraliste, bon compromis coût / qualité pour la conversation.",
   },
   {
-    id: "anthropic/claude-sonnet-5",
-    label: "Claude Sonnet 5",
+    id: "anthropic/claude-sonnet-5.5",
+    label: "Claude Sonnet 5.5",
     provider: "Anthropic",
     capability: "chat",
-    contextWindow: 200_000,
-    pricing: { input: 3, output: 15 },
+    contextWindow: 1_000_000,
+    pricing: { input: 2, output: 10 },
     tagline: "Excellent raisonnement et suivi d'instructions longues.",
   },
   {
@@ -324,7 +324,7 @@ Règles impératives :
     status: "review",
     updatedAt: "il y a 2 heures",
     modelAssignments: [
-      { capability: "chat", modelId: "anthropic/claude-sonnet-5" },
+      { capability: "chat", modelId: "anthropic/claude-sonnet-5.5" },
       { capability: "reasoning", modelId: null },
       { capability: "image", modelId: "google/gemini-2.5-flash-image" },
       { capability: "tts", modelId: null },
@@ -401,7 +401,7 @@ Le user doit pouvoir être guidé après avoir accepté de partager sa localisat
     status: "draft",
     updatedAt: "à l'instant",
     modelAssignments: [
-      { capability: "chat", modelId: "anthropic/claude-sonnet-5" },
+      { capability: "chat", modelId: "anthropic/claude-sonnet-5.5" },
       { capability: "reasoning", modelId: null },
       { capability: "image", modelId: null },
       { capability: "tts", modelId: null },
@@ -448,7 +448,7 @@ Comportement :
     status: "draft",
     updatedAt: "il y a 2 jours",
     modelAssignments: [
-      { capability: "chat", modelId: "anthropic/claude-sonnet-5" },
+      { capability: "chat", modelId: "anthropic/claude-sonnet-5.5" },
       { capability: "reasoning", modelId: null },
       { capability: "image", modelId: null },
       { capability: "tts", modelId: null },
@@ -611,7 +611,7 @@ STYLE
     status: "draft",
     updatedAt: "aujourd'hui",
     modelAssignments: [
-      { capability: "chat", modelId: "anthropic/claude-sonnet-5" },
+      { capability: "chat", modelId: "anthropic/claude-sonnet-5.5" },
       { capability: "reasoning", modelId: null },
       { capability: "image", modelId: null },
       { capability: "tts", modelId: null },

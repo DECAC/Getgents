@@ -140,7 +140,7 @@ describe("rapport d'administration", () => {
           gentName: "Compagnon de voyage",
           gentId: "voyage",
           reason: "voyage",
-          model: "anthropic/claude-sonnet-5",
+          model: "anthropic/claude-sonnet-5.5",
           durationMs: 4200,
           answer: "En Italie.",
         },

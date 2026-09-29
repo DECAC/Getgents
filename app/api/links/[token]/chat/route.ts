@@ -16,6 +16,7 @@ import { langueDeLEnTete } from "@/lib/langue";
 import { mesurerReponse, porteDuContenu, porteUnSigne, type InstantsReponse } from "@/lib/chatTiming";
 import { reponseSseElysee } from "@/lib/elysee2027/serveur";
 import { MOTEUR_ELYSEE } from "@/lib/elysee2027/moteur";
+import { modeleConversationEffectif } from "@/lib/modeleConversation";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -140,7 +141,7 @@ export async function POST(req: Request, { params }: Params) {
   const quota = await consommerPourVisiteur(ctx, "llm");
   if (!quota.ok) return quota.response;
 
-  const chatModelId = espace.chatModelId ?? "anthropic/claude-sonnet-5";
+  const chatModelId = modeleConversationEffectif(espace.chatModelId).id;
   const raisonnement = supportsReasoningStream(chatModelId);
   const instants: InstantsReponse = {
     debut: debutRequete,

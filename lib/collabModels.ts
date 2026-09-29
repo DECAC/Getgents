@@ -1,3 +1,4 @@
+import { MODELE_CHAT_PAR_DEFAUT, modeleActuel } from "@/lib/modeleConversation";
 /**
  * Quel modèle pour quel moment du salon.
  *
@@ -38,10 +39,10 @@
 export const MODELE_COLLECTE: string | null = "google/gemini-2.5-flash";
 
 /** Modèle de repli quand le gent n'en a aucun de configuré. */
-export const MODELE_SALON_DEFAUT = "anthropic/claude-sonnet-5";
+export const MODELE_SALON_DEFAUT = MODELE_CHAT_PAR_DEFAUT;
 
 export function modelePourPhase(phase: string, modeleDuGent: string | null | undefined): string {
-  const duGent = modeleDuGent?.trim() || MODELE_SALON_DEFAUT;
+  const duGent = modeleActuel(modeleDuGent?.trim() || MODELE_SALON_DEFAUT);
 
   // Hors collecte, le modèle du créateur fait foi, sans discussion : c'est là
   // que se jouent les propositions et la synthèse, et c'est lui qui a choisi.

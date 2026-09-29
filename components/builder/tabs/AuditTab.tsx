@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { readPublishedGents } from "@/lib/publishedGents";
-import { MODEL_CATALOG } from "@/lib/mock-data/builder";
+import { libelleModele } from "@/lib/modeleConversation";
 import { describeMessage, buildEspaceReport } from "@/lib/testReport";
 import { ReportMenu } from "@/components/shared/ReportMenu";
 import { describeShareLink, type ShareLink, type ShareLinkStats } from "@/lib/shareLink";
@@ -21,7 +21,7 @@ function formatWhen(iso?: string): string {
 
 function modelLabel(id?: string): string {
   if (!id) return "Modèle par défaut";
-  return MODEL_CATALOG.find((m) => m.id === id)?.label ?? id;
+  return libelleModele(id);
 }
 
 /** Sources de données réellement sollicitées pendant un run (appels d'outils + web). */

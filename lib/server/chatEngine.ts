@@ -54,6 +54,7 @@ import {
   userFacingToolLoopError,
   type StreamedToolCall,
 } from "@/lib/openRouterToolLoop";
+import { modeleActuel } from "@/lib/modeleConversation";
 
 // Un tour de conversation avec recherche web, boucle d'outils ou un prompt
 // système volumineux (base de connaissance) peut dépasser la limite par
@@ -161,6 +162,8 @@ export async function chatResponseFor(
   // question ne se pose plus : le builder paie ses appels, rien ne justifie de
   // le restreindre à notre sélection.
   const modeleDemande = body.model;
+  // Modèle retiré : son successeur, quelle que soit la clé (MODELES_REMPLACES).
+  if (typeof body.model === "string") body.model = modeleActuel(body.model);
   if (ctx.source === "plateforme") body.model = resolveModelId(body.model);
 
   traceChatRequest(source, body, modeleDemande);

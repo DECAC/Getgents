@@ -13,6 +13,7 @@ import { resolveImageModelId } from "@/lib/imageModels";
 import { downloadableDocumentsFromDraft } from "@/lib/fileDownload";
 import { normaliserNomAffiche } from "@/lib/nomAffiche";
 import { estFrequenceArtefacts } from "@/lib/artefactSignal";
+import { modeleActuel } from "@/lib/modeleConversation";
 
 // Persistance des gents publiés : la source de vérité est Supabase (via les
 // routes /api/gents), le localStorage n'est plus qu'un cache local pour un
@@ -538,7 +539,7 @@ export function draftToEspace(draft: GentDraft): Espace {
   // conversation (même mécanisme que les fichiers joints — voir
   // sessionContext.ts) et devient un artefact d'accueil pour que l'espace
   // s'ouvre directement dessus (voir EspaceContext, visionneuseMode).
-  const chatModelId = draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? undefined;
+  const chatModelId = modeleActuel(draft.modelAssignments.find((a) => a.capability === "chat")?.modelId ?? undefined);
 
   const visionneuseDoc = draft.visionneuse?.enabled ? draft.visionneuse.document : undefined;
   if (visionneuseDoc) {

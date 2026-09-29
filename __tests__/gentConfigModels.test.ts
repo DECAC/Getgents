@@ -19,9 +19,9 @@ describe("resolveModelIdForCapability", () => {
 
 describe("extractGentConfigSignal — modèles", () => {
   it("extrait le modèle de conversation", () => {
-    const raw = 'Voici. <!--GENT_CONFIG: {"chatModelId":"anthropic/claude-sonnet-5"}-->';
+    const raw = 'Voici. <!--GENT_CONFIG: {"chatModelId":"anthropic/claude-sonnet-5.5"}-->';
     const { config } = extractGentConfigSignal(raw);
-    expect(config?.chatModelId).toBe("anthropic/claude-sonnet-5");
+    expect(config?.chatModelId).toBe("anthropic/claude-sonnet-5.5");
   });
 
   it("résout un libellé vers l'id catalogue", () => {
@@ -38,9 +38,9 @@ describe("extractGentConfigSignal — modèles", () => {
    */
   it("ignore un reasoningModelId hérité sans perdre le reste", () => {
     const raw =
-      '<!--GENT_CONFIG: {"chatModelId":"anthropic/claude-sonnet-5","reasoningModelId":"deepseek/deepseek-r1"}-->';
+      '<!--GENT_CONFIG: {"chatModelId":"anthropic/claude-sonnet-5.5","reasoningModelId":"deepseek/deepseek-r1"}-->';
     const { config } = extractGentConfigSignal(raw);
-    expect(config?.chatModelId).toBe("anthropic/claude-sonnet-5");
+    expect(config?.chatModelId).toBe("anthropic/claude-sonnet-5.5");
     expect((config as Record<string, unknown> | null)?.reasoningModelId).toBeUndefined();
   });
 

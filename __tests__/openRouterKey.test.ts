@@ -60,8 +60,8 @@ describe("normaliserCatalogue", () => {
   const reponse = {
     data: [
       {
-        id: "anthropic/claude-sonnet-5",
-        name: "Claude Sonnet 5",
+        id: "anthropic/claude-sonnet-5.5",
+        name: "Claude Sonnet 5.5",
         description: "Raisonnement solide.",
         context_length: 200000,
         architecture: { modality: "text+image->text", output_modalities: ["text"] },
@@ -79,8 +79,8 @@ describe("normaliserCatalogue", () => {
   it("traduit une réponse réaliste", () => {
     const c = normaliserCatalogue(reponse);
     expect(c).toHaveLength(2);
-    const sonnet = c.find((m) => m.id === "anthropic/claude-sonnet-5")!;
-    expect(sonnet.label).toBe("Claude Sonnet 5");
+    const sonnet = c.find((m) => m.id === "anthropic/claude-sonnet-5.5")!;
+    expect(sonnet.label).toBe("Claude Sonnet 5.5");
     expect(sonnet.provider).toBe("Anthropic");
     expect(sonnet.capability).toBe("chat");
     expect(sonnet.contextWindow).toBe(200000);

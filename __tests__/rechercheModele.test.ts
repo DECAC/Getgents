@@ -7,8 +7,8 @@ const flash = {
   provider: "Google",
 };
 const sonnet = {
-  id: "anthropic/claude-sonnet-5",
-  label: "Claude Sonnet 5",
+  id: "anthropic/claude-sonnet-5.5",
+  label: "Claude Sonnet 5.5",
   provider: "Anthropic",
 };
 

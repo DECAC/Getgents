@@ -65,7 +65,7 @@ describe("documents volumineux (une centaine de pages)", () => {
   const hundredPages = "Le contenu du livre blanc. ".repeat(Math.ceil((100 * PAGE) / 27));
 
   it("fait tenir un document de 100 pages en entier, sans troncature", () => {
-    const note = filesNote([file("livre-blanc.docx", hundredPages)], documentsBudgetFor("anthropic/claude-sonnet-5"));
+    const note = filesNote([file("livre-blanc.docx", hundredPages)], documentsBudgetFor("anthropic/claude-sonnet-5.5"));
     expect(note).not.toContain("document long");
     expect(note).not.toContain("Non inclus faute de place");
   });
@@ -76,7 +76,7 @@ describe("documents volumineux (une centaine de pages)", () => {
   });
 
   it("dimensionne le budget sur la fenêtre de contexte du modèle", () => {
-    expect(documentsBudgetFor("anthropic/claude-sonnet-5")).toBeGreaterThan(documentsBudgetFor("mistralai/mistral-large"));
+    expect(documentsBudgetFor("anthropic/claude-sonnet-5.5")).toBeGreaterThan(documentsBudgetFor("mistralai/mistral-large"));
     // Modèle inconnu : on retombe sur la plus petite fenêtre, jamais sur zéro.
     expect(documentsBudgetFor("modele/inexistant")).toBe(documentsBudgetFor("mistralai/mistral-large"));
   });

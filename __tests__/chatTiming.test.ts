@@ -2,7 +2,7 @@ import { mesurerReponse, type ContexteReponse, type InstantsReponse } from "@/li
 
 const ctx: ContexteReponse = {
   gentId: "g1",
-  model: "anthropic/claude-sonnet-5",
+  model: "anthropic/claude-sonnet-5.5",
   raisonnement: true,
   webSearch: false,
   systemChars: 48000,

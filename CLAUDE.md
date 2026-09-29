@@ -332,6 +332,17 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   `getgents:chat` porte `gentId` et `modeleDemande` quand il y a eu
   substitution. Rappel : l'aperçu est une PHOTO prise au clic sur Preview —
   changer le modèle ensuite dans le studio n'agit pas sur un aperçu ouvert.
+  **Remplacer un modèle ≠ le retirer du catalogue.** Sur la clé plateforme,
+  un identifiant inconnu retombe sur `DEFAULT_CHAT_MODEL_ID` = Kimi K3 (le
+  modèle du builder), PAS sur le défaut des gents : retirer Sonnet 5 aurait
+  basculé en silence tous les gents réglés dessus vers Kimi. D'où
+  `MODELES_REMPLACES` (`lib/modeleConversation.ts`, 29/09 : Sonnet 5 →
+  Sonnet 5.5, nouveau défaut) : chaque lecture d'un modèle passe par
+  `modeleActuel` (moteur de chat toutes clés, `resolveModelId`, salon,
+  budget de documents, libellés, proposition de l'assistant du builder), et
+  le studio réécrit le réglage du gent à la lecture (`migrerModelesDraft`).
+  Pour le prochain remplacement : une ligne dans cette table, et vérifier
+  l'identifiant sur `openrouter.ai/api/v1/models` (joignable d'ici).
 - **Des gents impossibles à supprimer = les DÉMONSTRATIONS du code.**
   `GENT_DRAFTS` (voyage, succession, toilettes publiques, Radar Emploi,
   Élysée) était chargé dans l'état du studio, puis ENREGISTRÉ par sa

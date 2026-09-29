@@ -10,10 +10,11 @@ import { sessionContextNote } from "@/lib/sessionContext";
 import { extractLlmMessageText } from "@/lib/server/llmMessageText";
 import { extractJsonFromHtmlMarker } from "@/lib/server/markerJson";
 import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
+import { modeleActuel } from "@/lib/modeleConversation";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 /** Modèle fiable pour la structure JSON du dashboard (indépendamment du modèle chat du gent). */
-const PINNED_MODEL_FALLBACK = "anthropic/claude-sonnet-5";
+const PINNED_MODEL_FALLBACK = "anthropic/claude-sonnet-5.5";
 /**
  * Plafond par appel OpenRouter. Sans signal, un LLM bloqué laisse Vercel tuer
  * la fonction → le navigateur voit « Failed to fetch » (connexion coupée)
@@ -112,7 +113,7 @@ export async function refreshPinnedArtefact(
     DASHBOARD_BLOCKS_SCHEMA;
 
   const userContent = `${pinned.mission}${inputsBlock}`;
-  const model = espace.chatModelId ?? PINNED_MODEL_FALLBACK;
+  const model = modeleActuel(espace.chatModelId) ?? PINNED_MODEL_FALLBACK;
 
   /**
    * Trace d'UN appel. La generation d'artefact etait la seule voie sans

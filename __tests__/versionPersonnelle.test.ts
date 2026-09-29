@@ -24,7 +24,7 @@ const diffusee = espace({
 const travail = espace({
   version: 12,
   systemPrompt: "PROMPT EN COURS DE MODIFICATION",
-  chatModelId: "anthropic/claude-sonnet-5",
+  chatModelId: "anthropic/claude-sonnet-5.5",
   memory: "ma mémoire du jour",
   conversations: [{ id: "c1", startedAt: "", messages: [{ role: "user", text: "bilan de ce matin" }] }],
   activeConversationId: "c1",
@@ -80,7 +80,7 @@ describe("écriture depuis l'espace personnel", () => {
     const apresUsage = { ...vu, conversations: [{ id: "c1", startedAt: "", messages: [{ role: "user" as const, text: "nouvelle question" }] }] };
     const ecrit = fusionnerUsage(travail, apresUsage);
     expect(ecrit.systemPrompt).toBe("PROMPT EN COURS DE MODIFICATION");
-    expect(ecrit.chatModelId).toBe("anthropic/claude-sonnet-5");
+    expect(ecrit.chatModelId).toBe("anthropic/claude-sonnet-5.5");
     expect(ecrit.version).toBe(12);
   });
 

@@ -11,7 +11,7 @@ function draft(patch: Partial<GentDraft> = {}): GentDraft {
     status: "published",
     updatedAt: "à l'instant",
     modelAssignments: [
-      { capability: "chat", modelId: "anthropic/claude-sonnet-5" },
+      { capability: "chat", modelId: "anthropic/claude-sonnet-5.5" },
       { capability: "reasoning", modelId: null },
       { capability: "image", modelId: null },
       { capability: "tts", modelId: null },

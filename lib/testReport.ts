@@ -2,9 +2,8 @@
 // (builder ou espace) — configuration, transcript, appels d'outils,
 // propositions et décisions — pour analyse a posteriori des tests.
 import type { Espace, ConversationMessage } from "@/lib/types";
-import { modeleConversationEffectif } from "@/lib/modeleConversation";
+import { libelleModele, modeleConversationEffectif } from "@/lib/modeleConversation";
 import type { GentDraft } from "@/lib/types/builder";
-import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { parseDatasetUrl } from "@/lib/opendatasoft";
 import { describeShareLink, type ShareLink, type ShareLinkStats } from "@/lib/shareLink";
 
@@ -14,7 +13,7 @@ function stripHtml(html: string): string {
 
 function modelLabel(id?: string | null): string {
   if (!id) return "—";
-  return MODEL_CATALOG.find((m) => m.id === id)?.label ?? id;
+  return libelleModele(id);
 }
 
 function connectorBadge(toolKind: string, detail?: string): string {

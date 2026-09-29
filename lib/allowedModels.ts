@@ -1,4 +1,5 @@
 import { MODEL_CATALOG, BUILDER_ASSISTANT_MODEL_ID } from "@/lib/mock-data/builder";
+import { modeleActuel } from "@/lib/modeleConversation";
 
 /**
  * Modèles que la CLÉ DE LA PLATEFORME accepte de payer.
@@ -36,6 +37,9 @@ export function isPlatformModel(id: unknown): id is string {
  * d'artefact ou le routeur super-gent n'ont pas le même modèle de référence).
  */
 export function resolveModelId(requested: unknown, fallback: string = DEFAULT_CHAT_MODEL_ID): string {
+  // Un modèle retiré a un successeur nommé : sans cela, il retomberait sur
+  // le défaut du builder (voir MODELES_REMPLACES).
+  if (typeof requested === "string") requested = modeleActuel(requested);
   if (isPlatformModel(requested)) return requested;
   return isPlatformModel(fallback) ? fallback : DEFAULT_CHAT_MODEL_ID;
 }

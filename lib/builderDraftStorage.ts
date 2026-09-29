@@ -4,6 +4,7 @@ import { GENT_DRAFTS } from "@/lib/mock-data/builder";
 import { apiFetchInit, signalerSessionExpiree } from "@/lib/apiFetch";
 import { cacheKey } from "@/lib/session/currentUser";
 import { ajouterConnu, ecrireConnus, lireConnus, reconcilier } from "@/lib/reconciliation";
+import { modeleActuel } from "@/lib/modeleConversation";
 import { suggestGentIcon } from "@/lib/gentIcons";
 import { applyEventManagerTemplate } from "@/lib/eventManagerTemplate";
 
@@ -42,6 +43,30 @@ export function draftsForPersistence(drafts: GentDraftsMap): GentDraftsMap {
   return out;
 }
 
+/**
+ * Un modèle retiré du catalogue remplacé par son successeur
+ * (`MODELES_REMPLACES`) dans les réglages du gent. Appliqué à chaque lecture :
+ * le studio affiche le bon modèle, et sa persistance automatique réenregistre
+ * le gent migré — la migration se fait à l'usage, sans script.
+ */
+export function migrerModelesDraft(draft: GentDraft): GentDraft {
+  const assignments = draft?.modelAssignments;
+  if (!Array.isArray(assignments)) return draft;
+  let change = false;
+  const migres = assignments.map((a) => {
+    const actuel = a.modelId ? modeleActuel(a.modelId) : a.modelId;
+    if (actuel === a.modelId) return a;
+    change = true;
+    return { ...a, modelId: actuel };
+  });
+  return change ? { ...draft, modelAssignments: migres } : draft;
+}
+
+function migrerModeles(drafts: GentDraftsMap): GentDraftsMap {
+  for (const [id, d] of Object.entries(drafts)) drafts[id] = migrerModelesDraft(d);
+  return drafts;
+}
+
 export function readStoredDrafts(): GentDraftsMap {
   if (typeof window === "undefined") return {};
   try {
@@ -49,7 +74,7 @@ export function readStoredDrafts(): GentDraftsMap {
     if (!raw) return {};
     const parsed = JSON.parse(raw) as GentDraftsMap;
     for (const reserved of RESERVED_DRAFT_IDS) delete parsed[reserved];
-    return parsed;
+    return migrerModeles(parsed);
   } catch {
     return {};
   }
@@ -116,7 +141,7 @@ export async function fetchRemoteDrafts(): Promise<GentDraftsMap | null | "unaut
     const data = (await res.json()) as { drafts?: GentDraftsMap };
     const drafts = data.drafts ?? {};
     delete drafts[NOUVEAU_GENT_TEMPLATE_ID];
-    return drafts;
+    return migrerModeles(drafts);
   } catch {
     return null;
   }

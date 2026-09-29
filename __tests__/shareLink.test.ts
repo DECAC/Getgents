@@ -90,7 +90,7 @@ describe("projection publique d'un espace", () => {
     files: [{ id: "f1", name: "cv.pdf", size: 1, date: "hier" }],
     artefacts: [{ id: "a1", title: "Ancien rapport", type: "report", icon: "📄", date: "hier" }],
     systemPrompt: secret,
-    chatModelId: "anthropic/claude-sonnet-5",
+    chatModelId: "anthropic/claude-sonnet-5.5",
     webSearch: true,
     profile: { metier: "Solution Consultant" },
     mcpServers: [{ name: "interne", url: "https://interne.exemple/mcp" }],

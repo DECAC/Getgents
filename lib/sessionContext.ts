@@ -1,5 +1,6 @@
 import type { Espace, UserFile } from "@/lib/types";
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
+import { modeleActuel } from "@/lib/modeleConversation";
 
 // Contexte de session partagé par les deux modes d'un gent : la conversation et
 // l'artefact figé « mini-app ». Mémoire de l'espace et documents téléversés
@@ -38,7 +39,8 @@ const MIN_DOCUMENTS_BUDGET = 30_000;
  * (128k tokens) il est tronqué plutôt que de faire déborder la requête.
  */
 export function documentsBudgetFor(modelId?: string): number {
-  const contextWindow = MODEL_CATALOG.find((m) => m.id === modelId)?.contextWindow ?? FALLBACK_CONTEXT_WINDOW;
+  const id = modeleActuel(modelId);
+  const contextWindow = MODEL_CATALOG.find((m) => m.id === id)?.contextWindow ?? FALLBACK_CONTEXT_WINDOW;
   const chars = Math.floor(contextWindow * DOCUMENTS_CONTEXT_SHARE * CHARS_PER_TOKEN);
   return Math.min(MAX_DOCUMENTS_BUDGET, Math.max(MIN_DOCUMENTS_BUDGET, chars));
 }

@@ -5,6 +5,7 @@
 import { MODEL_CATALOG } from "@/lib/mock-data/builder";
 import { parseDatasetUrl, DVF_CANONICAL_DATASET_URL, datasetRefToDetail } from "@/lib/opendatasoft";
 import type { RestApiToolConfig, RestApiAuth, PinnedArtefactInput } from "@/lib/types";
+import { modeleActuel } from "@/lib/modeleConversation";
 
 const GENT_CONFIG_RE = /<!--GENT_CONFIG:\s*(\{[\s\S]*?\})\s*-->/;
 
@@ -67,7 +68,9 @@ export function resolveModelIdForCapability(
   capability: "chat" | "reasoning" | "image" | "tts" | "stt"
 ): string | undefined {
   if (typeof raw !== "string" || !raw.trim()) return undefined;
-  const value = raw.trim();
+  // Un identifiant retiré (souvent appris par le modèle du builder) vaut son
+  // successeur, plutôt que d'être ignoré.
+  const value = modeleActuel(raw.trim());
   const byId = MODEL_CATALOG.find((m) => m.id === value && m.capability === capability);
   if (byId) return byId.id;
   const lower = value.toLowerCase();

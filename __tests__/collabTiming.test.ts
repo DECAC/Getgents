@@ -3,7 +3,7 @@ import { mesurerTick, type ContexteTick, type InstantsTick } from "@/lib/collabT
 const ctx: ContexteTick = {
   sessionId: "s1",
   phase: "collecting",
-  model: "anthropic/claude-sonnet-5",
+  model: "anthropic/claude-sonnet-5.5",
   webSearch: false,
   systemChars: 4200,
   etatChars: 1800,
