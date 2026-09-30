@@ -276,3 +276,36 @@ export function titreScript(texte: string, max = 60): string {
   if (!net) return "Capsule vidéo";
   return net.length <= max ? net : `${net.slice(0, max - 1).trimEnd()}…`;
 }
+
+// --- « Au rythme de ma voix » ------------------------------------------------
+
+/**
+ * Un débit de 150 mots par minute se mesure PAUSES COMPRISES. Pendant qu'on
+ * parle, on articule plus vite : avancer à la vitesse moyenne pendant la
+ * parole seule mettait le texte en retard sur la voix — vécu au premier essai
+ * réel, « au rythme naturel, il a du mal à suivre ».
+ */
+export const FACTEUR_ARTICULATION = 1.3;
+/** Entre deux mots, la voix retombe : on continue d'avancer ce temps-là. */
+export const MAINTIEN_PAROLE_MS = 500;
+export const VITESSE_RYTHME_DEFAUT = 160;
+export const VITESSE_MIN = 90;
+export const VITESSE_MAX = 240;
+
+/**
+ * Le lecteur touche le mot où il en est vraiment : l'écart dit si le texte
+ * va trop lentement (mot touché en avant) ou trop vite (en arrière). La
+ * vitesse se corrige d'un dixième, jamais d'un coup — un toucher peut aussi
+ * être un saut volontaire.
+ */
+export function vitesseCorrigee(vitesse: number, positionAffichee: number, positionTouchee: number): number {
+  const ecart = positionTouchee - positionAffichee;
+  if (Math.abs(ecart) < 3 || Math.abs(ecart) > 40) return vitesse;
+  const corrigee = Math.round(vitesse * (ecart > 0 ? 1.1 : 0.9));
+  return Math.min(VITESSE_MAX, Math.max(VITESSE_MIN, corrigee));
+}
+
+/** Sur iPhone, l'accès se règle dans l'app Réglages, pas dans la page. */
+export function estIOS(userAgent: string): boolean {
+  return /iPhone|iPad|iPod/.test(userAgent);
+}

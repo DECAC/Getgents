@@ -175,7 +175,16 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   même reconnaissance vocale (Apple) et même barre flottante. Sur iPhone, la
   vidéo s'enregistre par la feuille de partage (« Enregistrer / partager »,
   `navigator.share` avec fichier → Photos, LinkedIn), plus naturelle qu'un
-  téléchargement qui part dans Fichiers.
+  téléchargement qui part dans Fichiers. **Deuxième essai réel (30/09,
+  Chrome iPhone)** : caméra OK une fois autorisée dans l'app Réglages ;
+  reconnaissance vocale refusée → repli « rythme », qui prenait du RETARD
+  au débit naturel. Cause : il avançait à la vitesse moyenne (pauses
+  comprises) pendant la parole seule. Désormais `FACTEUR_ARTICULATION`
+  (×1,3 en parole), maintien de 500 ms entre les mots, 160 mots/min par
+  défaut, et toucher un mot en pleine lecture corrige la vitesse d'un
+  dixième (`vitesseCorrigee`). La vignette se réduit en pastille pendant la
+  lecture, les réglages se replient derrière ⚙, l'en-tête tient sur une
+  ligne, les messages s'effacent seuls : l'écran est au texte.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

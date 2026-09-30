@@ -188,3 +188,23 @@ describe("ce que le gent sait de moi", () => {
     expect(memoryNote("a".repeat(MEMOIRE_MAX + 500)).length).toBeLessThan(MEMOIRE_MAX + 300);
   });
 });
+
+import { vitesseCorrigee, estIOS, VITESSE_MAX } from "@/lib/prompteur";
+
+describe("au rythme de ma voix", () => {
+  it("un mot touché en avant accélère, en arrière ralentit, d'un dixième", () => {
+    expect(vitesseCorrigee(160, 20, 26)).toBe(176);
+    expect(vitesseCorrigee(160, 20, 14)).toBe(144);
+  });
+
+  it("un petit écart ou un saut lointain ne change pas la vitesse", () => {
+    expect(vitesseCorrigee(160, 20, 21)).toBe(160);
+    expect(vitesseCorrigee(160, 20, 90)).toBe(160);
+    expect(vitesseCorrigee(VITESSE_MAX, 20, 26)).toBe(VITESSE_MAX);
+  });
+
+  it("reconnaît un iPhone, Chrome compris", () => {
+    expect(estIOS("Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) CriOS/140.0 Mobile Safari/604.1")).toBe(true);
+    expect(estIOS("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/140.0")).toBe(false);
+  });
+});

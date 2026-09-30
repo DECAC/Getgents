@@ -13,6 +13,11 @@ import {
   motsEntendus,
   MOTS_PAR_MINUTE,
   nomFichierCapsule,
+  estIOS,
+  FACTEUR_ARTICULATION,
+  MAINTIEN_PAROLE_MS,
+  VITESSE_RYTHME_DEFAUT,
+  vitesseCorrigee,
   rectangleCadrage,
   type Cadrage,
 } from "@/lib/prompteur";
@@ -110,7 +115,12 @@ export function Prompteur({
 
   const reconnaissanceDisponible = useMemo(() => !!constructeurReconnaissance(), []);
   const [suivi, setSuivi] = useState<Suivi>(() => (constructeurReconnaissance() ? "voix" : "rythme"));
-  const [vitesse, setVitesse] = useState(MOTS_PAR_MINUTE);
+  const [vitesse, setVitesse] = useState(VITESSE_RYTHME_DEFAUT);
+  // Réglages repliés d'office : l'écran est au texte.
+  const [reglages, setReglages] = useState(false);
+  // La vignette se réduit en pastille pendant la lecture ; on la touche pour
+  // la rouvrir. Déployée, elle couvrait les lignes à lire.
+  const [vignetteOuverte, setVignetteOuverte] = useState(false);
   const [taille, setTaille] = useState(() =>
     typeof window !== "undefined" && window.innerWidth < 700 ? 28 : 42
   );
@@ -172,7 +182,9 @@ export function Prompteur({
       const nom = (e as Error).name;
       setErreurCamera(
         nom === "NotAllowedError"
-          ? "Caméra et micro refusés. Autorisez-les dans les réglages du site pour enregistrer — le texte, lui, défile quand même."
+          ? estIOS(navigator.userAgent)
+            ? "Caméra et micro refusés. Sur iPhone : app Réglages › Chrome (ou Safari) › Caméra et Micro, puis « Réessayer la caméra ». Le texte, lui, défile quand même."
+            : "Caméra et micro refusés. Autorisez-les dans les réglages du site pour enregistrer — le texte, lui, défile quand même."
           : nom === "NotFoundError"
             ? "Aucune caméra trouvée sur cet appareil."
             : "La caméra n'a pas pu démarrer."
@@ -204,6 +216,15 @@ export function Prompteur({
       .catch(() => undefined);
     return () => void verrou?.release().catch(() => undefined);
   }, []);
+
+  // Une information s'efface seule : elle recouvrait les lignes à lire.
+  useEffect(() => {
+    if (!info) return;
+    const t = window.setTimeout(() => setInfo(null), 7000);
+    return () => window.clearTimeout(t);
+  }, [info]);
+  const [erreurMasquee, setErreurMasquee] = useState(false);
+  useEffect(() => setErreurMasquee(false), [erreurCamera]);
 
   // --- Défilement ------------------------------------------------------------
 
@@ -269,11 +290,13 @@ export function Prompteur({
         // Plancher de bruit appris en continu : la pièce la plus calme comme
         // la plus bruyante déclenchent au bon niveau.
         if (niveau < plancher * 1.5) plancher = plancher * 0.97 + niveau * 0.03;
-        if (niveau > Math.max(0.015, plancher * 3)) finParole = maintenant + 350;
+        if (niveau > Math.max(0.015, plancher * 3)) finParole = maintenant + MAINTIEN_PAROLE_MS;
         avance = maintenant < finParole;
         setParle(avance);
       }
-      if (avance) setPosition(Math.min(positionRef.current + (dt * vitesse) / 60000, mots.length));
+      // En parole, on articule plus vite que la moyenne pauses comprises.
+      const debit = suivi === "rythme" ? vitesse * FACTEUR_ARTICULATION : vitesse;
+      if (avance) setPosition(Math.min(positionRef.current + (dt * debit) / 60000, mots.length));
       rafale = requestAnimationFrame(pas);
     };
     rafale = requestAnimationFrame(pas);
@@ -313,8 +336,8 @@ export function Prompteur({
       actif = false;
       setInfo(
         e.error === "not-allowed" || e.error === "service-not-allowed"
-          ? "Reconnaissance vocale refusée : le texte avance maintenant quand vous parlez."
-          : "Reconnaissance vocale indisponible (réseau ?) : le texte avance maintenant quand vous parlez."
+          ? "Reconnaissance vocale indisponible sur cet appareil : le texte avance quand vous parlez."
+          : "Reconnaissance vocale injoignable (réseau ?) : le texte avance quand vous parlez."
       );
       setSuivi("rythme");
     };
@@ -482,15 +505,14 @@ export function Prompteur({
   const ratio = CADRAGES.find((c) => c.id === cadrage)?.ratio ?? 1;
   const estime = dureeEstimee(texte, suivi === "voix" ? MOTS_PAR_MINUTE : vitesse);
   const depasse = etat === "enregistre" && ecoule > dureeCible;
+  const reduite = !!flux && (defile || etat === "enregistre") && !vignetteOuverte;
 
   return createPortal(
     <div className={styles.voile} role="dialog" aria-modal="true" aria-label={`Prompteur — ${titre}`}>
       <header className={styles.entete}>
         <div className={styles.titre}>
-          <span aria-hidden="true">🎬</span> {titre}
-          <span className={styles.duree}>
-            ≈ {formatDuree(estime)} · visé {formatDuree(dureeCible)}
-          </span>
+          <span aria-hidden="true">🎬</span>
+          <span className={styles.titreTexte}>{titre}</span>
         </div>
         <button type="button" className={styles.fermer} onClick={fermer} aria-label="Fermer le prompteur">
           ×
@@ -513,7 +535,12 @@ export function Prompteur({
                   ]
                     .filter(Boolean)
                     .join(" ")}
-                  onClick={() => setPosition(index)}
+                  onClick={() => {
+                    // En pleine lecture, l'écart entre le mot touché et le mot
+                    // affiché dit si le texte va trop vite ou trop lentement.
+                    if (defile && suivi !== "voix") setVitesse((v) => vitesseCorrigee(v, courant, index));
+                    setPosition(index);
+                  }}
                 >
                   {mot}{" "}
                 </span>
@@ -527,7 +554,12 @@ export function Prompteur({
       {/* Vignette de la caméra, au format enregistré : ce qu'on voit est ce
           qui sera filmé. En miroir, comme dans une glace ; la vidéo, elle,
           est enregistrée à l'endroit. */}
-      <div className={styles.vignette} style={{ aspectRatio: String(ratio) }}>
+      <div
+        className={[styles.vignette, reduite ? styles.reduite : ""].filter(Boolean).join(" ")}
+        style={{ aspectRatio: String(ratio) }}
+        onClick={flux ? () => setVignetteOuverte((o) => !o) : undefined}
+        title={flux ? (reduite ? "Afficher la caméra" : "Réduire la caméra") : undefined}
+      >
         {flux ? (
           <video ref={videoRef} className={styles.video} muted playsInline autoPlay />
         ) : (
@@ -535,7 +567,7 @@ export function Prompteur({
             {erreurCamera ? "Réessayer la caméra" : "Activer la caméra"}
           </button>
         )}
-        {etat === "enregistre" && (
+        {etat === "enregistre" && !reduite && (
           <span className={[styles.rec, depasse ? styles.recDepasse : ""].filter(Boolean).join(" ")}>
             ● {formatDuree(ecoule)}
           </span>
@@ -550,9 +582,14 @@ export function Prompteur({
         </div>
       )}
 
-      {(erreurCamera || info) && (
-        <p className={styles.info} role="status">
-          {erreurCamera ?? info}
+      {((erreurCamera && !erreurMasquee) || info) && (
+        <p
+          className={styles.info}
+          role="status"
+          onClick={() => (erreurCamera ? setErreurMasquee(true) : setInfo(null))}
+          title="Toucher pour masquer"
+        >
+          {erreurCamera && !erreurMasquee ? erreurCamera : info}
         </p>
       )}
       </div>
@@ -560,8 +597,8 @@ export function Prompteur({
       <footer className={styles.commandes}>
         <div className={styles.groupe}>
           {etat === "enregistre" ? (
-            <button type="button" className={styles.stop} onClick={arreter}>
-              ■ Arrêter {fini ? "— fin du texte" : ""}
+            <button type="button" className={[styles.stop, depasse ? styles.stopDepasse : ""].filter(Boolean).join(" ")} onClick={arreter}>
+              ■ {formatDuree(ecoule)} {fini ? "— fin" : ""}
             </button>
           ) : (
             <button
@@ -586,9 +623,23 @@ export function Prompteur({
           <button type="button" className={styles.bouton} onClick={() => setPosition(0)} title="Revenir au début">
             ↺
           </button>
+          <button
+            type="button"
+            className={[styles.bouton, reglages ? styles.boutonActif : ""].filter(Boolean).join(" ")}
+            onClick={() => setReglages((r) => !r)}
+            aria-expanded={reglages}
+            aria-label="Réglages"
+            title="Suivi, vitesse, taille du texte, format"
+          >
+            ⚙
+          </button>
         </div>
 
+        {reglages && (
         <div className={styles.groupe}>
+          <span className={styles.duree}>
+            ≈ {formatDuree(estime)} · visé {formatDuree(dureeCible)}
+          </span>
           <label className={styles.libelle}>
             Suivi
             <select
@@ -642,6 +693,7 @@ export function Prompteur({
             </select>
           </label>
         </div>
+        )}
       </footer>
 
       {resultat && (
