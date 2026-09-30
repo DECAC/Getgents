@@ -797,9 +797,16 @@ export function EspaceProvider({
     const message = fil.messages[indexMessage];
     if (!message?.script) return;
     const titre = titreScript(message.script);
-    setPrompteurOuvert({ titre, texte: message.script });
+    const texte = message.script;
+    // Le texte est GARDÉ d'abord, le prompteur s'ouvre ensuite, au tour
+    // suivant : l'enregistrement de l'espace a alors eu lieu. Vécu sur iPhone :
+    // écran figé au clic, et à la réouverture aucune trace du texte validé.
+    const ouvrir = () => window.setTimeout(() => setPrompteurOuvert({ titre, texte }), 0);
     // Déjà gardé, et toujours là : rien à refaire. Supprimé depuis : on le recrée.
-    if (message.scriptId && espace.artefacts.some((a) => a.id === message.scriptId)) return;
+    if (message.scriptId && espace.artefacts.some((a) => a.id === message.scriptId)) {
+      ouvrir();
+      return;
+    }
     // Copie fidèle, sans modèle : c'est CE texte qu'on a validé.
     const dashboard = parseDashboard({ blocks: [{ type: "text", body: message.script }] });
     if (!dashboard) return;
@@ -831,6 +838,7 @@ export function EspaceProvider({
         },
       };
     });
+    ouvrir();
   }, []);
 
   const [miseEnFormeEnCours, setMiseEnFormeEnCours] = useState<string | null>(null);

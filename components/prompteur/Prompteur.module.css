@@ -334,7 +334,39 @@
   color: rgba(246, 239, 231, 0.6);
 }
 
+.detailErreur {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  word-break: break-word;
+}
+
 @media (max-width: 700px) {
+  /* Commandes en HAUT, sous le titre : en bas, la barre flottante de Safari
+     (iOS récent) les recouvre — il ne restait que le texte, sans moyen de
+     lancer ni d'arrêter. En haut, elles sont aussi près de l'objectif. */
+  .commandes {
+    order: -1;
+    justify-content: center;
+    padding: 8px 10px;
+    border-top: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .entete {
+    order: -2;
+    padding: calc(8px + env(safe-area-inset-top)) 12px 4px;
+  }
+
+  .bouton,
+  .record,
+  .stop {
+    min-height: 36px;
+    padding: 0 12px;
+  }
+
   .colonne {
     padding: 0 18px 60vh;
   }

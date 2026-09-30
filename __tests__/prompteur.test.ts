@@ -171,3 +171,20 @@ describe("le type de gent « Le Prompteur »", () => {
     expect(titreScript("mot ".repeat(40)).length).toBeLessThanOrEqual(60);
   });
 });
+
+import { memoryNote, MEMOIRE_MAX } from "@/lib/sessionContext";
+
+describe("ce que le gent sait de moi", () => {
+  const avecMemoire = { ...draftToEspace(brouillonNeuf("d4", "prompteur")), memory: "Directeur des opérations dans une ESN." };
+
+  it("part dans le prompt de l'espace personnel, jamais sur un lien ni au super gent", () => {
+    expect(buildGentSystemPrompt(avecMemoire, { variant: "espace" })).toContain("Directeur des opérations dans une ESN.");
+    expect(buildGentSystemPrompt(avecMemoire, { variant: "sharedLink" })).not.toContain("Directeur des opérations");
+    expect(buildGentSystemPrompt(avecMemoire, { variant: "superGent" })).not.toContain("Directeur des opérations");
+  });
+
+  it("dit au gent de ne pas redemander ce qu'il sait, et reste bornée", () => {
+    expect(memoryNote("x")).toMatch(/ne lui redemande pas/);
+    expect(memoryNote("a".repeat(MEMOIRE_MAX + 500)).length).toBeLessThan(MEMOIRE_MAX + 300);
+  });
+});

@@ -164,7 +164,20 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   pour Chrome, Apple pour Safari) ne peut pas l'être d'ici. **Piège payé :
   `Permissions-Policy` interdisait `camera` et `microphone` sur tout le
   site** (`next.config.mjs`) — getUserMedia échouait avant même de demander
-  l'accord. Désormais `(self)`.
+  l'accord. Désormais `(self)`. **Premier essai sur iPhone (30/09) : écran
+  figé au clic, et aucune trace du texte à la réouverture.** Non reproduit
+  ici (pas de WebKit). Trois parades : le script est gardé AVANT
+  l'ouverture (prompteur ouvert au tour suivant, après l'enregistrement de
+  l'espace) ; une limite d'erreur (`LimitePrompteur`) affiche le détail au
+  lieu d'emporter la page ; sur téléphone, les commandes passent EN HAUT —
+  en bas, la barre flottante de Safari récent les recouvrait.
+- **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
+  mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
+  métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
+  Le champ existait depuis longtemps mais son écran vivait dans l'ancienne
+  coquille : plus aucun moyen de le remplir. Par gent, pas par compte : une
+  mémoire COMMUNE à tous les gents exigera un stockage par compte (table et
+  migration).
 - **`artefactsModifiables`** (studio, faux par défaut) : autorise les
   VISITEURS à éditer et restaurer leurs artefacts. Chacun modifie SA copie,
   dans son navigateur — ce n'est PAS de la co-édition, qui exigera des

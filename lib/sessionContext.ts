@@ -51,9 +51,19 @@ export function documentsBudgetFor(modelId?: string): number {
  */
 export const FILES_CONTEXT_BUDGET = documentsBudgetFor(undefined);
 
+/** Au-delà, la mémoire est tronquée : elle part à CHAQUE tour. */
+export const MEMOIRE_MAX = 4000;
+
+/**
+ * Ce que l'utilisateur a confié au gent sur lui (métier, situation, façon de
+ * travailler) — écrit par lui dans son espace (« Ce qu'il sait de moi »).
+ */
 export function memoryNote(memory?: string): string {
-  const m = (memory ?? "").trim();
-  return m ? `\n\nMémoire de l'espace : ${m}` : "";
+  const m = (memory ?? "").trim().slice(0, MEMOIRE_MAX);
+  return m
+    ? "\n\nCe que l'utilisateur t'a confié sur lui, une fois pour toutes (tiens-en compte sans le lui répéter, " +
+        `et ne lui redemande pas ce qui y figure) :\n${m}`
+    : "";
 }
 
 /**
