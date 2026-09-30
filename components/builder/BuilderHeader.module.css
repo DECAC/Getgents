@@ -264,8 +264,32 @@
    La ligne passe donc au retour à la ligne, et le champ réclame une largeur
    minimale : il occupe une ligne entière, le statut se range en dessous. */
 @media (max-width: 860px) {
+  .head {
+    padding: 10px 14px 0;
+  }
+
+  /* Première ligne : menu, emblème, actions. Le nom passe DESSOUS, sur toute
+     la largeur : coincé entre l'emblème et les deux boutons, il n'avait plus
+     que quelques dizaines de pixels — « Nom du gent » sur trois lignes et
+     l'objectif réduit à « Écrir… ». */
   .top {
     flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .meta {
+    order: 1;
+    flex-basis: 100%;
+  }
+
+  .viewLiveLink {
+    margin-left: auto;
+  }
+
+  .viewLiveLink,
+  .deleteBtn {
+    padding: 8px 12px;
   }
 
   .nameWrap {
