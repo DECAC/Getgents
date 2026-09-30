@@ -208,3 +208,51 @@ describe("au rythme de ma voix", () => {
     expect(estIOS("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/140.0")).toBe(false);
   });
 });
+
+import { choisirFormatAudio, niveauAffiche, verdictSon } from "@/lib/prompteur";
+
+describe("test son", () => {
+  it("préfère l'AAC (iPhone), retombe sur l'Opus", () => {
+    expect(choisirFormatAudio(() => true)).toBe("audio/mp4");
+    expect(choisirFormatAudio((t) => t.startsWith("audio/webm"))).toBe("audio/webm;codecs=opus");
+    expect(choisirFormatAudio(() => false)).toBeNull();
+  });
+
+  it("gradue le vu-mètre en décibels", () => {
+    expect(niveauAffiche(0)).toBe(0);
+    expect(niveauAffiche(NaN)).toBe(0);
+    expect(niveauAffiche(0.001)).toBeCloseTo(0, 5); // -60 dBFS
+    expect(niveauAffiche(1)).toBe(1);
+    // Une voix normale (≈ -30 dBFS) remplit la moitié, pas 3 %.
+    expect(niveauAffiche(0.0316)).toBeCloseTo(0.5, 1);
+  });
+
+  it("oriente sans juger à la place de l'oreille", () => {
+    expect(verdictSon(0.1, 0.01).ton).toBe("muet");
+    expect(verdictSon(0.9, 1).ton).toBe("sature");
+    expect(verdictSon(0.4, 0.2).ton).toBe("faible");
+    expect(verdictSon(0.7, 0.6).ton).toBe("ok");
+  });
+});
+
+import { choisirFormatVideo as formatVideo, debitVideo, nomDefinition } from "@/lib/prompteur";
+
+describe("haute définition", () => {
+  it("préfère le H.264 High au Baseline, limité à la définition standard", () => {
+    expect(formatVideo(() => true)?.mimeType).toBe("video/mp4;codecs=avc1.640028,mp4a.40.2");
+    expect(formatVideo((t) => t.includes("42E01E"))?.mimeType).toBe("video/mp4;codecs=avc1.42E01E,mp4a.40.2");
+  });
+
+  it("règle le débit sur la taille de l'image, dans des bornes", () => {
+    expect(debitVideo(1080, 1080)).toBeGreaterThan(debitVideo(720, 720));
+    expect(debitVideo(480, 480)).toBe(3_000_000);
+    expect(debitVideo(3840, 2160)).toBe(12_000_000);
+  });
+
+  it("nomme la définition sur le petit côté", () => {
+    expect(nomDefinition(1080, 1080)).toBe("Full HD");
+    expect(nomDefinition(1280, 720)).toBe("HD");
+    expect(nomDefinition(608, 1080)).toBe("basse définition");
+    expect(nomDefinition(640, 480)).toBe("basse définition");
+  });
+});

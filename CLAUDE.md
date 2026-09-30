@@ -194,7 +194,18 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   faire dans l'app Dictaphone. Caméra ET micro sont désormais choisis dans ⚙
   (`choixRef`), lignes toujours présentes : elles n'existaient que caméra
   DÉMARRÉE, donc disparaissaient quand il fallait en changer (PC, caméra
-  occupée par une visio → `NotReadableError`, message dédié).
+  occupée par une visio → `NotReadableError`, message dédié). **Test son**
+  (⚙, `TestSon`) : vu-mètre en continu (échelle en dB, `niveauAffiche`) et
+  une phrase de 5 s enregistrée PUIS rejouée, sur la même piste que la vidéo
+  (mêmes traitements) ; `verdictSon` oriente (muet, faible, saturé), l'oreille
+  juge. **Définition sur PC (30/09, « basse déf »)** : cause NON établie
+  d'ici (caméra simulée en 1080p). Trois corrections et un témoin : H.264
+  High 4.0 avant le Baseline 3.0 (profil de définition STANDARD, 720×576 au
+  plus), débit selon la taille (`debitVideo`, 3 à 12 Mb/s au lieu de 5 fixes),
+  webcam poussée à sa meilleure définition par `applyConstraints` (pas sur
+  iPhone), et ⚙ AFFICHE « Image l×h → capsule l×h » — le témoin qui tranche.
+  Un vertical 9:16 tiré d'une webcam paysage 1080p fait 608×1080 : c'est la
+  caméra, pas l'encodage.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

@@ -251,7 +251,12 @@ export function rectangleCadrage(largeur: number, hauteur: number, cadrage: Cadr
  * publier partout ; WebM sinon (Firefox, Chrome plus ancien).
  */
 export function choisirFormatVideo(estSupporte: (type: string) => boolean): { mimeType: string; extension: string } | null {
+  // H.264 High 4.0 d'abord : le Baseline 3.0 (42E01E) est un profil de
+  // définition STANDARD (720×576 au plus) — un encodeur qui le respecte
+  // réduit l'image. Il reste en repli pour les navigateurs qui n'ont que lui.
   const candidats: [string, string][] = [
+    ["video/mp4;codecs=avc1.640028,mp4a.40.2", "mp4"],
+    ["video/mp4;codecs=avc1.4d0028,mp4a.40.2", "mp4"],
     ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "mp4"],
     ["video/mp4", "mp4"],
     ["video/webm;codecs=vp9,opus", "webm"],
@@ -262,6 +267,58 @@ export function choisirFormatVideo(estSupporte: (type: string) => boolean): { mi
     if (estSupporte(mimeType)) return { mimeType, extension };
   }
   return null;
+}
+
+/** Format du TEST SON (audio seul) : même ordre de préférence que la vidéo. */
+export function choisirFormatAudio(estSupporte: (type: string) => boolean): string | null {
+  for (const t of ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]) {
+    if (estSupporte(t)) return t;
+  }
+  return null;
+}
+
+/** Durée du test son : de quoi dire une phrase, pas plus. */
+export const DUREE_TEST_SON_MS = 5000;
+
+/**
+ * Niveau du vu-mètre, de 0 à 1, depuis la valeur efficace d'un signal
+ * (-1..1). Échelle en décibels, de -60 dBFS (silence) à 0 : une échelle
+ * linéaire resterait collée en bas pour une voix normale (≈ -30 dBFS).
+ */
+export function niveauAffiche(efficace: number): number {
+  if (!(efficace > 0)) return 0;
+  const db = 20 * Math.log10(efficace);
+  return Math.max(0, Math.min(1, (db + 60) / 60));
+}
+
+/**
+ * Verdict du test son, depuis le niveau le plus haut atteint (échelle de
+ * `niveauAffiche`) et la crête brute du signal. Les seuils sont des repères,
+ * pas une mesure de qualité : l'oreille décide, le verdict oriente.
+ */
+export function verdictSon(niveauMax: number, crete: number): { ton: "ok" | "faible" | "sature" | "muet"; texte: string } {
+  if (niveauMax < 0.2) return { ton: "muet", texte: "Rien n'a été capté : vérifiez le micro choisi, ou qu'il est bien allumé." };
+  if (crete >= 0.99) return { ton: "sature", texte: "Le son sature : éloignez un peu le micro, ou parlez moins fort." };
+  if (niveauMax < 0.5) return { ton: "faible", texte: "Son faible : rapprochez le micro de la bouche (un micro-cravate se fixe à une main sous le menton)." };
+  return { ton: "ok", texte: "Bon niveau. Réécoutez pour juger du bruit de fond et de l'écho." };
+}
+
+/**
+ * Débit vidéo selon la taille de l'image : 5 Mb/s fixes étaient justes pour
+ * du 720p, un peu courts pour du 1080p (aplats et flous de compression).
+ * Borné : LinkedIn réencode de toute façon, un fichier énorme ne gagne rien.
+ */
+export function debitVideo(largeur: number, hauteur: number): number {
+  const pixels = Math.max(0, largeur) * Math.max(0, hauteur);
+  return Math.round(Math.min(12_000_000, Math.max(3_000_000, pixels * 7)));
+}
+
+/** Nom lisible d'une définition, sur le petit côté de l'image. */
+export function nomDefinition(largeur: number, hauteur: number): string {
+  const petit = Math.min(largeur, hauteur);
+  if (petit >= 1080) return "Full HD";
+  if (petit >= 720) return "HD";
+  return "basse définition";
 }
 
 export function nomFichierCapsule(date: Date, extension: string): string {

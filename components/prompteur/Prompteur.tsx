@@ -13,6 +13,8 @@ import {
   motsEntendus,
   MOTS_PAR_MINUTE,
   nomFichierCapsule,
+  nomDefinition,
+  debitVideo,
   estIOS,
   FACTEUR_ARTICULATION,
   MAINTIEN_PAROLE_MS,
@@ -21,6 +23,7 @@ import {
   rectangleCadrage,
   type Cadrage,
 } from "@/lib/prompteur";
+import { TestSon } from "./TestSon";
 import styles from "./Prompteur.module.css";
 
 /**
@@ -49,6 +52,8 @@ interface Resultat {
   taille: number;
   extension: string;
   nom: string;
+  largeur: number;
+  hauteur: number;
 }
 
 /** Hauteur de la ligne de lecture, en part de la zone de texte : près de la caméra. */
@@ -180,6 +185,7 @@ export function Prompteur({
           ...(cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "user" }),
           width: { ideal: 1920 },
           height: { ideal: 1080 },
+          frameRate: { ideal: 30 },
         },
         audio: {
           // Micro choisi dans les réglages (micro-cravate…) ; sinon, celui
@@ -190,6 +196,28 @@ export function Prompteur({
           autoGainControl: true,
         },
       });
+      // Une webcam de PC peut ouvrir en 640×480 malgré l'« idéal » demandé :
+      // on la pousse vers sa meilleure définition (1080p au plus). Pas sur
+      // iPhone, où l'idéal est tenu et où les dimensions annoncées suivent
+      // l'orientation du capteur, pas celle de l'écran.
+      const pisteVideo = f.getVideoTracks()[0];
+      if (pisteVideo && !estIOS(navigator.userAgent)) {
+        try {
+          const cap = pisteVideo.getCapabilities?.();
+          const reglage = pisteVideo.getSettings();
+          const largeurMax = Math.min(cap?.width?.max ?? 0, 1920);
+          const hauteurMax = Math.min(cap?.height?.max ?? 0, 1080);
+          if (largeurMax && hauteurMax && (reglage.width ?? 0) < largeurMax) {
+            await pisteVideo.applyConstraints({
+              width: { ideal: largeurMax },
+              height: { ideal: hauteurMax },
+              frameRate: { ideal: 30 },
+            });
+          }
+        } catch {
+          // La caméra garde sa définition : l'enregistrement reste possible.
+        }
+      }
       // Changement de micro : l'ancien flux s'éteint, le nouveau le remplace.
       if (fluxRef.current && fluxRef.current !== f) fluxRef.current.getTracks().forEach((t) => t.stop());
       setErreurCamera(null);
@@ -241,6 +269,22 @@ export function Prompteur({
   useEffect(() => {
     void activerCamera();
   }, [activerCamera]);
+
+  // Définition RÉELLE de l'image, lue sur la vidéo (et non sur les réglages de
+  // la piste, dont l'orientation diffère sur téléphone) : affichée dans ⚙.
+  const [image, setImage] = useState<{ l: number; h: number } | null>(null);
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const lire = () => (v.videoWidth ? setImage({ l: v.videoWidth, h: v.videoHeight }) : undefined);
+    lire();
+    v.addEventListener("loadedmetadata", lire);
+    v.addEventListener("resize", lire);
+    return () => {
+      v.removeEventListener("loadedmetadata", lire);
+      v.removeEventListener("resize", lire);
+    };
+  }, [flux]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -429,6 +473,7 @@ export function Prompteur({
       const video = videoRef.current;
       const canevas = canevasRef.current as (HTMLCanvasElement & { captureStream?: (fps: number) => MediaStream }) | null;
       let aEnregistrer = f;
+      let dims = { l: video?.videoWidth ?? 0, h: video?.videoHeight ?? 0 };
       // Recadrage au format choisi : le canevas redessine la zone centrale de
       // l'image. Sans canevas capturable, on enregistre l'image entière.
       if (video && canevas?.captureStream && video.videoWidth && video.videoHeight) {
@@ -442,13 +487,14 @@ export function Prompteur({
             dessinRef.current = requestAnimationFrame(dessiner);
           };
           dessiner();
+          dims = { l: r.sw, h: r.sh };
           aEnregistrer = new MediaStream([...canevas.captureStream(30).getVideoTracks(), ...f.getAudioTracks()]);
         }
       }
       const morceaux: Blob[] = [];
       const enregistreur = new MediaRecorder(aEnregistrer, {
         mimeType: format.mimeType,
-        videoBitsPerSecond: 5_000_000,
+        videoBitsPerSecond: debitVideo(dims.l, dims.h),
         audioBitsPerSecond: 128_000,
       });
       enregistreur.ondataavailable = (e) => {
@@ -464,6 +510,8 @@ export function Prompteur({
           taille: blob.size,
           extension: format.extension,
           nom: nomFichierCapsule(new Date(), format.extension),
+          largeur: dims.l,
+          hauteur: dims.h,
         });
       };
       enregistreur.start(1000);
@@ -753,6 +801,15 @@ export function Prompteur({
               )}
             </label>
           ))}
+          {image && (
+            <span className={styles.duree}>
+              {(() => {
+                const r = rectangleCadrage(image.l, image.h, cadrage);
+                return `Image ${image.l}×${image.h} → capsule ${r.sw}×${r.sh} (${nomDefinition(r.sw, r.sh)})`;
+              })()}
+            </span>
+          )}
+          <TestSon flux={flux} desactive={etat === "enregistre" || etat === "decompte"} />
           <label className={styles.libelle}>
             Format
             <select
@@ -779,7 +836,9 @@ export function Prompteur({
             <video className={styles.lecture} src={resultat.url} controls playsInline />
             <div className={styles.actions}>
               <a className={styles.record} href={resultat.url} download={resultat.nom}>
-                Télécharger ({resultat.extension.toUpperCase()}, {(resultat.taille / 1_048_576).toFixed(1).replace(".", ",")} Mo)
+                Télécharger ({resultat.extension.toUpperCase()}
+                {resultat.largeur ? `, ${resultat.largeur}×${resultat.hauteur}` : ""},{" "}
+                {(resultat.taille / 1_048_576).toFixed(1).replace(".", ",")} Mo)
               </a>
               {/* Sur iPhone, un fichier « téléchargé » part dans Fichiers : la
                   feuille de partage, elle, propose « Enregistrer la vidéo »
