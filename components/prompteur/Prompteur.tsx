@@ -40,6 +40,7 @@ type Etat = "pret" | "decompte" | "enregistre" | "termine";
 
 interface Resultat {
   url: string;
+  blob: Blob;
   taille: number;
   extension: string;
   nom: string;
@@ -47,6 +48,27 @@ interface Resultat {
 
 /** Hauteur de la ligne de lecture, en part de la zone de texte : près de la caméra. */
 const ANCRE = 0.26;
+
+function fichierDe(r: Resultat): File {
+  return new File([r.blob], r.nom, { type: r.blob.type || "video/mp4" });
+}
+
+function partageable(r: Resultat): boolean {
+  if (typeof navigator === "undefined" || !navigator.canShare) return false;
+  try {
+    return navigator.canShare({ files: [fichierDe(r)] });
+  } catch {
+    return false;
+  }
+}
+
+async function partager(r: Resultat) {
+  try {
+    await navigator.share({ files: [fichierDe(r)], title: r.nom });
+  } catch {
+    // Partage annulé par l'utilisateur : rien à signaler.
+  }
+}
 
 type ReconnaissanceVocale = {
   lang: string;
@@ -371,6 +393,7 @@ export function Prompteur({
         const blob = new Blob(morceaux, { type: format.mimeType.split(";")[0] });
         setResultat({
           url: URL.createObjectURL(blob),
+          blob,
           taille: blob.size,
           extension: format.extension,
           nom: nomFichierCapsule(new Date(), format.extension),
@@ -630,6 +653,14 @@ export function Prompteur({
               <a className={styles.record} href={resultat.url} download={resultat.nom}>
                 Télécharger ({resultat.extension.toUpperCase()}, {(resultat.taille / 1_048_576).toFixed(1).replace(".", ",")} Mo)
               </a>
+              {/* Sur iPhone, un fichier « téléchargé » part dans Fichiers : la
+                  feuille de partage, elle, propose « Enregistrer la vidéo »
+                  (Photos) et LinkedIn directement. */}
+              {partageable(resultat) && (
+                <button type="button" className={styles.bouton} onClick={() => void partager(resultat)}>
+                  Enregistrer / partager
+                </button>
+              )}
               <button type="button" className={styles.bouton} onClick={refaire}>
                 Refaire une prise
               </button>

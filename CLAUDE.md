@@ -170,7 +170,12 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   l'ouverture (prompteur ouvert au tour suivant, après l'enregistrement de
   l'espace) ; une limite d'erreur (`LimitePrompteur`) affiche le détail au
   lieu d'emporter la page ; sur téléphone, les commandes passent EN HAUT —
-  en bas, la barre flottante de Safari récent les recouvrait.
+  en bas, la barre flottante de Safari récent les recouvrait. L'utilisateur
+  est sur **Chrome iPhone** : même moteur que Safari (règle d'Apple), donc
+  même reconnaissance vocale (Apple) et même barre flottante. Sur iPhone, la
+  vidéo s'enregistre par la feuille de partage (« Enregistrer / partager »,
+  `navigator.share` avec fichier → Photos, LinkedIn), plus naturelle qu'un
+  téléchargement qui part dans Fichiers.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

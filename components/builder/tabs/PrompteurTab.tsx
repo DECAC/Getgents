@@ -70,11 +70,11 @@ export function PrompteurTab() {
             <div className={styles.tip}>
               <span aria-hidden="true">🎙</span>
               <span>
-                <b>Suivre ma voix</b> utilise la reconnaissance vocale du navigateur (Chrome, Edge,
-                Safari), qui peut transcrire la voix sur les serveurs de son éditeur (Google pour
-                Chrome, Apple pour Safari) le temps de la lecture. Ailleurs, ou si vous préférez, le
-                texte avance quand vous parlez et s&apos;arrête quand vous vous taisez, sans rien
-                transcrire.
+                <b>Suivre ma voix</b> utilise la reconnaissance vocale du navigateur, qui peut
+                transcrire la voix sur les serveurs de son éditeur le temps de la lecture : Google pour
+                Chrome sur ordinateur ; sur iPhone, Apple, quel que soit le navigateur (Chrome et
+                Safari y partagent le même moteur). Si elle manque, ou si vous préférez, le texte
+                avance quand vous parlez et s&apos;arrête quand vous vous taisez, sans rien transcrire.
               </span>
             </div>
             <div className={styles.tip}>
