@@ -312,6 +312,12 @@
   font: inherit;
 }
 
+/* Les noms d'appareils sont longs (« Microphone (Realtek High Definition…) »). */
+.appareil {
+  max-width: 200px;
+  text-overflow: ellipsis;
+}
+
 .microNom {
   max-width: 180px;
   overflow: hidden;

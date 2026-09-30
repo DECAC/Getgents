@@ -188,7 +188,13 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (30/09) : le prompteur prenait le micro retenu par le système, sans le
   dire. Les réglages ⚙ montrent désormais le micro ACTIF (nom de la piste) et
   proposent les autres dès qu'il y en a plusieurs (`enumerateDevices`, relu
-  au branchement) ; en changer relance le flux avec `deviceId` exact.
+  au branchement) ; en changer relance le flux avec `deviceId` exact. Sur
+  iPhone, seul le micro de l'iPhone est listé : une page web n'a que ce
+  que le système lui présente (micro Bluetooth, jack caméra TRS…) — test à
+  faire dans l'app Dictaphone. Caméra ET micro sont désormais choisis dans ⚙
+  (`choixRef`), lignes toujours présentes : elles n'existaient que caméra
+  DÉMARRÉE, donc disparaissaient quand il fallait en changer (PC, caméra
+  occupée par une visio → `NotReadableError`, message dédié).
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

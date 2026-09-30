@@ -164,15 +164,23 @@ export function Prompteur({
 
   // --- Caméra et micro ------------------------------------------------------
 
-  const activerCamera = useCallback(async (microId?: string): Promise<MediaStream | null> => {
-    if (fluxRef.current && microId === undefined) return fluxRef.current;
+  // Caméra et micro choisis dans les réglages ; absents, ceux du système.
+  const choixRef = useRef<{ camera?: string; micro?: string }>({});
+
+  const activerCamera = useCallback(async (forcer = false): Promise<MediaStream | null> => {
+    if (fluxRef.current && !forcer) return fluxRef.current;
+    const { camera: cameraId, micro: microId } = choixRef.current;
     if (!navigator.mediaDevices?.getUserMedia) {
       setErreurCamera("Ce navigateur ne donne pas accès à la caméra.");
       return null;
     }
     try {
       const f = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1920 }, height: { ideal: 1080 } },
+        video: {
+          ...(cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "user" }),
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
         audio: {
           // Micro choisi dans les réglages (micro-cravate…) ; sinon, celui
           // que le système a retenu.
@@ -194,9 +202,11 @@ export function Prompteur({
           ? estIOS(navigator.userAgent)
             ? "Caméra et micro refusés. Sur iPhone : app Réglages › Chrome (ou Safari) › Caméra et Micro, puis « Réessayer la caméra ». Le texte, lui, défile quand même."
             : "Caméra et micro refusés. Autorisez-les dans les réglages du site pour enregistrer — le texte, lui, défile quand même."
-          : nom === "NotFoundError"
-            ? "Aucune caméra trouvée sur cet appareil."
-            : "La caméra n'a pas pu démarrer."
+          : nom === "NotFoundError" || nom === "OverconstrainedError"
+            ? "Caméra ou micro introuvable : choisissez-en un autre dans les réglages ⚙."
+            : nom === "NotReadableError"
+              ? "La caméra ou le micro est déjà utilisé par une autre application (visio, appareil photo…). Fermez-la, puis « Réessayer la caméra »."
+              : "La caméra n'a pas pu démarrer."
       );
       return null;
     }
@@ -205,19 +215,22 @@ export function Prompteur({
   // Les micros ne portent un NOM qu'une fois l'accès accordé : la liste se lit
   // après l'ouverture du flux, et se relit quand on branche un micro.
   const [micros, setMicros] = useState<{ id: string; nom: string }[]>([]);
+  const [cameras, setCameras] = useState<{ id: string; nom: string }[]>([]);
   const microActif = flux?.getAudioTracks()[0];
+  const cameraActive = flux?.getVideoTracks()[0];
   useEffect(() => {
-    if (!flux || !navigator.mediaDevices?.enumerateDevices) return;
+    if (!navigator.mediaDevices?.enumerateDevices) return;
     const lire = () =>
       navigator.mediaDevices
         .enumerateDevices()
-        .then((appareils) =>
-          setMicros(
+        .then((appareils) => {
+          const liste = (genre: MediaDeviceKind, prefixe: string) =>
             appareils
-              .filter((a) => a.kind === "audioinput" && a.deviceId)
-              .map((a, i) => ({ id: a.deviceId, nom: a.label || `Micro ${i + 1}` }))
-          )
-        )
+              .filter((a) => a.kind === genre && a.deviceId)
+              .map((a, i) => ({ id: a.deviceId, nom: a.label || `${prefixe} ${i + 1}` }));
+          setMicros(liste("audioinput", "Micro"));
+          setCameras(liste("videoinput", "Caméra"));
+        })
         .catch(() => undefined);
     void lire();
     navigator.mediaDevices.addEventListener?.("devicechange", lire);
@@ -708,27 +721,38 @@ export function Prompteur({
               A+
             </button>
           </span>
-          {microActif && (
-            <label className={styles.libelle}>
-              Micro
-              {micros.length > 1 ? (
+          {/* Toujours présents : ils ne dépendaient que d'une caméra DÉMARRÉE,
+              et disparaissaient justement quand il fallait en changer. */}
+          {(
+            [
+              ["camera", "Caméra", cameras, cameraActive],
+              ["micro", "Micro", micros, microActif],
+            ] as const
+          ).map(([genre, libelle, liste, piste]) => (
+            <label key={genre} className={styles.libelle}>
+              {libelle}
+              {liste.length ? (
                 <select
-                  className={styles.choix}
-                  value={microActif.getSettings().deviceId ?? ""}
-                  onChange={(e) => void activerCamera(e.target.value)}
+                  className={[styles.choix, styles.appareil].join(" ")}
+                  value={choixRef.current[genre] ?? piste?.getSettings().deviceId ?? ""}
+                  onChange={(e) => {
+                    choixRef.current = { ...choixRef.current, [genre]: e.target.value };
+                    void activerCamera(true);
+                  }}
                   disabled={etat === "enregistre" || etat === "decompte"}
                 >
-                  {micros.map((m) => (
+                  {!piste && !choixRef.current[genre] && <option value="">—</option>}
+                  {liste.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.nom}
                     </option>
                   ))}
                 </select>
               ) : (
-                <span className={styles.microNom}>{microActif.label || "micro de l'appareil"}</span>
+                <span className={styles.microNom}>{piste?.label || "aucun détecté"}</span>
               )}
             </label>
-          )}
+          ))}
           <label className={styles.libelle}>
             Format
             <select
