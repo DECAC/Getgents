@@ -164,8 +164,8 @@ export function Prompteur({
 
   // --- Caméra et micro ------------------------------------------------------
 
-  const activerCamera = useCallback(async (): Promise<MediaStream | null> => {
-    if (fluxRef.current) return fluxRef.current;
+  const activerCamera = useCallback(async (microId?: string): Promise<MediaStream | null> => {
+    if (fluxRef.current && microId === undefined) return fluxRef.current;
     if (!navigator.mediaDevices?.getUserMedia) {
       setErreurCamera("Ce navigateur ne donne pas accès à la caméra.");
       return null;
@@ -173,8 +173,17 @@ export function Prompteur({
     try {
       const f = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        audio: {
+          // Micro choisi dans les réglages (micro-cravate…) ; sinon, celui
+          // que le système a retenu.
+          ...(microId ? { deviceId: { exact: microId } } : {}),
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       });
+      // Changement de micro : l'ancien flux s'éteint, le nouveau le remplace.
+      if (fluxRef.current && fluxRef.current !== f) fluxRef.current.getTracks().forEach((t) => t.stop());
       setErreurCamera(null);
       setFlux(f);
       return f;
@@ -192,6 +201,28 @@ export function Prompteur({
       return null;
     }
   }, []);
+
+  // Les micros ne portent un NOM qu'une fois l'accès accordé : la liste se lit
+  // après l'ouverture du flux, et se relit quand on branche un micro.
+  const [micros, setMicros] = useState<{ id: string; nom: string }[]>([]);
+  const microActif = flux?.getAudioTracks()[0];
+  useEffect(() => {
+    if (!flux || !navigator.mediaDevices?.enumerateDevices) return;
+    const lire = () =>
+      navigator.mediaDevices
+        .enumerateDevices()
+        .then((appareils) =>
+          setMicros(
+            appareils
+              .filter((a) => a.kind === "audioinput" && a.deviceId)
+              .map((a, i) => ({ id: a.deviceId, nom: a.label || `Micro ${i + 1}` }))
+          )
+        )
+        .catch(() => undefined);
+    void lire();
+    navigator.mediaDevices.addEventListener?.("devicechange", lire);
+    return () => navigator.mediaDevices.removeEventListener?.("devicechange", lire);
+  }, [flux]);
 
   // Demandée à l'ouverture : on vient pour tourner.
   useEffect(() => {
@@ -677,6 +708,27 @@ export function Prompteur({
               A+
             </button>
           </span>
+          {microActif && (
+            <label className={styles.libelle}>
+              Micro
+              {micros.length > 1 ? (
+                <select
+                  className={styles.choix}
+                  value={microActif.getSettings().deviceId ?? ""}
+                  onChange={(e) => void activerCamera(e.target.value)}
+                  disabled={etat === "enregistre" || etat === "decompte"}
+                >
+                  {micros.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.nom}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className={styles.microNom}>{microActif.label || "micro de l'appareil"}</span>
+              )}
+            </label>
+          )}
           <label className={styles.libelle}>
             Format
             <select

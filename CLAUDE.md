@@ -184,7 +184,11 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   défaut, et toucher un mot en pleine lecture corrige la vitesse d'un
   dixième (`vitesseCorrigee`). La vignette se réduit en pastille pendant la
   lecture, les réglages se replient derrière ⚙, l'en-tête tient sur une
-  ligne, les messages s'effacent seuls : l'écran est au texte.
+  ligne, les messages s'effacent seuls : l'écran est au texte. Micro-cravate
+  (30/09) : le prompteur prenait le micro retenu par le système, sans le
+  dire. Les réglages ⚙ montrent désormais le micro ACTIF (nom de la piste) et
+  proposent les autres dès qu'il y en a plusieurs (`enumerateDevices`, relu
+  au branchement) ; en changer relance le flux avec `deviceId` exact.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
