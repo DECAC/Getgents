@@ -179,6 +179,8 @@ export interface GentDraft {
   pinnedArtefact?: import("@/lib/types").PinnedArtefact;
   /** Type de gent « visionneuse » : document fixé par le créateur, lu en immersion. */
   visionneuse?: import("@/lib/types").VisionneuseConfig;
+  /** Type de gent « Le Prompteur » : capsule vidéo écrite, lue et filmée. */
+  prompteur?: import("@/lib/types").PrompteurConfig;
   /** Type de gent « collaboratif » : salon multi-participants orchestré. */
   collab?: import("@/lib/types").CollabConfig;
   /**

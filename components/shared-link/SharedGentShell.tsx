@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { EspaceProvider, useEspace } from "@/lib/context/EspaceContext";
 import { WorkspaceCanvas } from "@/components/center/WorkspaceCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
+import { Prompteur } from "@/components/prompteur/Prompteur";
 import { ArtefactModal, ArtefactCorps } from "@/components/shared/ArtefactModal";
 import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
 import { FileDownloadControl } from "@/components/shared/FileDownloadControl";
@@ -57,6 +58,8 @@ export function SharedGentBody({
     declarerVoletVerdict,
     storageReady,
     versionPersonnelle,
+    prompteurOuvert,
+    fermerPrompteur,
   } = useEspace();
 
   /**
@@ -487,6 +490,14 @@ export function SharedGentBody({
 
       <DocumentViewerModal />
       <ArtefactModal />
+      {prompteurOuvert && (
+        <Prompteur
+          titre={prompteurOuvert.titre}
+          texte={prompteurOuvert.texte}
+          dureeCible={currentEspace.prompteur?.dureeCible}
+          onClose={fermerPrompteur}
+        />
+      )}
     </div>
   );
 }

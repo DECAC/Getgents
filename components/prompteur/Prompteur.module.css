@@ -1,0 +1,353 @@
+/* Le prompteur : sombre, le texte en grand, en haut — près de l'objectif. */
+.voile {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: #121011;
+  color: #f6efe7;
+  font-family: inherit;
+}
+
+.entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: rgba(246, 239, 231, 0.7);
+}
+
+.titre {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.duree {
+  font-weight: 400;
+  color: rgba(246, 239, 231, 0.5);
+}
+
+.fermer {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.scene {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.zone {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  /* Le texte naît et s'efface en fondu : seule la zone de lecture est nette. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 12%, #000 70%, transparent 100%);
+}
+
+.repere {
+  position: absolute;
+  left: 8px;
+  width: 0;
+  height: 0;
+  margin-top: 0.1em;
+  border-top: 0.35em solid transparent;
+  border-bottom: 0.35em solid transparent;
+  border-left: 0.45em solid var(--gold, #dca331);
+  opacity: 0.8;
+}
+
+.colonne {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 0 32px 60vh;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  transition: transform 0.35s ease-out;
+  will-change: transform;
+}
+
+.paragraphe {
+  margin: 0 0 0.9em;
+}
+
+.mot {
+  cursor: pointer;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.dit {
+  opacity: 0.32;
+}
+
+.courant {
+  color: var(--gold, #dca331);
+}
+
+.finTexte {
+  margin: 0;
+  font-size: 0.5em;
+  opacity: 0.4;
+  text-align: center;
+}
+
+.vignette {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: min(220px, 34vw);
+  max-height: 40vh;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #000;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Miroir à l'affichage seulement : l'enregistrement est à l'endroit. */
+  transform: scaleX(-1);
+}
+
+.activer {
+  margin: 12px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.rec {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(214, 70, 81, 0.9);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.recDepasse {
+  background: var(--gold, #dca331);
+  color: #121011;
+}
+
+.micro {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.microActif {
+  background: #7ed48a;
+  box-shadow: 0 0 0 4px rgba(126, 212, 138, 0.25);
+}
+
+.canevas {
+  display: none;
+}
+
+.decompte {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: min(40vw, 240px);
+  font-weight: 700;
+  color: rgba(246, 239, 231, 0.9);
+  background: rgba(18, 16, 17, 0.55);
+  pointer-events: none;
+}
+
+.info {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  margin: 0 auto;
+  max-width: 560px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 13px;
+  text-align: center;
+}
+
+.commandes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #1a1718;
+  font-size: 13px;
+}
+
+.groupe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.bouton,
+.record,
+.stop {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.bouton:disabled,
+.record:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.record {
+  border-color: transparent;
+  background: var(--plum, #d64651);
+  color: #fff;
+}
+
+.stop {
+  border-color: transparent;
+  background: #f6efe7;
+  color: #121011;
+}
+
+.libelle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(246, 239, 231, 0.65);
+}
+
+.choix {
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: #121011;
+  color: #f6efe7;
+  font: inherit;
+}
+
+.taille {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.resultat {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(18, 16, 17, 0.88);
+}
+
+.carte {
+  width: min(560px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  padding: 18px;
+  border-radius: 16px;
+  background: #1f1b1c;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.carteTitre {
+  margin: 0;
+  font-size: 17px;
+}
+
+.lecture {
+  width: 100%;
+  max-height: 55vh;
+  border-radius: 10px;
+  background: #000;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(246, 239, 231, 0.6);
+}
+
+@media (max-width: 700px) {
+  .colonne {
+    padding: 0 18px 60vh;
+  }
+
+  /* En haut, sur les lignes déjà lues : celles à venir restent libres. */
+  .vignette {
+    top: 8px;
+    right: 8px;
+    bottom: auto;
+    width: 20vw;
+  }
+
+  .commandes {
+    justify-content: center;
+  }
+}

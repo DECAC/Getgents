@@ -53,6 +53,12 @@ const ICON = {
       <path d="M8 8h7M8 12h7M8 16h4" />
     </svg>
   ),
+  prompteur: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="6" width="13" height="12" rx="2.5" />
+      <path d="M16 10.5l5-3v9l-5-3" />
+    </svg>
+  ),
   collaboratif: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="9" cy="8" r="3" />
@@ -129,7 +135,12 @@ const NAV_GLOBAL: NavEntry[] = [
   { id: "mesgents", label: "Mes gents", icon: ICON.mesgents, blue: true },
 ];
 
-function navGent(formats: { miniapp: boolean; visionneuse: boolean; collaboratif: boolean }): NavSection[] {
+function navGent(formats: {
+  miniapp: boolean;
+  visionneuse: boolean;
+  collaboratif: boolean;
+  prompteur: boolean;
+}): NavSection[] {
   return [
     {
       title: "Configurer",
@@ -147,6 +158,7 @@ function navGent(formats: { miniapp: boolean; visionneuse: boolean; collaboratif
         { id: "miniapp", label: "Mini App", icon: ICON.miniapp, actif: formats.miniapp, separe: true },
         { id: "visionneuse", label: "Visionneuse", icon: ICON.visionneuse, actif: formats.visionneuse },
         { id: "collaboratif", label: "Event Manager", icon: ICON.collaboratif, actif: formats.collaboratif },
+        { id: "prompteur", label: "Prompteur", icon: ICON.prompteur, actif: formats.prompteur },
       ],
     },
     {
@@ -266,6 +278,7 @@ function BuilderRailGent() {
           miniapp: !!currentDraft.pinnedArtefact?.enabled,
           visionneuse: !!currentDraft.visionneuse?.enabled,
           collaboratif: !!currentDraft.collab?.enabled,
+          prompteur: !!currentDraft.prompteur?.enabled,
         }),
       }}
       showPublish

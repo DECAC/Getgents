@@ -70,6 +70,7 @@ export type BuilderTab =
   | "miniapp"
   | "visionneuse"
   | "collaboratif"
+  | "prompteur"
   | "apercu"
   | "prompt"
   | "connectors"
@@ -157,6 +158,8 @@ interface BuilderContextValue {
   updatePinnedArtefact: (patch: Partial<import("@/lib/types").PinnedArtefact>) => void;
   /** Modifie la configuration du gent « visionneuse » du brouillon (patch partiel). */
   updateVisionneuse: (patch: Partial<import("@/lib/types").VisionneuseConfig>) => void;
+  /** Modifie le réglage « Prompteur » du brouillon (patch partiel). */
+  updatePrompteur: (patch: Partial<import("@/lib/types").PrompteurConfig>) => void;
   /** Modifie la configuration du gent « collaboratif » du brouillon (patch partiel). */
   updateCollab: (patch: Partial<import("@/lib/types").CollabConfig>) => void;
   /** Efface l'aperçu d'application pour repartir d'une page blanche. */
@@ -815,6 +818,19 @@ export function BuilderProvider({
         return {
           ...prev,
           [currentId]: { ...prev[currentId], visionneuse: { ...current, ...patch }, updatedAt: "à l'instant" },
+        };
+      });
+    },
+    [currentId]
+  );
+
+  const updatePrompteur = useCallback(
+    (patch: Partial<import("@/lib/types").PrompteurConfig>) => {
+      setDrafts((prev) => {
+        const current = prev[currentId].prompteur ?? { enabled: false };
+        return {
+          ...prev,
+          [currentId]: { ...prev[currentId], prompteur: { ...current, ...patch }, updatedAt: "à l'instant" },
         };
       });
     },
@@ -1514,6 +1530,7 @@ export function BuilderProvider({
         updateChannel,
         updatePinnedArtefact,
         updateVisionneuse,
+        updatePrompteur,
         updateCollab,
         clearAppPreview,
         sendBuilderMessage,

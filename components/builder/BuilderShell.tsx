@@ -38,6 +38,7 @@ const VALID_TABS: BuilderTab[] = [
   "miniapp",
   "visionneuse",
   "collaboratif",
+  "prompteur",
   "apercu",
   "connectors",
   "knowledge",

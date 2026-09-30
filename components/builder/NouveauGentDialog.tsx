@@ -11,6 +11,7 @@ const FORMATS: { id: FormatGent; titre: string; desc: string }[] = [
   { id: "miniapp", titre: "Mini App", desc: "Quelques entrées, un tableau de bord permanent." },
   { id: "visionneuse", titre: "Visionneuse", desc: "Un document que vous fixez, lu en pleine page." },
   { id: "collaboratif", titre: "Event Manager", desc: "Un salon à plusieurs : dispos, options, synthèse." },
+  { id: "prompteur", titre: "Le Prompteur", desc: "Il écrit votre capsule vidéo, vous la lisez et la filmez." },
 ];
 
 /**

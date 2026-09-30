@@ -8,6 +8,7 @@ import { profileContextNote, PROFILE_PROMPT_INSTRUCTION } from "@/lib/profileSig
 import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import { IMAGE_PROMPT_INSTRUCTION } from "@/lib/imageSignal";
 import { consigneDeLangue } from "@/lib/langue";
+import { consignePrompteur } from "@/lib/prompteur";
 
 /**
  * Assemble le message système d'un gent à l'exécution.
@@ -124,6 +125,8 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
   if (espace.prim) blocks.push(GEOLOC_PROMPT_INSTRUCTION);
   if (espace.profile) blocks.push(profileContextNote(espace.profile));
   if (espace.gmail) blocks.push(GMAIL_PROMPT_INSTRUCTION);
+  // Gent « Prompteur » : la forme du texte à dire et ses marqueurs.
+  if (espace.prompteur?.enabled && !superGent) blocks.push(consignePrompteur(espace.prompteur.dureeCible));
 
   blocks.push(FOLLOWUPS_PROMPT_INSTRUCTION);
 

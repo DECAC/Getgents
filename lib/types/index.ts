@@ -206,6 +206,13 @@ export interface ConversationMessage {
   ref?: string;
   /** Réponse gardée en note (« Garder en note ») : l'artefact qu'elle a produit. */
   noteId?: string;
+  /**
+   * Gent « Prompteur » : la dernière version complète du texte à dire que
+   * porte la réponse (entre `<!--SCRIPT-->` et `<!--/SCRIPT-->`), en texte brut.
+   */
+  script?: string;
+  /** Le script de cette réponse, gardé à son lancement dans le prompteur. */
+  scriptId?: string;
   tab?: string;
   icon?: string;
   status?: "pending" | "sent";
@@ -534,6 +541,8 @@ export interface Espace {
    * ce document (voir DocumentViewerModal), ce n'est jamais l'un OU l'autre.
    */
   visionneuse?: VisionneuseConfig;
+  /** Type de gent « Le Prompteur » : texte écrit ici, lu et filmé au prompteur. */
+  prompteur?: PrompteurConfig;
   /**
    * Téléchargement du document du gent (base de connaissance / visionneuse)
    * côté lecteur. Copié depuis le brouillon à la Preview / publication.
@@ -556,6 +565,17 @@ export interface Espace {
  * fois par le créateur (à l'inverse du bouton « Ouvrir en visionneuse » du
  * gent conversationnel, où l'utilisateur choisit son document à l'usage).
  */
+/**
+ * Type de gent « Le Prompteur » : la conversation écrit une capsule vidéo,
+ * le prompteur la fait lire au rythme de la voix et l'enregistre (voir
+ * lib/prompteur.ts).
+ */
+export interface PrompteurConfig {
+  enabled: boolean;
+  /** Durée visée de la capsule, en secondes (60 par défaut). */
+  dureeCible?: number;
+}
+
 export interface VisionneuseConfig {
   enabled: boolean;
   /** Consignes du créateur pour l'assistant qui accompagne la lecture (ex. angle, ton). */

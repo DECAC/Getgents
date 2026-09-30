@@ -16,7 +16,10 @@
 const SECURITY_HEADERS = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self), payment=()" },
+  // Caméra et micro : notre origine seulement — le prompteur filme et suit
+  // la voix. Ils étaient interdits partout (`camera=()`) : getUserMedia
+  // échouait avant même de demander l'accord de l'utilisateur.
+  { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=(self), payment=()" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
 ];
 

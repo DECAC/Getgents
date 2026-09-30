@@ -145,6 +145,26 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   portail (le panneau est un tiroir transformé sur téléphone), SOUS la
   sélection sur écran tactile, où le menu natif occupe le dessus. La même
   bulle accueillera « En faire une note » (surlignage → note).
+- **« Le Prompteur »** (format de gent, 30/09 ; `lib/prompteur.ts`,
+  `components/prompteur/Prompteur.tsx`) : la conversation écrit une capsule
+  vidéo LinkedIn, le prompteur la fait lire au rythme de la voix et
+  l'enregistre. Le gent encadre chaque version COMPLÈTE du texte à dire
+  entre `<!--SCRIPT-->` et `<!--/SCRIPT-->` (consigne `consignePrompteur`,
+  jointe par `buildGentSystemPrompt`, FORME seulement) ; les marqueurs
+  partent, le texte reste dans la réponse, et `m.script` porte la dernière
+  version. Le bouton « Prompteur » sous la réponse VALIDE : copie fidèle
+  gardée (type « Script », `lancerPrompteur`) puis lecture — le gent ne
+  décide jamais de l'artefact. Suivi : « voix » (reconnaissance vocale du
+  navigateur + `alignerPosition`, prudente : deux mots consécutifs ou un mot
+  long, jamais en arrière), repli « rythme » (niveau du micro : avance quand
+  on parle) et « régulier ». Enregistrement MediaRecorder dans le
+  navigateur, recadré par un canevas (carré par défaut, vertical sur
+  téléphone), MP4 sinon WebM, téléchargé — RIEN côté serveur. Vérifié au
+  navigateur avec caméra et micro SIMULÉS ; le suivi « voix » réel (Google
+  pour Chrome, Apple pour Safari) ne peut pas l'être d'ici. **Piège payé :
+  `Permissions-Policy` interdisait `camera` et `microphone` sur tout le
+  site** (`next.config.mjs`) — getUserMedia échouait avant même de demander
+  l'accord. Désormais `(self)`.
 - **`artefactsModifiables`** (studio, faux par défaut) : autorise les
   VISITEURS à éditer et restaurer leurs artefacts. Chacun modifie SA copie,
   dans son navigateur — ce n'est PAS de la co-édition, qui exigera des

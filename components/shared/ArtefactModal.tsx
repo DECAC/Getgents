@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { TYPE_NOTE } from "@/lib/miseEnForme";
+import { texteDepuisBlocs } from "@/lib/prompteur";
 import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTMLDoc } from "./SafeHTML";
 import { MiniBarChart } from "./MiniBarChart";
@@ -188,6 +189,7 @@ export function ArtefactModal() {
     mettreEnForme,
     miseEnFormeDisponible,
     miseEnFormeEnCours,
+    ouvrirPrompteur,
   } = useEspace();
   const [erreurMiseEnForme, setErreurMiseEnForme] = useState<string | null>(null);
   // Le créateur, dans son espace, modifie toujours ; un visiteur seulement si
@@ -392,6 +394,22 @@ export function ArtefactModal() {
           </div>
           {pleinePage && (
             <div className={styles.pageActions}>
+              {/* Gent « Prompteur » : tout texte gardé se lit au prompteur. */}
+              {currentEspace.prompteur?.enabled && artefact.dashboard && texteDepuisBlocs(artefact.dashboard.blocks as unknown as Record<string, unknown>[]) && (
+                <button
+                  type="button"
+                  className={styles.btnGhost}
+                  onClick={() =>
+                    ouvrirPrompteur(
+                      artefact.title,
+                      texteDepuisBlocs(artefact.dashboard?.blocks as unknown as Record<string, unknown>[])
+                    )
+                  }
+                  title="Lire ce texte au prompteur et filmer la capsule"
+                >
+                  🎬 Prompteur
+                </button>
+              )}
               {/* Une note gardée telle quelle peut être remise en forme par le
                   gent ; le résultat est une nouvelle version, la copie fidèle
                   reste dans l'historique. */}

@@ -409,17 +409,24 @@ export function allocateDraftFromDescription(
  * Format de départ d'un gent. Il PRÉCONFIGURE, il ne verrouille rien : un gent
  * conversationnel peut recevoir une mini-app plus tard, et l'inverse.
  */
-export type FormatGent = "conversationnel" | "miniapp" | "visionneuse" | "collaboratif";
+export type FormatGent = "conversationnel" | "miniapp" | "visionneuse" | "collaboratif" | "prompteur";
 
-export const FORMATS_GENT: readonly FormatGent[] = ["conversationnel", "miniapp", "visionneuse", "collaboratif"];
+export const FORMATS_GENT: readonly FormatGent[] = ["conversationnel", "miniapp", "visionneuse", "collaboratif", "prompteur"];
 
 /** Onglet où atterrit le créateur : là où le format se configure. */
-export const ONGLET_DU_FORMAT: Record<FormatGent, "prompt" | "miniapp" | "visionneuse" | "collaboratif"> = {
+export const ONGLET_DU_FORMAT: Record<FormatGent, "prompt" | "miniapp" | "visionneuse" | "collaboratif" | "prompteur"> = {
   conversationnel: "prompt",
   miniapp: "miniapp",
   visionneuse: "visionneuse",
   collaboratif: "collaboratif",
+  prompteur: "prompteur",
 };
+
+/** Instructions de départ d'un « Prompteur » — le créateur les ajuste à sa voix. */
+export const PROMPT_PROMPTEUR_DEFAUT =
+  "Tu es mon prompteur. Tu m'aides à transformer une idée en capsule vidéo d'une minute pour mon profil LinkedIn. " +
+  "Si je ne te donne qu'un thème, pose-moi une ou deux questions pour trouver l'angle personnel — une anecdote, un chiffre, une conviction — puis propose une première version. " +
+  "Garde ma voix : directe, concrète, sans jargon ni formule creuse.";
 
 /** Active la facette du format sur un brouillon. Pure. */
 export function appliquerFormat(draft: GentDraft, format: FormatGent): GentDraft {
@@ -432,6 +439,17 @@ export function appliquerFormat(draft: GentDraft, format: FormatGent): GentDraft
     return { ...draft, visionneuse: { ...actuel, enabled: true } };
   }
   if (format === "collaboratif") return applyEventManagerTemplate(draft);
+  if (format === "prompteur") {
+    // Création seulement : le brouillon est neuf, rien d'écrit n'est remplacé.
+    return {
+      ...draft,
+      name: "Le Prompteur",
+      icon: "🎬",
+      objective: draft.objective || "Écrire et tourner des capsules vidéo d'une minute pour LinkedIn.",
+      systemPrompt: draft.systemPrompt || PROMPT_PROMPTEUR_DEFAUT,
+      prompteur: { enabled: true, dureeCible: draft.prompteur?.dureeCible },
+    };
+  }
   return draft;
 }
 
@@ -447,7 +465,7 @@ export function brouillonNeuf(id: string, format: FormatGent, description = ""):
     draft = {
       ...draft,
       // Le gabarit Event Manager porte déjà son emblème.
-      icon: format === "collaboratif" ? draft.icon : suggestGentIcon(role),
+      icon: format === "collaboratif" || format === "prompteur" ? draft.icon : suggestGentIcon(role),
       objective: role.slice(0, 240),
       pendingBuilderMessage: role,
     };
@@ -548,6 +566,7 @@ export function restoreDraftFromPublished(id: string, espace: Espace): GentDraft
     fileDownloadEnabled: espace.fileDownloadEnabled,
     fileDownloadFormEnabled: espace.fileDownloadFormEnabled,
     jumpForm: espace.jumpForm,
+    prompteur: espace.prompteur,
     connectors,
     pinnedArtefact: pinned,
     appPreview: espace.appPreview,

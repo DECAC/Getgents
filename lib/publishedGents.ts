@@ -744,6 +744,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     restApis: restApis.length ? restApis : undefined,
     jumpForm: draft.jumpForm,
     moteurJeu: draft.moteurJeu,
+    prompteur: draft.prompteur?.enabled ? { enabled: true, dureeCible: draft.prompteur.dureeCible } : undefined,
     routine: draft.routine,
     channel: draft.channel,
     pinnedArtefact: draft.pinnedArtefact,

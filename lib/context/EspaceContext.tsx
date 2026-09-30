@@ -71,6 +71,7 @@ import { composerVersionPersonnelle, fusionnerUsage } from "@/lib/versionPersonn
 import { langueDeLEnTete } from "@/lib/langue";
 import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import { noteDepuisReponse } from "@/lib/noteDepuisReponse";
+import { extraireScript, titreScript, TYPE_SCRIPT } from "@/lib/prompteur";
 import { amorcesAJour } from "@/lib/amorcesContextuelles";
 import { noteEnTexte, TYPE_NOTE, TYPE_NOTE_MISE_EN_FORME } from "@/lib/miseEnForme";
 import {
@@ -245,6 +246,15 @@ interface EspaceContextValue {
    * gardée : ouvre la note au lieu d'en créer une seconde.
    */
   garderEnNote: (indexMessage: number) => void;
+  /** Gent « Prompteur » : le texte ouvert au prompteur, ou rien. */
+  prompteurOuvert: { titre: string; texte: string } | null;
+  ouvrirPrompteur: (titre: string, texte: string) => void;
+  fermerPrompteur: () => void;
+  /**
+   * « Prompteur » sous une réponse : valide son script — gardé TEL QUEL dans
+   * l'espace, une seule fois — et l'ouvre au prompteur.
+   */
+  lancerPrompteur: (indexMessage: number) => void;
   /**
    * Version que fait tourner l'espace personnel : la DIFFUSÉE, ou la version
    * de travail pour un gent jamais diffusé. Sans objet sur un lien ou un aperçu.
@@ -773,6 +783,56 @@ export function EspaceProvider({
     [openArtefactModal]
   );
 
+  const [prompteurOuvert, setPrompteurOuvert] = useState<{ titre: string; texte: string } | null>(null);
+  const ouvrirPrompteur = useCallback((titre: string, texte: string) => {
+    if (texte.trim()) setPrompteurOuvert({ titre, texte });
+  }, []);
+  const fermerPrompteur = useCallback(() => setPrompteurOuvert(null), []);
+
+  const lancerPrompteur = useCallback((indexMessage: number) => {
+    const id = currentIdRef.current;
+    const espace = espacesRef.current[id];
+    if (!espace) return;
+    const fil = getActiveConversation(espace.conversations, espace.activeConversationId);
+    const message = fil.messages[indexMessage];
+    if (!message?.script) return;
+    const titre = titreScript(message.script);
+    setPrompteurOuvert({ titre, texte: message.script });
+    // Déjà gardé, et toujours là : rien à refaire. Supprimé depuis : on le recrée.
+    if (message.scriptId && espace.artefacts.some((a) => a.id === message.scriptId)) return;
+    // Copie fidèle, sans modèle : c'est CE texte qu'on a validé.
+    const dashboard = parseDashboard({ blocks: [{ type: "text", body: message.script }] });
+    if (!dashboard) return;
+    const scriptId = `script-${Date.now()}`;
+    const artefact: Artefact = {
+      id: scriptId,
+      title: titre,
+      type: TYPE_SCRIPT,
+      icon: "🎬",
+      kind: "dashboard",
+      date: "à l'instant",
+      dashboard,
+    };
+    setEspaces((prev) => {
+      const e = prev[id];
+      if (!e) return prev;
+      const conversations = e.conversations.map((t) =>
+        t.id === fil.id
+          ? { ...t, messages: t.messages.map((m, i) => (i === indexMessage ? { ...m, scriptId } : m)) }
+          : t
+      );
+      return {
+        ...prev,
+        [id]: {
+          ...e,
+          artefacts: [artefact, ...e.artefacts],
+          themeTabs: upsertArtefactThemeTab(e.themeTabs ?? [], artefact, [e.gent, e.name]),
+          conversations,
+        },
+      };
+    });
+  }, []);
+
   const [miseEnFormeEnCours, setMiseEnFormeEnCours] = useState<string | null>(null);
   const mettreEnForme = useCallback(async (artefactId: string): Promise<{ ok: boolean; erreur?: string }> => {
     const id = currentIdRef.current;
@@ -1085,7 +1145,10 @@ export function EspaceProvider({
         // État de partie d'un moteur de jeu (bloc ETAT_JEU) : retiré du texte
         // AVANT tout le reste, car c'est le seul bloc qui contient du JSON
         // imbriqué — le laisser traîner brouillerait les extracteurs suivants.
-        const afterEtatJeu = extractEtatJeu(fullRaw);
+        // Gent « Prompteur » : le texte à dire, encadré par ses marqueurs. Les
+        // marqueurs partent, le texte reste visible dans la réponse.
+        const afterScript = espace.prompteur?.enabled ? extraireScript(fullRaw) : { text: fullRaw, script: undefined };
+        const afterEtatJeu = extractEtatJeu(afterScript.text);
         const jeuEtat = afterEtatJeu.etat ?? undefined;
         const extracted = extractQuestions(afterEtatJeu.text);
         // Repli : le modèle a posé une question et listé les choix en clair
@@ -1204,6 +1267,7 @@ export function EspaceProvider({
                   jeuEtat,
                   followups,
                   reasoning: reasoning || undefined,
+                  script: afterScript.script,
                 };
               msgs.push({
                 id: proposalId,
@@ -1238,6 +1302,7 @@ export function EspaceProvider({
                   jeuEtat,
                   followups,
                   reasoning: reasoning || undefined,
+                  script: afterScript.script,
                   artefactEchec,
                   artefactPossible: afterPossible.possible && !proposition && !artefactEchec,
                 };
@@ -1271,6 +1336,7 @@ export function EspaceProvider({
             jeuEtat,
             followups,
             reasoning: reasoning || undefined,
+            script: afterScript.script,
             artefactEchec,
             artefactPossible: afterPossible.possible && !proposition && !artefactEchec,
           }));
@@ -2325,6 +2391,10 @@ export function EspaceProvider({
         selectDay,
         openArtefactModal,
         garderEnNote,
+        prompteurOuvert,
+        ouvrirPrompteur,
+        fermerPrompteur,
+        lancerPrompteur,
         versionPersonnelle: versionsDiffuseesIds.has(currentId) ? "diffusee" : "travail",
         mettreEnForme,
         miseEnFormeDisponible: !shareToken,

@@ -102,6 +102,7 @@ export function AssistantPanel({
     switchTab,
     openArtefactModal,
     garderEnNote,
+    lancerPrompteur,
     viewArtefact,
     sendMessage,
     submitJumpForm,
@@ -878,6 +879,8 @@ export function AssistantPanel({
     // Pas pendant l'écriture : la note figerait une réponse inachevée.
     const peutGarder = canCopy && !(isLastMessage && isThinking);
     const noteGardee = !!m.noteId && currentEspace.artefacts.some((a) => a.id === m.noteId);
+    // Gent « Prompteur » : la réponse porte une version complète du texte à dire.
+    const peutPrompter = isAgent && !!m.script && !!currentEspace.prompteur?.enabled && !(isLastMessage && isThinking);
     return (
       <div key={i} className={[styles.msg, isAgent ? styles.msgAgent : styles.msgUser].join(" ")}>
         <div className={styles.av}>{isAgent ? "🤖" : "CL"}</div>
@@ -914,6 +917,20 @@ export function AssistantPanel({
             {isAgent && (canCopy || peutGarder) ? (
               <div className={styles.piedReponse}>
                 <span className={styles.t}>{m.t}</span>
+              {peutPrompter && (
+                <button
+                  type="button"
+                  className={[styles.copyBtn, styles.noteBtn].join(" ")}
+                  onClick={() => lancerPrompteur(i)}
+                  title="Valider ce texte : il est gardé dans l'espace et s'ouvre au prompteur"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="6" width="13" height="12" rx="2.5" />
+                    <path d="M16 10.5l5-3v9l-5-3" />
+                  </svg>
+                  Prompteur
+                </button>
+              )}
               {canCopy && (
                 <button
                   type="button"
