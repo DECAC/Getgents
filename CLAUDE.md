@@ -464,8 +464,12 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   retiraient que des OPÉRATEURS, en gardant guillemets et ponctuation — le
   repli était la même phrase introuvable. Deux barreaux ajoutés : sans
   ponctuation, puis les deux mots les plus DISTINCTIFS (`motsDistinctifs` :
-  noms propres d'abord, puis les plus longs — ici « Décibels Conseil »).
-  Gmail joint les termes par ET, donc retirer un mot élargit réellement.
+  noms propres d'abord, puis les plus longs, sans trait d'union ni nombre —
+  ici « Décibels Conseil »), et en tout dernier recours UN seul mot
+  (« Décibels ») : le second mot peut venir du nom affiché de l'expéditeur,
+  pas forcément indexé. Gmail joint par ET, donc retirer un mot élargit.
+  La requête du tour 2 est RECONSTITUÉE d'après le texte du gent, pas lue :
+  le journal `getgents:gmail recherche` (`requete`, `requeteElargie`) tranche.
   **La cause de fond n'est pas corrigée** : rien ne transporte les résultats
   d'outils d'un tour au suivant. Le jour où il faudra la traiter, le modèle
   existe déjà — le bloc `[ESPACE]` joint au DERNIER message utilisateur

@@ -188,8 +188,12 @@ export function requetesElargies(requete: string | undefined): string[] {
   // introuvable que l'originale. D'où les deux barreaux suivants.
   const sansPonctuation = net(sansDates.replace(PONCTUATION, " "));
   const distinctifs = motsDistinctifs(sansPonctuation);
+  // Dernier recours : UN mot. Gmail joint par ET, et le second mot peut venir
+  // du NOM AFFICHÉ de l'expéditeur, qui n'est pas forcément indexé — le seul
+  // barreau qui ne peut pas être plus étroit que la question d'origine.
+  const unMot = motsDistinctifs(sansPonctuation, 1);
   const sorties: string[] = [];
-  for (const r of [sansFiltres, sansDates, sansPonctuation, distinctifs]) {
+  for (const r of [sansFiltres, sansDates, sansPonctuation, distinctifs, unMot]) {
     if (r && r !== q && !sorties.includes(r)) sorties.push(r);
   }
   return sorties;
@@ -222,7 +226,9 @@ const MOTS_VIDES = new Set([
 export function motsDistinctifs(texte: string, combien = 2): string {
   const mots = net(texte)
     .split(" ")
-    .filter((m) => m.length >= 4 && !MOTS_VIDES.has(m.toLowerCase()));
+    // Ni trait d'union (« a-t-elle », que Gmail découpe) ni nombre pur : ils
+    // ne désignent jamais un message.
+    .filter((m) => m.length >= 4 && !m.includes("-") && !/^\d+$/.test(m) && !MOTS_VIDES.has(m.toLowerCase()));
   const vus = new Set<string>();
   const uniques = mots.filter((m) => {
     const cle = m.toLowerCase();

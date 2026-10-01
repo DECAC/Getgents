@@ -74,7 +74,7 @@ describe("réponse de gmail_search", () => {
   });
 });
 
-import { demandePorteSurLaBoite, requetesElargies } from "@/lib/gmailContenu";
+import { demandePorteSurLaBoite, motsDistinctifs, requetesElargies } from "@/lib/gmailContenu";
 import { dernierTexteUtilisateur } from "@/lib/boucleOutils";
 
 describe("question sur la boîte mail : recherche imposée au premier tour", () => {
@@ -129,7 +129,8 @@ describe("élargissement d'une recherche vide, par le serveur", () => {
     const q =
       'subject:"[TEST] Décibels #7 | L\'IA a-t-elle franchi le mur du son ?" from:"Conseil de l\'IA et du numérique"';
     const replis = requetesElargies(q);
-    expect(replis[replis.length - 1]).toBe("Décibels Conseil");
+    // Avant-dernier : deux mots ; dernier : UN — celui qui a marché au tour 1.
+    expect(replis.slice(-2)).toEqual(["Décibels Conseil", "Décibels"]);
     // Et la phrase exacte n'est jamais le DERNIER recours.
     expect(replis[replis.length - 1]).not.toContain('"');
   });
@@ -141,6 +142,10 @@ describe("élargissement d'une recherche vide, par le serveur", () => {
   it("rien à chercher : aucune requête de repli", () => {
     expect(requetesElargies("")).toEqual([]);
     expect(requetesElargies(undefined)).toEqual([]);
+  });
+
+  it("sans majuscule, ni trait d'union ni nombre ne sont retenus", () => {
+    expect(motsDistinctifs("l ia a-t-elle franchi le mur du son 2026")).toBe("franchi");
   });
 
   it("une requête déjà nue s'élargit quand même, par ses mots distinctifs", () => {
