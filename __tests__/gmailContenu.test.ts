@@ -109,21 +109,62 @@ describe("question sur la boîte mail : recherche imposée au premier tour", () 
 });
 
 describe("élargissement d'une recherche vide, par le serveur", () => {
-  it("retire les filtres, libère les champs, puis retire les dates", () => {
+  it("retire les filtres, libère les champs, puis les dates, puis la ponctuation", () => {
     expect(requetesElargies('subject:"The Batch" category:promotions newer_than:7d')).toEqual([
       '"The Batch" newer_than:7d',
       '"The Batch"',
+      "The Batch",
+      "Batch",
     ]);
+  });
+
+  it("une phrase exacte finit par tomber sur ses mots distinctifs", () => {
+    /*
+     * Le cas qui a motivé les deux derniers barreaux (01/10). Les deux
+     * premiers ne retirent que des OPÉRATEURS : la requête de repli gardait
+     * guillemets, crochets, dièse et barre verticale, et restait donc aussi
+     * introuvable que l'originale. Le gent concluait « je n'ai pas trouvé »
+     * sur un message qu'il avait lui-même affiché au tour précédent.
+     */
+    const q =
+      'subject:"[TEST] Décibels #7 | L\'IA a-t-elle franchi le mur du son ?" from:"Conseil de l\'IA et du numérique"';
+    const replis = requetesElargies(q);
+    expect(replis[replis.length - 1]).toBe("Décibels Conseil");
+    // Et la phrase exacte n'est jamais le DERNIER recours.
+    expect(replis[replis.length - 1]).not.toContain('"');
   });
 
   it("from: devient du texte libre", () => {
     expect(requetesElargies("from:thebatch is:unread")).toEqual(["thebatch"]);
   });
 
-  it("rien à élargir : aucune requête de repli", () => {
-    expect(requetesElargies("The Batch")).toEqual([]);
+  it("rien à chercher : aucune requête de repli", () => {
     expect(requetesElargies("")).toEqual([]);
     expect(requetesElargies(undefined)).toEqual([]);
+  });
+
+  it("une requête déjà nue s'élargit quand même, par ses mots distinctifs", () => {
+    // Gmail joint les termes par ET : retirer un mot ÉLARGIT réellement.
+    expect(requetesElargies("The Batch")).toEqual(["Batch"]);
+  });
+
+  it("un seul résultat : la consigne interdit de demander confirmation", () => {
+    /*
+     * Vécu (01/10). Une recherche rend UN message ; le gent demande « est-ce
+     * celui-ci ? ». L'utilisateur confirme, et le gent ne le retrouve plus :
+     * les résultats d'outils ne voyagent pas d'un tour à l'autre, donc
+     * l'identifiant avait disparu. La question lui a fait PERDRE le message
+     * qu'il tenait déjà.
+     */
+    const r = JSON.parse(reponseRecherche("Décibels", [{ id: "a", subject: "Décibels #7" }]));
+    expect(r.suite).toContain("gmail_get_message");
+    expect(r.suite).toMatch(/ne demande pas confirmation/i);
+  });
+
+  it("plusieurs résultats : lire le plus probable reste exigé dans le même tour", () => {
+    const r = JSON.parse(reponseRecherche("x", [{ id: "a" }, { id: "b" }]));
+    expect(r.suite).toContain("ce même tour");
+    expect(r.suite).toMatch(/identifiants ci-dessus auront disparu/i);
   });
 
   it("la réponse dit quand les résultats viennent de la requête élargie", () => {

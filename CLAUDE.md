@@ -450,6 +450,28 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (« merci », « ok »…) ; le filtre par mots-clés ne sert plus qu'aux gents
   qui ont d'autres outils. Coût : 1 à 3 s par question. VÉRIFIÉ en
   production le 26/09 par l'utilisateur (question Dialange rejouée).
+- **Une question de confirmation PERD le message trouvé.** Vécu (01/10,
+  « Résume le dernier mail de Décibels ») : la recherche rend UN message, le
+  gent affiche expéditeur et objet puis demande « est-ce celui-ci ? ».
+  L'utilisateur confirme — et le gent ne le retrouve plus. Les résultats
+  d'outils ne voyagent PAS d'un tour à l'autre : l'identifiant avait disparu,
+  et il a cherché l'objet au caractère près (`[TEST] Décibels #7 | …`), que
+  Gmail ne rend jamais. Deux correctifs, et une cause de fond qui reste.
+  (1) La consigne jointe aux résultats dépend désormais du NOMBRE : un seul
+  message → « lis-le maintenant, ne demande pas confirmation » ; plusieurs →
+  lire le plus probable dans le même tour avant de faire choisir.
+  (2) `requetesElargies` n'élargissait pas vraiment : ses deux barreaux ne
+  retiraient que des OPÉRATEURS, en gardant guillemets et ponctuation — le
+  repli était la même phrase introuvable. Deux barreaux ajoutés : sans
+  ponctuation, puis les deux mots les plus DISTINCTIFS (`motsDistinctifs` :
+  noms propres d'abord, puis les plus longs — ici « Décibels Conseil »).
+  Gmail joint les termes par ET, donc retirer un mot élargit réellement.
+  **La cause de fond n'est pas corrigée** : rien ne transporte les résultats
+  d'outils d'un tour au suivant. Le jour où il faudra la traiter, le modèle
+  existe déjà — le bloc `[ESPACE]` joint au DERNIER message utilisateur
+  (`avecContexteEspace`, `lib/historiqueModele.ts`) ; il faudra que le
+  serveur renvoie les résultats au client, qui ne garde aujourd'hui que le
+  détail des appels EN ÉCHEC (`toolDetail`).
 - **getgents.ai « tourne sans fin » = Supabase qui ne répond pas.** Vécu
   (29/09), sans aucun déploiement depuis trois jours. Le middleware demande à
   Supabase qui est connecté, à CHAQUE page, et attendait sans limite : un
