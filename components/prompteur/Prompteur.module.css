@@ -402,6 +402,13 @@
   gap: 12px;
 }
 
+.carteEntete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .carteTitre {
   margin: 0;
   font-size: 17px;

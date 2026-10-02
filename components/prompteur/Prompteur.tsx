@@ -73,11 +73,13 @@ function partageable(r: Resultat): boolean {
   }
 }
 
-async function partager(r: Resultat) {
+async function partager(r: Resultat): Promise<boolean> {
   try {
     await navigator.share({ files: [fichierDe(r)], title: r.nom });
+    return true;
   } catch {
     // Partage annulé par l'utilisateur : rien à signaler.
+    return false;
   }
 }
 
@@ -151,6 +153,9 @@ export function Prompteur({
   const [ecoule, setEcoule] = useState(0);
   const [resultat, setResultat] = useState<Resultat | null>(null);
   const [habiller, setHabiller] = useState(false);
+  // La prise a-t-elle quitté le navigateur (téléchargée ou partagée) ? Sinon,
+  // fermer la perd : on demande confirmation.
+  const [gardee, setGardee] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canevasRef = useRef<HTMLCanvasElement>(null);
@@ -555,6 +560,7 @@ export function Prompteur({
   const refaire = useCallback(() => {
     if (resultatRef.current) URL.revokeObjectURL(resultatRef.current.url);
     setResultat(null);
+    setGardee(false);
     setEtat("pret");
     setPosition(0);
   }, [setPosition]);
@@ -577,8 +583,14 @@ export function Prompteur({
 
   const fermer = useCallback(() => {
     if (etat === "enregistre" && !window.confirm("L'enregistrement en cours sera perdu. Fermer le prompteur ?")) return;
+    if (
+      resultat &&
+      !gardee &&
+      !window.confirm("Cette capsule n'a été ni téléchargée ni partagée : elle sera perdue. Fermer quand même ?")
+    )
+      return;
     onClose();
-  }, [etat, onClose]);
+  }, [etat, onClose, resultat, gardee]);
 
   useEffect(() => {
     function surTouche(e: KeyboardEvent) {
@@ -842,10 +854,17 @@ export function Prompteur({
       {resultat && (
         <div className={styles.resultat} role="dialog" aria-label="Votre capsule">
           <div className={styles.carte}>
-            <h2 className={styles.carteTitre}>Votre capsule est prête</h2>
+            {/* La carte couvre tout l'écran, en-tête compris : sans sa propre
+                sortie, on ne pouvait plus quitter le prompteur (vécu sur iPhone). */}
+            <div className={styles.carteEntete}>
+              <h2 className={styles.carteTitre}>Votre capsule est prête</h2>
+              <button type="button" className={styles.fermer} onClick={fermer} aria-label="Fermer le prompteur">
+                ×
+              </button>
+            </div>
             <video className={styles.lecture} src={resultat.url} controls playsInline />
             <div className={styles.actions}>
-              <a className={styles.record} href={resultat.url} download={resultat.nom}>
+              <a className={styles.record} href={resultat.url} download={resultat.nom} onClick={() => setGardee(true)}>
                 Télécharger ({resultat.extension.toUpperCase()}
                 {resultat.largeur ? `, ${resultat.largeur}×${resultat.hauteur}` : ""},{" "}
                 {(resultat.taille / 1_048_576).toFixed(1).replace(".", ",")} Mo)
@@ -854,7 +873,7 @@ export function Prompteur({
                   feuille de partage, elle, propose « Enregistrer la vidéo »
                   (Photos) et LinkedIn directement. */}
               {partageable(resultat) && (
-                <button type="button" className={styles.bouton} onClick={() => void partager(resultat)}>
+                <button type="button" className={styles.bouton} onClick={() => void partager(resultat).then((ok) => ok && setGardee(true))}>
                   Enregistrer / partager
                 </button>
               )}

@@ -205,7 +205,12 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   webcam poussée à sa meilleure définition par `applyConstraints` (pas sur
   iPhone), et ⚙ AFFICHE « Image l×h → capsule l×h » — le témoin qui tranche.
   Un vertical 9:16 tiré d'une webcam paysage 1080p fait 608×1080 : c'est la
-  caméra, pas l'encodage.
+  caméra, pas l'encodage. **Carte « Votre capsule est prête » sans
+  sortie** (02/10, iPhone) : elle couvre tout l'écran, en-tête et son ×
+  compris — on ne pouvait plus quitter le prompteur. Elle a désormais son
+  propre ×, et fermer une prise ni téléchargée ni partagée demande
+  confirmation (elle n'existe que dans le navigateur). Tout calque plein
+  écran doit porter sa propre sortie.
 - **Habillage d'une capsule** (02/10 ; `lib/habillage.ts`,
   `lib/musiqueHabillage.ts`, `components/habillage/`) : depuis la carte
   « Votre capsule est prête », un atelier ajoute sous-titres, effets et
