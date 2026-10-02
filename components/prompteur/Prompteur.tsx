@@ -24,6 +24,7 @@ import {
   type Cadrage,
 } from "@/lib/prompteur";
 import { TestSon } from "./TestSon";
+import { Habillage } from "@/components/habillage/Habillage";
 import styles from "./Prompteur.module.css";
 
 /**
@@ -149,6 +150,7 @@ export function Prompteur({
   const [decompte, setDecompte] = useState(0);
   const [ecoule, setEcoule] = useState(0);
   const [resultat, setResultat] = useState<Resultat | null>(null);
+  const [habiller, setHabiller] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canevasRef = useRef<HTMLCanvasElement>(null);
@@ -580,7 +582,15 @@ export function Prompteur({
 
   useEffect(() => {
     function surTouche(e: KeyboardEvent) {
-      if (e.target instanceof HTMLSelectElement || e.target instanceof HTMLInputElement) return;
+      // L'atelier d'habillage ouvert par-dessus a ses champs et ses touches :
+      // Échap y fermerait le prompteur, et la prise avec.
+      if (habiller) return;
+      if (
+        e.target instanceof HTMLSelectElement ||
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      )
+        return;
       if (e.key === "Escape") fermer();
       else if (e.key === " ") {
         e.preventDefault();
@@ -590,7 +600,7 @@ export function Prompteur({
     }
     window.addEventListener("keydown", surTouche);
     return () => window.removeEventListener("keydown", surTouche);
-  }, [fermer, etat, mots.length, setPosition]);
+  }, [fermer, etat, mots.length, setPosition, habiller]);
 
   if (typeof document === "undefined") return null;
 
@@ -848,6 +858,10 @@ export function Prompteur({
                   Enregistrer / partager
                 </button>
               )}
+              {/* Sous-titres, effets, musique : un atelier à part, sur cette prise. */}
+              <button type="button" className={styles.record} onClick={() => setHabiller(true)}>
+                ✨ Habiller la vidéo
+              </button>
               <button type="button" className={styles.bouton} onClick={refaire}>
                 Refaire une prise
               </button>
@@ -858,6 +872,16 @@ export function Prompteur({
             </p>
           </div>
         </div>
+      )}
+      {resultat && habiller && (
+        <Habillage
+          url={resultat.url}
+          video={resultat.blob}
+          nom={resultat.nom}
+          texte={texte}
+          titre={titre}
+          onClose={() => setHabiller(false)}
+        />
       )}
     </div>,
     document.body

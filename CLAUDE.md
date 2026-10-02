@@ -206,6 +206,36 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   iPhone), et ⚙ AFFICHE « Image l×h → capsule l×h » — le témoin qui tranche.
   Un vertical 9:16 tiré d'une webcam paysage 1080p fait 608×1080 : c'est la
   caméra, pas l'encodage.
+- **Habillage d'une capsule** (02/10 ; `lib/habillage.ts`,
+  `lib/musiqueHabillage.ts`, `components/habillage/`) : depuis la carte
+  « Votre capsule est prête », un atelier ajoute sous-titres, effets et
+  musique, avec 5 STYLES qui règlent l'image ET le son, retouchables onglet
+  par onglet. Ce n'est PAS un artefact au sens des blocs : la vidéo n'existe
+  que dans le navigateur (aucun stockage serveur), seul le style choisi est
+  mémorisé (localStorage, par appareil). **Sous-titres sans transcription** :
+  le texte est le script ; on repère la parole dans la piste son
+  (`segmentsParole`, seuil adaptatif) et on y répartit les mots au poids
+  syllabique (`alignerMots`). Pas de service de reconnaissance à payer ni à
+  autoriser — mais un mot improvisé n'apparaît pas : chaque sous-titre
+  s'édite, et un curseur de calage décale l'ensemble. Ponctuation française
+  (« demain ? ») rattachée au mot (`motsDuTexte`) : sinon « ? » faisait un
+  sous-titre à lui seul. **Musiques GÉNÉRÉES** (Web Audio hors temps réel,
+  `synthese.ts`) : libres de droits par construction, mais ce sont des fonds
+  sonores simples — NON écoutées depuis l'agent, seulement mesurées
+  (niveau sous la voix, pas de saturation). Musique importée possible,
+  droits à la charge de l'utilisateur. La musique baisse sous la voix
+  (`enveloppeMusique`). **Export en TEMPS RÉEL** : la vidéo est rejouée dans
+  un canevas (`dessiner`, même fonction que l'aperçu) et réenregistrée avec
+  voix + musique mêlées ; un onglet caché arrête l'export (le canevas ne
+  s'anime plus). Un limiteur protège le mélange : sans lui, la crête
+  mesurée était 1,00. Vérifié au navigateur avec une voix SIMULÉE (fichier
+  de phrases et de pauses) ; non vérifié sur iPhone (`createMediaElementSource`,
+  `ctx.filter` absent de Safari ancien → étalonnage sauté). Piège de test :
+  la CSP (`connect-src`) interdit `fetch` sur une adresse `blob:` — l'atelier
+  lit le Blob directement ; un test qui relit le fichier exporté doit
+  contourner la CSP (`bypassCSP`). Le prompteur ignore ses raccourcis tant
+  que l'atelier est ouvert : Échap y aurait fermé le prompteur, et la prise
+  avec.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
