@@ -137,7 +137,8 @@ export function Habillage({
   const [analyse, setAnalyse] = useState<{ dureeVideo: number; segments: Segment[]; voixTrouvee: boolean } | null>(null);
   const [blocs, setBlocs] = useState<SousTitre[]>([]);
   const [decalage, setDecalage] = useState(0);
-  const [dims, setDims] = useState({ l: 1080, h: 1080 });
+  // Dimensions RÉELLES de la prise : tant qu'on ne les connaît pas, pas d'export.
+  const [dims, setDims] = useState<{ l: number; h: number } | null>(null);
 
   const [fichierMusique, setFichierMusique] = useState<{ nom: string; tampon: AudioBuffer } | null>(null);
   const [musique, setMusique] = useState<AudioBuffer | null>(null);
@@ -217,7 +218,6 @@ export function Habillage({
       }
       if (v) {
         if (!duree) duree = await dureeDeLaVideo(v);
-        if (v.videoWidth) setDims({ l: v.videoWidth, h: v.videoHeight });
       }
       if (annule) return;
       setAnalyse({ dureeVideo: duree, segments, voixTrouvee: segments.length > 0 });
@@ -228,6 +228,23 @@ export function Habillage({
       annule = true;
     };
   }, [source, caler]);
+
+  // Vécu sur iPhone : la piste son était analysée AVANT que la vidéo ne
+  // livre ses dimensions — le canevas restait carré par défaut, et une prise
+  // verticale y était écrasée. On les lit quand la vidéo les donne.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const lire = () => {
+      if (!v.videoWidth || !v.videoHeight) return;
+      setDims((d) => (d && d.l === v.videoWidth && d.h === v.videoHeight ? d : { l: v.videoWidth, h: v.videoHeight }));
+    };
+    lire();
+    for (const e of ["loadedmetadata", "loadeddata", "resize"]) v.addEventListener(e, lire);
+    return () => {
+      for (const e of ["loadedmetadata", "loadeddata", "resize"]) v.removeEventListener(e, lire);
+    };
+  }, []);
 
   // --- Musique : régénérée quand le style ou le volume changent ---------------
   useEffect(() => {
@@ -592,9 +609,9 @@ export function Habillage({
 
       <div className={styles.corps}>
         <section className={styles.apercu}>
-          <div className={styles.cadre} style={{ aspectRatio: `${dims.l} / ${dims.h}` }}>
-            <canvas ref={canevasRef} className={styles.canevas} width={dims.l} height={dims.h} />
-            {!analyse && <div className={styles.attente}>Écoute de la voix et calage des sous-titres…</div>}
+          <div className={styles.cadre} style={{ aspectRatio: dims ? `${dims.l} / ${dims.h}` : "9 / 16" }}>
+            <canvas ref={canevasRef} className={styles.canevas} width={dims?.l ?? 1080} height={dims?.h ?? 1920} />
+            {(!analyse || !dims) && <div className={styles.attente}>Écoute de la voix et calage des sous-titres…</div>}
           </div>
           {/* Source cachée : la vidéo est lue ici, dessinée dans le canevas. */}
           <video ref={videoRef} src={url} className={styles.cache} playsInline preload="auto" />
@@ -638,7 +655,7 @@ export function Habillage({
             </div>
           ) : (
             <div className={styles.export}>
-              <button type="button" className={styles.principal} onClick={() => void exporter()} disabled={!analyse || musiqueEnCours}>
+              <button type="button" className={styles.principal} onClick={() => void exporter()} disabled={!analyse || !dims || musiqueEnCours}>
                 Exporter la vidéo
               </button>
               <span className={styles.note}>

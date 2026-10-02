@@ -240,7 +240,13 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   lit le Blob directement ; un test qui relit le fichier exporté doit
   contourner la CSP (`bypassCSP`). Le prompteur ignore ses raccourcis tant
   que l'atelier est ouvert : Échap y aurait fermé le prompteur, et la prise
-  avec.
+  avec. **Prise verticale ÉCRASÉE sur iPhone (02/10)** :
+  les dimensions étaient lues une seule fois, à la fin de l'analyse du son —
+  l'iPhone ne les avait pas encore livrées, le canevas restait carré par
+  défaut et l'image 1080×1920 y était étirée. Désormais lues sur les
+  événements de la vidéo (`loadedmetadata`, `resize`), export bloqué tant
+  qu'elles manquent, et `dessiner` recadre en « couvrant » : jamais
+  d'étirement, quoi qu'il arrive.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

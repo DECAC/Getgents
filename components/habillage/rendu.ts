@@ -215,7 +215,16 @@ export function dessiner(
     ctx.scale(zoom, zoom);
     ctx.translate(-cx, -cy);
   }
-  if (video.readyState >= 2) ctx.drawImage(video, 0, 0, w, h);
+  if (video.readyState >= 2) {
+    // Recadrage « couvrant » : si le canevas n'a pas les proportions de la
+    // vidéo, on coupe les bords plutôt que d'écraser l'image.
+    const vl = video.videoWidth || w;
+    const vh = video.videoHeight || h;
+    const echelle = Math.max(w / vl, h / vh);
+    const sl = w / echelle;
+    const sh = h / echelle;
+    ctx.drawImage(video, (vl - sl) / 2, (vh - sh) / 2, sl, sh, 0, 0, w, h);
+  }
   ctx.restore();
 
   if (enCarton) {
