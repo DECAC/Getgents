@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useBuilder } from "@/lib/context/BuilderContext";
 import { ShareLinksSection } from "./ShareLinksSection";
 import { CollabSuiviSection } from "./CollabSuiviSection";
@@ -9,6 +10,57 @@ import styles from "./DiffusionTab.module.css";
 
 const E164 = /^\+[1-9]\d{6,14}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Adresse e-mail du gent chantier : on y transfère un devis ou un mail
+ * d'artisan, le gent le lit et met le dossier à jour. Absente tant que le
+ * courrier n'est pas configuré côté serveur — on le dit, plutôt que se taire.
+ */
+function AdresseCourrier({ gentId }: { gentId: string }) {
+  const [etat, setEtat] = useState<"chargement" | "absente" | string>("chargement");
+  const [copie, setCopie] = useState(false);
+  useEffect(() => {
+    let vivant = true;
+    fetch(`/api/courrier?gentId=${encodeURIComponent(gentId)}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { adresse?: string | null } | null) => vivant && setEtat(d?.adresse || "absente"))
+      .catch(() => vivant && setEtat("absente"));
+    return () => {
+      vivant = false;
+    };
+  }, [gentId]);
+  const adresse = etat !== "chargement" && etat !== "absente" ? etat : null;
+  return (
+    <div className={styles.card}>
+      <h4 className={styles.title}>Adresse e-mail du gent</h4>
+      <div className={styles.sub}>
+        Transférez-y un devis ou le message d&apos;un artisan : le gent le lit, vous répond par e-mail et prépare la
+        mise à jour du dossier, appliquée à l&apos;ouverture du gent (annulable). Seuls vos propres envois sont lus.
+      </div>
+      {adresse ? (
+        <div className={styles.priveAdresse}>
+          <code>{adresse}</code>{" "}
+          <button
+            type="button"
+            className={styles.priveLien}
+            onClick={() => {
+              void navigator.clipboard?.writeText(adresse).then(() => {
+                setCopie(true);
+                window.setTimeout(() => setCopie(false), 1500);
+              });
+            }}
+          >
+            {copie ? "Copiée" : "Copier"}
+          </button>
+        </div>
+      ) : etat === "absente" ? (
+        <p className={styles.priveNote}>
+          Le courrier n&apos;est pas encore configuré sur ce serveur (Brevo, secret d&apos;adresse).
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 export function DiffusionTab() {
   const { currentDraft, updateChannel, updateDiffusionPrivee } = useBuilder();
@@ -51,6 +103,8 @@ export function DiffusionTab() {
           </p>
         )}
       </div>
+
+      {currentDraft.chantier?.enabled && <AdresseCourrier gentId={currentDraft.id} />}
 
       <div className={styles.card}>
         <div className={styles.headRow}>
