@@ -1,5 +1,6 @@
 import { resolveVisionModelId } from "@/lib/visionModels";
 import { MAX_VIDEO_FRAMES } from "@/lib/extractVideoFrames";
+import { consigneVisionPhoto } from "@/lib/extractPhoto";
 import { messageCleOpenRouter } from "@/lib/openRouterKey";
 import type { ContexteLlm } from "@/lib/server/openRouterKey";
 import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
@@ -13,6 +14,8 @@ export interface VisionAnalyzeInput {
   videoName?: string;
   question?: string;
   modelId?: string;
+  /** « photo » : une seule image, décrite pour un expert (lib/extractPhoto.ts). */
+  nature?: "video" | "photo";
 }
 
 function isAllowedFrameUrl(url: string): boolean {
@@ -38,8 +41,9 @@ export async function analyzeVisionFrames(
       : "durée inconnue";
   const times = input.frameTimesSec ?? frames.map((_, i) => i);
 
-  const intro =
-    `Tu analyses une vidéo (« ${title} », ${duration}). ` +
+  const intro = input.nature === "photo"
+    ? consigneVisionPhoto(input.videoName)
+    : `Tu analyses une vidéo (« ${title} », ${duration}). ` +
     `${frames.length} images ont été extraites à différents instants (en secondes : ${times.join(", ")}). ` +
     "Décris ce qui se passe : sujet, actions, personnes ou objets visibles, texte à l'écran, lieux, ambiance, évolution entre les images. " +
     "Réponds en français, de façon structurée et factuelle. Si une information n'est pas visible, dis-le.";

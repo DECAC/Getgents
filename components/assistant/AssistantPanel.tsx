@@ -10,9 +10,12 @@ import { FollowupChips } from "@/components/shared/FollowupChips";
 import { JumpFormCard } from "@/components/shared/JumpFormCard";
 import { extractDocumentText } from "@/lib/extractDocumentText";
 import { extractVideoFrames } from "@/lib/extractVideoFrames";
+import { extrairePhoto } from "@/lib/extractPhoto";
 import {
   type ChatAttachment,
   formatVideoDuration,
+  isPhotoAttachment,
+  isPhotoFile,
   isVideoAttachment,
   isVideoFile,
 } from "@/lib/chatAttachment";
@@ -201,7 +204,39 @@ export function AssistantPanel({
     const parts: string[] = [];
 
     if (attachment) {
-      if (isVideoAttachment(attachment)) {
+      if (isPhotoAttachment(attachment)) {
+        // Une photo, c'est une vidéo d'une seule image : même route, une
+        // consigne propre (décrire, et dire ce que l'image ne prouve pas).
+        setAttaching(true);
+        setAttachStatus("Lecture de la photo…");
+        setAttachError(null);
+        try {
+          const res = await fetch("/api/video/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              frames: [attachment.dataUrl],
+              name: attachment.name,
+              question: txt || undefined,
+              nature: "photo",
+            }),
+          });
+          const data = (await res.json()) as { analysis?: string; error?: string };
+          if (!res.ok || !data.analysis) {
+            throw new Error(data.error || "Lecture de la photo impossible.");
+          }
+          parts.push(`Photo jointe « ${attachment.name} » — ce qu'on y voit :\n"""\n${data.analysis}\n"""`);
+          if (txt) parts.push(txt);
+        } catch (err) {
+          setAttachError((err as Error).message || "Impossible de lire cette photo.");
+          setAttaching(false);
+          setAttachStatus(null);
+          return;
+        } finally {
+          setAttaching(false);
+          setAttachStatus(null);
+        }
+      } else if (isVideoAttachment(attachment)) {
         setAttaching(true);
         setAttachStatus("Analyse de la vidéo par vision…");
         setAttachError(null);
@@ -256,9 +291,13 @@ export function AssistantPanel({
     if (!file) return;
     setAttachError(null);
     setAttaching(true);
-    setAttachStatus(isVideoFile(file) ? "Extraction des images de la vidéo…" : "Lecture du document…");
+    setAttachStatus(
+      isPhotoFile(file) ? "Préparation de la photo…" : isVideoFile(file) ? "Extraction des images de la vidéo…" : "Lecture du document…"
+    );
     try {
-      if (isVideoFile(file)) {
+      if (isPhotoFile(file)) {
+        setAttachment(await extrairePhoto(file));
+      } else if (isVideoFile(file)) {
         const video = await extractVideoFrames(file);
         setAttachment(video);
       } else {
@@ -1303,11 +1342,18 @@ export function AssistantPanel({
           {viewerError && <div className={styles.attachError}>{viewerError}</div>}
           {attachment && !attaching && (
             <div className={styles.attachChip}>
-              <span className={styles.attachChipIcon} aria-hidden="true">📎</span>
+              {isPhotoAttachment(attachment) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className={styles.attachVignette} src={attachment.dataUrl} alt="" />
+              ) : (
+                <span className={styles.attachChipIcon} aria-hidden="true">📎</span>
+              )}
               <div className={styles.attachChipBody}>
                 <div className={styles.attachChipName}>{attachment.name}</div>
                 <div className={styles.attachChipMeta}>
-                  {isVideoAttachment(attachment)
+                  {isPhotoAttachment(attachment)
+                    ? "Photo · lue au prochain envoi"
+                    : isVideoAttachment(attachment)
                     ? `${formatVideoDuration(attachment.durationSec)} · ${attachment.frames.length} images · analyse au prochain envoi`
                     : `${attachment.text.length.toLocaleString("fr-FR")} caractères${
                         attachment.truncated ? " (tronqué)" : ""
@@ -1327,7 +1373,8 @@ export function AssistantPanel({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.docx,.txt,.md,.csv,.tsv,.mp4,.webm,.mov,.m4v,.ogv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg"
+            // `image/*` : sur téléphone, le sélecteur propose aussi « Prendre une photo ».
+            accept="image/*,.heic,.heif,.pdf,.docx,.txt,.md,.csv,.tsv,.mp4,.webm,.mov,.m4v,.ogv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv,video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg"
             style={{ display: "none" }}
             onChange={(e) => handleFilePick(e.target.files?.[0])}
           />
@@ -1370,7 +1417,9 @@ export function AssistantPanel({
               rows={1}
               placeholder={
                 attachment
-                  ? isVideoAttachment(attachment)
+                  ? isPhotoAttachment(attachment)
+                    ? "Votre question sur la photo…"
+                    : isVideoAttachment(attachment)
                     ? "Question sur la vidéo (facultatif)…"
                     : "Ajouter un message (facultatif)…"
                   : "Écrire à votre assistant…"

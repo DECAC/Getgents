@@ -12,6 +12,8 @@ interface AnalyzeBody {
   name?: string;
   question?: string;
   modelId?: string;
+  /** « photo » : une seule image, décrite pour un expert. */
+  nature?: string;
 }
 
 /**
@@ -31,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
-  const frames = Array.isArray(body.frames) ? body.frames : [];
+  const frames = Array.isArray(body.frames) ? (body.nature === "photo" ? body.frames.slice(0, 1) : body.frames) : [];
   if (!frames.length) {
     return NextResponse.json({ error: "missing_frames" }, { status: 400 });
   }
@@ -43,6 +45,8 @@ export async function POST(req: NextRequest) {
     videoName: typeof body.name === "string" ? body.name : undefined,
     question: typeof body.question === "string" ? body.question : undefined,
     modelId: typeof body.modelId === "string" ? body.modelId : undefined,
+    // Une photo, c'est une vidéo d'une seule image : on n'en garde qu'une.
+    ...(body.nature === "photo" ? { nature: "photo" as const } : {}),
   }, garde.value.ctx);
 
   if ("error" in result) {

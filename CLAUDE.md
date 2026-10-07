@@ -271,8 +271,13 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   **Dossier lu en entier** : `BUDGET_DOSSIER` (6 000 caractères par partie,
   32 000 au total, 8 artefacts, dossier en tête) au lieu de 3 000 / 8 000 /
   5 — coût assumé, jusqu'à ~8 000 jetons de plus par tour sur un dossier
-  plein. Après « Nouvel échange », le dossier est sa seule mémoire. **Pas
-  encore fait** : les photos, puis l'adresse e-mail
+  plein. Après « Nouvel échange », le dossier est sa seule mémoire. **Photos** (07/10, tous les gents) : une photo est une VIDÉO D'UNE
+  IMAGE — réduite à 1 600 px dans le navigateur (`lib/extractPhoto.ts`),
+  décrite par `/api/video/analyze` (`nature: "photo"`, `consigneVisionPhoto`),
+  la description part dans le message. La vision DÉCRIT (et dit ce que
+  l'image ne permet pas d'affirmer), le gent CONCLUT. La photo n'est PAS
+  gardée dans le fil, seule sa description ; comptes connectés seulement,
+  quota « video ». **Pas encore fait** : l'adresse e-mail
   du bot (`@bot.getgents.ai`, une adresse par gent, échanges où le
   propriétaire est présent seulement, l'e-mail ne donne jamais d'ordre).
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
