@@ -1,5 +1,6 @@
 import type { Espace, PinnedArtefact } from "@/lib/types";
 import { mergeVisionneuseArtefact } from "@/lib/publishedGents";
+import { mergeDossierChantier } from "@/lib/chantier";
 
 /**
  * L'espace personnel du créateur (GetSpace, `/espace/<id>`) tourne sur la
@@ -64,6 +65,8 @@ function reporterUsage(base: Espace, source: Espace): Espace {
   // Le document d'une visionneuse est CONFIGURATION : il vient de `base` ;
   // tous les autres artefacts sont à l'utilisateur.
   sortie.artefacts = mergeVisionneuseArtefact(source.artefacts ?? [], base.artefacts ?? []);
+  // Gent « chantier » : le dossier est posé une fois, jamais écrasé.
+  sortie.artefacts = mergeDossierChantier(sortie.artefacts, base.chantier?.enabled === true);
   sortie.pinnedArtefact = usagePinned(source.pinnedArtefact, base.pinnedArtefact);
   sortie.routine = base.routine
     ? { ...base.routine, lastRunAt: source.routine?.lastRunAt, lastRunNote: source.routine?.lastRunNote }

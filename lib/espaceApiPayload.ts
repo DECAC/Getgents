@@ -1,4 +1,5 @@
 import type { Espace } from "@/lib/types";
+import { mergeDossierChantier } from "@/lib/chantier";
 import { formatConversationStartedAt } from "@/lib/conversationUtils";
 import { downloadableDocumentsForReader } from "@/lib/fileDownload";
 
@@ -116,8 +117,12 @@ export function espaceForPublicLink(espace: Espace): Espace {
     conversations: [{ id: "shared", startedAt: formatConversationStartedAt(), messages: [] }],
     activeConversationId: "shared",
     files: [],
-    artefacts: visionneuseDoc ? [visionneuseDoc] : [],
+    // Gent « chantier » : le visiteur reçoit le dossier VIERGE — sa structure
+    // est un livrable du gent, son contenu est privé. Le dossier rempli du
+    // créateur (devis, artisans, adresse) ne quitte jamais son espace.
+    artefacts: mergeDossierChantier(visionneuseDoc ? [visionneuseDoc] : [], espace.chantier?.enabled === true),
     visionneuse: espace.visionneuse?.enabled ? { enabled: true } : undefined,
+    chantier: espace.chantier?.enabled ? { enabled: true } : undefined,
     // Le prompteur est un OUTIL du gent, pas une donnée du créateur : le
     // visiteur écrit et filme SA capsule, dans son navigateur.
     prompteur: espace.prompteur?.enabled ? espace.prompteur : undefined,

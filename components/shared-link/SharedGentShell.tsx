@@ -116,6 +116,18 @@ export function SharedGentBody({
     if (miniAppMode || modeJeu) closeAssistant();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [miniAppMode, modeJeu]);
+  // Gent « chantier » sur écran étroit : on arrive sur le dossier, une seule
+  // fois — rouvrir la conversation reste possible et n'est plus contrarié.
+  // L'écran étroit n'est connu qu'après le premier rendu : la conversation
+  // peut s'y montrer un instant avant de céder la place.
+  const chantier = currentEspace.chantier?.enabled === true;
+  const dossierMontre = useRef(false);
+  useEffect(() => {
+    if (!chantier || !etroit || dossierMontre.current) return;
+    dossierMontre.current = true;
+    closeAssistant();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chantier, etroit]);
   // Mini-application et jeu s'utilisent par la page, pas par la conversation :
   // le destinataire d'un lien n'y a pas accès non plus. Un visiteur arrive
   // ICI et nulle part ailleurs — c'est sa seule vue du gent.
@@ -142,7 +154,13 @@ export function SharedGentBody({
    * Par défaut en BANDE : la conversation garde presque toute la largeur. Un
    * volet vide ne réserve même pas la bande — voir `colonneVolet`.
    */
-  const [volet, setVolet] = useState<"bande" | "moitie" | "large">("bande");
+  /**
+   * Gent « chantier » : le dossier EST l'application — il s'affiche d'abord.
+   * Sur grand écran, le volet part élargi, la conversation garde sa colonne à
+   * côté ; sur écran étroit, où volet et conversation ne tiennent pas
+   * ensemble, on ouvre sur « Le gent » (voir l'effet plus bas).
+   */
+  const [volet, setVolet] = useState<"bande" | "moitie" | "large">(chantier ? "large" : "bande");
   // Rouvrir sans défaire un choix : un volet déjà large le reste.
   const ouvrirVolet = useCallback(() => setVolet((v) => (v === "bande" ? "moitie" : v)), []);
 

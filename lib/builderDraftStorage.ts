@@ -7,6 +7,7 @@ import { ajouterConnu, ecrireConnus, lireConnus, reconcilier } from "@/lib/recon
 import { modeleActuel } from "@/lib/modeleConversation";
 import { suggestGentIcon } from "@/lib/gentIcons";
 import { applyEventManagerTemplate } from "@/lib/eventManagerTemplate";
+import { PROMPT_CHANTIER_DEFAUT } from "@/lib/chantier";
 
 // Base de la clé : la clé RÉELLE porte l'identifiant du compte (voir
 // lib/storageScope.ts). Un brouillon contient le prompt système en cours
@@ -409,9 +410,9 @@ export function allocateDraftFromDescription(
  * Format de départ d'un gent. Il PRÉCONFIGURE, il ne verrouille rien : un gent
  * conversationnel peut recevoir une mini-app plus tard, et l'inverse.
  */
-export type FormatGent = "conversationnel" | "miniapp" | "visionneuse" | "collaboratif" | "prompteur";
+export type FormatGent = "conversationnel" | "miniapp" | "visionneuse" | "collaboratif" | "prompteur" | "chantier";
 
-export const FORMATS_GENT: readonly FormatGent[] = ["conversationnel", "miniapp", "visionneuse", "collaboratif", "prompteur"];
+export const FORMATS_GENT: readonly FormatGent[] = ["conversationnel", "miniapp", "visionneuse", "collaboratif", "prompteur", "chantier"];
 
 /** Onglet où atterrit le créateur : là où le format se configure. */
 export const ONGLET_DU_FORMAT: Record<FormatGent, "prompt" | "miniapp" | "visionneuse" | "collaboratif" | "prompteur"> = {
@@ -420,6 +421,8 @@ export const ONGLET_DU_FORMAT: Record<FormatGent, "prompt" | "miniapp" | "vision
   visionneuse: "visionneuse",
   collaboratif: "collaboratif",
   prompteur: "prompteur",
+  // Le dossier se règle dans le prompt : pas d'onglet propre pour l'instant.
+  chantier: "prompt",
 };
 
 /** Instructions de départ d'un « Prompteur » — le créateur les ajuste à sa voix. */
@@ -450,6 +453,19 @@ export function appliquerFormat(draft: GentDraft, format: FormatGent): GentDraft
       prompteur: { enabled: true, dureeCible: draft.prompteur?.dureeCible },
     };
   }
+  if (format === "chantier") {
+    // Création seulement, comme le Prompteur : rien d'écrit n'est remplacé.
+    return {
+      ...draft,
+      name: "Mon chantier",
+      icon: "🏗️",
+      objective: draft.objective || "Piloter ma rénovation, du financement à la réception, avec un dossier tenu à jour.",
+      systemPrompt: draft.systemPrompt || PROMPT_CHANTIER_DEFAUT,
+      // Vérifier un artisan (SIRET, décennale, RGE) passe par la recherche web.
+      webSearch: true,
+      chantier: { enabled: true },
+    };
+  }
   return draft;
 }
 
@@ -465,7 +481,7 @@ export function brouillonNeuf(id: string, format: FormatGent, description = ""):
     draft = {
       ...draft,
       // Le gabarit Event Manager porte déjà son emblème.
-      icon: format === "collaboratif" || format === "prompteur" ? draft.icon : suggestGentIcon(role),
+      icon: format === "collaboratif" || format === "prompteur" || format === "chantier" ? draft.icon : suggestGentIcon(role),
       objective: role.slice(0, 240),
       pendingBuilderMessage: role,
     };
@@ -567,6 +583,7 @@ export function restoreDraftFromPublished(id: string, espace: Espace): GentDraft
     fileDownloadFormEnabled: espace.fileDownloadFormEnabled,
     jumpForm: espace.jumpForm,
     prompteur: espace.prompteur,
+    chantier: espace.chantier?.enabled ? { enabled: true } : undefined,
     connectors,
     pinnedArtefact: pinned,
     appPreview: espace.appPreview,

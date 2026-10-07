@@ -42,6 +42,7 @@ import {
   readPublishedGents,
   mergeVisionneuseArtefact,
 } from "@/lib/publishedGents";
+import { mergeDossierChantier } from "@/lib/chantier";
 import { draftContentSnapshot } from "@/lib/builderSnapshot";
 import { renderMarkdown } from "@/lib/markdown";
 import { streamChatCompletion, defaultStatusLabel } from "@/lib/streamChat";
@@ -501,7 +502,12 @@ export function BuilderProvider({
         // Sans cette fusion, attacher un document à un gent existant restait
         // sans effet : l'artefact fraîchement produit était écrasé par la
         // liste d'artefacts d'avant, et la visionneuse n'avait rien à ouvrir.
-        artefacts: mergeVisionneuseArtefact(existing.artefacts ?? fresh.artefacts, fresh.artefacts),
+        // Même logique pour le dossier d'un gent « chantier » : posé une fois
+        // s'il n'existe pas, jamais écrasé (lib/chantier.ts).
+        artefacts: mergeDossierChantier(
+          mergeVisionneuseArtefact(existing.artefacts ?? fresh.artefacts, fresh.artefacts),
+          fresh.chantier?.enabled === true
+        ),
         themeTabs: existing.themeTabs,
         amorcesContextuelles: existing.amorcesContextuelles,
         memory: existing.memory || fresh.memory,

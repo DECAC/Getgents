@@ -181,6 +181,8 @@ export interface GentDraft {
   visionneuse?: import("@/lib/types").VisionneuseConfig;
   /** Type de gent « Le Prompteur » : capsule vidéo écrite, lue et filmée. */
   prompteur?: import("@/lib/types").PrompteurConfig;
+  /** Type de gent « Le chantier » : assistant de maître d'œuvre et son dossier. */
+  chantier?: import("@/lib/types").ChantierConfig;
   /** Type de gent « collaboratif » : salon multi-participants orchestré. */
   collab?: import("@/lib/types").CollabConfig;
   /**

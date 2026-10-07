@@ -544,6 +544,11 @@ export interface Espace {
   /** Type de gent « Le Prompteur » : texte écrit ici, lu et filmé au prompteur. */
   prompteur?: PrompteurConfig;
   /**
+   * Type de gent « Le chantier » : assistant de maître d'œuvre, dont le
+   * dossier (artefacts `chantier-*`) existe dès l'ouverture — lib/chantier.ts.
+   */
+  chantier?: ChantierConfig;
+  /**
    * Téléchargement du document du gent (base de connaissance / visionneuse)
    * côté lecteur. Copié depuis le brouillon à la Preview / publication.
    */
@@ -570,6 +575,11 @@ export interface Espace {
  * le prompteur la fait lire au rythme de la voix et l'enregistre (voir
  * lib/prompteur.ts).
  */
+/** Type de gent « Le chantier » (voir lib/chantier.ts). */
+export interface ChantierConfig {
+  enabled: boolean;
+}
+
 export interface PrompteurConfig {
   enabled: boolean;
   /** Durée visée de la capsule, en secondes (60 par défaut). */

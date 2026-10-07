@@ -14,6 +14,7 @@ import { downloadableDocumentsFromDraft } from "@/lib/fileDownload";
 import { normaliserNomAffiche } from "@/lib/nomAffiche";
 import { estFrequenceArtefacts } from "@/lib/artefactSignal";
 import { modeleActuel } from "@/lib/modeleConversation";
+import { mergeDossierChantier } from "@/lib/chantier";
 
 // Persistance des gents publiés : la source de vérité est Supabase (via les
 // routes /api/gents), le localStorage n'est plus qu'un cache local pour un
@@ -716,18 +717,22 @@ export function draftToEspace(draft: GentDraft): Espace {
     conversations: [{ id: threadId, startedAt: formatConversationStartedAt(), messages: [] }],
     activeConversationId: threadId,
     files,
-    artefacts: visionneuseDoc
-      ? [
-          {
-            id: "visionneuse-doc",
-            title: visionneuseDoc.sourceName,
-            type: "Visionneuse de document",
-            icon: "📖",
-            date: "Document du gent",
-            document: visionneuseDoc,
-          },
-        ]
-      : [],
+    // Gent « chantier » : le dossier existe dès l'ouverture (lib/chantier.ts).
+    artefacts: mergeDossierChantier(
+      visionneuseDoc
+        ? [
+            {
+              id: "visionneuse-doc",
+              title: visionneuseDoc.sourceName,
+              type: "Visionneuse de document",
+              icon: "📖",
+              date: "Document du gent",
+              document: visionneuseDoc,
+            },
+          ]
+        : [],
+      draft.chantier?.enabled === true
+    ),
     systemPrompt,
     chatModelId,
     imageModelId,
@@ -745,6 +750,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     jumpForm: draft.jumpForm,
     moteurJeu: draft.moteurJeu,
     prompteur: draft.prompteur?.enabled ? { enabled: true, dureeCible: draft.prompteur.dureeCible } : undefined,
+    chantier: draft.chantier?.enabled ? { enabled: true } : undefined,
     routine: draft.routine,
     channel: draft.channel,
     pinnedArtefact: draft.pinnedArtefact,

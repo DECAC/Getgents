@@ -247,6 +247,24 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   événements de la vidéo (`loadedmetadata`, `resize`), export bloqué tant
   qu'elles manquent, et `dessiner` recadre en « couvrant » : jamais
   d'étirement, quoi qu'il arrive.
+- **« Le chantier »** (format de gent, 07/10 ; `lib/chantier.ts`) : assistant
+  de maître d'œuvre pour une rénovation. Son DOSSIER est l'application —
+  cinq artefacts `chantier-*` (Vue d'ensemble, Chantier, Artisans, Devis,
+  Planning) posés par la CONFIGURATION, comme le document d'une visionneuse
+  (`draftToEspace`). `mergeDossierChantier` ne pose le squelette que si
+  AUCUNE partie n'existe : un dossier rempli n'est jamais écrasé, une partie
+  supprimée exprès ne revient pas. Les visiteurs reçoivent le squelette
+  VIERGE (`espaceForPublicLink`) : la structure est un livrable du gent, le
+  contenu (adresse, devis, artisans) est privé. Le gent s'OUVRE sur le
+  dossier (`SharedGentShell` : volet large ; sur écran étroit, on arrive sur
+  « Le gent »). « Nouvel échange » n'y touche pas : les artefacts ne vivent
+  pas dans les fils. Consigne de FORME : retoucher les parties par leur
+  identifiant, jamais un second dossier. **Pas encore fait** : la mise à
+  jour automatique (une retouche arrive en proposition à garder) et un
+  dossier lu en entier par le modèle (3 000 caractères par artefact,
+  `BUDGET_ARTEFACT`) — lot suivant ; puis les photos, puis l'adresse e-mail
+  du bot (`@bot.getgents.ai`, une adresse par gent, échanges où le
+  propriétaire est présent seulement, l'e-mail ne donne jamais d'ordre).
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

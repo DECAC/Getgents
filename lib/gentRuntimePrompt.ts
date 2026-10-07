@@ -9,6 +9,7 @@ import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import { IMAGE_PROMPT_INSTRUCTION } from "@/lib/imageSignal";
 import { consigneDeLangue } from "@/lib/langue";
 import { consignePrompteur } from "@/lib/prompteur";
+import { consigneChantier } from "@/lib/chantier";
 
 /**
  * Assemble le message système d'un gent à l'exécution.
@@ -127,6 +128,8 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
   if (espace.gmail) blocks.push(GMAIL_PROMPT_INSTRUCTION);
   // Gent « Prompteur » : la forme du texte à dire et ses marqueurs.
   if (espace.prompteur?.enabled && !superGent) blocks.push(consignePrompteur(espace.prompteur.dureeCible));
+  // Gent « chantier » : où vit le dossier et comment le retoucher.
+  if (espace.chantier?.enabled && !superGent) blocks.push(consigneChantier());
 
   blocks.push(FOLLOWUPS_PROMPT_INSTRUCTION);
 
