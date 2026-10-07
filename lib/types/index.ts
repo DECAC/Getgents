@@ -249,6 +249,13 @@ export interface ConversationMessage {
   imageStatus?: "pending" | "done" | "error";
   proposal?: ArtefactProposal;
   proposalStatus?: "pending" | "added" | "dismissed";
+  /**
+   * Gent « chantier » : retouche du dossier appliquée SANS verdict. La carte
+   * dit ce qui a changé et permet d'annuler (lib/chantier.ts).
+   */
+  autoApplique?: boolean;
+  /** Numéro de la version rangée par cette retouche : « Annuler » y revient. */
+  versionRangee?: number;
   themeProposal?: ThemeTabProposalAction;
   themeProposalStatus?: "pending" | "applied" | "dismissed";
   /** Illustration proposée (génération IA ou photo web) — jamais sans accord. */

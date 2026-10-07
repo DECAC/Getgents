@@ -104,6 +104,7 @@ export function AssistantPanel({
     garderEnNote,
     lancerPrompteur,
     viewArtefact,
+    restaurerVersionArtefact,
     sendMessage,
     submitJumpForm,
     confirmArtefactProposal,
@@ -450,6 +451,38 @@ export function AssistantPanel({
 
     if (m.role === "artef-proposal" && m.proposal) {
       const p = m.proposal;
+      if (m.proposalStatus === "added" && m.autoApplique) {
+        // Dossier de chantier : appliqué sans verdict. On dit ce qui a changé
+        // et on laisse annuler — tant qu'aucun changement n'est venu depuis :
+        // revenir plus loin défairait aussi ceux-là.
+        const cible = currentEspace.artefacts.find((a) => a.id === m.ref);
+        const dernier = cible?.versions?.[0]?.n;
+        const annulable = !!cible && m.versionRangee != null && dernier === m.versionRangee;
+        // Annuler range l'état courant sous un résumé connu (restaurerVersion).
+        const annulee = !!cible && cible.versions?.[0]?.resume === `retour à la version ${m.versionRangee}`;
+        const resume = p.modification?.resume ?? "mise à jour";
+        return (
+          <div key={i} className={styles.artefPointer} role="status">
+            <div className={[styles.pic, styles.picSent].join(" ")}>✓</div>
+            <div className={styles.ptext}>
+              <div className={styles.ptitle}>
+                {annulee ? "Mise à jour annulée" : "Dossier mis à jour"} — {p.title}
+              </div>
+              <div className={styles.pmeta}>{resume.charAt(0).toUpperCase() + resume.slice(1)}.</div>
+            </div>
+            <div className={styles.plink}>
+              {annulable && (
+                <button type="button" className={styles.lienAction} onClick={() => restaurerVersionArtefact(cible!.id, m.versionRangee!)}>
+                  Annuler
+                </button>
+              )}
+              <button type="button" className={styles.lienAction} onClick={() => viewArtefact(m.id ?? "")}>
+                Voir
+              </button>
+            </div>
+          </div>
+        );
+      }
       if (m.proposalStatus === "added") {
         return (
           <button key={i} className={styles.artefPointer} onClick={() => viewArtefact(m.id ?? "")}>

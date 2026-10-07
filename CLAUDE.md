@@ -259,10 +259,20 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   dossier (`SharedGentShell` : volet large ; sur écran étroit, on arrive sur
   « Le gent »). « Nouvel échange » n'y touche pas : les artefacts ne vivent
   pas dans les fils. Consigne de FORME : retoucher les parties par leur
-  identifiant, jamais un second dossier. **Pas encore fait** : la mise à
-  jour automatique (une retouche arrive en proposition à garder) et un
-  dossier lu en entier par le modèle (3 000 caractères par artefact,
-  `BUDGET_ARTEFACT`) — lot suivant ; puis les photos, puis l'adresse e-mail
+  identifiant, jamais un second dossier. **Mise à jour AUTOMATIQUE** (choix
+  de l'utilisateur, 07/10) : une RETOUCHE d'une partie du dossier
+  (`appliquerSansVerdict`) passe par le même chemin que « Garder »
+  (`confirmArtefactProposal(…, "add", true)`) — une seule mécanique de
+  versions ; une version complète ou un artefact ordinaire restent des
+  propositions. La partie garde SA PLACE (`placerMiseAJour` ; un artefact
+  ordinaire passe en tête, ce qui aurait mélangé les onglets). La carte sous
+  la réponse dit ce qui a changé et offre « Annuler » (`versionRangee`,
+  `restaurerVersionArtefact`) tant qu'aucun changement n'est venu depuis.
+  **Dossier lu en entier** : `BUDGET_DOSSIER` (6 000 caractères par partie,
+  32 000 au total, 8 artefacts, dossier en tête) au lieu de 3 000 / 8 000 /
+  5 — coût assumé, jusqu'à ~8 000 jetons de plus par tour sur un dossier
+  plein. Après « Nouvel échange », le dossier est sa seule mémoire. **Pas
+  encore fait** : les photos, puis l'adresse e-mail
   du bot (`@bot.getgents.ai`, une adresse par gent, échanges où le
   propriétaire est présent seulement, l'e-mail ne donne jamais d'ordre).
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la

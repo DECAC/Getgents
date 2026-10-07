@@ -38,6 +38,7 @@ import {
   preferenceArtefact,
 } from "@/lib/historiqueModele";
 import { contexteArtefacts, resoudreRetouche } from "@/lib/operationsBlocs";
+import { appliquerSansVerdict, BUDGET_DOSSIER, dossierEnTete, placerMiseAJour } from "@/lib/chantier";
 import { avecNouvelleVersion, restaurerVersion } from "@/lib/versionsArtefact";
 import { lireMessageOnglet, PREFIXE_ONGLET } from "@/lib/ongletArtefact";
 import { mesurerArtefact } from "@/lib/telemetrieArtefact";
@@ -318,7 +319,7 @@ interface EspaceContextValue {
   updatePinnedInput: (inputId: string, value: string) => void;
   pinnedRefreshing: boolean;
   pinnedError: string | null;
-  confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss") => void;
+  confirmArtefactProposal: (proposalId: string, decision: "add" | "dismiss", auto?: boolean) => void;
   confirmThemeProposal: (proposalId: string, decision: "apply" | "dismiss") => void;
   /**
    * Autorise ou refuse une illustration proposée (génération IA ou photo web).
@@ -991,6 +992,9 @@ export function EspaceProvider({
     []
   );
 
+  // `sendMessage` est défini avant `confirmArtefactProposal` : il l'atteint
+  // par ce relais, tenu à jour à chaque rendu.
+  const confirmerRef = useRef<(id: string, d: "add" | "dismiss", auto?: boolean) => void>(() => {});
   const sendMessage = useCallback((text: string) => {
     if (streamAbortRef.current) return; // une génération est déjà en cours
     const id = currentIdRef.current;
@@ -1020,7 +1024,14 @@ export function EspaceProvider({
     // qui permet au gent de RETOUCHER un bloc au lieu de tout régénérer.
     const filComplet = [...(thread?.messages ?? []), userMsg];
     const history = avecPreferenceArtefact(
-      avecContexteEspace(historiquePourModele(filComplet), contexteArtefacts(espace.artefacts)),
+      avecContexteEspace(
+        historiquePourModele(filComplet),
+        // Gent « chantier » : le dossier d'abord, lu en entier — c'est sa
+        // seule mémoire après « Nouvel échange ».
+        espace.chantier?.enabled
+          ? contexteArtefacts(dossierEnTete(espace.artefacts), BUDGET_DOSSIER)
+          : contexteArtefacts(espace.artefacts)
+      ),
       preferenceArtefact(filComplet)
     );
 
@@ -1292,7 +1303,14 @@ export function EspaceProvider({
           });
           setModalArtefactId(null);
           setModalResvId(null);
-          setPendingArtefactVerdict({ proposalMessageId: proposalId, preview, modification: sig.modification });
+          if (appliquerSansVerdict(espace, sig)) {
+            // Gent « chantier » : le dossier se met à jour seul, par le MÊME
+            // chemin que « Garder » — une seule mécanique de versions. Au tour
+            // suivant, une fois la proposition inscrite dans le fil.
+            window.setTimeout(() => confirmerRef.current(proposalId, "add", true), 0);
+          } else {
+            setPendingArtefactVerdict({ proposalMessageId: proposalId, preview, modification: sig.modification });
+          }
         } else if (afterTheme.themeAction) {
           const action = afterTheme.themeAction;
           const proposalId = `theme-prop-${Date.now()}`;
@@ -1894,7 +1912,7 @@ export function EspaceProvider({
       });
   }, []);
 
-  const confirmArtefactProposal = useCallback((proposalId: string, decision: "add" | "dismiss") => {
+  const confirmArtefactProposal = useCallback((proposalId: string, decision: "add" | "dismiss", auto = false) => {
     const id = currentIdRef.current;
     let keptDocumentId: string | undefined;
     // Verdict relevé sur l'état COURANT, avant la mise à jour : React peut
@@ -1932,6 +1950,7 @@ export function EspaceProvider({
       let artefacts = espace.artefacts;
       let themeTabs = espace.themeTabs ?? [];
       let newArtefactId: string | undefined;
+      let versionRangee: number | undefined;
       // Même titre qu'un artefact gardé : c'est sa version mise à jour, qui le
       // REMPLACE sur place — même id, donc même onglet. L'ajouter à côté
       // produisait un doublon à chaque retouche demandée au gent.
@@ -1946,8 +1965,10 @@ export function EspaceProvider({
           targetMsg.proposal.modification?.resume ?? "nouvelle version complète",
           horodatage()
         );
-        // En tête, comme un nouvel artefact : c'est lui que l'espace montre.
-        artefacts = [misAJour, ...espace.artefacts.filter((a) => a.id !== homonyme.id)];
+        // En tête, comme un nouvel artefact : c'est lui que l'espace montre —
+        // sauf une partie du dossier de chantier, qui garde sa place.
+        artefacts = placerMiseAJour(espace.artefacts, misAJour);
+        versionRangee = misAJour.versions?.[0]?.n;
         if (misAJour.document) keptDocumentId = misAJour.id;
       } else if (decision === "add") {
         newArtefactId = `artef-${Date.now()}`;
@@ -1983,6 +2004,7 @@ export function EspaceProvider({
                           : ("dismissed" as const)
                         : m.themeProposalStatus,
                       ref: newArtefactId,
+                      ...(auto && decision === "add" ? { autoApplique: true, versionRangee } : {}),
                     }
                   : m
               ),
@@ -2004,6 +2026,7 @@ export function EspaceProvider({
       });
     }
   }, [shareToken]);
+  confirmerRef.current = confirmArtefactProposal;
 
   const changeArtefactKind = useCallback((artefactId: string, kind: WorkspaceArtefactKind) => {
     const id = currentIdRef.current;

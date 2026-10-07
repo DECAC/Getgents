@@ -72,7 +72,8 @@ export function consigneChantier(): string {
     "Quand l'utilisateur t'apprend quelque chose qui change le dossier, mets à jour la partie concernée par une RETOUCHE de ses blocs, " +
     "en la visant par son identifiant. Ne crée jamais un second dossier ni une nouvelle partie qui ferait doublon. " +
     "Remplace les lignes « à renseigner » par les vraies informations, et retire l'encadré « Pour commencer » d'une partie dès qu'elle est remplie. " +
-    "Dis en une phrase ce que tu as changé. Une information non vérifiée entre dans le dossier marquée « à vérifier »."
+    "Ta retouche est APPLIQUÉE tout de suite, sans validation : ne retouche que sur une information donnée par l'utilisateur ou vérifiée, " +
+    "et une information non vérifiée entre dans le dossier marquée « à vérifier ». Dis en une phrase ce que tu as changé."
   );
 }
 
@@ -243,4 +244,53 @@ export function estPartieDuDossier(a: Pick<Artefact, "id">): boolean {
 export function mergeDossierChantier(gardes: Artefact[], actif: boolean): Artefact[] {
   if (!actif || gardes.some(estPartieDuDossier)) return gardes;
   return [...dossierChantier(), ...gardes];
+}
+
+/* ------------------------------------------------------------------ */
+/* Le dossier se met à jour seul                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Une retouche du gent s'applique-t-elle SANS verdict ?
+ *
+ * Seulement sur un gent chantier, et seulement pour une RETOUCHE (des
+ * opérations sur des blocs) qui vise une partie du dossier. C'est le choix de
+ * l'utilisateur : son dossier vit seul, sans un clic par échange. Le filet,
+ * ce sont les versions (8 conservées) et « Annuler » sous la réponse.
+ * Une version complète, ou un artefact ordinaire, reste une proposition à
+ * garder : ce n'est plus mettre à jour le dossier, c'est en écrire un autre.
+ */
+export function appliquerSansVerdict(
+  espace: { chantier?: { enabled: boolean } },
+  proposition: { modification?: { artefactId: string } } | null | undefined
+): boolean {
+  if (espace.chantier?.enabled !== true) return false;
+  const id = proposition?.modification?.artefactId;
+  return !!id && estPartieDuDossier({ id });
+}
+
+/**
+ * Range la nouvelle version d'un artefact gardé. Une partie du dossier reste
+ * À SA PLACE : la remettre en tête, comme un artefact ordinaire, mélangerait
+ * l'ordre des onglets à chaque mise à jour.
+ */
+export function placerMiseAJour(artefacts: Artefact[], misAJour: Artefact): Artefact[] {
+  if (estPartieDuDossier(misAJour) && artefacts.some((a) => a.id === misAJour.id)) {
+    return artefacts.map((a) => (a.id === misAJour.id ? misAJour : a));
+  }
+  return [misAJour, ...artefacts.filter((a) => a.id !== misAJour.id)];
+}
+
+/**
+ * Ce que l'assistant voit du dossier à chaque tour. Le dossier est sa SEULE
+ * mémoire après « Nouvel échange » : il doit le lire en entier. Le budget
+ * ordinaire (3 000 caractères par artefact) réduisait une partie remplie à
+ * des titres de blocs. Coût assumé : jusqu'à ~8 000 jetons de plus par tour
+ * sur un dossier plein.
+ */
+export const BUDGET_DOSSIER = { total: 32_000, parArtefact: 6_000, maxArtefacts: 8 } as const;
+
+/** Le dossier d'abord, dans l'ordre de ses onglets ; le reste ensuite. */
+export function dossierEnTete(artefacts: readonly Artefact[]): Artefact[] {
+  return [...artefacts.filter(estPartieDuDossier), ...artefacts.filter((a) => !estPartieDuDossier(a))];
 }

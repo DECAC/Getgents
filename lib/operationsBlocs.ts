@@ -300,9 +300,12 @@ export function versBlocs(a: Artefact): DashboardSpec | null {
 }
 
 /** Budget du contexte d'artefacts, en caractères, sur l'ensemble et par artefact. */
-const BUDGET_TOTAL = 8_000;
-const BUDGET_ARTEFACT = 3_000;
-const MAX_ARTEFACTS = 5;
+export interface BudgetContexte {
+  total: number;
+  parArtefact: number;
+  maxArtefacts: number;
+}
+export const BUDGET_PAR_DEFAUT: BudgetContexte = { total: 8_000, parArtefact: 3_000, maxArtefacts: 5 };
 
 function blocResume(b: DashboardBlock): string {
   const titre = "title" in b && b.title ? `,"title":${JSON.stringify(b.title)}` : "";
@@ -317,10 +320,15 @@ function blocResume(b: DashboardBlock): string {
  *
  * Chaîne vide quand il n'y a rien de retouchable.
  */
-export function contexteArtefacts(artefacts: readonly Artefact[]): string {
+export function contexteArtefacts(
+  artefacts: readonly Artefact[],
+  budget: BudgetContexte = BUDGET_PAR_DEFAUT
+): string {
+  const BUDGET_TOTAL = budget.total;
+  const BUDGET_ARTEFACT = budget.parArtefact;
   const lignes: string[] = [];
   let total = 0;
-  for (const a of artefacts.slice(0, MAX_ARTEFACTS)) {
+  for (const a of artefacts.slice(0, budget.maxArtefacts)) {
     const spec = versBlocs(a);
     if (!spec) continue;
     const entete = `- artefact "${a.id}" « ${a.title} » (${formeDeduite(spec)}) :`;

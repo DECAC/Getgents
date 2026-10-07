@@ -148,3 +148,67 @@ describe("le type de gent « Le chantier »", () => {
     expect(PROMPT_CHANTIER_DEFAUT).toMatch(/c'est toujours moi qui valide/);
   });
 });
+
+import { appliquerSansVerdict, placerMiseAJour, dossierEnTete, BUDGET_DOSSIER } from "@/lib/chantier";
+import { BUDGET_PAR_DEFAUT } from "@/lib/operationsBlocs";
+
+describe("le dossier se met à jour seul", () => {
+  const chantier = { chantier: { enabled: true } };
+  const retouche = (artefactId: string) => ({ modification: { artefactId } });
+
+  it("une RETOUCHE d'une partie du dossier s'applique sans verdict", () => {
+    expect(appliquerSansVerdict(chantier, retouche(IDS_DOSSIER.devis))).toBe(true);
+  });
+
+  it("tout le reste demande toujours un verdict", () => {
+    // Un artefact ordinaire, une version complète, un autre gent.
+    expect(appliquerSansVerdict(chantier, retouche("note-1"))).toBe(false);
+    expect(appliquerSansVerdict(chantier, {})).toBe(false);
+    expect(appliquerSansVerdict(chantier, null)).toBe(false);
+    expect(appliquerSansVerdict({}, retouche(IDS_DOSSIER.devis))).toBe(false);
+    expect(appliquerSansVerdict({ chantier: { enabled: false } }, retouche(IDS_DOSSIER.devis))).toBe(false);
+  });
+
+  it("une partie mise à jour garde SA PLACE : l'ordre des onglets ne bouge pas", () => {
+    const avant = [...dossierChantier(), note];
+    const devis = { ...avant[3], date: "à l'instant" };
+    const apres = placerMiseAJour(avant, devis);
+    expect(apres.map((a) => a.id)).toEqual(avant.map((a) => a.id));
+    expect(apres[3]).toBe(devis);
+  });
+
+  it("un artefact ordinaire, lui, passe en tête comme avant", () => {
+    const avant = [...dossierChantier(), note];
+    const n2 = { ...note, title: "Ma note, v2" };
+    expect(placerMiseAJour(avant, n2)[0]).toBe(n2);
+    expect(placerMiseAJour(avant, n2)).toHaveLength(avant.length);
+  });
+});
+
+describe("l'assistant lit le dossier en entier", () => {
+  // Un dossier rempli : chaque partie autour de 4 000 caractères.
+  const plein = dossierChantier().map((a, i) => ({
+    ...a,
+    dashboard: { blocks: [{ id: `t${i}`, type: "text" as const, body: `Partie ${i} — ` + "détail du chantier ".repeat(210) }] },
+  }));
+
+  it("le budget ordinaire réduisait une partie remplie à des titres", () => {
+    expect(contexteArtefacts(plein)).toContain("(contenu omis)");
+  });
+
+  it("le budget du dossier les montre toutes, en entier", () => {
+    const ctx = contexteArtefacts(plein, BUDGET_DOSSIER);
+    expect(ctx).not.toContain("(contenu omis)");
+    for (let i = 0; i < 5; i++) expect(ctx).toContain(`Partie ${i} — `);
+  });
+
+  it("le dossier passe avant les notes, même rangées devant lui", () => {
+    const ordre = dossierEnTete([note, ...plein]).map((a) => a.id);
+    expect(ordre[0]).toBe(IDS_DOSSIER.ensemble);
+    expect(ordre[ordre.length - 1]).toBe("note-1");
+  });
+
+  it("les autres gents gardent le budget d'avant", () => {
+    expect(BUDGET_PAR_DEFAUT).toEqual({ total: 8_000, parArtefact: 3_000, maxArtefacts: 5 });
+  });
+});

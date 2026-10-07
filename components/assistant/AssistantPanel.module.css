@@ -628,6 +628,29 @@
   white-space: nowrap;
 }
 
+/* Dossier de chantier mis à jour sans verdict : ce qui a changé, et l'annuler. */
+.pmeta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+.lienAction {
+  all: unset;
+  cursor: pointer;
+  color: var(--sage-700);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.lienAction:hover {
+  background: var(--sage-tint);
+}
+.lienAction:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 1px;
+}
+
 /* History */
 .histList {
   display: flex;
