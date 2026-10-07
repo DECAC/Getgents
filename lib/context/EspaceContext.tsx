@@ -88,6 +88,7 @@ import {
   formatApiNetworkError,
 } from "@/lib/espaceApiPayload";
 import { renderMarkdown } from "@/lib/markdown";
+import type { RetoucheCourrier } from "@/lib/courrier";
 import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 import { supportsReasoningStream } from "@/lib/openRouterReasoning";
 import { buildJumpFormPrompt } from "@/lib/jumpFormSignal";
@@ -2027,6 +2028,89 @@ export function EspaceProvider({
     }
   }, [shareToken]);
   confirmerRef.current = confirmArtefactProposal;
+
+  // Courrier transféré à l'adresse du gent (chantier) : le serveur dépose des
+  // RETOUCHES du dossier, rejouées ici par le chemin de « Garder » — il
+  // n'écrit jamais dans le brouillon, que ce navigateur réécrit à chaque
+  // frappe. Une fois par gent et par ouverture, retouche après retouche : la
+  // suivante se résout sur le dossier déjà mis à jour par la précédente.
+  const courrierLuRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!storageReady || shareMode) return;
+    if (!currentEspace?.chantier?.enabled) return;
+    if (courrierLuRef.current.has(currentId)) return;
+    courrierLuRef.current.add(currentId);
+    const gentId = currentId;
+    const pause = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
+    (async () => {
+      try {
+        const res = await fetch(`/api/courrier?gentId=${encodeURIComponent(gentId)}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const { courrier } = (await res.json()) as {
+          courrier?: { id: string; objet: string; resume: string; retouches: RetoucheCourrier[] }[];
+        };
+        const faits: string[] = [];
+        for (const c of courrier ?? []) {
+          for (const r of c.retouches ?? []) {
+            const espace = espacesRef.current[gentId];
+            const proposal = espace ? resoudreRetouche(espace.artefacts, r.artefactId, r.operations) : null;
+            if (!proposal) continue;
+            const proposalId = `courrier-${c.id}-${r.artefactId}`;
+            setEspaces((p) => {
+              const e = p[gentId];
+              if (!e) return p;
+              const convs = e.conversations.map((t) =>
+                t.id !== e.activeConversationId
+                  ? t
+                  : {
+                      ...t,
+                      messages: [
+                        ...t.messages,
+                        { id: proposalId, role: "artef-proposal" as const, proposal, proposalStatus: "pending" as const, t: nowTime() },
+                      ],
+                    }
+              );
+              return { ...p, [gentId]: { ...e, conversations: convs } };
+            });
+            await pause(0);
+            confirmerRef.current(proposalId, "add", true);
+            await pause(60);
+          }
+          // Ce que le gent a compris, dans le fil : on voit pourquoi le dossier a bougé.
+          const resume = c.resume?.trim();
+          if (resume) {
+            setEspaces((p) => {
+              const e = p[gentId];
+              if (!e) return p;
+              const convs = e.conversations.map((t) =>
+                t.id !== e.activeConversationId
+                  ? t
+                  : {
+                      ...t,
+                      messages: [
+                        ...t.messages,
+                        { role: "agent" as const, text: renderMarkdown(`**E-mail reçu — ${c.objet || "sans objet"}**\n\n${resume}`), t: nowTime() },
+                      ],
+                    }
+              );
+              return { ...p, [gentId]: { ...e, conversations: convs } };
+            });
+          }
+          faits.push(c.id);
+        }
+        if (faits.length) {
+          await fetch("/api/courrier", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: faits }),
+          });
+        }
+      } catch {
+        // Hors ligne ou migration absente : le courrier reste en attente, rien n'est perdu.
+        courrierLuRef.current.delete(gentId);
+      }
+    })();
+  }, [storageReady, shareMode, currentId, currentEspace?.chantier?.enabled]);
 
   const changeArtefactKind = useCallback((artefactId: string, kind: WorkspaceArtefactKind) => {
     const id = currentIdRef.current;
