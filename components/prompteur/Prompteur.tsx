@@ -57,6 +57,8 @@ interface Resultat {
   hauteur: number;
 }
 
+const CLE_SON_BRUT = "getgents:prompteur:sonBrut";
+
 /** Hauteur de la ligne de lecture, en part de la zone de texte : près de la caméra. */
 const ANCRE = 0.26;
 
@@ -179,6 +181,21 @@ export function Prompteur({
   // Caméra et micro choisis dans les réglages ; absents, ceux du système.
   const choixRef = useRef<{ camera?: string; micro?: string }>({});
 
+  // « Son brut » : sans anti-écho, réduction de bruit ni gain automatique.
+  // Ces traitements sont ceux d'un APPEL ; sur iPhone, ils peuvent faire
+  // basculer sur le micro intégré — vécu : micro-cravate qui marche dans
+  // l'appareil photo mais pas ici (12/10). Hypothèse non vérifiée d'ici :
+  // le réglage permet de trancher en un essai. Mémorisé sur l'appareil.
+  const [sonBrut, setSonBrut] = useState(() => {
+    try {
+      return localStorage.getItem(CLE_SON_BRUT) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const sonBrutRef = useRef(sonBrut);
+  sonBrutRef.current = sonBrut;
+
   const activerCamera = useCallback(async (forcer = false): Promise<MediaStream | null> => {
     if (fluxRef.current && !forcer) return fluxRef.current;
     const { camera: cameraId, micro: microId } = choixRef.current;
@@ -198,9 +215,9 @@ export function Prompteur({
           // Micro choisi dans les réglages (micro-cravate…) ; sinon, celui
           // que le système a retenu.
           ...(microId ? { deviceId: { exact: microId } } : {}),
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
+          echoCancellation: !sonBrutRef.current,
+          noiseSuppression: !sonBrutRef.current,
+          autoGainControl: !sonBrutRef.current,
         },
       });
       // Une webcam de PC peut ouvrir en 640×480 malgré l'« idéal » demandé :
@@ -823,6 +840,25 @@ export function Prompteur({
               )}
             </label>
           ))}
+          <label className={styles.libelle} title="Sans traitement d'appel : pour un micro externe (cravate, USB)">
+            <input
+              type="checkbox"
+              checked={sonBrut}
+              onChange={(e) => {
+                const v = e.target.checked;
+                setSonBrut(v);
+                sonBrutRef.current = v;
+                try {
+                  localStorage.setItem(CLE_SON_BRUT, v ? "1" : "0");
+                } catch {
+                  // sans mémoire : le réglage vaut pour cette séance
+                }
+                void activerCamera(true);
+              }}
+              disabled={etat === "enregistre" || etat === "decompte"}
+            />
+            Son brut (micro externe)
+          </label>
           {image && (
             <span className={styles.duree}>
               {(() => {

@@ -210,7 +210,15 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   compris — on ne pouvait plus quitter le prompteur. Elle a désormais son
   propre ×, et fermer une prise ni téléchargée ni partagée demande
   confirmation (elle n'existe que dans le navigateur). Tout calque plein
-  écran doit porter sa propre sortie.
+  écran doit porter sa propre sortie. **Micro-cravate ignoré sur iPhone (12/10)** :
+  il marche dans l'appareil photo, pas dans le prompteur. Hypothèse NON
+  vérifiée : les traitements d'APPEL demandés (anti-écho, réduction de
+  bruit, gain automatique) font passer iOS en mode voix, qui impose le
+  micro intégré. Case « Son brut (micro externe) » dans ⚙ : les coupe et
+  relance le flux (vérifié au navigateur : les trois passent à faux),
+  mémorisée sur l'appareil. Si elle ne suffit pas, la cause est ailleurs
+  (le micro n'est pas présenté à WebKit) — et il n'y a alors rien à faire
+  côté page.
 - **Habillage d'une capsule** (02/10 ; `lib/habillage.ts`,
   `lib/musiqueHabillage.ts`, `components/habillage/`) : depuis la carte
   « Votre capsule est prête », un atelier ajoute sous-titres, effets et
