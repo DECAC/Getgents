@@ -643,6 +643,20 @@ variables (dont `SECRET_BOX_KEY`), le cron de `vercel.json` vers
 mondial — n'est pas utilisé ici : la boucle de test passe par la production, et
 le réseau pèse 100 ms face à 24 s de modèle.
 
+**Bascule lancée (13/10)** : motif financier — Vercel Pro à 20 $/mois pour
+un usage faible ; Railway facture l'usage (~5 $/mois attendus, à vérifier
+sur la facture). Vercel Hobby ÉCARTÉ : 60 s de plafond contre 17 routes à
+300 s. Étape 1 faite dans le code : `images.unoptimized` (aucun `next/image`
+dans le projet ; `/_next/image` répond 404, l'avis « Image Optimizer » ne
+s'applique plus) et `engines.node = 22.x` (version testée). Vérifié :
+`next build` puis `PORT=… next start` démarre, le cron refuse sans secret.
+Reste, côté utilisateur : projet Railway branché sur `main` ; variables
+(`NEXT_PUBLIC_*` présentes À LA CONSTRUCTION, `SECRET_BOX_KEY`,
+`CRON_SECRET`, Supabase, OpenRouter, OAuth Google — dont l'URI de redirection
+à déclarer pour le nouveau domaine de test) ; cron horaire Railway
+`curl -H "Authorization: Bearer $CRON_SECRET" https://getgents.ai/api/routines/run` ;
+essai sur l'adresse Railway ; DNS ; Vercel gardé une semaine en secours.
+
 ## Le dépôt GitHub
 
 **PUBLIC.** Décision assumée après discussion. Conséquence : le secret scanning

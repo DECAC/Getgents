@@ -25,6 +25,10 @@ const SECURITY_HEADERS = [
 
 const nextConfig = {
   reactStrictMode: true,
+  // Aucune page n'utilise `next/image`. Couper l'optimiseur ferme
+  // `/_next/image`, visé par un avis de sécurité (déni de service) qui ne
+  // touche QUE l'auto-hébergement — préalable à la sortie de Vercel.
+  images: { unoptimized: true },
   async headers() {
     return [
       {
