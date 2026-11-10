@@ -285,23 +285,13 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   la description part dans le message. La vision DÉCRIT (et dit ce que
   l'image ne permet pas d'affirmer), le gent CONCLUT. La photo n'est PAS
   gardée dans le fil, seule sa description ; comptes connectés seulement,
-  quota « video ». **Adresse e-mail du gent** (07/10, `lib/courrier.ts`, `lib/server/courrier.ts`) :
-  `<jeton>@bot.getgents.ai`, jeton = HMAC du gent avec `BREVO_INBOUND_SECRET`.
-  Le propriétaire TRANSFÈRE un devis ou un mail d'artisan ; Brevo (Inbound
-  parsing) appelle `/api/courrier/entrant?secret=…`. Refus : expéditeur ≠
-  propriétaire, spam, adresse inconnue — réponse 200 toujours (Brevo rejouerait).
-  Le courrier est une DONNÉE encadrée, jamais une instruction ; seules les
-  retouches des parties du dossier sont gardées. **Le serveur n'écrit JAMAIS
-  dans le dossier** : le navigateur réécrit le brouillon à chaque frappe et
-  écraserait l'écriture. Il dépose des OPÉRATIONS dans `courrier_entrant`
-  (migration 019), que le navigateur rejoue à l'ouverture par le chemin de
-  « Garder » (versions, « Annuler »). Le gent doit avoir une ligne
-  `published_gents` (diffusion privée suffit). L'en-tête « De » est falsifiable :
-  jeton secret + expéditeur se couvrent, et le bot ne fait que proposer des
-  retouches annulables. **Non vérifié en réel d'ici** (ni Brevo, ni Supabase) ;
-  journal `getgents:courrier` (`refuse`, `traite`, `depot_echoue`). Config :
-  migration 019 AVANT déploiement, `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`,
-  domaine authentifié, MX de `bot.getgents.ai`, webhook Inbound, `BREVO_INBOUND_SECRET`.
+  quota « video ». **Adresse e-mail du bot : ABANDONNÉE** (10/11, décision de
+  l'utilisateur). Le lot était écrit (`<jeton>@bot.getgents.ai`, Brevo Inbound,
+  table `courrier_entrant`) puis retiré — récupérable dans l'historique
+  (« Adresse e-mail du gent chantier », annulé juste après). À savoir si on y
+  revient : un serveur ne peut PAS écrire dans le dossier, le navigateur
+  réécrit le brouillon à chaque frappe ; il faut déposer des opérations que
+  le navigateur rejoue.
 - **Mini-app à STRUCTURE FIGÉE** (10/11 ; `lib/miniApp.ts`) : « Update »
   faisait tout réécrire au modèle — sections, ordre, indicateurs —, et
   l'ancien tableau était écrasé. Dans le studio, « Figer cette structure »
