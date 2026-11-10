@@ -53,6 +53,7 @@ function usagePinned(travail: PinnedArtefact | undefined, config: PinnedArtefact
     dashboard: travail.dashboard,
     generatedAt: travail.generatedAt,
     runs: travail.runs,
+    versions: travail.versions,
   };
 }
 

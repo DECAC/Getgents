@@ -11,6 +11,7 @@ import { extractLlmMessageText } from "@/lib/server/llmMessageText";
 import { extractJsonFromHtmlMarker } from "@/lib/server/markerJson";
 import { enTetesOpenRouter } from "@/lib/server/openRouterKey";
 import { modeleActuel } from "@/lib/modeleConversation";
+import { appliquerDonnees, consigneDonnees } from "@/lib/miniApp";
 
 const OPENROUTER_API = process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 /** Modèle fiable pour la structure JSON du dashboard (indépendamment du modèle chat du gent). */
@@ -30,6 +31,12 @@ export interface PinnedRefreshResult {
   pinned: PinnedArtefact;
   /** Métriques de la génération, également archivées dans pinned.runs. */
   run?: PinnedRun;
+  /**
+   * Structure figée : identifiants du gabarit, dans l'ordre. Le navigateur
+   * s'en sert pour remettre à leur place, depuis SON tableau précédent, les
+   * blocs que le modèle n'a pas rendus — le serveur ne connaît pas ce tableau.
+   */
+  ordre?: string[];
 }
 
 /** Nombre de générations conservées dans l'historique de l'artefact. */
@@ -60,6 +67,18 @@ export async function refreshPinnedArtefact(
   const pinned = espace.pinnedArtefact;
   const stamp = new Date().toISOString();
   const startedAt = Date.now();
+  // Structure figée par le créateur : le modèle ne rend que des données.
+  const gabarit = pinned?.gabarit?.blocs?.length ? pinned.gabarit : null;
+  let manquants = 0;
+  // Une réponse du modèle → un tableau. Avec gabarit, elle y est ramenée :
+  // mêmes blocs, même ordre ; rien n'est accepté hors structure.
+  const lireTableau = (texte: string): DashboardSpec | null => {
+    const lu = extractPinnedDashboard(texte);
+    if (!gabarit) return lu;
+    const res = appliquerDonnees(gabarit, lu);
+    manquants = res?.manquants.length ?? 0;
+    return res?.dashboard ?? null;
+  };
   if (!pinned?.enabled || !pinned.mission.trim()) {
     return { ok: false, note: "artefact figé non configuré", pinned: pinned ?? { enabled: false, title: "", mission: "", inputs: [] } };
   }
@@ -75,7 +94,7 @@ export async function refreshPinnedArtefact(
       source,
       ...extra,
     };
-    return { ok, note, pinned: withRun(next ?? pinned, run), run };
+    return { ok, note, pinned: withRun(next ?? pinned, run), run, ...(gabarit ? { ordre: gabarit.blocs.map((b) => b.id) } : {}) };
   };
 
   const key = ctx.cle;
@@ -110,7 +129,8 @@ export async function refreshPinnedArtefact(
     "Une éventuelle interdiction d'utiliser des balises HTML s'applique au CONTENU du tableau de bord " +
     "(titres, textes, cellules, qui doivent rester en texte brut, sans <cite>, <a> ni <span>), " +
     "jamais à cette enveloppe. Sans le bloc <!--PINNED: …-->, ta réponse est inexploitable.\n\n" +
-    DASHBOARD_BLOCKS_SCHEMA;
+    DASHBOARD_BLOCKS_SCHEMA +
+    (gabarit ? `\n\n${consigneDonnees(gabarit)}` : "");
 
   const userContent = `${pinned.mission}${inputsBlock}`;
   const model = modeleActuel(espace.chatModelId) ?? PINNED_MODEL_FALLBACK;
@@ -156,7 +176,7 @@ export async function refreshPinnedArtefact(
   const debut1 = Date.now();
   let call = await callPinnedModel(key, model, systemPrompt, userContent, espace.webSearch);
   let raw = call.text;
-  let dashboard = raw ? extractPinnedDashboard(raw) : null;
+  let dashboard = raw ? lireTableau(raw) : null;
   tracerAppel(1, model, !!espace.webSearch, debut1, call, !!dashboard);
 
   // 2e tentative : modèle de repli + consigne plus stricte (structure JSON souvent
@@ -182,7 +202,7 @@ export async function refreshPinnedArtefact(
     if (retry.text) {
       raw = retry.text;
       usedModel = retryModel;
-      dashboard = extractPinnedDashboard(retry.text);
+      dashboard = lireTableau(retry.text);
     }
     // La 2e tentative coupe la recherche web — d'ou `false`.
     tracerAppel(2, retryModel, false, debut2, retry, !!dashboard);
@@ -208,6 +228,8 @@ export async function refreshPinnedArtefact(
       webSearch: !!espace.webSearch,
       systemChars: systemPrompt.length,
       blocs: dashboard?.blocks.length ?? 0,
+      structureFigee: !!gabarit,
+      blocsManquants: manquants,
       totalMs: Date.now() - startedAt,
     })
   );
@@ -229,8 +251,8 @@ export async function refreshPinnedArtefact(
 
   return finish(
     true,
-    `ok — ${dashboard.blocks.length} blocs`,
-    { ...metrics, blocks: dashboard.blocks.length },
+    manquants ? `ok — ${dashboard.blocks.length} blocs, ${manquants} non rendu(s)` : `ok — ${dashboard.blocks.length} blocs`,
+    { ...metrics, blocks: dashboard.blocks.length, ...(manquants ? { blocsManquants: manquants } : {}) },
     { ...pinned, dashboard, generatedAt: stamp }
   );
 }

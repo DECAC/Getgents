@@ -121,5 +121,6 @@ export async function POST(req: Request, { params }: Params) {
     note: result.note,
     dashboard: result.pinned.dashboard ?? null,
     run: result.run ?? null,
+    ordre: result.ordre ?? null,
   });
 }

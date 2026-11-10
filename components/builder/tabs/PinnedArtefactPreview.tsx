@@ -7,6 +7,7 @@ import { DashboardArtefact } from "@/components/shared/dashboard/DashboardArtefa
 import { extractDocumentText } from "@/lib/extractDocumentText";
 import { espaceForPinnedRefresh, formatApiNetworkError } from "@/lib/espaceApiPayload";
 import type { DashboardSpec } from "@/lib/dashboardArtefact";
+import { figerGabarit } from "@/lib/miniApp";
 import styles from "./PinnedArtefactPreview.module.css";
 
 /**
@@ -17,7 +18,7 @@ import styles from "./PinnedArtefactPreview.module.css";
  * exactement comme le verra l'utilisateur final.
  */
 export function PinnedArtefactPreview() {
-  const { currentDraft } = useBuilder();
+  const { currentDraft, updatePinnedArtefact } = useBuilder();
   const pinned = currentDraft.pinnedArtefact;
 
   const [values, setValues] = useState<Record<string, string>>({});
@@ -66,7 +67,7 @@ export function PinnedArtefactPreview() {
       if (!res.ok) {
         setError(
           data.error === "invalid_espace"
-            ? "Configurez la mini-app (onglet Prompt)."
+            ? "Configurez d'abord la mini-application."
             : `Erreur : ${data.error ?? res.status}`
         );
       } else if (data.dashboard) {
@@ -101,7 +102,7 @@ export function PinnedArtefactPreview() {
           disabled={loading || missionMissing}
           title={
             missionMissing
-              ? "Renseignez d'abord l'instruction de génération (onglet Prompt)"
+              ? "Renseignez d'abord l'instruction de génération, plus haut"
               : "Générer l'aperçu"
           }
         >
@@ -119,8 +120,8 @@ export function PinnedArtefactPreview() {
 
       {missionMissing && (
         <div className={styles.warn}>
-          L&apos;instruction de génération est vide : renseignez-la dans l&apos;onglet <b>Prompt</b>{" "}
-          (section Mini-application) pour pouvoir générer un aperçu.
+          L&apos;instruction de génération est vide : renseignez-la plus haut pour
+          pouvoir générer un aperçu.
         </div>
       )}
 
@@ -169,6 +170,39 @@ export function PinnedArtefactPreview() {
       )}
 
       {error && <div className={styles.error}>{error}</div>}
+
+      {/* Structure figée : les générations suivantes rendront les mêmes blocs,
+          à la même place — seules les données changeront. */}
+      {pinned.gabarit ? (
+        <div className={styles.fige}>
+          <span>
+            <b>Structure figée</b> — {pinned.gabarit.blocs.length} blocs. Chaque mise à jour garde ces
+            sections, dans cet ordre ; seules les données changent.
+          </span>
+          <button type="button" className={styles.figeBtn} onClick={() => updatePinnedArtefact({ gabarit: undefined })}>
+            Défiger
+          </button>
+        </div>
+      ) : (
+        dashboard && (
+          <div className={styles.fige}>
+            <span>
+              Cet aperçu vous convient ? Figez sa structure : vos utilisateurs obtiendront toujours ces
+              sections, remplies avec leurs propres données. Aucune donnée de l&apos;aperçu n&apos;est gardée.
+            </span>
+            <button
+              type="button"
+              className={styles.figeBtn}
+              onClick={() => {
+                const gabarit = figerGabarit(dashboard);
+                if (gabarit) updatePinnedArtefact({ gabarit });
+              }}
+            >
+              Figer cette structure
+            </button>
+          </div>
+        )
+      )}
 
       {dashboard ? (
         <div className={styles.preview}>

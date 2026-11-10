@@ -20,7 +20,7 @@ function formatWhen(iso?: string): string {
  * données d'un bouton — sans jamais reformuler une instruction.
  */
 export function PinnedArtefactPanel({ pinned }: { pinned: PinnedArtefact }) {
-  const { refreshPinnedArtefact, resetPinnedArtefact, updatePinnedInput, pinnedRefreshing, pinnedError } =
+  const { refreshPinnedArtefact, resetPinnedArtefact, annulerPinnedArtefact, updatePinnedInput, pinnedRefreshing, pinnedError } =
     useEspace();
   const [inputsOpen, setInputsOpen] = useState(!pinned.dashboard);
   const [fileState, setFileState] = useState<Record<string, string>>({});
@@ -30,6 +30,7 @@ export function PinnedArtefactPanel({ pinned }: { pinned: PinnedArtefact }) {
   const hasSession =
     hasData || pinned.inputs.some((i) => !!(i.value && i.value.trim())) || Object.keys(fileState).length > 0;
   const missingInputs = pinned.inputs.some((i) => !i.value?.trim());
+  const derniere = hasData ? pinned.versions?.[0] : undefined;
 
   // Entrée « fichier » : on extrait le TEXTE côté navigateur (CV PDF/Word) et on
   // le stocke comme valeur — c'est ce contenu qui nourrit la génération, pas le
@@ -77,7 +78,7 @@ export function PinnedArtefactPanel({ pinned }: { pinned: PinnedArtefact }) {
               disabled={pinnedRefreshing}
               title="Effacer le résultat et les entrées pour recommencer"
             >
-              New
+              Recommencer
             </button>
           )}
           <button
@@ -92,7 +93,7 @@ export function PinnedArtefactPanel({ pinned }: { pinned: PinnedArtefact }) {
                 <span className={styles.spinner} aria-hidden="true" /> Mise à jour…
               </>
             ) : hasData ? (
-              <>↻ Update</>
+              <>↻ Mettre à jour</>
             ) : (
               <>✨ Générer</>
             )}
@@ -145,6 +146,19 @@ export function PinnedArtefactPanel({ pinned }: { pinned: PinnedArtefact }) {
       )}
 
       {pinnedError && <div className={styles.error}>{pinnedError}</div>}
+
+      {/* Rien n'est écrasé : la dernière mise à jour dit ce qu'elle a changé
+          et se défait d'un geste. */}
+      {derniere && !pinnedRefreshing && (
+        <div className={styles.changement}>
+          <span>
+            {derniere.resume === "annulée" ? "Mise à jour annulée." : `Dernière mise à jour : ${derniere.resume}.`}
+          </span>
+          <button type="button" className={styles.annulerBtn} onClick={() => annulerPinnedArtefact()}>
+            {derniere.resume === "annulée" ? "Rétablir" : "Annuler"}
+          </button>
+        </div>
+      )}
 
       {hasData ? (
         <div className={styles.body}>

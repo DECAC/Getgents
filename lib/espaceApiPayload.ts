@@ -13,7 +13,9 @@ export function espaceForPinnedRefresh(espace: Espace, inputs?: Record<string, s
   if (pinned) {
     // L'historique des générations n'a aucune utilité pour produire le
     // dashboard : on l'exclut du payload (il est archivé côté client).
-    const { runs: _runs, ...rest } = pinned;
+    // Ni le tableau déjà produit ni ses versions : le serveur n'en a pas
+    // besoin, et ils alourdiraient chaque requête.
+    const { runs: _runs, versions: _versions, dashboard: _dashboard, ...rest } = pinned;
     pinned = inputs
       ? { ...rest, inputs: rest.inputs.map((i) => (i.id in inputs ? { ...i, value: inputs[i.id] } : i)) }
       : rest;

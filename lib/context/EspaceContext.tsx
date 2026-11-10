@@ -88,6 +88,7 @@ import {
   formatApiNetworkError,
 } from "@/lib/espaceApiPayload";
 import { renderMarkdown } from "@/lib/markdown";
+import { annulerDerniereMiseAJour, avecNouveauTableau, completerAvecPrecedent } from "@/lib/miniApp";
 import type { RetoucheCourrier } from "@/lib/courrier";
 import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 import { supportsReasoningStream } from "@/lib/openRouterReasoning";
@@ -316,6 +317,8 @@ interface EspaceContextValue {
    * entrées pour repartir d'un chargement neuf (bouton « New »).
    */
   resetPinnedArtefact: () => void;
+  /** Revient au tableau précédent de la mini-app (lui-même annulable). */
+  annulerPinnedArtefact: () => void;
   /** Met à jour une entrée de l'artefact figé (LinkedIn, CV…). */
   updatePinnedInput: (inputId: string, value: string) => void;
   pinnedRefreshing: boolean;
@@ -1604,6 +1607,18 @@ export function EspaceProvider({
     });
   }, []);
 
+  // « Annuler » la dernière mise à jour de la mini-app : le tableau précédent
+  // revient, celui qu'on quitte est rangé à son tour.
+  const annulerPinnedArtefact = useCallback(() => {
+    const id = currentIdRef.current;
+    setPinnedError(null);
+    setEspaces((prev) => {
+      const pinned = prev[id]?.pinnedArtefact;
+      const retour = pinned ? annulerDerniereMiseAJour(pinned) : null;
+      return retour ? { ...prev, [id]: { ...prev[id], pinnedArtefact: retour } } : prev;
+    });
+  }, []);
+
   const resetPinnedArtefact = useCallback(() => {
     const id = currentIdRef.current;
     setPinnedError(null);
@@ -1611,7 +1626,9 @@ export function EspaceProvider({
       const espace = prev[id];
       const pinned = espace?.pinnedArtefact;
       if (!pinned?.enabled) return prev;
-      const { dashboard: _d, generatedAt: _g, ...rest } = pinned;
+      // Recommencer efface aussi les versions : elles portent les données de
+      // la session qu'on quitte (le CV d'une autre personne, par exemple).
+      const { dashboard: _d, generatedAt: _g, versions: _v, ...rest } = pinned;
       return {
         ...prev,
         [id]: {
@@ -1659,6 +1676,7 @@ export function EspaceProvider({
         note?: string;
         dashboard?: NonNullable<Espace["pinnedArtefact"]>["dashboard"];
         run?: PinnedRun | null;
+        ordre?: string[] | null;
         error?: string;
         hint?: string;
       } = {};
@@ -1687,16 +1705,16 @@ export function EspaceProvider({
       }
       if (!data.ok) setPinnedError(data.note ?? "La génération n'a pas abouti.");
       if (espace.pinnedArtefact) {
-        archive(
-          espace.pinnedArtefact,
-          data.dashboard
-            ? {
-                inputs: slim.pinnedArtefact!.inputs,
-                dashboard: data.dashboard,
-                generatedAt: new Date().toISOString(),
-              }
-            : { inputs: slim.pinnedArtefact!.inputs }
-        );
+        // Le tableau précédent est RANGÉ, pas écrasé ; avec une structure
+        // figée, un bloc que le modèle n'a pas rendu garde son contenu.
+        const base = { ...espace.pinnedArtefact, inputs: slim.pinnedArtefact!.inputs };
+        if (data.dashboard) {
+          const complet = data.ordre?.length
+            ? completerAvecPrecedent(data.dashboard, espace.pinnedArtefact.dashboard, data.ordre)
+            : data.dashboard;
+          const suivant = avecNouveauTableau(base, complet, new Date().toISOString());
+          archive(base, { dashboard: suivant.dashboard, generatedAt: suivant.generatedAt, versions: suivant.versions });
+        } else archive(base, {});
       }
     } catch (e) {
       setPinnedError(formatApiNetworkError(e));
@@ -2537,6 +2555,7 @@ export function EspaceProvider({
         viewArtefact,
         refreshPinnedArtefact,
         resetPinnedArtefact,
+        annulerPinnedArtefact,
         updatePinnedInput,
         pinnedRefreshing,
         pinnedError,

@@ -302,6 +302,27 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   journal `getgents:courrier` (`refuse`, `traite`, `depot_echoue`). Config :
   migration 019 AVANT déploiement, `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`,
   domaine authentifié, MX de `bot.getgents.ai`, webhook Inbound, `BREVO_INBOUND_SECRET`.
+- **Mini-app à STRUCTURE FIGÉE** (10/11 ; `lib/miniApp.ts`) : « Update »
+  faisait tout réécrire au modèle — sections, ordre, indicateurs —, et
+  l'ancien tableau était écrasé. Dans le studio, « Figer cette structure »
+  tire d'un aperçu réussi un GABARIT (`pinnedArtefact.gabarit`) : ids, types,
+  titres, libellés — **AUCUNE donnée** (l'aperçu vient du CV du créateur ; ses
+  valeurs seraient relues par le modèle à chaque génération d'un visiteur).
+  Avec gabarit, le serveur ramène la réponse à la structure
+  (`appliquerDonnees` : même id ET même type, à sa place ; un bloc en trop est
+  écarté, un bloc absent est COMPTÉ, jamais inventé — `blocsManquants` dans
+  `getgents:artefact generation`). Le gabarit reste côté serveur (absent de
+  `espaceForPublicLink`) ; la réponse porte `ordre`, avec lequel le
+  navigateur remet depuis SON tableau précédent les blocs non rendus
+  (`completerAvecPrecedent` — le serveur ne connaît pas le tableau d'un
+  visiteur). Chaque mise à jour RANGE l'état précédent (`versions`, 8) et
+  s'annule (« Annuler » / « Rétablir ») ; « Recommencer » efface aussi les
+  versions (données de la session quittée). Sans gabarit : comportement
+  d'origine, rien à migrer. Vérifié avec un faux modèle (blocs mélangés, un
+  en trop, un manquant), pas en production. **Restent** (plan du 10/11) :
+  conversation ouverte sur le tableau, liens d'entrée réellement LUS (une
+  entrée « URL » part aujourd'hui comme une simple chaîne), crédit du lien
+  non décompté sur échec, types d'entrées.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

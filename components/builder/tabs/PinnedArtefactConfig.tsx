@@ -46,16 +46,15 @@ export function PinnedArtefactConfig() {
           <div className={styles.sub}>
             Le gent produit un <b>tableau de bord permanent</b> au rendu figé ; l&apos;utilisateur ne
             converse pas, il fournit quelques entrées (lien LinkedIn, CV…) et rafraîchit les données
-            d&apos;un bouton <b>Update</b>. Idéal pour un usage « app », pas « chat ».
+            d&apos;un bouton <b>Mettre à jour</b>. Idéal pour un usage « app », pas « chat ».
           </div>
         </div>
       </div>
 
       {!pinned?.enabled ? (
         <div className={styles.disabledHint}>
-          Activez la <b>mini-application</b> dans l&apos;onglet <b>Prompt</b> pour définir
-          l&apos;instruction de génération, puis revenez ici configurer le titre, les entrées et
-          prévisualiser l&apos;artefact.
+Activez la <b>mini-application</b> ci-dessus et décrivez ce qu&apos;elle produit ; le titre,
+          les entrées et l&apos;aperçu se règlent ensuite ici.
         </div>
       ) : (
         <div className={styles.config}>
@@ -116,9 +115,9 @@ export function PinnedArtefactConfig() {
           ))}
 
           <div className={styles.hint}>
-            Activez la recherche web (onglet Prompt) pour que les données soient réelles et
+            Activez la recherche web (Prompt &amp; Modèle) pour que les données soient réelles et
             vérifiées. Prévisualisez le rendu ci-dessous avant de publier ; côté utilisateur, le
-            bouton <b>Update</b> le rafraîchit sans reformulation.
+            bouton <b>Mettre à jour</b> le rafraîchit sans reformulation.
           </div>
         </div>
       )}

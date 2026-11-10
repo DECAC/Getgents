@@ -637,6 +637,24 @@ export interface PinnedArtefact {
    * une génération ratée ne laissait aucune trace exploitable.
    */
   runs?: PinnedRun[];
+  /**
+   * STRUCTURE figée par le créateur (studio) : avec elle, chaque génération
+   * rend les MÊMES blocs, dans le même ordre — seules les données changent.
+   * Absente, la mini-app garde son comportement d'origine (tout est réécrit).
+   * Ne porte AUCUNE donnée : voir `lib/miniApp.ts`.
+   */
+  gabarit?: import("@/lib/miniApp").GabaritMiniApp;
+  /** États précédents du tableau (le plus récent en tête, 8 au plus). */
+  versions?: PinnedVersion[];
+}
+
+/** Un état rangé du tableau d'une mini-app : rien n'est écrasé par une mise à jour. */
+export interface PinnedVersion {
+  n: number;
+  /** Horodatage ISO de la génération rangée. */
+  date?: string;
+  resume: string;
+  dashboard: import("@/lib/dashboardArtefact").DashboardSpec;
 }
 
 /** Trace d'une génération d'artefact figé, succès ou échec. */
@@ -659,6 +677,8 @@ export interface PinnedRun {
   totalTokens?: number;
   /** Origine du déclenchement : espace du créateur, ou lien de partage. */
   source?: "espace" | "lien";
+  /** Structure figée : blocs du gabarit que le modèle n'a pas rendus. */
+  blocsManquants?: number;
 }
 
 /**
