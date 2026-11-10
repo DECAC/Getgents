@@ -189,3 +189,48 @@ export function annulerDerniereMiseAJour(pinned: PinnedArtefact): PinnedArtefact
     versions: [rangee, ...reste].slice(0, MAX_VERSIONS_MINI_APP),
   };
 }
+
+/** Identifiant sous lequel le tableau de la mini-app est présenté au gent. */
+export const ID_TABLEAU = "miniapp";
+
+/**
+ * La conversation est-elle ouverte à côté du tableau ? Le réglage explicite
+ * prime ; sans lui, elle l'est dès que la structure est figée. Une mini-app
+ * d'origine (ni figée ni réglée) reste sans conversation : rien ne change
+ * pour les gents déjà diffusés.
+ */
+export function conversationOuverte(pinned: Pick<PinnedArtefact, "enabled" | "conversation" | "gabarit"> | null | undefined): boolean {
+  if (!pinned?.enabled) return false;
+  if (typeof pinned.conversation === "boolean") return pinned.conversation;
+  return !!pinned.gabarit?.blocs?.length;
+}
+
+/**
+ * Le tableau, vu comme un artefact gardé : c'est sous cette forme que le gent
+ * le lit (bloc [ESPACE]) et le retouche par opérations, comme tout artefact.
+ * `null` tant que rien n'a été généré.
+ */
+export function artefactDuTableau(pinned: PinnedArtefact | null | undefined): import("@/lib/types").Artefact | null {
+  if (!pinned?.enabled || !pinned.dashboard) return null;
+  return {
+    id: ID_TABLEAU,
+    title: pinned.title?.trim() || "Tableau de bord",
+    type: "Tableau de bord",
+    icon: "📊",
+    date: pinned.generatedAt ?? "",
+    kind: "dashboard",
+    dashboard: pinned.dashboard,
+  };
+}
+
+/** Consigne de FORME : où est le tableau, et comment y toucher. */
+export function consigneMiniApp(): string {
+  return (
+    `MINI-APPLICATION : ce gent tient un tableau de bord, visible à côté de la conversation. Quand il a été généré, ` +
+    `c'est l'artefact gardé d'identifiant « ${ID_TABLEAU} » : explique-le, réponds aux questions sur ses chiffres en ` +
+    `t'appuyant sur ses blocs, et, si l'utilisateur demande une correction, retouche-le par opérations ciblées sur cet ` +
+    `identifiant — jamais un second tableau à côté. Ne retouche que sur demande. S'il n'existe pas encore, invite ` +
+    `l'utilisateur à renseigner les entrées et à cliquer sur « Générer ». Le bouton « Mettre à jour » recalcule tout ` +
+    `le tableau depuis les entrées : préviens que tes retouches manuelles n'y survivent pas.`
+  );
+}

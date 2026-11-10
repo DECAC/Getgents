@@ -1,3 +1,4 @@
+import { conversationOuverte } from "@/lib/miniApp";
 import type { Espace } from "@/lib/types";
 import { mergeDossierChantier } from "@/lib/chantier";
 import { formatConversationStartedAt } from "@/lib/conversationUtils";
@@ -155,6 +156,9 @@ export function espaceForPublicLink(espace: Espace): Espace {
           title: pinned.title,
           mission: "", // le « prompt figé » reste côté serveur
           inputs: pinned.inputs.map((i) => ({ id: i.id, label: i.label, kind: i.kind })),
+          // Le gabarit reste côté serveur ; le visiteur n'en reçoit que la
+          // conséquence : la conversation est-elle ouverte à côté du tableau.
+          conversation: conversationOuverte(pinned),
           // dashboard / generatedAt volontairement absents : voir ci-dessus.
         }
       : undefined,

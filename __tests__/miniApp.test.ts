@@ -170,3 +170,58 @@ describe("ce qui voyage", () => {
     expect(r).not.toHaveProperty("versions");
   });
 });
+
+import { artefactDuTableau, consigneMiniApp, conversationOuverte, ID_TABLEAU } from "@/lib/miniApp";
+import { contexteArtefacts, resoudreRetouche } from "@/lib/operationsBlocs";
+import { buildGentSystemPrompt } from "@/lib/gentRuntimePrompt";
+
+describe("la conversation à côté du tableau", () => {
+  const base: PinnedArtefact = { enabled: true, title: "Carrière", mission: "m", inputs: [] };
+
+  it("reste fermée sur une mini-app d'origine, s'ouvre quand la structure est figée", () => {
+    expect(conversationOuverte(base)).toBe(false);
+    expect(conversationOuverte({ ...base, gabarit })).toBe(true);
+    expect(conversationOuverte({ ...base, gabarit, conversation: false })).toBe(false);
+    expect(conversationOuverte({ ...base, conversation: true })).toBe(true);
+    expect(conversationOuverte({ ...base, enabled: false, conversation: true })).toBe(false);
+    expect(conversationOuverte(undefined)).toBe(false);
+  });
+
+  it("le gent voit le tableau comme un artefact, avec ses blocs", () => {
+    expect(artefactDuTableau(base)).toBeNull();
+    const a = artefactDuTableau({ ...base, dashboard: tableau("72") })!;
+    expect(a.id).toBe(ID_TABLEAU);
+    const ctx = contexteArtefacts([a]);
+    expect(ctx).toContain(`"${ID_TABLEAU}"`);
+    expect(ctx).toContain("chiffres");
+  });
+
+  it("une retouche du gent vise le tableau, et lui seul", () => {
+    const a = artefactDuTableau({ ...base, dashboard: tableau("72") })!;
+    const prop = resoudreRetouche([a], ID_TABLEAU, [
+      { op: "modifier", bloc: "chiffres", avec: { type: "stats", items: [{ label: "Score", value: "75" }] } },
+    ])!;
+    expect(prop.modification?.artefactId).toBe(ID_TABLEAU);
+    expect(JSON.stringify(prop.dashboard)).toContain("75");
+    expect(prop.dashboard!.blocks.map((b) => b.id)).toEqual(["titre", "chiffres", "detail", "avis"]);
+    // Appliquée, elle range l'état précédent : elle s'annule comme une mise à jour.
+    const apres = avecNouveauTableau({ ...base, dashboard: tableau("72"), generatedAt: "d1" }, prop.dashboard!, "d2");
+    expect(JSON.stringify(annulerDerniereMiseAJour(apres)!.dashboard)).toContain("72");
+  });
+
+  it("la consigne n'est jointe que si la conversation est ouverte", () => {
+    const espace = (p: PinnedArtefact) =>
+      ({ icon: "🧭", name: "G", gent: "g", artefacts: [], conversations: [], files: [], tools: [], integrations: [], pinnedArtefact: p }) as unknown as Espace;
+    const repere = "MINI-APPLICATION";
+    expect(consigneMiniApp()).toContain(repere);
+    expect(buildGentSystemPrompt(espace({ ...base, gabarit }), { variant: "sharedLink" })).toContain(repere);
+    expect(buildGentSystemPrompt(espace(base), { variant: "sharedLink" })).not.toContain(repere);
+  });
+
+  it("le visiteur reçoit le réglage, pas le gabarit", () => {
+    const e = { icon: "🧭", name: "G", gent: "g", artefacts: [], conversations: [], files: [], pinnedArtefact: { ...base, gabarit } } as unknown as Espace;
+    const v = espaceForPublicLink(e).pinnedArtefact!;
+    expect(v.conversation).toBe(true);
+    expect(v).not.toHaveProperty("gabarit");
+  });
+});

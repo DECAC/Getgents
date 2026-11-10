@@ -88,7 +88,14 @@ import {
   formatApiNetworkError,
 } from "@/lib/espaceApiPayload";
 import { renderMarkdown } from "@/lib/markdown";
-import { annulerDerniereMiseAJour, avecNouveauTableau, completerAvecPrecedent } from "@/lib/miniApp";
+import {
+  annulerDerniereMiseAJour,
+  artefactDuTableau,
+  avecNouveauTableau,
+  completerAvecPrecedent,
+  conversationOuverte,
+  ID_TABLEAU,
+} from "@/lib/miniApp";
 import { streamChatCompletion, CHAT_MAX_TOKENS, defaultStatusLabel, humanToolCallLabel } from "@/lib/streamChat";
 import { supportsReasoningStream } from "@/lib/openRouterReasoning";
 import { buildJumpFormPrompt } from "@/lib/jumpFormSignal";
@@ -103,6 +110,15 @@ function cibleDuRemplacement(artefacts: Artefact[], proposition: ArtefactProposa
     return artefacts.find((a) => a.id === proposition.modification!.artefactId);
   }
   return artefactHomonyme(artefacts, proposition.title);
+}
+
+/**
+ * Les artefacts que le gent voit et peut retoucher : ceux qui sont gardés,
+ * précédés du tableau de la mini-app quand sa conversation est ouverte.
+ */
+function avecTableau(espace: Espace): Artefact[] {
+  const tableau = conversationOuverte(espace.pinnedArtefact) ? artefactDuTableau(espace.pinnedArtefact) : null;
+  return tableau ? [tableau, ...espace.artefacts] : espace.artefacts;
 }
 
 function artefactFromProposal(sig: ArtefactProposal, id: string): Artefact {
@@ -354,6 +370,8 @@ interface EspaceContextValue {
    * alors par son tableau de bord et non par la conversation.
    */
   miniAppMode: boolean;
+  /** Mini-app dont la conversation est ouverte à côté du tableau. */
+  miniAppConversation: boolean;
   /**
    * Mode JEU : le gent est piloté par un moteur déterministe (`moteurJeu`).
    * Comme en mini-application, la partie se joue sur la zone principale et le
@@ -730,6 +748,9 @@ export function EspaceProvider({
   // généré en cours de lecture SANS fermer le document qu'on est en train de
   // lire (l'artefact se superpose, la visionneuse reste dessous).
   const openArtefactModal = useCallback((id: string) => {
+    // Le tableau d'une mini-app n'est pas un artefact gardé : il est déjà à
+    // l'écran, à côté de la conversation — aucune fenêtre à ouvrir.
+    if (id === ID_TABLEAU) return;
     const espace = espacesRef.current[currentIdRef.current];
     if (espace?.artefacts.find((a) => a.id === id)?.document) {
       setViewerArtefactId(id);
@@ -1033,7 +1054,7 @@ export function EspaceProvider({
         // seule mémoire après « Nouvel échange ».
         espace.chantier?.enabled
           ? contexteArtefacts(dossierEnTete(espace.artefacts), BUDGET_DOSSIER)
-          : contexteArtefacts(espace.artefacts)
+          : contexteArtefacts(avecTableau(espace))
       ),
       preferenceArtefact(filComplet)
     );
@@ -1198,7 +1219,7 @@ export function EspaceProvider({
         let proposition: ArtefactProposal | null = signal;
         let artefactEchec = afterArtefact.echec;
         if (signal?.operations && signal.cible) {
-          proposition = resoudreRetouche(espace.artefacts, signal.cible, signal.operations);
+          proposition = resoudreRetouche(avecTableau(espace), signal.cible, signal.operations);
           if (!proposition) artefactEchec = "cible";
         }
         const contexteMesure = {
@@ -1972,8 +1993,21 @@ export function EspaceProvider({
       // Même titre qu'un artefact gardé : c'est sa version mise à jour, qui le
       // REMPLACE sur place — même id, donc même onglet. L'ajouter à côté
       // produisait un doublon à chaque retouche demandée au gent.
-      const homonyme = decision === "add" ? cibleDuRemplacement(espace.artefacts, targetMsg.proposal) : undefined;
-      if (homonyme) {
+      // Retouche du tableau d'une mini-app : elle s'applique AU TABLEAU, qui
+      // range son état précédent (« Annuler » sur le tableau) — pas un
+      // artefact de plus à côté.
+      const versTableau =
+        decision === "add" &&
+        targetMsg.proposal.modification?.artefactId === ID_TABLEAU &&
+        !!espace.pinnedArtefact?.enabled &&
+        !!targetMsg.proposal.dashboard;
+      let pinnedArtefact = espace.pinnedArtefact;
+      const homonyme =
+        decision === "add" && !versTableau ? cibleDuRemplacement(espace.artefacts, targetMsg.proposal) : undefined;
+      if (versTableau) {
+        newArtefactId = ID_TABLEAU;
+        pinnedArtefact = avecNouveauTableau(espace.pinnedArtefact!, targetMsg.proposal.dashboard!, new Date().toISOString());
+      } else if (homonyme) {
         newArtefactId = homonyme.id;
         // L'état précédent rejoint l'historique : une retouche appliquée, ou
         // une version complète qui remplace, n'écrase plus rien.
@@ -2030,7 +2064,7 @@ export function EspaceProvider({
           : t
       );
 
-      return { ...prev, [id]: { ...espace, artefacts, themeTabs, conversations } };
+      return { ...prev, [id]: { ...espace, artefacts, themeTabs, conversations, pinnedArtefact } };
     });
     setPendingArtefactVerdict((p) => (p?.proposalMessageId === proposalId ? null : p));
     if (keptDocumentId) setViewerArtefactId(keptDocumentId);
@@ -2477,6 +2511,7 @@ export function EspaceProvider({
         pinnedError,
         shareMode,
         miniAppMode: !!currentEspace.pinnedArtefact?.enabled,
+        miniAppConversation: conversationOuverte(currentEspace.pinnedArtefact),
         modeJeu: !!currentEspace.moteurJeu,
         addFile,
         removeFile,

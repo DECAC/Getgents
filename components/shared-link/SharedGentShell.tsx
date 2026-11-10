@@ -53,6 +53,7 @@ export function SharedGentBody({
     openAssistant,
     closeAssistant,
     miniAppMode,
+    miniAppConversation,
     modeJeu,
     documentViewerOpen,
     pendingArtefactVerdict,
@@ -131,7 +132,9 @@ export function SharedGentBody({
   // Mini-application et jeu s'utilisent par la page, pas par la conversation :
   // le destinataire d'un lien n'y a pas accès non plus. Un visiteur arrive
   // ICI et nulle part ailleurs — c'est sa seule vue du gent.
-  const chatAvailable = !miniAppMode && !modeJeu;
+  // Exception : une mini-app à structure figée garde la conversation, pour
+  // interroger et retoucher le tableau — on arrive quand même sur le tableau.
+  const chatAvailable = (!miniAppMode || miniAppConversation) && !modeJeu;
   // Visionneuse ouverte : la conversation y est déjà rendue, à droite du
   // document (voir DocumentViewerModal) — ne pas la monter deux fois.
   const chatOpen = chatAvailable && assistantOpen && !documentViewerOpen;
@@ -160,7 +163,17 @@ export function SharedGentBody({
    * côté ; sur écran étroit, où volet et conversation ne tiennent pas
    * ensemble, on ouvre sur « Le gent » (voir l'effet plus bas).
    */
-  const [volet, setVolet] = useState<"bande" | "moitie" | "large">(chantier ? "large" : "bande");
+  const [volet, setVolet] = useState<"bande" | "moitie" | "large">(chantier || miniAppConversation ? "large" : "bande");
+  // Mini-app dont la conversation est ouverte : le tableau EST l'application.
+  // Ouvrir la conversation ne doit pas le faire disparaître derrière une
+  // bande — il garde la grande colonne. Une fois, dès que le réglage est connu
+  // (l'espace personnel n'est relu qu'après le premier rendu).
+  const tableauElargi = useRef(false);
+  useEffect(() => {
+    if (!miniAppConversation || tableauElargi.current) return;
+    tableauElargi.current = true;
+    setVolet("large");
+  }, [miniAppConversation]);
   // Rouvrir sans défaire un choix : un volet déjà large le reste.
   const ouvrirVolet = useCallback(() => setVolet((v) => (v === "bande" ? "moitie" : v)), []);
 
@@ -190,7 +203,8 @@ export function SharedGentBody({
     comptePrecedent.current = compte;
   }, [compte, ouvrirVolet, storageReady]);
 
-  const espaceGarni = aDesArtefacts(currentEspace);
+  // Le tableau d'une mini-app compte : sans lui, la colonne serait vide.
+  const espaceGarni = aDesArtefacts(currentEspace) || miniAppMode;
   const sousTitre = sousTitreDuGent(currentEspace.gent, currentEspace.name);
   const voletVisible = volet !== "bande";
   // L'aperçu ne prend la place du canevas que si le volet est effectivement

@@ -309,10 +309,19 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   s'annule (« Annuler » / « Rétablir ») ; « Recommencer » efface aussi les
   versions (données de la session quittée). Sans gabarit : comportement
   d'origine, rien à migrer. Vérifié avec un faux modèle (blocs mélangés, un
-  en trop, un manquant), pas en production. **Restent** (plan du 10/11) :
-  conversation ouverte sur le tableau, liens d'entrée réellement LUS (une
-  entrée « URL » part aujourd'hui comme une simple chaîne), crédit du lien
-  non décompté sur échec, types d'entrées.
+  en trop, un manquant), pas en production. **Conversation OUVERTE à côté du
+  tableau** (`conversationOuverte` : réglage `pinnedArtefact.conversation`,
+  sinon vrai dès que la structure est figée — une mini-app d'origine reste
+  sans conversation, rien ne change pour les gents diffusés). Le gent voit le
+  tableau comme l'artefact « miniapp » (`artefactDuTableau`, bloc `[ESPACE]`)
+  et le retouche par opérations ; « Garder » applique la retouche AU TABLEAU
+  (`avecNouveauTableau`, donc annulable), jamais un artefact à côté — avec
+  verdict, pas d'auto-application. « Mettre à jour » recalcule tout : les
+  retouches manuelles n'y survivent pas, la consigne le fait dire au gent.
+  Le visiteur ne reçoit pas le gabarit, seulement le booléen `conversation`.
+  NON vérifié au navigateur. **Restent** (plan du 10/11) : liens d'entrée
+  réellement LUS (une entrée « URL » part aujourd'hui comme une simple
+  chaîne), crédit du lien non décompté sur échec, types d'entrées.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

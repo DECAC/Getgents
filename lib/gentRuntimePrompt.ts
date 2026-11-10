@@ -1,3 +1,4 @@
+import { conversationOuverte, consigneMiniApp } from "@/lib/miniApp";
 import type { Espace } from "@/lib/types";
 import { sessionContextNote } from "@/lib/sessionContext";
 import { SUGGESTIONS_PROMPT_INSTRUCTION, FOLLOWUPS_PROMPT_INSTRUCTION } from "@/lib/suggestions";
@@ -128,6 +129,8 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
   if (espace.gmail) blocks.push(GMAIL_PROMPT_INSTRUCTION);
   // Gent « Prompteur » : la forme du texte à dire et ses marqueurs.
   if (espace.prompteur?.enabled && !superGent) blocks.push(consignePrompteur(espace.prompteur.dureeCible));
+  // Mini-application dont la conversation est ouverte : où est le tableau.
+  if (conversationOuverte(espace.pinnedArtefact) && !superGent) blocks.push(consigneMiniApp());
   // Gent « chantier » : où vit le dossier et comment le retoucher.
   if (espace.chantier?.enabled && !superGent) blocks.push(consigneChantier());
 

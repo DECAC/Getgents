@@ -2,6 +2,7 @@
 
 import { useBuilder } from "@/lib/context/BuilderContext";
 import type { PinnedArtefactInput } from "@/lib/types";
+import { conversationOuverte } from "@/lib/miniApp";
 import styles from "./PinnedArtefactConfig.module.css";
 
 const INPUT_KINDS: { kind: PinnedArtefactInput["kind"]; label: string }[] = [
@@ -113,6 +114,18 @@ Activez la <b>mini-application</b> ci-dessus et décrivez ce qu&apos;elle produi
               </button>
             </div>
           ))}
+
+          <label className={styles.fieldLabel} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 12 }}>
+            <input
+              type="checkbox"
+              checked={conversationOuverte(pinned)}
+              onChange={(e) => updatePinnedArtefact({ conversation: e.target.checked })}
+            />
+            <span>
+              Conversation ouverte à côté du tableau — l&apos;utilisateur peut interroger le gent sur ses
+              chiffres et lui demander une retouche. Activée d&apos;office quand la structure est figée.
+            </span>
+          </label>
 
           <div className={styles.hint}>
             Activez la recherche web (Prompt &amp; Modèle) pour que les données soient réelles et

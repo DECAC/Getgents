@@ -644,6 +644,12 @@ export interface PinnedArtefact {
    * Ne porte AUCUNE donnée : voir `lib/miniApp.ts`.
    */
   gabarit?: import("@/lib/miniApp").GabaritMiniApp;
+  /**
+   * La conversation est-elle ouverte à côté du tableau ? Absent : oui si la
+   * structure est figée (nouveau modèle), non sinon (mini-app d'origine,
+   * inchangée). Voir `conversationOuverte`.
+   */
+  conversation?: boolean;
   /** États précédents du tableau (le plus récent en tête, 8 au plus). */
   versions?: PinnedVersion[];
 }
