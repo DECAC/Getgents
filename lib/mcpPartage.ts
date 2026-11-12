@@ -111,6 +111,65 @@ export function modeleMail(d: DemandePartage, lien: string): { objet: string; co
   };
 }
 
+// --- Partages d'un compte (lot 2) ------------------------------------------
+
+/** Une ligne de « Mes partages » : tout sauf le contenu. */
+export interface ResumePartage {
+  jeton: string;
+  titre: string;
+  format: FormatArtefact;
+  destinataire: string;
+  caracteres: number;
+  createdAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+}
+
+export type StatutPartage = "actif" | "revoque" | "expire";
+
+export function statutPartage(p: Pick<ResumePartage, "expiresAt" | "revokedAt">, maintenant = Date.now()): StatutPartage {
+  if (p.revokedAt) return "revoque";
+  if (p.expiresAt && Date.parse(p.expiresAt) < maintenant) return "expire";
+  return "actif";
+}
+
+const sansAccents = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+/**
+ * Filtre par titre ou destinataire, sans tenir compte des accents ni de la
+ * casse : « marie » trouve « Marie Dupont » et « marie@acme.fr ». Chaque mot
+ * de la recherche doit apparaître (ET), comme dans une barre de recherche.
+ */
+export function filtrerPartages<T extends Pick<ResumePartage, "titre" | "destinataire">>(liste: T[], recherche?: string): T[] {
+  const mots = sansAccents(recherche ?? "").split(/\s+/).filter(Boolean);
+  if (!mots.length) return liste;
+  return liste.filter((p) => {
+    const cible = sansAccents(`${p.titre} ${p.destinataire}`);
+    return mots.every((m) => cible.includes(m));
+  });
+}
+
+const dateCourte = (iso: string) =>
+  new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Paris" });
+
+const LIBELLE_STATUT: Record<StatutPartage, string> = { actif: "actif", revoque: "révoqué", expire: "expiré" };
+
+/** La liste telle que le modèle la lit : une ligne par partage, identifiant compris. */
+export function texteListe(liste: ResumePartage[], base: string, maintenant = Date.now()): string {
+  if (!liste.length) return "Aucun partage ne correspond.";
+  return liste
+    .map((p) => {
+      const statut = statutPartage(p, maintenant);
+      const fin = statut === "actif" && p.expiresAt ? `, expire le ${dateCourte(p.expiresAt)}` : "";
+      return `- « ${p.titre} » → ${p.destinataire} — partagé le ${dateCourte(p.createdAt)}, ${LIBELLE_STATUT[statut]}${fin} — identifiant ${p.jeton} — ${base}/partage/${p.jeton}`;
+    })
+    .join("\n");
+}
+
 // --- Protocole MCP ---------------------------------------------------------
 
 export const VERSIONS_PROTOCOLE = ["2025-06-18", "2025-03-26", "2024-11-05"];
@@ -149,15 +208,48 @@ export const SCHEMA_OUTIL = {
   additionalProperties: false,
 };
 
+export const OUTIL_LISTER = "lister_partages";
+export const OUTIL_REVOQUER = "revoquer_partage";
+
+const DESCRIPTION_LISTER =
+  "Liste les artefacts que l'utilisateur a partagés par Getgents, du plus récent au plus ancien : titre, " +
+  "destinataire, date, statut (actif, révoqué, expiré), lien et identifiant. `recherche` filtre par titre ou " +
+  "destinataire (« Marie », « offre Acme »).";
+
+const DESCRIPTION_REVOQUER =
+  "Révoque un lien de partage : le destinataire ne pourra plus ouvrir l'artefact. IRRÉVERSIBLE. " +
+  "Prends l'identifiant dans lister_partages ; si plusieurs partages correspondent à la demande, " +
+  "montre-les à l'utilisateur et demande lequel AVANT de révoquer — ne choisis jamais à sa place.";
+
+const SCHEMA_LISTER = {
+  type: "object",
+  properties: { recherche: { type: "string", description: "Facultatif : mots du titre ou du destinataire." } },
+  additionalProperties: false,
+};
+
+const SCHEMA_REVOQUER = {
+  type: "object",
+  properties: { identifiant: { type: "string", description: "Identifiant du partage, tel que rendu par lister_partages." } },
+  required: ["identifiant"],
+  additionalProperties: false,
+};
+
 export const INSTRUCTIONS_SERVEUR =
   "Getgents publie les artefacts que l'utilisateur veut partager avec un client. Quand il demande de " +
   "partager, d'envoyer ou de transmettre un artefact, appelle partager_artefact avec son contenu COMPLET, " +
   "puis donne-lui le lien et le modèle de mail. Getgents n'envoie aucun e-mail : c'est l'utilisateur qui " +
-  "l'envoie. Ne dis jamais que le mail est parti.";
+  "l'envoie. Ne dis jamais que le mail est parti. Pour retrouver ou couper un lien déjà envoyé, " +
+  "utilise lister_partages puis revoquer_partage.";
 
 export interface ContexteMcp {
   /** Enregistre l'artefact et rend son lien public. */
   enregistrer: (d: DemandePartage, fidelite: Fidelite) => Promise<{ lien: string }>;
+  /** Partages du compte connecté (absent : outils de gestion non proposés). */
+  lister?: () => Promise<ResumePartage[]>;
+  /** Révoque un partage DU compte connecté ; faux s'il n'existe pas, n'est pas à lui, ou l'était déjà. */
+  revoquer?: (jeton: string) => Promise<boolean>;
+  /** Origine publique, pour écrire les liens de la liste. */
+  base?: string;
 }
 
 type Id = string | number | null;
@@ -215,7 +307,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
         result: {
           protocolVersion: VERSIONS_PROTOCOLE.includes(demandee) ? demandee : VERSIONS_PROTOCOLE[0],
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: "getgents", title: "Getgents — partage d'artefacts", version: "0.1.0" },
+          serverInfo: { name: "getgents", title: "Getgents — partage d'artefacts", version: "0.2.0" },
           instructions: INSTRUCTIONS_SERVEUR,
         },
       };
@@ -235,14 +327,80 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
               inputSchema: SCHEMA_OUTIL,
               annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
             },
+            ...(ctx.lister
+              ? [
+                  {
+                    name: OUTIL_LISTER,
+                    title: "Lister mes partages",
+                    description: DESCRIPTION_LISTER,
+                    inputSchema: SCHEMA_LISTER,
+                    annotations: { readOnlyHint: true, openWorldHint: false },
+                  },
+                ]
+              : []),
+            ...(ctx.revoquer
+              ? [
+                  {
+                    name: OUTIL_REVOQUER,
+                    title: "Révoquer un partage",
+                    description: DESCRIPTION_REVOQUER,
+                    inputSchema: SCHEMA_REVOQUER,
+                    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+                  },
+                ]
+              : []),
           ],
         },
       };
     case "tools/call": {
+      const echec = (texte: string): ReponseRpc => ({ jsonrpc: "2.0", id, result: { isError: true, content: [{ type: "text", text: texte }] } });
+      const args = (r.params?.arguments && typeof r.params.arguments === "object" ? r.params.arguments : {}) as Record<string, unknown>;
+      if (r.params?.name === OUTIL_LISTER && ctx.lister) {
+        try {
+          const recherche = typeof args.recherche === "string" ? args.recherche.slice(0, 200) : undefined;
+          const liste = filtrerPartages(await ctx.lister(), recherche).slice(0, 30);
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              content: [{ type: "text", text: texteListe(liste, ctx.base ?? "") }],
+              structuredContent: {
+                partages: liste.map((p) => ({ ...p, statut: statutPartage(p), lien: `${ctx.base ?? ""}/partage/${p.jeton}` })),
+              },
+            },
+          };
+        } catch {
+          return echec("La liste des partages n'a pas pu être lue. Réessaie dans un instant.");
+        }
+      }
+      if (r.params?.name === OUTIL_REVOQUER && ctx.revoquer) {
+        const jeton = typeof args.identifiant === "string" ? args.identifiant.trim() : "";
+        if (!jeton) return echec("identifiant manquant : prends-le dans lister_partages.");
+        try {
+          const coupe = await ctx.revoquer(jeton);
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: coupe
+              ? { content: [{ type: "text", text: "Lien révoqué : le destinataire ne peut plus ouvrir l'artefact." }], structuredContent: { revoque: true } }
+              : {
+                  isError: true,
+                  content: [
+                    {
+                      type: "text",
+                      text: "Aucun partage actif de ce compte ne porte cet identifiant (déjà révoqué, ou introuvable). Vérifie avec lister_partages.",
+                    },
+                  ],
+                },
+          };
+        } catch {
+          return echec("La révocation n'a pas pu être enregistrée. Réessaie dans un instant.");
+        }
+      }
       if (r.params?.name !== NOM_OUTIL) return erreurRpc(id, -32602, `Outil inconnu : ${String(r.params?.name)}`);
       const v = validerDemande(r.params?.arguments);
       // Une erreur de saisie est un RÉSULTAT d'outil en échec, que le modèle lit et corrige.
-      if (!v.ok) return { jsonrpc: "2.0", id, result: { isError: true, content: [{ type: "text", text: v.erreur }] } };
+      if (!v.ok) return echec(v.erreur);
       const fidelite = controleFidelite(v.demande.contenu, v.demande.format);
       try {
         const { lien } = await ctx.enregistrer(v.demande, fidelite);
@@ -256,7 +414,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
           },
         };
       } catch {
-        return { jsonrpc: "2.0", id, result: { isError: true, content: [{ type: "text", text: "Le partage n'a pas pu être enregistré. Réessaie dans un instant." }] } };
+        return echec("Le partage n'a pas pu être enregistré. Réessaie dans un instant.");
       }
     }
     default:

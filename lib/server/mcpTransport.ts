@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { traiterMessage, type DemandePartage, type Fidelite, type ReponseRpc } from "@/lib/mcpPartage";
-import { enregistrerArtefact, type Proprietaire } from "@/lib/server/artefactsPartages";
+import { enregistrerArtefact, listerPartages, revoquerPartage, type Proprietaire } from "@/lib/server/artefactsPartages";
 
 /**
  * Transport MCP « Streamable HTTP » en réponses JSON simples, commun à la
@@ -47,6 +47,9 @@ export async function repondreMcp(req: Request, origine: string, proprietaire: P
       );
       return { lien: `${origine}/partage/${a.jeton}` };
     },
+    lister: () => listerPartages(proprietaire.userId),
+    revoquer: (jeton: string) => revoquerPartage(proprietaire.userId, jeton),
+    base: origine,
   };
 
   const lot = Array.isArray(corps);

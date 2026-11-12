@@ -5,6 +5,7 @@ import { isAuthConfigured, missingAuthEnvVars, unconfiguredPolicy } from "@/lib/
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import CleOpenRouter, { type EtatCle } from "@/components/compte/CleOpenRouter";
 import Consommation from "@/components/compte/Consommation";
+import MesPartages from "@/components/compte/MesPartages";
 import Identifiants from "@/components/compte/Identifiants";
 import ZoneSensible from "@/components/compte/ZoneSensible";
 import styles from "./compte.module.css";
@@ -145,6 +146,8 @@ export default async function ComptePage() {
             <Link href="/builder/mesgents">la page Mes gents</Link>.
           </p>
         </section>
+
+        <MesPartages />
 
         <ZoneSensible email={user.confirmedEmail} />
 

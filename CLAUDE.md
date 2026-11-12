@@ -394,8 +394,18 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (18 contrôles, `next dev` : en `next start` la mémoire locale est refusée,
   c'est voulu) et au navigateur (clic → retour vers claude.ai). **Essai
   réel CONCLUANT dans Claude (12/11)** ; la route d'essai `/api/mcp/<clé>`
-  est RETIRÉE — `MCP_ESSAI_CLE` ne sert plus, à supprimer sur Vercel. Lots suivants : page « Partages » + outils lister/révoquer,
-  code par e-mail (Brevo), domaine séparé.
+  est RETIRÉE — `MCP_ESSAI_CLE` ne sert plus, à supprimer sur Vercel. **Lot 2 — gérer
+  ses partages (12/11)** : section « Mes partages » de /compte
+  (`MesPartages`, `/api/partages`, révocation `DELETE /api/partages/<jeton>`)
+  et deux outils du connecteur, `lister_partages` (recherche sans accents
+  ni casse, tous les mots exigés — `filtrerPartages`) et `revoquer_partage`
+  (marqué destructeur ; la consigne exige de faire choisir l'utilisateur
+  quand plusieurs partages correspondent). La garde de propriété est dans
+  la REQUÊTE (`owner_id` filtré par `revoquerPartage`) : connaître le jeton
+  d'autrui ne suffit pas. La liste ne lit jamais `contenu` (2 Mo par
+  ligne). Les partages faits avec l'ancienne clé d'essai n'ont pas de
+  propriétaire : ils n'apparaissent nulle part, et expirent seuls. Aucune
+  migration (colonnes de la 020). Lots suivants : code par e-mail (Brevo), domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

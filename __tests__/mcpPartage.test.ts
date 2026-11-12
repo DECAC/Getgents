@@ -5,6 +5,11 @@ import {
   validerDemande,
   CONTENU_MAX,
   NOM_OUTIL,
+  OUTIL_LISTER,
+  OUTIL_REVOQUER,
+  filtrerPartages,
+  statutPartage,
+  type ResumePartage,
   type ContexteMcp,
   type DemandePartage,
 } from "@/lib/mcpPartage";
@@ -206,4 +211,91 @@ describe("document de l'artefact", () => {
 
 it("l'adresse /partage est réservée : aucun gent ne peut la prendre", () => {
   expect(SLUGS_RESERVES.has("partage")).toBe(true);
+});
+
+describe("gestion des partages (lot 2)", () => {
+  const P = (o: Partial<ResumePartage> = {}): ResumePartage => ({
+    jeton: "JETON_MARIE_0123456789abcd",
+    titre: "Offre Acme",
+    format: "html",
+    destinataire: "Marie Dupont",
+    caracteres: 10,
+    createdAt: "2026-11-12T09:00:00Z",
+    expiresAt: "2026-12-12T09:00:00Z",
+    revokedAt: null,
+    ...o,
+  });
+  const gestion = (liste: ResumePartage[]) => {
+    const revoques: string[] = [];
+    return {
+      revoques,
+      ctx: {
+        ...contexte(),
+        base: "https://getgents.ai",
+        lister: async () => liste,
+        revoquer: async (j: string) => {
+          const ok = liste.some((p) => p.jeton === j && !p.revokedAt) && !revoques.includes(j);
+          if (ok) revoques.push(j);
+          return ok;
+        },
+      },
+    };
+  };
+  const outil = (name: string, args: unknown) => ({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name, arguments: args } });
+
+  it("statut : révoqué l'emporte, puis expiré", () => {
+    const maintenant = Date.parse("2026-11-20T00:00:00Z");
+    expect(statutPartage(P(), maintenant)).toBe("actif");
+    expect(statutPartage(P({ expiresAt: "2026-11-19T00:00:00Z" }), maintenant)).toBe("expire");
+    expect(statutPartage(P({ revokedAt: "2026-11-13T00:00:00Z", expiresAt: "2026-11-19T00:00:00Z" }), maintenant)).toBe("revoque");
+  });
+
+  it("recherche sans accents ni casse, tous les mots exigés", () => {
+    const liste = [P(), P({ jeton: "b".repeat(24), titre: "Étude énergie", destinataire: "paul@exemple.fr" })];
+    expect(filtrerPartages(liste, "marie")).toHaveLength(1);
+    expect(filtrerPartages(liste, "ETUDE paul")).toHaveLength(1);
+    expect(filtrerPartages(liste, "etude marie")).toHaveLength(0);
+    expect(filtrerPartages(liste, "  ")).toHaveLength(2);
+  });
+
+  it("sans contexte de gestion, un seul outil ; avec, trois — révoquer marqué destructeur", async () => {
+    const r = (await traiterMessage({ jsonrpc: "2.0", id: 2, method: "tools/list" }, gestion([]).ctx)) as {
+      result: { tools: { name: string; annotations: { destructiveHint?: boolean } }[] };
+    };
+    expect(r.result.tools.map((t) => t.name)).toEqual([NOM_OUTIL, OUTIL_LISTER, OUTIL_REVOQUER]);
+    expect(r.result.tools[2].annotations.destructiveHint).toBe(true);
+  });
+
+  it("liste : identifiant et lien dans le texte, filtrée par la recherche", async () => {
+    const { ctx } = gestion([P(), P({ jeton: "c".repeat(24), destinataire: "Paul" })]);
+    const r = (await traiterMessage(outil(OUTIL_LISTER, { recherche: "Marie" }), ctx)) as {
+      result: { content: { text: string }[]; structuredContent: { partages: { lien: string }[] } };
+    };
+    expect(r.result.structuredContent.partages).toHaveLength(1);
+    expect(r.result.content[0].text).toMatch(/« Offre Acme » → Marie Dupont/);
+    expect(r.result.content[0].text).toMatch(/identifiant JETON_MARIE_0123456789abcd/);
+    expect(r.result.structuredContent.partages[0].lien).toBe("https://getgents.ai/partage/JETON_MARIE_0123456789abcd");
+    const vide = (await traiterMessage(outil(OUTIL_LISTER, { recherche: "Zoé" }), ctx)) as { result: { content: { text: string }[] } };
+    expect(vide.result.content[0].text).toMatch(/Aucun partage/);
+  });
+
+  it("révoquer : coupe une fois, puis échec lisible ; identifiant requis", async () => {
+    const { ctx, revoques } = gestion([P()]);
+    const ok = (await traiterMessage(outil(OUTIL_REVOQUER, { identifiant: "JETON_MARIE_0123456789abcd" }), ctx)) as {
+      result: { isError?: boolean };
+    };
+    expect(ok.result.isError).toBeUndefined();
+    expect(revoques).toEqual(["JETON_MARIE_0123456789abcd"]);
+    const encore = (await traiterMessage(outil(OUTIL_REVOQUER, { identifiant: "JETON_MARIE_0123456789abcd" }), ctx)) as {
+      result: { isError: boolean };
+    };
+    expect(encore.result.isError).toBe(true);
+    const sans = (await traiterMessage(outil(OUTIL_REVOQUER, {}), ctx)) as { result: { isError: boolean } };
+    expect(sans.result.isError).toBe(true);
+  });
+
+  it("un outil de gestion sans contexte reste inconnu", async () => {
+    const r = (await traiterMessage(outil(OUTIL_LISTER, {}), contexte())) as { error: { code: number } };
+    expect(r.error.code).toBe(-32602);
+  });
 });

@@ -249,3 +249,58 @@
 .danger .sousTitre {
   color: var(--plum);
 }
+
+/* « Mes partages » (connecteur MCP) */
+.partages {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+}
+
+.partage {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+
+.partage:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.partageTexte {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.partageTitre {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+a.partageTitre {
+  text-decoration: none;
+}
+
+a.partageTitre:hover {
+  color: var(--sage);
+  text-decoration: underline;
+}
+
+.partageMeta {
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.partageStatut {
+  font-size: 12.5px;
+  color: var(--faint, var(--muted));
+}
