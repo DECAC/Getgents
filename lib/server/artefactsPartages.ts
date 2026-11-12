@@ -34,7 +34,17 @@ export function nouveauJeton(): string {
   return randomBytes(24).toString("base64url");
 }
 
-export async function enregistrerArtefact(d: DemandePartage, f: Fidelite, client: string | null): Promise<ArtefactPartage> {
+export interface Proprietaire {
+  userId: string;
+  clientId: string;
+}
+
+export async function enregistrerArtefact(
+  d: DemandePartage,
+  f: Fidelite,
+  client: string | null,
+  proprietaire: Proprietaire | null = null
+): Promise<ArtefactPartage> {
   const maintenant = new Date();
   const a: ArtefactPartage = {
     jeton: nouveauJeton(),
@@ -64,6 +74,9 @@ export async function enregistrerArtefact(d: DemandePartage, f: Fidelite, client
     caracteres: a.caracteres,
     client: a.client,
     expires_at: a.expiresAt,
+    // Sans propriétaire (clé d'essai), on n'écrit pas les colonnes de la
+    // migration 020 : la phase 0 reste valable avant que celle-ci soit passée.
+    ...(proprietaire ? { owner_id: proprietaire.userId, mcp_client_id: proprietaire.clientId } : {}),
   });
   if (error) {
     console.error(JSON.stringify({ tag: "getgents:partage", event: "enregistrement_echoue", detail: error.message }));

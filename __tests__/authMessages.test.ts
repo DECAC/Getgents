@@ -49,6 +49,9 @@ describe("destination après connexion", () => {
   it("revient là où l'on voulait aller", () => {
     expect(destinationApresConnexion("/builder/g-42")).toBe("/builder/g-42");
     expect(destinationApresConnexion("/espace/voyage?x=1")).toBe("/espace/voyage?x=1");
+    // Consentement OAuth : l'adresse de retour du client voyage dans la requête.
+    const oauth = "/oauth/autoriser?client_id=c&redirect_uri=https://claude.ai/api/mcp/auth_callback";
+    expect(destinationApresConnexion(oauth)).toBe(oauth);
   });
 
   it("refuse une redirection vers l'extérieur", () => {
@@ -59,6 +62,8 @@ describe("destination après connexion", () => {
       "//site-hostile.fr",
       "http://site-hostile.fr",
       "javascript:alert(1)",
+      "/\\site-hostile.fr",
+      "https://site-hostile.fr?x=/a",
     ]) {
       expect(destinationApresConnexion(hostile)).toBe("/builder/mesgents");
     }

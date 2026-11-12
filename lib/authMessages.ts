@@ -68,7 +68,11 @@ export function verifierMotDePasse(mdp: string, confirmation?: string): string |
  */
 export function destinationApresConnexion(next: string | null | undefined): string {
   if (!next) return "/builder/mesgents";
-  if (!next.startsWith("/") || next.startsWith("//") || next.includes("://")) {
+  // Le CHEMIN doit être interne ; la requête, elle, peut porter une adresse
+  // (consentement OAuth : `redirect_uri=https://claude.ai/…` non encodé).
+  // Refuser tout `://` renvoyait alors le commercial sur « Mes gents ».
+  const chemin = next.split(/[?#]/)[0];
+  if (!chemin.startsWith("/") || chemin.startsWith("//") || chemin.includes("\\") || chemin.includes("://")) {
     return "/builder/mesgents";
   }
   return next;

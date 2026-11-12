@@ -57,6 +57,16 @@ const OUVERTES: Record<string, string> = {
   // d'authentification POUR L'ESSAI SEULEMENT — la phase 1 la remplace par
   // une autorisation OAuth liée au compte.
   "app/api/mcp/[cle]/route.ts": "clé d'essai dans l'adresse (phase 0), 404 sans elle",
+  // Connecteur MCP (phase 1) : authentifié par un jeton porteur OAuth, émis
+  // après consentement d'un commercial connecté (/oauth/autoriser, qui passe
+  // par requireUser). 401 + WWW-Authenticate sans jeton valide.
+  "app/api/mcp/route.ts": "jeton porteur OAuth (verifierAcces), 401 sans lui",
+  // Inscription dynamique (RFC 7591) : Claude s'inscrit sans compte, par
+  // nature. Ne donne aucun droit — le consentement d'un compte reste requis.
+  "app/api/oauth/register/route.ts": "inscription de client OAuth, sans droit attaché",
+  // Échange de code : client public, la preuve est le code_verifier PKCE et
+  // le code à usage unique émis au consentement.
+  "app/api/oauth/token/route.ts": "code à usage unique + PKCE, ou jeton de renouvellement",
   // Le document d'un artefact partagé : c'est le DESTINATAIRE, sans compte,
   // qui le lit. Le jeton (24 octets aléatoires) autorise la lecture seule ;
   // le contenu est servi sous CSP sandbox, sans accès à rien d'autre.

@@ -375,7 +375,27 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (12/11, essais de l'utilisateur)** : un artefact autonome arrive COMPLET, un
   artefact React interactif s'affiche et fonctionne (la chaîne Babel + esm.sh
   tient en vrai). ChatGPT non essayé — choix de l'utilisateur : Claude
-  d'abord. Prochaine étape : phase 1.
+  d'abord. **Phase 1, lot 1 — connexion OAuth (12/11, écrit, NON essayé
+  dans Claude)** : adresse `/api/mcp` SANS clé. Sans jeton : 401 +
+  `WWW-Authenticate` → métadonnées (`/.well-known/oauth-protected-resource`,
+  racine ET suffixe `/api/mcp` ; `/.well-known/oauth-authorization-server`)
+  → inscription dynamique (`/api/oauth/register`, clients PUBLICS seuls,
+  retour HTTPS ou localhost) → consentement `/oauth/autoriser` (chemin
+  privé : passe par /connexion) → `/api/oauth/token` (PKCE S256
+  obligatoire, code 5 min à usage unique, accès 1 h, renouvellement 30 j
+  avec ROTATION : un renouvellement rejoué révoque toute la famille).
+  Codes et jetons stockés en EMPREINTE SHA-256 seulement (migration 020,
+  à passer AVANT le déploiement) ; chaque partage porte `owner_id`. Le
+  consentement part par fetch puis `location` : un formulaire redirigé vers
+  claude.ai serait bloqué par `form-action 'self'`. `destinationApresConnexion`
+  ne contrôle plus que le CHEMIN de `next` : la requête du consentement
+  porte `redirect_uri=https://…`, et l'ancien refus de tout `://` renvoyait
+  le commercial sur « Mes gents ». Vérifié avec le client MCP OFFICIEL
+  (18 contrôles, `next dev` : en `next start` la mémoire locale est refusée,
+  c'est voulu) et au navigateur (clic → retour vers claude.ai). La clé
+  d'essai `/api/mcp/<clé>` reste en service jusqu'à l'essai réel, puis
+  sera RETIRÉE. Lots suivants : page « Partages » + outils lister/révoquer,
+  code par e-mail (Brevo), domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

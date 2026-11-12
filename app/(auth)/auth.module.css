@@ -160,3 +160,23 @@
     padding: 0 4px;
   }
 }
+
+/* Consentement du connecteur MCP (/oauth/autoriser). */
+.liste {
+  margin: 0 0 4px;
+  padding-left: 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.liste li + li {
+  margin-top: 6px;
+}
+
+.secondaire {
+  composes: submit;
+  margin-top: 10px;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}

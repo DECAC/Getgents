@@ -43,6 +43,8 @@ const CHEMINS_PRIVES = [
   /^\/accueil$/,
   /^\/myspace$/,
   /^\/compte(\/|$)/,
+  // Consentement du connecteur MCP : on consent depuis SON compte.
+  /^\/oauth\//,
 ];
 
 function estPrive(pathname: string): boolean {
