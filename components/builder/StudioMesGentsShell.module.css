@@ -1,6 +1,7 @@
 .shell {
   display: grid;
   grid-template-columns: 260px 1fr;
+  transition: grid-template-columns 0.2s;
   height: 100vh;
   overflow: hidden;
   background: var(--bg);
@@ -11,6 +12,14 @@
   min-height: 0;
   overflow-y: auto;
   padding: 24px 22px 32px;
+}
+
+/* Rail replié : la colonne suit, comme dans la vue d'un gent (BuilderShell).
+   Le repli est un état local du rail de la liste ; la grille le lit sur
+   l'attribut qu'il pose, sans état à remonter. Sans cela, le rail se
+   repliait dans une colonne restée à 260 px. */
+.shell:has(> [data-replie="oui"]) {
+  grid-template-columns: 66px 1fr;
 }
 
 /* Même point de rupture et même tiroir que le reste du studio : les règles de

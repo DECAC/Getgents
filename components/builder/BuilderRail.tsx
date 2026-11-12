@@ -377,6 +377,7 @@ function RailChrome({
         .filter(Boolean)
         .join(" ")}
       aria-label="Navigation du studio"
+      data-replie={railCollapsed ? "oui" : undefined}
       id="builder-rail"
     >
       <div className={styles.brand}>
