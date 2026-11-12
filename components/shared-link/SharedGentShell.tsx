@@ -1,5 +1,6 @@
 "use client";
 
+import { SelecteurMode } from "@/components/shared/SelecteurMode";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EspaceProvider, useEspace } from "@/lib/context/EspaceContext";
 import { WorkspaceCanvas } from "@/components/center/WorkspaceCanvas";
@@ -264,6 +265,15 @@ export function SharedGentBody({
       <header className={styles.head}>
         {/* Espace personnel : l'ancienne coquille avait la colonne de tous les
             gents ; ici, un retour vers la liste en tient lieu. */}
+        {/* Espace personnel : les deux modes, comme partout ailleurs —
+            « Construire » ouvre les réglages de CE gent. */}
+        {personnelDe && (
+          <SelecteurMode
+            mode="utiliser"
+            enTete
+            gent={{ id: personnelDe, diffusionPrivee: currentEspace.diffusionPrivee, adressePrivee: currentEspace.adressePrivee }}
+          />
+        )}
         {personnelDe && (
           <a href="/myspace" className={styles.retour} title="Tous mes gents">
             ‹ <span className={styles.retourTexte}>Mes gents</span>
@@ -342,7 +352,7 @@ export function SharedGentBody({
           {personnelDe && <MemoireGent />}
           {personnelDe && (
             <a href={`/builder/${encodeURIComponent(personnelDe)}`} className={styles.lienStudio}>
-              Ouvrir dans GetStudio
+              Configurer ce gent
             </a>
           )}
           {/* Signaler vise le créateur : sans objet quand c'est lui qui regarde. */}

@@ -26,7 +26,7 @@ export default function NouveauMotDePassePage() {
         const { error } = await supabase.auth.updateUser({ password: motDePasse });
         if (error) throw new Error(messageErreurAuth(error.message));
         // Rechargement complet : voir la note de l'écran de connexion.
-        window.location.assign("/builder/mesgents");
+        window.location.assign("/accueil");
         return null;
       }}
     >

@@ -65,12 +65,12 @@ describe("destination après connexion", () => {
       "/\\site-hostile.fr",
       "https://site-hostile.fr?x=/a",
     ]) {
-      expect(destinationApresConnexion(hostile)).toBe("/builder/mesgents");
+      expect(destinationApresConnexion(hostile)).toBe("/accueil");
     }
   });
 
   it("a une destination par défaut", () => {
-    expect(destinationApresConnexion(null)).toBe("/builder/mesgents");
-    expect(destinationApresConnexion("")).toBe("/builder/mesgents");
+    expect(destinationApresConnexion(null)).toBe("/accueil");
+    expect(destinationApresConnexion("")).toBe("/accueil");
   });
 });

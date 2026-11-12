@@ -18,8 +18,8 @@ import { NavMobileProvider } from "@/lib/context/NavMobileContext";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Getgents — Espace",
-  description: "Votre espace de travail avec vos gents",
+  title: "Getgents",
+  description: "Construisez vos gents, puis servez-vous-en au quotidien.",
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-icon.png",

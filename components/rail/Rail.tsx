@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { cheminEspace } from "@/lib/diffusionPrivee";
 import { useEspace } from "@/lib/context/EspaceContext";
-import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
+import { SelecteurMode } from "@/components/shared/SelecteurMode";
+import { LIBELLE_STATUT, statutGent } from "@/lib/statutGent";
 import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./Rail.module.css";
 import { MenuCompte } from "@/components/compte/MenuCompte";
 import { useNavMobile } from "@/lib/context/NavMobileContext";
-import { BRAND_LABEL } from "@/lib/brand";
 
 const STATUS_DOT_CLASS: Record<string, string> = {
   live: styles.dotLive,
@@ -32,42 +32,47 @@ export function Rail() {
       className={[styles.rail, railCollapsed ? styles.collapsed : "", ouvert ? styles.open : ""]
         .filter(Boolean)
         .join(" ")}
-      aria-label="Mes gents actifs"
+      aria-label="Mes gents"
       id="rail"
     >
       <div className={styles.brand}>
-        <ProductBrandMenu surface="space" compact={railCollapsed} />
-        <button
-          className={styles.railToggle}
-          onClick={toggleRail}
-          aria-label={railCollapsed ? "Déployer la colonne" : "Réduire la colonne"}
-          title={railCollapsed ? "Déployer" : "Réduire"}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            style={{ transform: railCollapsed ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }}
-          >
-            <path d="M14 6l-6 6 6 6" />
-          </svg>
-        </button>
+        <SelecteurMode
+          mode="utiliser"
+          compact={railCollapsed}
+          aCote={
+            <button
+              className={styles.railToggle}
+              onClick={toggleRail}
+              aria-label={railCollapsed ? "Déployer la colonne" : "Réduire la colonne"}
+              title={railCollapsed ? "Déployer" : "Réduire"}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                style={{ transform: railCollapsed ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }}
+              >
+                <path d="M14 6l-6 6 6 6" />
+              </svg>
+            </button>
+          }
+        />
       </div>
 
       {/* Au-dessus de la liste : le point d'entrée unique, où l'on interroge
           l'ensemble de ses gents sans avoir à choisir lequel ouvrir. */}
-      <a href="/myspace" className={styles.homeLink} title="Interroger tous vos gents">
+      <a href="/myspace" className={styles.homeLink} title="Poser une question à tous vos gents à la fois">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 10.5 12 3l9 7.5" />
           <path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" />
         </svg>
-        <span className={styles.homeLinkLabel}>{BRAND_LABEL.getspace}</span>
+        <span className={styles.homeLinkLabel}>Tous mes gents</span>
       </a>
 
-      <div className={styles.railLabel}>Mes gents actifs</div>
+      <div className={styles.railLabel}>Mes gents</div>
 
       <ul className={styles.espaceList} role="list">
         {Object.entries(espaces).map(([id, e]) => (
@@ -85,7 +90,7 @@ export function Rail() {
                 <span className={styles.name}>{e.name}</span>
                 <span className={styles.sub}>
                   <span className={[styles.dot, STATUS_DOT_CLASS[e.status]].filter(Boolean).join(" ")} />
-                  {e.diffusionPrivee ? "Privé" : e.statusLabel} · {e.gent}
+                  {LIBELLE_STATUT[statutGent(e)]}
                 </span>
               </span>
             </button>

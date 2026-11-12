@@ -16,14 +16,19 @@ import {
   type StudioExample,
 } from "@/lib/studioExamples";
 import type { GentDraft } from "@/lib/types/builder";
-import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
+import { SelecteurMode } from "@/components/shared/SelecteurMode";
+import { cibleDuMode } from "@/lib/navigationModes";
+import { LIBELLE_STATUT, peutEtreOuvert, statutGent } from "@/lib/statutGent";
 import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./StudioHome.module.css";
 
 const MAX_RECENT = 6;
 
 /**
- * Accueil du Gent' studio.
+ * Accueil de Getgents (le logo y ramène, depuis les deux modes).
+ *
+ * Un nouveau venu y décrit le gent à construire ; qui a déjà des gents les
+ * voit d'abord, pour s'en servir — la création reste juste en dessous.
  *
  * Auparavant, /builder redirigeait vers le dernier gent ouvert (ou en créait un
  * au passage) : ouvrir le studio revenait donc à être parachuté dans un gent
@@ -83,7 +88,7 @@ export function StudioHome() {
   return (
     <div className={styles.page}>
       <header className={styles.topBar}>
-        <ProductBrandMenu surface="accueil" />
+        <SelecteurMode enTete />
         {recent.length > 0 && (
           <a href="/builder/mesgents" className={styles.topLink}>
             Mes gents
@@ -93,8 +98,48 @@ export function StudioHome() {
       </header>
 
       <div className={styles.body}>
+        {/* L'accueil suit l'utilisateur : qui a déjà des gents vient d'abord
+            s'en servir — ils passent devant, la création reste juste dessous. */}
+        {recent.length > 0 && (
+          <section className={styles.recent} id="mes-gents" aria-labelledby="studio-recent-title">
+            <div className={styles.sectionHead}>
+              <h2 className={styles.sectionTitle} id="studio-recent-title">
+                Vos gents
+              </h2>
+              <p className={styles.sectionSub}>Ouvrez-en un pour vous en servir, du plus récemment modifié au plus ancien.</p>
+            </div>
+            <div className={styles.recentList}>
+              {recent.slice(0, MAX_RECENT).map((draft) => (
+                // Un gent diffusé s'ouvre pour s'en servir ; un brouillon, qui n'a
+                // pas encore d'espace, ouvre ses réglages.
+                <a
+                  key={draft.id}
+                  href={peutEtreOuvert(statutGent(draft)) ? cibleDuMode("utiliser", draft) : cibleDuMode("construire", draft)}
+                  className={styles.recentItem}
+                >
+                  <span className={styles.recentIcon} aria-hidden="true">
+                    <BrandIcon variant="fillSm" />
+                  </span>
+                  <span className={styles.recentBody}>
+                    <span className={styles.recentName}>{draft.name}</span>
+                    <span className={styles.recentMeta}>
+                      {LIBELLE_STATUT[statutGent(draft)]} · {draft.objective?.trim() || "Objectif à définir"}
+                    </span>
+                  </span>
+                </a>
+              ))}
+            </div>
+            {recent.length > MAX_RECENT && (
+              <a href="/builder/mesgents" className={styles.allLink}>
+                Voir les {recent.length} gents
+              </a>
+            )}
+          </section>
+        )}
         <section className={styles.hero}>
-          <h1 className={styles.title}>Quel gent voulez-vous construire ?</h1>
+          <h1 className={[styles.title, recent.length > 0 ? styles.titleSecond : ""].filter(Boolean).join(" ")}>
+            {recent.length > 0 ? "Ou construisez un nouveau gent" : "Quel gent voulez-vous construire ?"}
+          </h1>
           <p className={styles.sub}>
             Décrivez son rôle en une phrase. On l&apos;installe dans le studio et on continue ensemble.
           </p>
@@ -152,36 +197,6 @@ export function StudioHome() {
           </div>
         </section>
 
-        {recent.length > 0 && (
-          <section className={styles.recent} id="mes-gents" aria-labelledby="studio-recent-title">
-            <div className={styles.sectionHead}>
-              <h2 className={styles.sectionTitle} id="studio-recent-title">
-                Reprendre un gent
-              </h2>
-              <p className={styles.sectionSub}>Vos gents existants, du plus récemment modifié au plus ancien.</p>
-            </div>
-            <div className={styles.recentList}>
-              {recent.slice(0, MAX_RECENT).map((draft) => (
-                <a key={draft.id} href={`/builder/${draft.id}?tab=conversationnel`} className={styles.recentItem}>
-                  <span className={styles.recentIcon} aria-hidden="true">
-                    <BrandIcon variant="fillSm" />
-                  </span>
-                  <span className={styles.recentBody}>
-                    <span className={styles.recentName}>{draft.name}</span>
-                    <span className={styles.recentMeta}>
-                      {draft.objective?.trim() || "Objectif à définir"}
-                    </span>
-                  </span>
-                </a>
-              ))}
-            </div>
-            {recent.length > MAX_RECENT && (
-              <a href="/builder/mesgents" className={styles.allLink}>
-                Voir les {recent.length} gents
-              </a>
-            )}
-          </section>
-        )}
       </div>
     </div>
   );

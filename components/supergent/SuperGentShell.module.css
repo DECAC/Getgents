@@ -18,3 +18,13 @@
     grid-template-columns: var(--rail-min) 1fr;
   }
 }
+
+/* Sous 860 px le rail devient un tiroir (position fixe, hors du flux) : la
+   grille ne doit plus lui réserver de colonne. Sinon la page entière tombait
+   dans la première colonne, large de quelques dizaines de pixels — GetSpace
+   était illisible sur téléphone. */
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+}

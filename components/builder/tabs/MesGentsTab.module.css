@@ -428,3 +428,77 @@
     min-height: 44px;
   }
 }
+
+/* Les deux modes sur chaque carte : Ouvrir (s'en servir), Configurer. */
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.actionPrincipale,
+.actionSecondaire {
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--r-pill);
+  padding: 6px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.actionPrincipale {
+  background: var(--blue);
+  color: #fff;
+}
+.actionPrincipale:hover {
+  filter: brightness(1.06);
+}
+.actionSecondaire {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.actionSecondaire:hover {
+  border-color: var(--sage);
+  color: var(--sage-700);
+}
+.actionPrincipale:focus-visible,
+.actionSecondaire:focus-visible,
+.plusBtn:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+
+/* Actions rares, derrière « ⋯ ». */
+.plus {
+  position: relative;
+  margin-left: auto;
+}
+.plusBtn {
+  list-style: none;
+  cursor: pointer;
+  width: 30px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+}
+.plusBtn::-webkit-details-marker {
+  display: none;
+}
+.plusBtn:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+.plusMenu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  z-index: 20;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(42, 31, 25, 0.14);
+}

@@ -6,6 +6,8 @@ import { useBuilder } from "@/lib/context/BuilderContext";
 import { hasCustomName } from "@/lib/builderSnapshot";
 import { deleteGentEverywhere } from "@/lib/deleteGent";
 import styles from "./BuilderHeader.module.css";
+import { cibleDuMode } from "@/lib/navigationModes";
+import { statutGent } from "@/lib/statutGent";
 import { BoutonNavMobile } from "@/components/shared/BoutonNavMobile";
 import { BrandIcon } from "@/components/shared/BrandMark";
 
@@ -107,6 +109,18 @@ export function BuilderHeader() {
             aria-label="Objectif du gent"
           />
         </div>
+        {/* Le pont vers l'usage : le gent tel que vous vous en servez, avec vos
+            conversations et vos notes. Preview, à côté, montre ce que voit un
+            visiteur. Un gent jamais diffusé n'a pas encore d'espace. */}
+        {statutGent(currentDraft) !== "brouillon" && (
+          <a
+            href={cibleDuMode("utiliser", currentDraft)}
+            className={styles.viewLiveLink}
+            title="Ouvrir ce gent dans GetSpace, pour vous en servir"
+          >
+            Ouvrir ce gent
+          </a>
+        )}
         <button
           type="button"
           className={styles.viewLiveLink}

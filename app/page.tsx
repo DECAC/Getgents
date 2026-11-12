@@ -20,10 +20,11 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   // Sans Supabase (développement local, mode maquette), on garde le
   // comportement d'avant : personne n'est attendu à la connexion.
-  if (!isAuthConfigured()) redirect("/builder/mesgents");
+  if (!isAuthConfigured()) redirect("/accueil");
 
   const user = await getUser();
-  if (user) redirect("/builder/mesgents");
+  // L'accueil s'adapte : vos gents d'abord si vous en avez, la création sinon.
+  if (user) redirect("/accueil");
 
   return (
     <main className={styles.page}>

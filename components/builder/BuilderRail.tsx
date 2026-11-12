@@ -4,7 +4,8 @@ import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBuilder, type BuilderTab } from "@/lib/context/BuilderContext";
 import { hasCustomName, isDirtySincePublish } from "@/lib/builderSnapshot";
-import { ProductBrandMenu } from "@/components/shared/ProductBrandMenu";
+import { SelecteurMode } from "@/components/shared/SelecteurMode";
+import type { GentOuvert } from "@/lib/navigationModes";
 import { useNavMobile } from "@/lib/context/NavMobileContext";
 import styles from "./BuilderRail.module.css";
 import { MenuCompte } from "@/components/compte/MenuCompte";
@@ -130,10 +131,8 @@ const ICON = {
  * les entrées de configuration ouvraient en plus, sans le dire, le premier
  * gent venu.
  */
-const NAV_GLOBAL: NavEntry[] = [
-  { id: "accueil", label: "Accueil", icon: ICON.accueil },
-  { id: "mesgents", label: "Mes gents", icon: ICON.mesgents, blue: true },
-];
+// L'accueil n'y figure plus : le logo, en tête du rail, y ramène.
+const NAV_GLOBAL: NavEntry[] = [{ id: "mesgents", label: "Mes gents", icon: ICON.mesgents, blue: true }];
 
 function navGent(formats: {
   miniapp: boolean;
@@ -281,6 +280,11 @@ function BuilderRailGent() {
           prompteur: !!currentDraft.prompteur?.enabled,
         }),
       }}
+      gentOuvert={{
+        id: currentDraft.id,
+        diffusionPrivee: currentDraft.diffusionPrivee,
+        adressePrivee: currentDraft.adressePrivee,
+      }}
       showPublish
       publishLabel={publishing ? "Diffusion…" : publishLabel}
       publishDisabled={publishDisabled || publishing}
@@ -313,7 +317,10 @@ function RailChrome({
   publishLive,
   onPublish,
   publishBlocked,
+  gentOuvert,
 }: {
+  /** Le gent ouvert : « Utiliser » mène à CE gent, pas à la liste. */
+  gentOuvert?: GentOuvert;
   railCollapsed: boolean;
   onToggleRail: () => void;
   activeTab: BuilderTab;
@@ -373,25 +380,30 @@ function RailChrome({
       id="builder-rail"
     >
       <div className={styles.brand}>
-        <ProductBrandMenu surface="studio" compact={railCollapsed} />
-        <button
-          className={styles.railToggle}
-          onClick={onToggleRail}
-          aria-label={railCollapsed ? "Déployer la colonne" : "Réduire la colonne"}
-          title={railCollapsed ? "Déployer" : "Réduire"}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            style={{ transform: railCollapsed ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }}
-          >
-            <path d="M14 6l-6 6 6 6" />
-          </svg>
-        </button>
+        <SelecteurMode
+          mode="construire" gent={gentOuvert}
+          compact={railCollapsed}
+          aCote={
+            <button
+              className={styles.railToggle}
+              onClick={onToggleRail}
+              aria-label={railCollapsed ? "Déployer la colonne" : "Réduire la colonne"}
+              title={railCollapsed ? "Déployer" : "Réduire"}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                style={{ transform: railCollapsed ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }}
+              >
+                <path d="M14 6l-6 6 6 6" />
+              </svg>
+            </button>
+          }
+        />
       </div>
 
       <div className={styles.nav}>

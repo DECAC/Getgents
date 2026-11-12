@@ -1,0 +1,126 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 8px;
+  flex: 1;
+  min-width: 0;
+}
+/* Dans un rail : les deux modes prennent toute la largeur, sous le logo —
+   côte à côte avec lui, « Construire » était coupé. */
+.wrap:not(.enTete):not(.compact) .modes {
+  flex-basis: 100%;
+}
+
+.logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--sage-tint);
+  display: grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+}
+.logo:hover {
+  filter: brightness(0.97);
+}
+
+.modes {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.mode {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 4px;
+  border-radius: 7px;
+  font-size: 12px;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.mode:hover {
+  color: var(--ink);
+}
+.mode:focus-visible,
+.logo:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+
+.actif {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(42, 31, 25, 0.12);
+}
+
+.icone {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  display: inline-flex;
+}
+.icone svg {
+  width: 100%;
+  height: 100%;
+}
+
+.libelle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Rail replié : le logo, puis les deux modes empilés. */
+.compact {
+  flex-direction: column;
+  flex: none;
+  width: 100%;
+  align-items: center;
+}
+.compact .modes {
+  flex-direction: column;
+  flex: none;
+}
+.compact .mode {
+  padding: 7px;
+}
+
+/* Dans un en-tête : il ne prend que sa place. */
+.enTete {
+  flex: none;
+  width: 290px;
+  flex-wrap: nowrap;
+}
+@media (max-width: 360px) {
+  .enTete {
+    width: auto;
+  }
+  .enTete .libelle {
+    display: none;
+  }
+  .enTete .mode {
+    padding: 7px 9px;
+  }
+}
+
+.aCote {
+  margin-left: auto;
+  display: inline-flex;
+}
+.compact .aCote {
+  margin-left: 0;
+}

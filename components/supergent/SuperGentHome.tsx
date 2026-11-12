@@ -228,7 +228,7 @@ export function SuperGentHome() {
     <div className={[styles.wrap, started ? styles.wrapThread : ""].filter(Boolean).join(" ")}>
       {!started ? (
         <div className={styles.hero}>
-          <h1 className={styles.title}>Interroge tes gents</h1>
+          <h1 className={styles.title}>Interrogez vos gents</h1>
           <p className={styles.sub}>
             Une seule question — le gent le mieux placé y répond.
           </p>
@@ -244,8 +244,8 @@ export function SuperGentHome() {
               className={styles.input}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={storageReady ? "Interroge tes gents…" : "Chargement de vos gents…"}
-              aria-label="Interroge tes gents"
+              placeholder={storageReady ? "Interrogez vos gents…" : "Chargement de vos gents…"}
+              aria-label="Interrogez vos gents"
               autoFocus
             />
             <button type="submit" className={styles.send} disabled={!draft.trim() || !ready} aria-label="Envoyer">

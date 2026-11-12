@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { BuilderShell } from "@/components/builder/BuilderShell";
 
+export const metadata = { title: "Construire · GetStudio" };
+
 // Page privée : elle dépend des cookies de session, donc ne peut plus être
 // pré-générée. Laisser un generateStaticParams ici servirait la même page à
 // tout le monde, ou ferait échouer le build.

@@ -66,7 +66,7 @@ export default function InscriptionPage() {
           email: email.trim(),
           password: motDePasse,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=/builder/mesgents`,
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=/accueil`,
           },
         });
         if (error) throw new Error(messageErreurAuth(error.message));

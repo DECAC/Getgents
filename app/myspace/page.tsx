@@ -1,6 +1,8 @@
 import { ESPACES } from "@/lib/mock-data/espaces";
 import { SuperGentShell } from "@/components/supergent/SuperGentShell";
 
+export const metadata = { title: "Utiliser vos gents · GetSpace" };
+
 /**
  * Gent' space : le « super gent ». Point d'entrée unique où l'on interroge
  * l'ensemble de ses gents sans avoir à choisir lequel ouvrir.

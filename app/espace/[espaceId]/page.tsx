@@ -1,5 +1,7 @@
 import { EspaceShell } from "@/components/shell/EspaceShell";
 
+export const metadata = { title: "Utiliser · GetSpace" };
+
 // Page privée : elle dépend des cookies de session, donc ne peut plus être
 // pré-générée. Laisser un generateStaticParams ici servirait la même page à
 // tout le monde, ou ferait échouer le build.

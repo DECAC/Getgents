@@ -6,20 +6,40 @@ import { useGentsList } from "@/lib/hooks/useGentsList";
 import { SessionExpiree } from "@/components/shared/SessionExpiree";
 import { BrandIcon } from "@/components/shared/BrandMark";
 import styles from "./MesGentsTab.module.css";
+import { cibleDuMode } from "@/lib/navigationModes";
+import { LIBELLE_STATUT, peutEtreOuvert, statutGent, type StatutGent } from "@/lib/statutGent";
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Brouillon",
-  review: "En revue",
-  published: "Publié",
+// Mêmes mots que le rail de GetSpace (`lib/statutGent.ts`).
+const STATUS_CLASS: Record<StatutGent, string> = {
+  brouillon: styles.statusDraft,
+  diffuse: styles.statusPublished,
+  prive: styles.statusReview,
 };
 
-const STATUS_CLASS: Record<string, string> = {
-  draft: styles.statusDraft,
-  review: styles.statusReview,
-  published: styles.statusPublished,
-};
+function Statut({ g }: { g: { status?: string; diffusionPrivee?: boolean } }) {
+  const s = statutGent(g);
+  return <span className={[styles.statusBadge, STATUS_CLASS[s]].join(" ")}>{LIBELLE_STATUT[s]}</span>;
+}
+
+/**
+ * Les actions RARES d'une carte, derrière « ⋯ » : la seule action visible
+ * d'une carte était « Supprimer », ce qui en faisait l'action principale.
+ */
+function MenuPlus({ children, label }: { children: React.ReactNode; label: string }) {
+  return (
+    <details className={styles.plus} onClick={(e) => e.stopPropagation()}>
+      <summary className={styles.plusBtn} aria-label={`Autres actions — ${label}`} title="Autres actions">
+        ⋯
+      </summary>
+      <div className={styles.plusMenu}>{children}</div>
+    </details>
+  );
+}
 
 type View = "tuile" | "liste";
+
+/** Un brouillon jamais diffusé n'a pas encore d'espace où s'en servir. */
+const ouvrable = (g: { status?: string; diffusionPrivee?: boolean }) => peutEtreOuvert(statutGent(g));
 
 function SelectionCheck({
   checked,
@@ -41,9 +61,8 @@ function SelectionCheck({
 
 /**
  * Liste des gents au niveau studio (/builder/mesgents) : tuiles ou lignes,
- * sans bandeau ni assistant d'un gent ouvert. Accessible via « Mes gents »
- * dans le rail ; la bascule vers Gent' space se fait uniquement par le menu
- * titre en haut à gauche.
+ * sans bandeau ni assistant d'un gent ouvert. Chaque carte porte les deux
+ * modes : Ouvrir (s'en servir, GetSpace) et Configurer (GetStudio).
  */
 export function MesGentsTab() {
   const {
@@ -116,7 +135,7 @@ export function MesGentsTab() {
     <div className={styles.wrap}>
       <div>
         <h4 className={styles.title}>Mes gents</h4>
-        <div className={styles.sub}>Tous les gents de votre Gent&apos;space — créez-en un ou reprenez-en un.</div>
+        <div className={styles.sub}>Ouvrez un gent pour vous en servir, ou configurez-le. Un brouillon s&apos;ouvre une fois diffusé.</div>
       </div>
 
       <div className={styles.headRow}>
@@ -238,8 +257,8 @@ export function MesGentsTab() {
 
       {orphanedPublished.length > 0 && (
         <div className={styles.banner}>
-          <strong>Gents publiés retrouvés</strong> — le brouillon builder a pu disparaître après une mise à
-          jour, mais l&apos;espace publié est toujours disponible.
+          <strong>Gents sans réglages</strong> — ces gents fonctionnent toujours, mais leurs réglages ne
+          sont plus dans le studio. « Restaurer » les y remet.
         </div>
       )}
 
@@ -261,28 +280,38 @@ export function MesGentsTab() {
                   onToggle={() => toggleId(d.id)}
                 />
               </div>
-              <a href={`/builder/${d.id}`} className={styles.cardLink}>
+              {/* La carte ouvre le gent ; un brouillon, qu'on ne peut pas encore
+                  utiliser, ouvre ses réglages. */}
+              <a href={ouvrable(d) ? cibleDuMode("utiliser", d) : cibleDuMode("construire", d)} className={styles.cardLink}>
                 <div className={styles.cardTop}>
                   <div className={styles.ic} aria-hidden="true"><BrandIcon variant="fillSm" /></div>
                   <div>
                     <div className={styles.name}>{d.name}</div>
-                    <span className={[styles.statusBadge, STATUS_CLASS[d.status]].join(" ")}>
-                      {STATUS_LABEL[d.status]}
-                    </span>
+                    <Statut g={d} />
                   </div>
                 </div>
                 <p className={styles.objective}>{d.objective || "Aucun objectif défini pour l'instant."}</p>
                 <div className={styles.meta}>Mis à jour {d.updatedAt}</div>
               </a>
               <div className={styles.cardActions}>
-                <button
-                  type="button"
-                  className={styles.deleteBtn}
-                  onClick={() => handleDelete(d.id, d.name || "ce gent")}
-                  disabled={busy || deletingId === d.id}
-                >
-                  {deletingId === d.id ? "Suppression…" : "Supprimer"}
-                </button>
+                {ouvrable(d) && (
+                  <a href={cibleDuMode("utiliser", d)} className={styles.actionPrincipale}>
+                    Ouvrir
+                  </a>
+                )}
+                <a href={cibleDuMode("construire", d)} className={styles.actionSecondaire}>
+                  Configurer
+                </a>
+                <MenuPlus label={d.name || "ce gent"}>
+                  <button
+                    type="button"
+                    className={styles.deleteBtn}
+                    onClick={() => handleDelete(d.id, d.name || "ce gent")}
+                    disabled={busy || deletingId === d.id}
+                  >
+                    {deletingId === d.id ? "Suppression…" : "Supprimer"}
+                  </button>
+                </MenuPlus>
               </div>
             </div>
           ))}
@@ -306,25 +335,27 @@ export function MesGentsTab() {
                 <div className={styles.ic} aria-hidden="true"><BrandIcon variant="fillSm" /></div>
                 <div>
                   <div className={styles.name}>{espace.gent || espace.name}</div>
-                  <span className={[styles.statusBadge, styles.statusPublished].join(" ")}>Publié (espace seul)</span>
+                  <Statut g={espace} />
                 </div>
               </div>
-              <p className={styles.objective}>Brouillon builder absent — restaurez-le pour continuer à l&apos;éditer.</p>
+              <p className={styles.objective}>Réglages absents du studio — restaurez-les pour pouvoir le configurer.</p>
               <div className={styles.recoveryActions}>
-                <a href={`/espace/${id}`} className={styles.recoveryLink}>
-                  Ouvrir l&apos;espace
+                <a href={cibleDuMode("utiliser", { id, ...espace })} className={styles.actionPrincipale}>
+                  Ouvrir
                 </a>
                 <button type="button" className={styles.recoveryBtn} onClick={() => handleRestore(id, espace)} disabled={busy}>
                   Restaurer
                 </button>
-                <button
-                  type="button"
-                  className={styles.deleteBtn}
-                  onClick={() => handleDelete(id, espace.gent || espace.name)}
-                  disabled={busy || deletingId === id}
-                >
-                  {deletingId === id ? "Suppression…" : "Supprimer"}
-                </button>
+                <MenuPlus label={espace.gent || espace.name || "ce gent"}>
+                  <button
+                    type="button"
+                    className={styles.deleteBtn}
+                    onClick={() => handleDelete(id, espace.gent || espace.name)}
+                    disabled={busy || deletingId === id}
+                  >
+                    {deletingId === id ? "Suppression…" : "Supprimer"}
+                  </button>
+                </MenuPlus>
               </div>
             </div>
           ))}
@@ -349,22 +380,30 @@ export function MesGentsTab() {
                 label={`Sélectionner ${d.name || "ce gent"}`}
                 onToggle={() => toggleId(d.id)}
               />
-              <a href={`/builder/${d.id}`} className={styles.rowLink}>
+              <a href={ouvrable(d) ? cibleDuMode("utiliser", d) : cibleDuMode("construire", d)} className={styles.rowLink}>
                 <div className={styles.ic} aria-hidden="true"><BrandIcon variant="fillSm" /></div>
                 <span className={styles.rowName}>{d.name}</span>
-                <span className={[styles.statusBadge, STATUS_CLASS[d.status]].join(" ")}>
-                  {STATUS_LABEL[d.status]}
-                </span>
+                <Statut g={d} />
               </a>
               <span className={styles.rowMeta}>Mis à jour {d.updatedAt}</span>
-              <button
-                type="button"
-                className={styles.deleteBtn}
-                onClick={() => handleDelete(d.id, d.name || "ce gent")}
-                disabled={busy || deletingId === d.id}
-              >
-                {deletingId === d.id ? "Suppression…" : "Supprimer"}
-              </button>
+              {ouvrable(d) && (
+                <a href={cibleDuMode("utiliser", d)} className={styles.actionPrincipale}>
+                  Ouvrir
+                </a>
+              )}
+              <a href={cibleDuMode("construire", d)} className={styles.actionSecondaire}>
+                Configurer
+              </a>
+              <MenuPlus label={d.name || "ce gent"}>
+                <button
+                  type="button"
+                  className={styles.deleteBtn}
+                  onClick={() => handleDelete(d.id, d.name || "ce gent")}
+                  disabled={busy || deletingId === d.id}
+                >
+                  {deletingId === d.id ? "Suppression…" : "Supprimer"}
+                </button>
+              </MenuPlus>
             </div>
           ))}
 
@@ -381,22 +420,24 @@ export function MesGentsTab() {
                 label={`Sélectionner ${espace.gent || espace.name || "ce gent"}`}
                 onToggle={() => toggleId(id)}
               />
-              <a href={`/espace/${id}`} className={styles.rowLink}>
+              <a href={cibleDuMode("utiliser", { id, ...espace })} className={styles.rowLink}>
                 <div className={styles.ic} aria-hidden="true"><BrandIcon variant="fillSm" /></div>
                 <span className={styles.rowName}>{espace.gent || espace.name}</span>
-                <span className={[styles.statusBadge, styles.statusPublished].join(" ")}>Publié (espace seul)</span>
+                <Statut g={espace} />
               </a>
               <button type="button" className={styles.recoveryBtn} onClick={() => handleRestore(id, espace)} disabled={busy}>
                 Restaurer
               </button>
-              <button
-                type="button"
-                className={styles.deleteBtn}
-                onClick={() => handleDelete(id, espace.gent || espace.name)}
-                disabled={busy || deletingId === id}
-              >
-                {deletingId === id ? "Suppression…" : "Supprimer"}
-              </button>
+              <MenuPlus label={espace.gent || espace.name || "ce gent"}>
+                <button
+                  type="button"
+                  className={styles.deleteBtn}
+                  onClick={() => handleDelete(id, espace.gent || espace.name)}
+                  disabled={busy || deletingId === id}
+                >
+                  {deletingId === id ? "Suppression…" : "Supprimer"}
+                </button>
+              </MenuPlus>
             </div>
           ))}
         </div>

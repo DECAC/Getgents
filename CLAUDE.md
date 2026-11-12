@@ -452,8 +452,35 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
 - **Salon collaboratif** : le modèle dépend de la PHASE
   (`lib/collabModels.ts`) — un modèle rapide en collecte, celui du créateur en
   propositions. Mesuré : 82-91 % du temps d'un tick est l'appel au modèle.
+- **Navigation : DEUX MODES, les marques en second** (12/11 ;
+  `components/shared/SelecteurMode.tsx`, `lib/navigationModes.ts`). Les
+  utilisateurs ne comprenaient pas Getgents / GetSpace / GetStudio : trois
+  marques pour deux gestes, derrière un menu déroulant caché sous le logo qui
+  ne montrait jamais la section courante (`ProductBrandMenu`, supprimé).
+  Désormais : le logo ramène à l'accueil, et un sélecteur toujours visible
+  `Utiliser | Construire` (GetSpace | GetStudio en info-bulle) marque la
+  position courante. Changer de mode GARDE le gent ouvert (`cibleDuMode` :
+  depuis `/builder/<id>`, « Utiliser » ouvre son espace — adresse privée
+  comprise ; depuis `/espace/<id>`, « Construire » ses réglages). « Getgents »
+  n'est plus une section : c'est l'accueil, qui s'ADAPTE (`StudioHome`) —
+  vos gents d'abord si vous en avez (un diffusé s'ouvre pour s'en servir, un
+  brouillon ouvre ses réglages), la création dessous ; un nouveau venu voit la
+  création. Connexion et racine mènent à `/accueil` (`destinationApresConnexion`).
+  « Mes gents » : chaque carte porte **Ouvrir** et **Configurer**,
+  « Supprimer » passe sous « ⋯ ». Statuts : les MÊMES mots partout
+  (`lib/statutGent.ts` : Brouillon / Diffusé / Privé) — le studio disait
+  « Publié », GetSpace « Actif ». Ponts : « Ouvrir ce gent » dans le studio
+  d'un gent diffusé (Preview reste la vue d'un visiteur), « Configurer ce
+  gent » dans l'espace personnel. L'interface VOUVOIE partout
+  (`__tests__/tonVous.test.ts`, GetSpace tutoyait). Payé en passant :
+  GetSpace était illisible sur téléphone (la grille réservait une colonne au
+  rail devenu tiroir fixe, toute la page tombait dans 66 px). Vérifié au
+  navigateur en mode maquette (sans Supabase), PAS avec de vrais
+  utilisateurs : rejouer « posez une question à votre gent X », « changez son
+  prompt », « créez-en un » et noter le premier clic.
 - **Créer et configurer ne partagent plus aucune entrée de menu.** Le rail a
-  deux étages : GLOBAL (« + Nouveau gent », Accueil, Mes gents) et, sous le
+  deux étages : GLOBAL (« + Nouveau gent », Mes gents — l'accueil passe par le
+  logo) et, sous le
   nom du gent ouvert, SES réglages : Configurer (dont les formats Mini App,
   Visionneuse, Event Manager, sous un filet — une section « Formats » à part
   se lisait comme une information) puis Diffuser et suivre. L'ancien menu « Créer » créait un gent depuis la liste et changeait
