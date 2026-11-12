@@ -413,9 +413,19 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   conversation ne suffit pas. À dire à chaque nouvel outil. **Assistant du
   document (12/11, NON essayé avec un vrai modèle)** : option d'un partage
   (`assistant` dans l'outil, faux par défaut ; case « Assistant IA » dans
-  Mes partages). Panneau À CÔTÉ du cadre, dans la page Getgents, jamais
-  dans le document isolé ; sur téléphone, bascule Document / Assistant (le
-  cadre est masqué, pas retiré : l'artefact garde son état). Ce n'est PAS un
+  Mes partages). Panneau dans la page Getgents, jamais dans le document
+  isolé. **UX choisie par l'utilisateur (12/11, après maquettes)** : REPLIÉ
+  à l'arrivée — document plein écran, bouton « ✦ Poser une question » en
+  bas à droite (la languette sur le bord a été écartée), bulle de première
+  visite à 3 s, une seule fois par navigateur (`getgents:partage:bulleVue`).
+  OUVERT = deux cartes DÉTACHÉES (14 px de marge partout, rien ne touche le
+  bord ni la barre du haut), le document se RESSERRE à côté : on consulte en
+  posant ses questions (la superposition avait été écartée pour ça). Sous
+  1 000 px l'assistant passe au-dessus ; sur téléphone, moitié basse, le
+  document reste utilisable au-dessus, ⤢ agrandit. ✕ ou Échap replie, le
+  fil est gardé. Le cadre n'est JAMAIS démonté (vérifié : un seul
+  chargement du document en ouvrant, fermant, agrandissant) — l'artefact
+  garde son état. Ce n'est PAS un
   gent : consigne fixe (`consigneAssistant`, `lib/assistantDocument.ts`) —
   le document SEUL, jamais d'invention (un prix inventé engagerait le
   commercial), document entre balises traité comme une donnée. Le code est

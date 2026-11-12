@@ -11,12 +11,35 @@ import styles from "./partage.module.css";
  * Le panneau de l'assistant du document. Le fil ne vit que dans la page :
  * rien n'est gardé côté serveur, recharger la page le vide.
  */
-export default function AssistantDocument({ jeton, amorces }: { jeton: string; amorces: string[] }) {
+export default function AssistantDocument({
+  jeton,
+  amorces,
+  ouvert,
+  agrandi,
+  onFermer,
+  onAgrandir,
+}: {
+  jeton: string;
+  amorces: string[];
+  ouvert: boolean;
+  agrandi: boolean;
+  onFermer: () => void;
+  onAgrandir: () => void;
+}) {
   const [fil, setFil] = useState<MessageAssistant[]>([]);
   const [saisie, setSaisie] = useState("");
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const basRef = useRef<HTMLDivElement>(null);
+  const champRef = useRef<HTMLTextAreaElement>(null);
+
+  // À l'ouverture, on peut écrire tout de suite — après la transition, sinon
+  // le défilement vers le champ ferait sauter la page.
+  useEffect(() => {
+    if (!ouvert) return;
+    const t = window.setTimeout(() => champRef.current?.focus({ preventScroll: true }), 260);
+    return () => window.clearTimeout(t);
+  }, [ouvert]);
 
   useEffect(() => {
     basRef.current?.scrollIntoView({ block: "end" });
@@ -50,12 +73,20 @@ export default function AssistantDocument({ jeton, amorces }: { jeton: string; a
   }
 
   return (
-    <aside className={styles.assistant} aria-label="Assistant du document">
+    <aside className={styles.assistant} aria-label="Assistant du document" aria-hidden={!ouvert}>
       <div className={styles.assistantTete}>
         <span className={styles.avatar} aria-hidden="true">✦</span>
         <div>
           <div className={styles.assistantNom}>Assistant du document</div>
-          <div className={styles.assistantSous}>Répond à partir de ce document, et de rien d&apos;autre</div>
+          <div className={styles.assistantSous}>D&apos;après ce document uniquement</div>
+        </div>
+        <div className={styles.outils}>
+          <button type="button" className={`${styles.outil} ${styles.outilAgrandir}`} onClick={onAgrandir} aria-label={agrandi ? "Réduire" : "Agrandir"}>
+            {agrandi ? "⤡" : "⤢"}
+          </button>
+          <button type="button" className={styles.outil} onClick={onFermer} aria-label="Fermer l'assistant">
+            ✕
+          </button>
         </div>
       </div>
 
@@ -95,6 +126,7 @@ export default function AssistantDocument({ jeton, amorces }: { jeton: string; a
         }}
       >
         <textarea
+          ref={champRef}
           className={styles.champ}
           value={saisie}
           rows={1}
@@ -112,7 +144,7 @@ export default function AssistantDocument({ jeton, amorces }: { jeton: string; a
           →
         </button>
       </form>
-      <p className={styles.mention}>Vous échangez avec une IA : elle peut se tromper. Rien n&apos;est conservé après la visite.</p>
+      <p className={styles.mention}>Vous échangez avec une IA : elle peut se tromper.</p>
     </aside>
   );
 }
