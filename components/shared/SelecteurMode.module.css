@@ -84,7 +84,17 @@
   text-overflow: ellipsis;
 }
 
-/* Rail replié : le logo, puis les deux modes empilés. */
+/* Dans un rail déployé : trois modes dans 244 px ne tiennent pas en ligne
+   (« Construire » était coupé en « Const… ») — l'icône passe AU-DESSUS du
+   libellé, chaque mode garde son nom entier. */
+.wrap:not(.enTete):not(.compact) .mode {
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 2px 5px;
+  font-size: 11.5px;
+}
+
+/* Rail replié : le logo, puis les modes empilés. */
 .compact {
   flex-direction: column;
   flex: none;
@@ -102,13 +112,25 @@
 /* Dans un en-tête : il ne prend que sa place. */
 .enTete {
   flex: none;
-  width: 290px;
+  width: 340px;
   flex-wrap: nowrap;
 }
-@media (max-width: 360px) {
+/* Téléphone : trois modes en ligne ne tiennent plus ; comme dans le rail,
+   l'icône passe au-dessus du libellé. Les libellés ne disparaissent que sur
+   les écrans les plus étroits — une icône seule ne dit pas où elle mène. */
+@media (max-width: 420px) {
   .enTete {
     width: auto;
+    flex: 1;
   }
+  .enTete .mode {
+    flex-direction: column;
+    gap: 2px;
+    padding: 5px 2px 4px;
+    font-size: 11px;
+  }
+}
+@media (max-width: 340px) {
   .enTete .libelle {
     display: none;
   }

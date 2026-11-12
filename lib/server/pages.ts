@@ -226,3 +226,191 @@ export async function pagePourLien(id: string): Promise<Page | null> {
   if (error) throw new Error(error.message);
   return data ? depuisLigne(data as Ligne) : null;
 }
+
+// ——— Rubrique « Pages » : liste, fiche, versions, suppression (lot B) ———
+
+export interface DestinatairePage {
+  jeton: string;
+  destinataire: string;
+  createdAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  questions: number;
+}
+
+export interface ResumePage {
+  id: string;
+  titre: string;
+  format: FormatArtefact;
+  origine: string | null;
+  assistant: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  /** Liens ni révoqués ni expirés. */
+  actifs: number;
+  /** Tous les liens, révoqués et expirés compris. */
+  liens: number;
+  /** Date d'expiration la plus lointaine parmi les liens actifs. */
+  expireLe: string | null;
+  /** Le lien actif le plus récent : ce qu'ouvre « Voir comme le client ». */
+  dernierJeton: string | null;
+}
+
+export interface VersionPage {
+  version: number;
+  titre: string;
+  createdAt: string;
+}
+
+const estActif = (d: { revokedAt: string | null; expiresAt: string | null }, maintenant = Date.now()) =>
+  !d.revokedAt && !(d.expiresAt && Date.parse(d.expiresAt) < maintenant);
+
+/** Le partage tel que la rubrique le lit (sans contenu : 2 Mo par ligne). */
+async function liensDuCompte(ownerId: string): Promise<(DestinatairePage & { pageId: string | null })[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    const g = globalThis as unknown as {
+      __artefactsPartages?: Map<string, { ownerId: string | null; pageId: string | null; jeton: string; destinataire: string; createdAt: string; expiresAt: string | null; revokedAt: string | null; questions: number }>;
+    };
+    return Array.from(g.__artefactsPartages?.values() ?? [])
+      .filter((m) => m.ownerId === ownerId)
+      .map((m) => ({ jeton: m.jeton, destinataire: m.destinataire, createdAt: m.createdAt, expiresAt: m.expiresAt, revokedAt: m.revokedAt, questions: m.questions, pageId: m.pageId }));
+  }
+  const { data, error } = await sb
+    .from("artefacts_partages")
+    .select("jeton, destinataire, created_at, expires_at, revoked_at, questions, page_id")
+    .eq("owner_id", ownerId)
+    .order("created_at", { ascending: false })
+    .limit(2000);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((d) => ({
+    jeton: d.jeton,
+    destinataire: d.destinataire,
+    createdAt: d.created_at,
+    expiresAt: d.expires_at,
+    revokedAt: d.revoked_at,
+    questions: d.questions ?? 0,
+    pageId: d.page_id ?? null,
+  }));
+}
+
+/** Les pages du compte, de la plus récemment modifiée à la plus ancienne, avec leurs compteurs de liens. */
+export async function listerPages(ownerId: string): Promise<ResumePage[]> {
+  const sb = getSupabaseAdmin();
+  let pages: Page[];
+  if (!sb) {
+    pages = Array.from(memoire().pages.values()).filter((p) => p.ownerId === ownerId && !p.supprimeeAt);
+  } else {
+    const { data, error } = await sb
+      .from("pages")
+      .select("id, owner_id, titre, format, origine, assistant, version, created_at, updated_at")
+      .eq("owner_id", ownerId)
+      .is("supprimee_at", null)
+      .order("updated_at", { ascending: false })
+      .limit(500);
+    if (error) throw new Error(error.message);
+    pages = (data ?? []).map((d) => depuisLigne({ ...(d as Omit<Ligne, "contenu">), contenu: "" }));
+  }
+  const liens = await liensDuCompte(ownerId);
+  const maintenant = Date.now();
+  return pages
+    .map((p) => {
+      const siens = liens.filter((l) => l.pageId === p.id);
+      const actifs = siens.filter((l) => estActif(l, maintenant));
+      const expireLe = actifs.map((l) => l.expiresAt).filter((x): x is string => !!x).sort().pop() ?? null;
+      return {
+        id: p.id,
+        titre: p.titre,
+        format: p.format,
+        origine: p.origine,
+        assistant: p.assistant,
+        version: p.version,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        actifs: actifs.length,
+        liens: siens.length,
+        expireLe,
+        dernierJeton: [...actifs].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.jeton ?? null,
+      };
+    })
+    .sort((x, y) => y.updatedAt.localeCompare(x.updatedAt));
+}
+
+export interface DetailPage extends Omit<Page, "contenu"> {
+  destinataires: DestinatairePage[];
+  versions: VersionPage[];
+  questions: number;
+}
+
+/** La fiche d'une page : ses destinataires et ses versions. Null si elle n'est pas à ce compte. */
+export async function detailPage(ownerId: string, id: string): Promise<DetailPage | null> {
+  const page = await lirePage(ownerId, id);
+  if (!page) return null;
+  const destinataires = (await liensDuCompte(ownerId))
+    .filter((l) => l.pageId === id)
+    .map(({ pageId: _p, ...l }) => l);
+  let versions: VersionPage[];
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    versions = (memoire().versions.get(id) ?? []).map((v) => ({ version: v.version, titre: v.titre, createdAt: v.createdAt }));
+  } else {
+    const { data, error } = await sb.from("pages_versions").select("version, titre, created_at").eq("page_id", id).order("version", { ascending: false });
+    if (error) throw new Error(error.message);
+    versions = (data ?? []).map((v) => ({ version: v.version, titre: v.titre, createdAt: v.created_at }));
+  }
+  versions.sort((a, b) => b.version - a.version);
+  const { contenu: _c, ...meta } = page;
+  return { ...meta, destinataires, versions, questions: destinataires.reduce((n, d) => n + d.questions, 0) };
+}
+
+/**
+ * Restaure une version ANCIENNE en la remettant en tête, comme une nouvelle
+ * version : la version actuelle est rangée à son tour — restaurer est
+ * lui-même un changement, rien n'est détruit.
+ */
+export async function restaurerVersion(ownerId: string, id: string, version: number): Promise<Page | null> {
+  const page = await lirePage(ownerId, id);
+  if (!page || !Number.isInteger(version)) return null;
+  let ancienne: { titre: string; format: FormatArtefact; contenu: string } | null = null;
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    const v = (memoire().versions.get(id) ?? []).find((x) => x.version === version);
+    ancienne = v ? { titre: v.titre, format: v.format, contenu: v.contenu } : null;
+  } else {
+    const { data } = await sb.from("pages_versions").select("titre, format, contenu").eq("page_id", id).eq("version", version).maybeSingle();
+    ancienne = data ? { titre: data.titre, format: data.format, contenu: data.contenu } : null;
+  }
+  if (!ancienne) return null;
+  return mettreAJourPage(ownerId, id, ancienne);
+}
+
+/**
+ * Supprime une page : elle disparaît de la rubrique et TOUS ses liens
+ * tombent. Marquée, pas effacée — les lignes restent, sans plus rien servir.
+ */
+export async function supprimerPage(ownerId: string, id: string): Promise<boolean> {
+  if (!estIdPage(id)) return false;
+  const maintenant = new Date().toISOString();
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    const p = memoire().pages.get(id);
+    if (!p || p.ownerId !== ownerId || p.supprimeeAt) return false;
+    p.supprimeeAt = maintenant;
+    return true;
+  }
+  const { data, error } = await sb
+    .from("pages")
+    .update({ supprimee_at: maintenant })
+    .eq("id", id)
+    .eq("owner_id", ownerId)
+    .is("supprimee_at", null)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).length > 0;
+}
+
+/** Contenu d'une page pour l'aperçu de son PROPRIÉTAIRE (fiche, vignettes). */
+export async function contenuPourProprietaire(ownerId: string, id: string): Promise<Page | null> {
+  return lirePage(ownerId, id);
+}

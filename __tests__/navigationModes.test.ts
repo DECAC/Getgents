@@ -1,4 +1,4 @@
-import { cibleDuMode, MODES } from "@/lib/navigationModes";
+import { cibleDuMode, MODES, ORDRE_MODES } from "@/lib/navigationModes";
 import { LIBELLE_STATUT, peutEtreOuvert, statutGent } from "@/lib/statutGent";
 
 describe("les deux modes", () => {
@@ -24,6 +24,13 @@ describe("les deux modes", () => {
   it("disent l'action d'abord, la marque ensuite", () => {
     expect(MODES.utiliser).toMatchObject({ libelle: "Utiliser", marque: "GetSpace" });
     expect(MODES.construire).toMatchObject({ libelle: "Construire", marque: "GetStudio" });
+    expect(MODES.pages).toMatchObject({ libelle: "Pages", marque: "GetSite" });
+  });
+
+  it("Pages, troisième mode, mène toujours à la rubrique : une page ne dépend d'aucun gent", () => {
+    expect(ORDRE_MODES).toEqual(["utiliser", "construire", "pages"]);
+    expect(cibleDuMode("pages")).toBe("/pages");
+    expect(cibleDuMode("pages", { id: "draft-1" })).toBe("/pages");
   });
 });
 

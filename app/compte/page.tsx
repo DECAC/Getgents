@@ -5,7 +5,6 @@ import { isAuthConfigured, missingAuthEnvVars, unconfiguredPolicy } from "@/lib/
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import CleOpenRouter, { type EtatCle } from "@/components/compte/CleOpenRouter";
 import Consommation from "@/components/compte/Consommation";
-import MesPartages from "@/components/compte/MesPartages";
 import Identifiants from "@/components/compte/Identifiants";
 import ZoneSensible from "@/components/compte/ZoneSensible";
 import styles from "./compte.module.css";
@@ -147,7 +146,15 @@ export default async function ComptePage() {
           </p>
         </section>
 
-        <MesPartages />
+        {/* « Mes partages » vivait ici ; la rubrique Pages le remplace — deux
+            listes des mêmes liens finiraient par se contredire. */}
+        <section className={styles.bloc}>
+          <h2 className={styles.sousTitre}>Mes pages</h2>
+          <p className={styles.aide} style={{ marginBottom: 0 }}>
+            Les pages partagées depuis Claude, leurs destinataires et leur assistant sont dans{" "}
+            <Link href="/pages">la rubrique Pages</Link>.
+          </p>
+        </section>
 
         <ZoneSensible email={user.confirmedEmail} />
 

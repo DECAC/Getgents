@@ -5,8 +5,9 @@ import { cibleDuMode, MODES, ORDRE_MODES, type GentOuvert, type Mode } from "@/l
 import styles from "./SelecteurMode.module.css";
 
 /**
- * Navigation principale : le logo ramène à l'accueil, et deux modes,
- * toujours visibles — Utiliser (GetSpace) et Construire (GetStudio).
+ * Navigation principale : le logo ramène à l'accueil, et trois modes,
+ * toujours visibles — Utiliser (GetSpace), Construire (GetStudio) et Pages
+ * (GetSite).
  *
  * Elle remplace un menu déroulant caché derrière le logo, qui ne montrait
  * jamais la section où l'on était et proposait trois marques pour deux
@@ -49,7 +50,12 @@ export function SelecteurMode({
               title={`${d.libelle} — ${d.sous} (${d.marque})`}
             >
               <span className={styles.icone} aria-hidden="true">
-                {m === "utiliser" ? (
+                {m === "pages" ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 3v5h5M9 13h6M9 17h4" />
+                  </svg>
+                ) : m === "utiliser" ? (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-4.6A8.4 8.4 0 1 1 21 11.5z" />
                   </svg>

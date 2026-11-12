@@ -472,8 +472,28 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   « partage cet artefact ». `partager_artefact` est encore ACCEPTÉ sans être
   annoncé : Claude garde l'ancienne liste d'outils tant qu'on ne reconnecte
   pas. Le code interne et les événements de journal gardent « artefact ».
-  Lots suivants : B (écrans /pages), C (accueil), puis code par e-mail
-  (Brevo), domaine séparé.
+  **Lot B (12/11, écrit, NON déployé)** : `/pages` (liste, une carte par
+  page, vignette = vrai rendu réduit à 30 % dans un cadre isolé, chargé en
+  `loading="lazy"`) et `/pages/<id>` (aperçu réel, destinataires avec
+  copier / révoquer, « + Partager à… » qui crée un lien SANS Claude — même
+  chemin que le repartage du connecteur —, interrupteur d'assistant par page,
+  versions avec « Restaurer » qui crée une NOUVELLE version, suppression qui
+  coupe tous les liens). Chemin privé (middleware). Aperçu propriétaire :
+  `/api/pages/<id>/apercu`, même CSP `sandbox` que chez le client — la
+  requête porte les cookies du compte, le document ne les voit pas. Troisième
+  mode du sélecteur (`Utiliser | Construire | Pages`, GetSite) : dans un
+  rail, l'icône passe AU-DESSUS du libellé (« Construire » était coupé en
+  « Const… ») ; sur téléphone, même disposition, libellés masqués sous
+  340 px seulement. Rail propre (`RailPages`, styles du rail du studio) :
+  « Mes pages », « Connecter Claude / ChatGPT » (guide en 3 étapes, aussi
+  écran vide) ; ChatGPT et Mistral annoncés « bientôt », pas avant un essai.
+  « Mes partages » RETIRÉ de Mon compte (lien vers la rubrique) : deux
+  listes des mêmes liens finiraient par se contredire. Vérifié au navigateur
+  (mémoire locale, données créées par le client MCP officiel) : filtres,
+  recherche, partage depuis la fiche, copie du mail, révocation, assistant,
+  restauration (aperçu revenu à la v1), suppression, téléphone sans
+  débordement. PAS avec Supabase. Lots suivants : C (accueil), puis code par
+  e-mail (Brevo), domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

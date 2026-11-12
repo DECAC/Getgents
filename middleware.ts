@@ -45,6 +45,8 @@ const CHEMINS_PRIVES = [
   /^\/compte(\/|$)/,
   // Consentement du connecteur MCP : on consent depuis SON compte.
   /^\/oauth\//,
+  // Rubrique « Pages » (GetSite) : les pages et leurs destinataires.
+  /^\/pages(\/|$)/,
 ];
 
 function estPrive(pathname: string): boolean {

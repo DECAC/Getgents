@@ -12,14 +12,17 @@
 // Module PUR.
 import { cheminEspace } from "@/lib/diffusionPrivee";
 
-export type Mode = "utiliser" | "construire";
+export type Mode = "utiliser" | "construire" | "pages";
 
 export const MODES: Record<Mode, { libelle: string; marque: string; sous: string; liste: string }> = {
   utiliser: { libelle: "Utiliser", marque: "GetSpace", sous: "Vos gents au quotidien", liste: "/myspace" },
   construire: { libelle: "Construire", marque: "GetStudio", sous: "Créer et configurer vos gents", liste: "/builder/mesgents" },
+  // Troisième objet, pas un geste sur le gent : les pages viennent de Claude,
+  // ChatGPT ou Mistral, et se partagent. D'où un NOM et non un verbe.
+  pages: { libelle: "Pages", marque: "GetSite", sous: "Vos pages partagées depuis Claude, ChatGPT…", liste: "/pages" },
 };
 
-export const ORDRE_MODES: readonly Mode[] = ["utiliser", "construire"];
+export const ORDRE_MODES: readonly Mode[] = ["utiliser", "construire", "pages"];
 
 /** Le gent ouvert, s'il y en a un : de quoi construire son adresse d'espace. */
 export interface GentOuvert {
@@ -30,6 +33,7 @@ export interface GentOuvert {
 
 /** Où mène un mode, depuis la page courante. */
 export function cibleDuMode(mode: Mode, gent?: GentOuvert | null): string {
-  if (!gent?.id) return MODES[mode].liste;
+  // Les pages ne dépendent d'aucun gent : la rubrique, toujours.
+  if (mode === "pages" || !gent?.id) return MODES[mode].liste;
   return mode === "utiliser" ? cheminEspace(gent.id, gent) : `/builder/${encodeURIComponent(gent.id)}`;
 }

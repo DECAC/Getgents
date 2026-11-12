@@ -1,0 +1,676 @@
+/* Rubrique « Pages » (GetSite). Mêmes variables que le studio, accent ocre
+   (--gold) pour distinguer le troisième mode, comme le bleu de « Construire ». */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 1200px;
+}
+
+.titre {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.sous {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+.erreur {
+  font-size: 13px;
+  color: var(--plum);
+}
+
+.barre {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.recherche {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.recherche:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.filtres {
+  display: flex;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+}
+
+.filtres button {
+  min-height: 34px;
+  padding: 6px 13px;
+  border: none;
+  border-radius: var(--r-pill);
+  background: transparent;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.filtres .filtreOn {
+  background: color-mix(in srgb, var(--gold) 22%, transparent);
+  color: color-mix(in srgb, var(--gold) 55%, var(--ink));
+  font-weight: 600;
+}
+
+/* ——— Cartes ——— */
+.grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.carte {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.vignetteLien {
+  position: relative;
+  display: block;
+  border-bottom: 1px solid var(--line);
+}
+
+/* La page est rendue à 1 280 px de large puis réduite à 30 % : on voit sa
+   mise en page de bureau, pas une version téléphone écrasée. Une carte plus
+   étroite que 384 px rogne simplement le bord droit. */
+.vignette {
+  position: relative;
+  display: block;
+  height: 140px;
+  overflow: hidden;
+  background: #fff;
+  pointer-events: none;
+}
+
+.vignetteCadre {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1280px;
+  height: 480px;
+  border: none;
+  transform: scale(0.3);
+  transform-origin: 0 0;
+}
+
+.format {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.carteCorps {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.carteTitre {
+  font-weight: 700;
+  font-size: 14.5px;
+  color: var(--ink);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.carteTitre:hover {
+  color: color-mix(in srgb, var(--gold) 60%, var(--ink));
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.puces {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.puceDest,
+.puceIa,
+.puceEteinte {
+  display: inline-flex;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.puceDest {
+  background: var(--blue-tint);
+  color: color-mix(in srgb, var(--blue) 75%, var(--ink));
+}
+
+.puceIa {
+  background: var(--sage-tint);
+  color: var(--sage-700);
+}
+
+.puceEteinte {
+  background: var(--bg);
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.principal,
+.secondaire,
+.secondairePetit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Ocre foncé : le blanc sur --gold pur ne se lit pas (contraste ~2,2:1). */
+.principal {
+  border: 1px solid color-mix(in srgb, var(--gold) 68%, #000);
+  background: color-mix(in srgb, var(--gold) 68%, #000);
+  color: #fff;
+}
+
+.principal:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.secondaire,
+.secondairePetit {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+}
+
+.secondairePetit {
+  min-height: 32px;
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.secondaire:hover,
+.secondairePetit:hover {
+  border-color: var(--gold);
+}
+
+.lienTexte,
+.lienDanger {
+  min-height: 32px;
+  border: none;
+  background: none;
+  padding: 4px 2px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lienTexte {
+  color: var(--blue);
+}
+
+.lienDanger {
+  color: var(--plum);
+}
+
+/* ——— Guide de connexion (écran vide) ——— */
+.guide {
+  max-width: 640px;
+  padding: 26px 28px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+}
+
+.guideTitre {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.guideLede {
+  margin: 0 0 14px;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 13.5px;
+}
+
+.etapes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: etape;
+}
+
+.etapes li {
+  counter-increment: etape;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 0 12px 42px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.etapes li:first-child {
+  border-top: none;
+}
+
+.etapes li::before {
+  content: counter(etape);
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--gold) 22%, transparent);
+  color: color-mix(in srgb, var(--gold) 55%, var(--ink));
+  font-weight: 700;
+}
+
+.etapes b {
+  color: var(--ink);
+  font-size: 13.5px;
+}
+
+.adresse {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.adresse code {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  font-size: 13px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.guideNote {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+/* ——— Fiche ——— */
+.fiche {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+}
+
+.retour {
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  align-self: flex-start;
+}
+
+.retour:hover {
+  color: var(--ink);
+}
+
+.entete {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.enteteTexte {
+  flex: 1;
+  min-width: 0;
+}
+
+.titreFiche {
+  margin: 0;
+  font-size: 21px;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.message {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  font-size: 13px;
+}
+
+.deux {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 16px;
+}
+
+.apercu {
+  flex: 1;
+  min-width: 0;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.apercuBarre {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.apercuBarre a {
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.apercuCadre {
+  flex: 1;
+  width: 100%;
+  border: none;
+}
+
+.cote {
+  width: 400px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.bloc {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.blocTitre {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.blocTitre button {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.aide {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.partager {
+  margin-bottom: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.champLibelle {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.ligne {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.champ {
+  flex: 1;
+  min-width: 150px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.lienCode {
+  flex: 1 1 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.destinataires {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.destinataire {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+
+.destinataire:first-child {
+  border-top: none;
+}
+
+.eteint {
+  opacity: 0.55;
+}
+
+.avatar {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--blue-tint);
+  color: color-mix(in srgb, var(--blue) 75%, var(--ink));
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.destTexte {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.destTexte b {
+  font-size: 13.5px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.destActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.interrupteur {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.interrupteur > span {
+  flex: 1;
+}
+
+.interrupteur b {
+  display: block;
+  color: var(--ink);
+  font-size: 13.5px;
+}
+
+.interrupteur input {
+  flex: none;
+  appearance: none;
+  width: 40px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--line);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.interrupteur input::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s;
+}
+
+.interrupteur input:checked {
+  background: var(--success);
+}
+
+.interrupteur input:checked::after {
+  left: 19px;
+}
+
+.interrupteur input:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.version {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.version b {
+  color: var(--ink);
+}
+
+/* Écran moyen et téléphone : la fiche passe en colonne, l'aperçu en premier. */
+@media (max-width: 1100px) {
+  .deux {
+    flex-direction: column;
+  }
+  .cote {
+    width: auto;
+    overflow: visible;
+  }
+  .apercu {
+    min-height: 360px;
+    flex: none;
+    height: 60vh;
+  }
+}

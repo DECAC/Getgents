@@ -121,7 +121,7 @@ export async function enregistrerArtefact(
     client: a.client,
     expires_at: a.expiresAt,
     owner_id: proprietaire.userId,
-    mcp_client_id: proprietaire.clientId,
+    mcp_client_id: proprietaire.clientId || null,
     page_id: page.id,
   });
   if (error) {
