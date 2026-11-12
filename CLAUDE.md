@@ -371,7 +371,11 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (version FIGÉE et datée, vérification des données personnelles avant
   envoi) ET un repérage côté serveur qui ne dépend pas du modèle
   (`dependClaude` : `window.claude`, `window.storage`, mention de
-  claude.ai), signalé dans la réponse de l'outil.
+  claude.ai), signalé dans la réponse de l'outil. **PHASE 0 VALIDÉE pour Claude
+  (12/11, essais de l'utilisateur)** : un artefact autonome arrive COMPLET, un
+  artefact React interactif s'affiche et fonctionne (la chaîne Babel + esm.sh
+  tient en vrai). ChatGPT non essayé — choix de l'utilisateur : Claude
+  d'abord. Prochaine étape : phase 1.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
