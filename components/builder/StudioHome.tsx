@@ -20,9 +20,13 @@ import { SelecteurMode } from "@/components/shared/SelecteurMode";
 import { cibleDuMode } from "@/lib/navigationModes";
 import { LIBELLE_STATUT, peutEtreOuvert, statutGent } from "@/lib/statutGent";
 import { BrandIcon } from "@/components/shared/BrandMark";
+import type { LignePage } from "@/lib/pagesGetsite";
 import styles from "./StudioHome.module.css";
 
 const MAX_RECENT = 6;
+const MAX_PAGES = 4;
+
+const dateCourte = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 
 /**
  * Accueil de Getgents (le logo y ramène, depuis les deux modes).
@@ -43,6 +47,9 @@ export function StudioHome() {
   const [role, setRole] = useState("");
   const [creating, setCreating] = useState(false);
   const [recent, setRecent] = useState<GentDraft[]>([]);
+  // Pages partagées depuis Claude (rubrique GetSite). Un échec ou une absence
+  // de compte laisse la section absente : l'accueil n'en dépend pas.
+  const [pages, setPages] = useState<LignePage[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -51,6 +58,12 @@ export function StudioHome() {
     syncDraftsFromRemote().finally(() => {
       if (!cancelled) setRecent(listVisibleDrafts());
     });
+    fetch("/api/pages", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { pages?: LignePage[] } | null) => {
+        if (!cancelled && d?.pages) setPages(d.pages);
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -132,6 +145,43 @@ export function StudioHome() {
             {recent.length > MAX_RECENT && (
               <a href="/builder/mesgents" className={styles.allLink}>
                 Voir les {recent.length} gents
+              </a>
+            )}
+          </section>
+        )}
+        {pages.length > 0 && (
+          <section className={styles.recent} aria-labelledby="studio-pages-title">
+            <div className={styles.sectionHead}>
+              <h2 className={styles.sectionTitle} id="studio-pages-title">
+                Vos dernières pages
+              </h2>
+              <p className={styles.sectionSub}>Partagées depuis Claude. Ouvrez-en une pour voir ses destinataires.</p>
+            </div>
+            <div className={styles.recentList}>
+              {pages.slice(0, MAX_PAGES).map((p) => (
+                <a key={p.id} href={`/pages/${p.id}`} className={`${styles.recentItem} ${styles.recentItemPage}`} title={`Mise à jour le ${dateCourte(p.updatedAt)}`}>
+                  <span className={`${styles.recentIcon} ${styles.recentIconPage}`} aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                      <path d="M14 3v5h5M9 13h6M9 17h4" />
+                    </svg>
+                  </span>
+                  <span className={styles.recentBody}>
+                    <span className={styles.recentName}>{p.titre}</span>
+                    <span className={styles.recentMeta}>
+                      {/* La date est dans l'info-bulle et dans la rubrique : ici, la ligne
+                          coupait au milieu (« mise à jour l… »). */}
+                      {[p.actifs ? `${p.actifs} destinataire${p.actifs > 1 ? "s" : ""}` : "Aucun lien actif", p.assistant ? "Assistant IA" : null]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </span>
+                </a>
+              ))}
+            </div>
+            {pages.length > MAX_PAGES && (
+              <a href="/pages" className={styles.allLink}>
+                Voir les {pages.length} pages
               </a>
             )}
           </section>

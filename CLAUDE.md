@@ -492,8 +492,14 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (mémoire locale, données créées par le client MCP officiel) : filtres,
   recherche, partage depuis la fiche, copie du mail, révocation, assistant,
   restauration (aperçu revenu à la v1), suppression, téléphone sans
-  débordement. PAS avec Supabase. Lots suivants : C (accueil), puis code par
-  e-mail (Brevo), domaine séparé.
+  débordement. PAS avec Supabase. **Déployé (12/11)** ; cartes de la liste
+  sans boutons à la demande de l'utilisateur : la carte ENTIÈRE ouvre la
+  fiche, « Voir comme le client » reste dans la fiche. **Lot C (12/11)** :
+  « Vos dernières pages » sur l'accueil (`StudioHome`, 4 au plus, sous
+  « Vos gents »), absente sans page ou sans compte — l'accueil n'en dépend
+  pas. Payé en passant : les lignes « Vos gents » de l'accueil sortaient
+  SOULIGNÉES (des liens sans `text-decoration: none`). Lots suivants : code
+  par e-mail (Brevo), domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
