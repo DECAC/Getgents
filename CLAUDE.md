@@ -425,7 +425,7 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   document reste utilisable au-dessus, ⤢ agrandit. ✕ ou Échap replie, le
   fil est gardé. Le cadre n'est JAMAIS démonté (vérifié : un seul
   chargement du document en ouvrant, fermant, agrandissant) — l'artefact
-  garde son état. Ce n'est PAS un
+  garde son état. **Essai réel CONCLUANT (12/11).** Ce n'est PAS un
   gent : consigne fixe (`consigneAssistant`, `lib/assistantDocument.ts`) —
   le document SEUL, jamais d'invention (un prix inventé engagerait le
   commercial), document entre balises traité comme une donnée. Le code est
