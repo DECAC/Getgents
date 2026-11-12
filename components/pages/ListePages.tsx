@@ -68,36 +68,26 @@ export function ListePages() {
           {visibles.length === 0 && <p className={styles.sous}>Aucune page ne correspond.</p>}
           <div className={styles.grille}>
             {visibles.map((p) => (
-              <article key={p.id} className={styles.carte}>
-                <a href={`/pages/${p.id}`} className={styles.vignetteLien} aria-label={`Ouvrir ${p.titre}`} tabIndex={-1}>
+              // La carte ENTIÈRE ouvre la fiche : un bouton « Ouvrir » doublait le
+              // clic sur la vignette, et « Voir comme le client » vit dans la fiche.
+              <a key={p.id} href={`/pages/${p.id}`} className={styles.carte}>
+                <span className={styles.vignetteLien}>
                   <Vignette id={p.id} titre={p.titre} version={p.version} />
                   <span className={styles.format}>{libelleFormat(p.format)}</span>
-                </a>
-                <div className={styles.carteCorps}>
-                  <a href={`/pages/${p.id}`} className={styles.carteTitre}>
-                    {p.titre}
-                  </a>
-                  <div className={styles.meta}>
+                </span>
+                <span className={styles.carteCorps}>
+                  <span className={styles.carteTitre}>{p.titre}</span>
+                  <span className={styles.meta}>
                     {[p.origine, p.version > 1 ? `version ${p.version}` : null, `mise à jour le ${date(p.updatedAt)}`].filter(Boolean).join(" · ")}
-                  </div>
-                  <div className={styles.puces}>
+                  </span>
+                  <span className={styles.puces}>
                     <span className={p.actifs ? styles.puceDest : styles.puceEteinte}>
                       {p.actifs ? `${p.actifs} destinataire${p.actifs > 1 ? "s" : ""}` : "Aucun lien actif"}
                     </span>
                     {p.assistant && <span className={styles.puceIa}>✦ Assistant IA</span>}
-                  </div>
-                  <div className={styles.actions}>
-                    <a href={`/pages/${p.id}`} className={styles.principal}>
-                      Ouvrir
-                    </a>
-                    {p.dernierJeton && (
-                      <a href={`/partage/${p.dernierJeton}`} target="_blank" rel="noopener noreferrer" className={styles.secondaire}>
-                        Voir comme le client
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </article>
+                  </span>
+                </span>
+              </a>
             ))}
           </div>
         </>
