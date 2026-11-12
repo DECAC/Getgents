@@ -138,7 +138,16 @@ export async function decisionAcces(a: Pick<ArtefactPartage, "jeton" | "pageId" 
   return accesValide(cleAcces(), a.jeton, cookie) ? "ouvert" : "code";
 }
 
-export type ResultatEnvoi = { ok: true; masque: string } | { ok: false; status: number; erreur: string };
+export type ResultatEnvoi = { ok: true; masque: string } | { ok: false; status: number; erreur: string; cause?: string };
+
+/** Cause courte d'un échec Brevo, montrable au visiteur : « brevo-401 », « brevo-reseau », « brevo-non-configure ». */
+export function causeBrevo(note: string): string {
+  const statut = /Brevo (\d{3})/.exec(note)?.[1];
+  if (statut) return `brevo-${statut}`;
+  if (/réseau/.test(note)) return "brevo-reseau";
+  if (/non configuré/.test(note)) return "brevo-non-configure";
+  return "brevo";
+}
 
 /** Envoie un code au destinataire du lien. Renvoi limité (60 s), envois limités par lien. */
 export async function envoyerCode(a: Pick<ArtefactPartage, "jeton" | "destinataire" | "titre">): Promise<ResultatEnvoi> {
@@ -169,7 +178,7 @@ export async function envoyerCode(a: Pick<ArtefactPartage, "jeton" | "destinatai
   }
   const r = await sendBrevoEmail(a.destinataire, mail.objet, mail.html);
   console.log(JSON.stringify({ tag: "getgents:acces", event: r.ok ? "code_envoye" : "code_non_envoye", note: r.ok ? undefined : r.note }));
-  if (!r.ok) return { ok: false, status: 502, erreur: "Le code n'a pas pu être envoyé. Réessayez dans un instant." };
+  if (!r.ok) return { ok: false, status: 502, erreur: "Le code n'a pas pu être envoyé. Réessayez dans un instant.", cause: causeBrevo(r.note) };
   return { ok: true, masque: masquerEmail(a.destinataire) };
 }
 

@@ -31,8 +31,9 @@ export default function EcranCode({
     setMessage(null);
     try {
       const r = await fetch(`/api/partage/${encodeURIComponent(jeton)}/code`, { method: "POST" });
-      const j = (await r.json().catch(() => ({}))) as { error?: string };
-      if (!r.ok) throw new Error(j.error || "Le code n'a pas pu être envoyé.");
+      const j = (await r.json().catch(() => ({}))) as { error?: string; cause?: string };
+      // La référence (cause, ou statut HTTP brut) rend le message diagnostiquable.
+      if (!r.ok) throw new Error(`${j.error || "Le code n'a pas pu être envoyé."} (réf. ${j.cause ?? `http-${r.status}`})`);
       setEtape("saisie");
       setCode("");
       window.setTimeout(() => champ.current?.focus(), 50);
