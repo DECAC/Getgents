@@ -111,7 +111,7 @@ export function validerDemande(args: unknown): ResultatValidation {
 
   if (!titre) return { ok: false, erreur: "Le titre est vide." };
   if (titre.length > TITRE_MAX) return { ok: false, erreur: `Titre trop long (${TITRE_MAX} caractères au plus).` };
-  if (!contenu.trim()) return { ok: false, erreur: "Le contenu est vide : recopie le code COMPLET de l'artefact." };
+  if (!contenu.trim()) return { ok: false, erreur: "Le contenu est vide : recopie le code COMPLET de la page (l'artefact ou le canvas)." };
   if (contenu.length > CONTENU_MAX) return { ok: false, erreur: `Contenu trop long (${CONTENU_MAX} caractères au plus).` };
   if (!format) return { ok: false, erreur: `Format inconnu : choisis parmi ${FORMATS_ARTEFACT.join(", ")}.` };
   if (!destinataire) return { ok: false, erreur: "Destinataire vide : une adresse e-mail ou le nom du client." };
@@ -203,18 +203,24 @@ export function texteListe(liste: ResumePartage[], base: string, maintenant = Da
 // --- Protocole MCP ---------------------------------------------------------
 
 export const VERSIONS_PROTOCOLE = ["2025-06-18", "2025-03-26", "2024-11-05"];
-export const NOM_OUTIL = "partager_artefact";
+export const NOM_OUTIL = "partager_page";
+/**
+ * Ancien nom (jusqu'au 12/11). Claude GARDE la liste d'outils lue à l'ajout
+ * du connecteur : une conversation qui l'a encore appelle `partager_artefact`.
+ * On l'accepte toujours, sans plus l'annoncer.
+ */
+export const NOM_OUTIL_ANCIEN = "partager_artefact";
 
 export const DESCRIPTION_OUTIL =
-  "Partage un artefact, un canvas ou un document (page HTML, document, schéma, application) avec un client : " +
-  "crée un lien privé Getgents qui l'affiche en pleine page, et rédige le mail à lui envoyer. Dans Getgents, " +
-  "c'est une « page ». Pour envoyer une page DÉJÀ partagée à quelqu'un d'autre, passe seulement `page` " +
+  "Partage une page avec un client — ce que Claude appelle un artefact, ChatGPT et Mistral un canvas : page HTML, " +
+  "document, schéma, application. Crée un lien privé Getgents qui l'affiche en plein écran, et rédige le mail à " +
+  "lui envoyer. Pour envoyer une page DÉJÀ partagée à quelqu'un d'autre, passe seulement `page` " +
   "(son identifiant, rendu par le partage précédent ou par lister_partages) et `destinataire` : ne recopie pas le " +
   "contenu. Pour la modifier, utilise mettre_a_jour_page. " +
-  "IMPORTANT : `contenu` doit être le code ou le texte COMPLET de l'artefact, recopié À L'IDENTIQUE, " +
+  "IMPORTANT : `contenu` doit être le code ou le texte COMPLET de la page, recopié À L'IDENTIQUE, " +
   "du premier au dernier caractère. Ne résume pas, ne tronque pas, n'abrège pas (aucun « ... » ni " +
   "« reste du code inchangé »), ne reformate pas : le client verra exactement ce que tu envoies. " +
-  "SEULE exception : si l'artefact lit des données EN DIRECT depuis Claude ou le compte de l'utilisateur " +
+  "SEULE exception : si la page lit des données EN DIRECT depuis Claude ou le compte de l'utilisateur " +
   "(window.claude, window.storage, agenda, e-mails, tâches planifiées), elles ne s'afficheront pas chez le " +
   "client — et ne le doivent pas. Envoie alors une version FIGÉE : les données actuelles écrites dans la " +
   "page, datées, sans ces appels. Avant d'envoyer, signale à l'utilisateur toute donnée personnelle " +
@@ -227,11 +233,11 @@ export const SCHEMA_OUTIL = {
       type: "string",
       description: "Facultatif : identifiant d'une page déjà partagée. Avec lui, ne fournis ni titre, ni contenu, ni format.",
     },
-    titre: { type: "string", description: "Titre de l'artefact, tel que le client le lira (obligatoire sans `page`)." },
+    titre: { type: "string", description: "Titre de la page, tel que le client le lira (obligatoire sans `page`)." },
     contenu: {
       type: "string",
       description:
-        "Le code ou le texte COMPLET de l'artefact, à l'identique (obligatoire sans `page`). Pour une page HTML : le document entier, de <!DOCTYPE> à </html>.",
+        "Le code ou le texte COMPLET de la page (l'artefact ou le canvas), à l'identique (obligatoire sans `page`). Pour une page HTML : le document entier, de <!DOCTYPE> à </html>.",
     },
     format: {
       type: "string",
@@ -254,12 +260,12 @@ export const OUTIL_LISTER = "lister_partages";
 export const OUTIL_REVOQUER = "revoquer_partage";
 
 const DESCRIPTION_LISTER =
-  "Liste les artefacts que l'utilisateur a partagés par Getgents, du plus récent au plus ancien : titre, " +
+  "Liste les pages que l'utilisateur a partagées par Getgents, du plus récent au plus ancien : titre, " +
   "destinataire, date, statut (actif, révoqué, expiré), lien et identifiant. `recherche` filtre par titre ou " +
   "destinataire (« Marie », « offre Acme »).";
 
 const DESCRIPTION_REVOQUER =
-  "Révoque un lien de partage : le destinataire ne pourra plus ouvrir l'artefact. IRRÉVERSIBLE. " +
+  "Révoque un lien de partage : le destinataire ne pourra plus ouvrir la page. IRRÉVERSIBLE. " +
   "Prends l'identifiant dans lister_partages ; si plusieurs partages correspondent à la demande, " +
   "montre-les à l'utilisateur et demande lequel AVANT de révoquer — ne choisis jamais à sa place.";
 
@@ -282,7 +288,7 @@ const DESCRIPTION_METTRE_A_JOUR =
   "Remplace le contenu d'une page déjà partagée par une nouvelle version : TOUS ses liens affichent aussitôt " +
   "la nouvelle version, l'ancienne est gardée et restaurable. `contenu` doit être le code ou le texte COMPLET de " +
   "la nouvelle version, à l'identique — jamais un extrait ni une différence. À utiliser quand l'utilisateur veut " +
-  "corriger ou faire évoluer un artefact déjà envoyé ; pour un document différent, partage une nouvelle page.";
+  "corriger ou faire évoluer une page déjà envoyée ; pour un document différent, partage une nouvelle page.";
 
 const SCHEMA_METTRE_A_JOUR = {
   type: "object",
@@ -297,8 +303,9 @@ const SCHEMA_METTRE_A_JOUR = {
 };
 
 export const INSTRUCTIONS_SERVEUR =
-  "Getgents publie les artefacts que l'utilisateur veut partager avec un client. Quand il demande de " +
-  "partager, d'envoyer ou de transmettre un artefact, appelle partager_artefact avec son contenu COMPLET, " +
+  "Getgents publie les pages que l'utilisateur veut partager avec un client — un artefact dans Claude, un " +
+  "canvas dans ChatGPT ou Mistral. Quand il demande de partager, d'envoyer ou de transmettre l'un d'eux, " +
+  "appelle partager_page avec son contenu COMPLET, " +
   "puis donne-lui le lien et le modèle de mail. Getgents n'envoie aucun e-mail : c'est l'utilisateur qui " +
   "l'envoie. Ne dis jamais que le mail est parti. Pour retrouver ou couper un lien déjà envoyé, " +
   "utilise lister_partages puis revoquer_partage. Pour envoyer une page déjà partagée à quelqu'un d'autre, passe " +
@@ -342,7 +349,7 @@ function alertesFidelite(f: Fidelite): string[] {
   if (f.abreviationSuspecte) alertes.push("le contenu contient une marque d'abréviation (« ... reste du code ») : la copie est probablement incomplète");
   if (f.dependClaude)
     alertes.push(
-      "l'artefact lit ses données EN DIRECT dans Claude : chez le client, ces blocs resteront vides. Propose une version FIGÉE (données actuelles écrites dans la page, datées), et vérifie avec l'utilisateur qu'elle ne contient rien de personnel"
+      "la page lit ses données EN DIRECT dans Claude : chez le client, ces blocs resteront vides. Propose une version FIGÉE (données actuelles écrites dans la page, datées), et vérifie avec l'utilisateur qu'elle ne contient rien de personnel"
     );
   return alertes;
 }
@@ -405,7 +412,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
         result: {
           protocolVersion: VERSIONS_PROTOCOLE.includes(demandee) ? demandee : VERSIONS_PROTOCOLE[0],
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: "getgents", title: "Getgents — partage d'artefacts", version: "0.3.0" },
+          serverInfo: { name: "getgents", title: "Getgents — Pages (GetSite)", version: "0.3.0" },
           instructions: INSTRUCTIONS_SERVEUR,
         },
       };
@@ -420,7 +427,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
           tools: [
             {
               name: NOM_OUTIL,
-              title: "Partager un artefact avec un client",
+              title: "Partager une page avec un client",
               description: DESCRIPTION_OUTIL,
               inputSchema: SCHEMA_OUTIL,
               annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
@@ -491,7 +498,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
             jsonrpc: "2.0",
             id,
             result: coupe
-              ? { content: [{ type: "text", text: "Lien révoqué : le destinataire ne peut plus ouvrir l'artefact." }], structuredContent: { revoque: true } }
+              ? { content: [{ type: "text", text: "Lien révoqué : le destinataire ne peut plus ouvrir la page." }], structuredContent: { revoque: true } }
               : {
                   isError: true,
                   content: [
@@ -543,7 +550,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
           return echec("La mise à jour n'a pas pu être enregistrée. Réessaie dans un instant.");
         }
       }
-      if (r.params?.name !== NOM_OUTIL) return erreurRpc(id, -32602, `Outil inconnu : ${String(r.params?.name)}`);
+      if (r.params?.name !== NOM_OUTIL && r.params?.name !== NOM_OUTIL_ANCIEN) return erreurRpc(id, -32602, `Outil inconnu : ${String(r.params?.name)}`);
       const v = validerDemande(r.params?.arguments);
       // Une erreur de saisie est un RÉSULTAT d'outil en échec, que le modèle lit et corrige.
       if (!v.ok) return echec(v.erreur);

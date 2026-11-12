@@ -380,3 +380,21 @@ describe("pages (lot A)", () => {
     expect(t).toMatch(new RegExp(`page ${PAGE_ID}`));
   });
 });
+
+describe("vocabulaire « page » (12/11)", () => {
+  it("annonce partager_page, accepte encore partager_artefact (listes d'outils gardées par Claude)", async () => {
+    const liste = (await traiterMessage({ jsonrpc: "2.0", id: 1, method: "tools/list" }, contexte())) as {
+      result: { tools: { name: string; title: string; description: string }[] };
+    };
+    expect(liste.result.tools[0].name).toBe("partager_page");
+    expect(liste.result.tools[0].title).toBe("Partager une page avec un client");
+    // Les synonymes restent : c'est par eux que le modèle reconnaît la demande.
+    expect(liste.result.tools[0].description).toMatch(/artefact/);
+    expect(liste.result.tools[0].description).toMatch(/canvas/);
+    const ancien = (await traiterMessage(
+      { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "partager_artefact", arguments: { titre: "Offre", contenu: PAGE, format: "html", destinataire: "Marie" } } },
+      contexte()
+    )) as { result: { isError?: boolean } };
+    expect(ancien.result.isError).toBeUndefined();
+  });
+});

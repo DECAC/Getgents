@@ -42,10 +42,10 @@ export default async function AutoriserPage({ searchParams }: { searchParams: Re
     <>
       <h1 className={styles.title}>Autoriser {nom}</h1>
       <p className={styles.lede}>
-        <strong>{nom}</strong> demande à partager des artefacts en votre nom, depuis <strong>{site}</strong>.
+        <strong>{nom}</strong> demande à partager des pages en votre nom, depuis <strong>{site}</strong>.
       </p>
       <ul className={styles.liste}>
-        <li>Publier un artefact que vous lui demandez de partager, et vous rendre le lien privé.</li>
+        <li>Publier une page (un artefact, un canvas) que vous lui demandez de partager, et vous rendre le lien privé.</li>
         <li>Chaque partage est rattaché à votre compte ({compte}).</li>
       </ul>
       <p className={styles.note}>

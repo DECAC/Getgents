@@ -465,6 +465,13 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   la page. Le lien dit « mis à jour le… » (ou « à HH:MM » le jour même).
   Slug `pages` réservé. Vérifié avec le client MCP officiel (12 contrôles,
   mémoire locale), PAS avec Supabase : la reprise SQL n'a tourné nulle part.
+  **Déployé (12/11).** Vocabulaire du connecteur passé à « page » (12/11,
+  demande de l'utilisateur) : outil `partager_page`, titres et messages ;
+  « artefact » (Claude) et « canvas » (ChatGPT, Mistral) restent comme
+  SYNONYMES dans les descriptions — c'est par eux que le modèle reconnaît
+  « partage cet artefact ». `partager_artefact` est encore ACCEPTÉ sans être
+  annoncé : Claude garde l'ancienne liste d'outils tant qu'on ne reconnecte
+  pas. Le code interne et les événements de journal gardent « artefact ».
   Lots suivants : B (écrans /pages), C (accueil), puis code par e-mail
   (Brevo), domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
