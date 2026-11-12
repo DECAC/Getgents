@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { traiterMessage, type DemandePartage, type Fidelite, type ReponseRpc } from "@/lib/mcpPartage";
+import { statutPartage, traiterMessage, type ContexteMcp, type DemandePartage, type Fidelite, type ReponseRpc } from "@/lib/mcpPartage";
 import { enregistrerArtefact, listerPartages, revoquerPartage, type Proprietaire } from "@/lib/server/artefactsPartages";
+import { mettreAJourPage } from "@/lib/server/pages";
+import { lireClient } from "@/lib/server/oauthMcp";
 
 /**
  * Transport MCP « Streamable HTTP » en réponses JSON simples, commun à la
@@ -18,7 +20,7 @@ export const ENTETES_CORS = {
   "Access-Control-Expose-Headers": "WWW-Authenticate, Mcp-Session-Id",
 };
 
-export async function repondreMcp(req: Request, origine: string, proprietaire: Proprietaire): Promise<NextResponse> {
+export async function repondreMcp(req: Request, base: string, proprietaire: Proprietaire): Promise<NextResponse> {
   let corps: unknown;
   try {
     corps = await req.json();
@@ -27,29 +29,41 @@ export async function repondreMcp(req: Request, origine: string, proprietaire: P
   }
 
   const client = req.headers.get("user-agent");
-  const ctx = {
-    enregistrer: async (demande: DemandePartage, fidelite: Fidelite) => {
-      const a = await enregistrerArtefact(demande, fidelite, client, proprietaire);
+  const ctx: ContexteMcp = {
+    enregistrer: async (demande: DemandePartage, fidelite: Fidelite | null) => {
+      // La plateforme d'origine d'une NOUVELLE page : le nom déclaré par le client MCP (« Claude »…).
+      const plateforme = demande.pageId ? null : ((await lireClient(proprietaire.clientId))?.nom ?? null);
+      const a = await enregistrerArtefact(demande, fidelite, client, proprietaire, plateforme);
+      if (!a) return null;
       console.log(
         JSON.stringify({
           tag: "getgents:partage",
           event: "artefact_partage",
-          format: demande.format,
-          caracteres: fidelite.caracteres,
-          lignes: fidelite.lignes,
-          finPresente: fidelite.finPresente,
-          abreviationSuspecte: fidelite.abreviationSuspecte,
-          dependClaude: fidelite.dependClaude,
+          format: a.format,
+          repartage: !!demande.pageId,
+          nouvellePage: a.nouvellePage,
+          caracteres: fidelite?.caracteres ?? null,
+          lignes: fidelite?.lignes ?? null,
+          finPresente: fidelite?.finPresente ?? null,
+          abreviationSuspecte: fidelite?.abreviationSuspecte ?? null,
+          dependClaude: fidelite?.dependClaude ?? null,
           compte: "oauth",
           ownerId: proprietaire.userId,
           client,
         })
       );
-      return { lien: `${origine}/partage/${a.jeton}` };
+      return { lien: `${base}/partage/${a.jeton}`, pageId: a.pageId ?? undefined, nouvellePage: a.nouvellePage, titre: a.titre, assistant: a.assistant };
+    },
+    mettreAJour: async (pageId, d) => {
+      const page = await mettreAJourPage(proprietaire.userId, pageId, d);
+      if (!page) return null;
+      const liens = (await listerPartages(proprietaire.userId)).filter((p) => p.pageId === page.id && statutPartage(p) === "actif").length;
+      console.log(JSON.stringify({ tag: "getgents:partage", event: "page_mise_a_jour", ownerId: proprietaire.userId, version: page.version, liens }));
+      return { version: page.version, liens, format: page.format };
     },
     lister: () => listerPartages(proprietaire.userId),
     revoquer: (jeton: string) => revoquerPartage(proprietaire.userId, jeton),
-    base: origine,
+    base: base,
   };
 
   const lot = Array.isArray(corps);

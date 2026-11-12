@@ -29,6 +29,12 @@ export interface DemandePartage {
   message?: string;
   /** Assistant du document : le destinataire peut poser des questions sur l'artefact. */
   assistant?: boolean;
+  /**
+   * Page déjà partagée (rubrique Pages) : on la partage à un nouveau
+   * destinataire SANS recopier le contenu — titre, contenu et format sont
+   * alors ignorés (vides).
+   */
+  pageId?: string;
 }
 
 export interface Fidelite {
@@ -88,6 +94,20 @@ export function validerDemande(args: unknown): ResultatValidation {
   const destinataire = texte(a.destinataire).trim();
   const message = texte(a.message).trim();
   const format = FORMATS_ARTEFACT.includes(a.format as FormatArtefact) ? (a.format as FormatArtefact) : null;
+  const assistant = a.assistant === true ? { assistant: true } : {};
+
+  // Repartage d'une page existante : seul le destinataire compte.
+  const page = texte(a.page).trim();
+  if (page) {
+    if (!/^[0-9a-f-]{36}$/i.test(page)) return { ok: false, erreur: "Identifiant de page invalide : prends-le dans un partage précédent ou dans lister_partages." };
+    if (!destinataire) return { ok: false, erreur: "Destinataire vide : une adresse e-mail ou le nom du client." };
+    if (destinataire.length > DESTINATAIRE_MAX) return { ok: false, erreur: "Destinataire trop long." };
+    if (message.length > MESSAGE_MAX) return { ok: false, erreur: `Message trop long (${MESSAGE_MAX} caractères au plus).` };
+    return {
+      ok: true,
+      demande: { titre: "", contenu: "", format: "html", destinataire, pageId: page.toLowerCase(), ...(message ? { message } : {}), ...assistant },
+    };
+  }
 
   if (!titre) return { ok: false, erreur: "Le titre est vide." };
   if (titre.length > TITRE_MAX) return { ok: false, erreur: `Titre trop long (${TITRE_MAX} caractères au plus).` };
@@ -99,7 +119,7 @@ export function validerDemande(args: unknown): ResultatValidation {
   if (message.length > MESSAGE_MAX) return { ok: false, erreur: `Message trop long (${MESSAGE_MAX} caractères au plus).` };
   return {
     ok: true,
-    demande: { titre, contenu, format, destinataire, ...(message ? { message } : {}), ...(a.assistant === true ? { assistant: true } : {}) },
+    demande: { titre, contenu, format, destinataire, ...(message ? { message } : {}), ...assistant },
   };
 }
 
@@ -130,6 +150,8 @@ export interface ResumePartage {
   revokedAt: string | null;
   /** Assistant du document activé. */
   assistant?: boolean;
+  /** Page partagée (rubrique Pages). */
+  pageId?: string | null;
 }
 
 export type StatutPartage = "actif" | "revoque" | "expire";
@@ -172,7 +194,8 @@ export function texteListe(liste: ResumePartage[], base: string, maintenant = Da
     .map((p) => {
       const statut = statutPartage(p, maintenant);
       const fin = statut === "actif" && p.expiresAt ? `, expire le ${dateCourte(p.expiresAt)}` : "";
-      return `- « ${p.titre} » → ${p.destinataire} — partagé le ${dateCourte(p.createdAt)}, ${LIBELLE_STATUT[statut]}${fin} — identifiant ${p.jeton} — ${base}/partage/${p.jeton}`;
+      const page = p.pageId ? ` — page ${p.pageId}` : "";
+      return `- « ${p.titre} » → ${p.destinataire} — partagé le ${dateCourte(p.createdAt)}, ${LIBELLE_STATUT[statut]}${fin} — identifiant ${p.jeton}${page} — ${base}/partage/${p.jeton}`;
     })
     .join("\n");
 }
@@ -183,8 +206,11 @@ export const VERSIONS_PROTOCOLE = ["2025-06-18", "2025-03-26", "2024-11-05"];
 export const NOM_OUTIL = "partager_artefact";
 
 export const DESCRIPTION_OUTIL =
-  "Partage un artefact (page HTML, document, schéma, application) avec un client : crée un lien privé " +
-  "Getgents qui l'affiche en pleine page, et rédige le mail à lui envoyer. " +
+  "Partage un artefact, un canvas ou un document (page HTML, document, schéma, application) avec un client : " +
+  "crée un lien privé Getgents qui l'affiche en pleine page, et rédige le mail à lui envoyer. Dans Getgents, " +
+  "c'est une « page ». Pour envoyer une page DÉJÀ partagée à quelqu'un d'autre, passe seulement `page` " +
+  "(son identifiant, rendu par le partage précédent ou par lister_partages) et `destinataire` : ne recopie pas le " +
+  "contenu. Pour la modifier, utilise mettre_a_jour_page. " +
   "IMPORTANT : `contenu` doit être le code ou le texte COMPLET de l'artefact, recopié À L'IDENTIQUE, " +
   "du premier au dernier caractère. Ne résume pas, ne tronque pas, n'abrège pas (aucun « ... » ni " +
   "« reste du code inchangé »), ne reformate pas : le client verra exactement ce que tu envoies. " +
@@ -197,11 +223,15 @@ export const DESCRIPTION_OUTIL =
 export const SCHEMA_OUTIL = {
   type: "object",
   properties: {
-    titre: { type: "string", description: "Titre de l'artefact, tel que le client le lira." },
+    page: {
+      type: "string",
+      description: "Facultatif : identifiant d'une page déjà partagée. Avec lui, ne fournis ni titre, ni contenu, ni format.",
+    },
+    titre: { type: "string", description: "Titre de l'artefact, tel que le client le lira (obligatoire sans `page`)." },
     contenu: {
       type: "string",
       description:
-        "Le code ou le texte COMPLET de l'artefact, à l'identique. Pour une page HTML : le document entier, de <!DOCTYPE> à </html>.",
+        "Le code ou le texte COMPLET de l'artefact, à l'identique (obligatoire sans `page`). Pour une page HTML : le document entier, de <!DOCTYPE> à </html>.",
     },
     format: {
       type: "string",
@@ -216,7 +246,7 @@ export const SCHEMA_OUTIL = {
         "Facultatif, faux par défaut. Vrai si l'utilisateur veut que son client puisse poser des questions sur le document à un assistant IA, à côté de l'artefact (« avec l'assistant »). Les réponses sont facturées à l'utilisateur.",
     },
   },
-  required: ["titre", "contenu", "format", "destinataire"],
+  required: ["destinataire"],
   additionalProperties: false,
 };
 
@@ -246,16 +276,45 @@ const SCHEMA_REVOQUER = {
   additionalProperties: false,
 };
 
+export const OUTIL_METTRE_A_JOUR = "mettre_a_jour_page";
+
+const DESCRIPTION_METTRE_A_JOUR =
+  "Remplace le contenu d'une page déjà partagée par une nouvelle version : TOUS ses liens affichent aussitôt " +
+  "la nouvelle version, l'ancienne est gardée et restaurable. `contenu` doit être le code ou le texte COMPLET de " +
+  "la nouvelle version, à l'identique — jamais un extrait ni une différence. À utiliser quand l'utilisateur veut " +
+  "corriger ou faire évoluer un artefact déjà envoyé ; pour un document différent, partage une nouvelle page.";
+
+const SCHEMA_METTRE_A_JOUR = {
+  type: "object",
+  properties: {
+    page: { type: "string", description: "Identifiant de la page (rendu par le partage ou par lister_partages)." },
+    contenu: { type: "string", description: "Le contenu COMPLET de la nouvelle version, à l'identique." },
+    titre: { type: "string", description: "Facultatif : nouveau titre." },
+    format: { type: "string", enum: [...FORMATS_ARTEFACT], description: "Facultatif : nouveau format." },
+  },
+  required: ["page", "contenu"],
+  additionalProperties: false,
+};
+
 export const INSTRUCTIONS_SERVEUR =
   "Getgents publie les artefacts que l'utilisateur veut partager avec un client. Quand il demande de " +
   "partager, d'envoyer ou de transmettre un artefact, appelle partager_artefact avec son contenu COMPLET, " +
   "puis donne-lui le lien et le modèle de mail. Getgents n'envoie aucun e-mail : c'est l'utilisateur qui " +
   "l'envoie. Ne dis jamais que le mail est parti. Pour retrouver ou couper un lien déjà envoyé, " +
-  "utilise lister_partages puis revoquer_partage.";
+  "utilise lister_partages puis revoquer_partage. Pour envoyer une page déjà partagée à quelqu'un d'autre, passe " +
+  "son identifiant (`page`) au lieu de recopier le contenu ; pour la corriger, mettre_a_jour_page.";
 
 export interface ContexteMcp {
   /** Enregistre l'artefact et rend son lien public. */
-  enregistrer: (d: DemandePartage, fidelite: Fidelite) => Promise<{ lien: string }>;
+  enregistrer: (
+    d: DemandePartage,
+    fidelite: Fidelite | null
+  ) => Promise<{ lien: string; pageId?: string; nouvellePage?: boolean; titre?: string; assistant?: boolean } | null>;
+  /** Nouvelle version d'une page du compte ; null si elle n'existe pas. */
+  mettreAJour?: (
+    pageId: string,
+    d: { contenu: string; titre?: string; format?: FormatArtefact }
+  ) => Promise<{ version: number; liens: number; format: FormatArtefact } | null>;
   /** Partages du compte connecté (absent : outils de gestion non proposés). */
   lister?: () => Promise<ResumePartage[]>;
   /** Révoque un partage DU compte connecté ; faux s'il n'existe pas, n'est pas à lui, ou l'était déjà. */
@@ -277,7 +336,7 @@ export type ReponseRpc =
 
 const erreurRpc = (id: Id, code: number, message: string): ReponseRpc => ({ jsonrpc: "2.0", id, error: { code, message } });
 
-function texteResultat(f: Fidelite, lien: string, mail: { objet: string; corps: string }, assistant = false): string {
+function alertesFidelite(f: Fidelite): string[] {
   const alertes: string[] = [];
   if (f.finPresente === false) alertes.push("la fin attendue du document est ABSENTE : la copie est probablement tronquée");
   if (f.abreviationSuspecte) alertes.push("le contenu contient une marque d'abréviation (« ... reste du code ») : la copie est probablement incomplète");
@@ -285,22 +344,46 @@ function texteResultat(f: Fidelite, lien: string, mail: { objet: string; corps: 
     alertes.push(
       "l'artefact lit ses données EN DIRECT dans Claude : chez le client, ces blocs resteront vides. Propose une version FIGÉE (données actuelles écrites dans la page, datées), et vérifie avec l'utilisateur qu'elle ne contient rien de personnel"
     );
+  return alertes;
+}
+
+const ligneFidelite = (f: Fidelite) => {
+  const alertes = alertesFidelite(f);
+  return alertes.length
+    ? `ATTENTION — ${alertes.join(" ; ")}. Préviens l'utilisateur et propose de recommencer avec le contenu intégral.`
+    : "Contrôle de fidélité : aucune trace de troncature détectée.";
+};
+
+function texteResultat(
+  f: Fidelite | null,
+  lien: string,
+  mail: { objet: string; corps: string },
+  r: { assistant: boolean; pageId?: string; nouvellePage?: boolean }
+): string {
+  const page = r.pageId
+    ? f === null
+      ? `Page existante (identifiant ${r.pageId}) partagée à un nouveau destinataire : aucun contenu recopié, le lien affiche sa dernière version.`
+      : r.nouvellePage
+        ? `Nouvelle page créée dans Getgents, identifiant ${r.pageId}. Pour l'envoyer à quelqu'un d'autre, passe ce \`page\` au lieu de recopier le contenu ; pour la corriger, mettre_a_jour_page.`
+        : `Ce contenu existait déjà : même page (identifiant ${r.pageId}), nouveau lien pour ce destinataire.`
+    : "";
   return [
     `Lien privé : ${lien}`,
     "",
     `Objet : ${mail.objet}`,
     mail.corps,
     "",
-    `Reçu : ${f.caracteres} caractères, ${f.lignes} lignes.`,
-    assistant
-      ? "Assistant du document ACTIVÉ : le client peut poser des questions à côté de l'artefact ; les réponses sont facturées à l'utilisateur. Il peut le couper dans Mon compte → Mes partages."
-      : "Assistant du document non activé (l'utilisateur peut l'activer dans Mon compte → Mes partages).",
-    alertes.length
-      ? `ATTENTION — ${alertes.join(" ; ")}. Préviens l'utilisateur et propose de recommencer avec le contenu intégral.`
-      : "Contrôle de fidélité : aucune trace de troncature détectée.",
+    page,
+    f ? `Reçu : ${f.caracteres} caractères, ${f.lignes} lignes.` : "",
+    r.assistant
+      ? "Assistant du document ACTIVÉ sur cette page : le client peut poser des questions à côté ; les réponses sont facturées à l'utilisateur."
+      : "Assistant du document non activé (l'utilisateur peut l'activer sur la page, dans Getgents).",
+    f ? ligneFidelite(f) : "",
     "",
     "Donne à l'utilisateur le lien et le modèle de mail ci-dessus, et rappelle-lui que c'est à lui d'envoyer le mail.",
-  ].join("\n");
+  ]
+    .filter((l, i, t) => l !== "" || (t[i - 1] ?? "") !== "")
+    .join("\n");
 }
 
 /** Traite UN message JSON-RPC. Renvoie null pour une notification (pas de réponse due). */
@@ -322,7 +405,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
         result: {
           protocolVersion: VERSIONS_PROTOCOLE.includes(demandee) ? demandee : VERSIONS_PROTOCOLE[0],
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: "getgents", title: "Getgents — partage d'artefacts", version: "0.2.0" },
+          serverInfo: { name: "getgents", title: "Getgents — partage d'artefacts", version: "0.3.0" },
           instructions: INSTRUCTIONS_SERVEUR,
         },
       };
@@ -350,6 +433,17 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
                     description: DESCRIPTION_LISTER,
                     inputSchema: SCHEMA_LISTER,
                     annotations: { readOnlyHint: true, openWorldHint: false },
+                  },
+                ]
+              : []),
+            ...(ctx.mettreAJour
+              ? [
+                  {
+                    name: OUTIL_METTRE_A_JOUR,
+                    title: "Mettre à jour une page partagée",
+                    description: DESCRIPTION_METTRE_A_JOUR,
+                    inputSchema: SCHEMA_METTRE_A_JOUR,
+                    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
                   },
                 ]
               : []),
@@ -412,20 +506,60 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
           return echec("La révocation n'a pas pu être enregistrée. Réessaie dans un instant.");
         }
       }
+      if (r.params?.name === OUTIL_METTRE_A_JOUR && ctx.mettreAJour) {
+        const page = typeof args.page === "string" ? args.page.trim().toLowerCase() : "";
+        const contenu = typeof args.contenu === "string" ? args.contenu : "";
+        const format = FORMATS_ARTEFACT.includes(args.format as FormatArtefact) ? (args.format as FormatArtefact) : undefined;
+        const titre = typeof args.titre === "string" ? args.titre.trim().slice(0, TITRE_MAX) : undefined;
+        if (!/^[0-9a-f-]{36}$/.test(page)) return echec("Identifiant de page manquant ou invalide : prends-le dans lister_partages.");
+        if (!contenu.trim()) return echec("Le contenu est vide : envoie le code COMPLET de la nouvelle version.");
+        if (contenu.length > CONTENU_MAX) return echec(`Contenu trop long (${CONTENU_MAX} caractères au plus).`);
+        try {
+          const maj = await ctx.mettreAJour(page, { contenu, titre: titre || undefined, format });
+          if (!maj) return echec("Aucune page de ce compte ne porte cet identifiant. Vérifie avec lister_partages.");
+          // Contrôle avec le format que la page a désormais (inchangé si l'appel n'en donne pas).
+          const f = controleFidelite(contenu, maj.format);
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              content: [
+                {
+                  type: "text",
+                  text: [
+                    `Page mise à jour : version ${maj.version}. Ses ${maj.liens} lien(s) actif(s) affichent désormais cette version ; la précédente est gardée et restaurable.`,
+                    `Reçu : ${f.caracteres} caractères, ${f.lignes} lignes.`,
+                    ligneFidelite(f),
+                    "Aucun e-mail n'est parti : si l'utilisateur veut prévenir ses destinataires, c'est à lui de le faire.",
+                  ]
+                    .filter(Boolean)
+                    .join("\n"),
+                },
+              ],
+              structuredContent: { page, version: maj.version, liens: maj.liens, fidelite: f },
+            },
+          };
+        } catch {
+          return echec("La mise à jour n'a pas pu être enregistrée. Réessaie dans un instant.");
+        }
+      }
       if (r.params?.name !== NOM_OUTIL) return erreurRpc(id, -32602, `Outil inconnu : ${String(r.params?.name)}`);
       const v = validerDemande(r.params?.arguments);
       // Une erreur de saisie est un RÉSULTAT d'outil en échec, que le modèle lit et corrige.
       if (!v.ok) return echec(v.erreur);
-      const fidelite = controleFidelite(v.demande.contenu, v.demande.format);
+      // Repartage d'une page : rien n'a été recopié, il n'y a rien à contrôler.
+      const fidelite = v.demande.pageId ? null : controleFidelite(v.demande.contenu, v.demande.format);
       try {
-        const { lien } = await ctx.enregistrer(v.demande, fidelite);
-        const mail = modeleMail(v.demande, lien);
+        const res = await ctx.enregistrer(v.demande, fidelite);
+        if (!res) return echec("Aucune page de ce compte ne porte cet identifiant. Vérifie avec lister_partages, ou partage le contenu complet.");
+        const mail = modeleMail({ ...v.demande, titre: res.titre ?? v.demande.titre }, res.lien);
+        const assistant = res.assistant ?? v.demande.assistant === true;
         return {
           jsonrpc: "2.0",
           id,
           result: {
-            content: [{ type: "text", text: texteResultat(fidelite, lien, mail, v.demande.assistant === true) }],
-            structuredContent: { lien, objet: mail.objet, corps: mail.corps, fidelite },
+            content: [{ type: "text", text: texteResultat(fidelite, res.lien, mail, { assistant, pageId: res.pageId, nouvellePage: res.nouvellePage }) }],
+            structuredContent: { lien: res.lien, page: res.pageId ?? null, objet: mail.objet, corps: mail.corps, fidelite },
           },
         };
       } catch {

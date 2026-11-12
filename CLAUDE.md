@@ -450,8 +450,23 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   du connecteur avec identifiant de page (« partage-la aussi à Paul » sans
   recopier). `/pages` n'est PAS encore un slug réservé. Maquettes : liste
   façon « Mes gents », fiche (aperçu réel, destinataires, assistant,
-  versions), écran vide qui explique le connecteur. Lots suivants : code par
-  e-mail (Brevo), domaine séparé.
+  versions), écran vide qui explique le connecteur. **Lot A (12/11, écrit,
+  NON déployé)** : tables `pages` et `pages_versions`, `page_id` sur
+  `artefacts_partages` (migration 022, à passer AVANT : la lecture d'un lien
+  joint la page). Un partage ne garde PLUS de copie (`contenu` = '') : le
+  lien lit la page, donc sa DERNIÈRE version ; un vieux partage sans page
+  (clé d'essai) garde la sienne. Un contenu renvoyé À L'IDENTIQUE (empreinte
+  md5, même compte) retrouve sa page. Connecteur : `partager_artefact`
+  accepte `page` (repartage sans recopie, sans contrôle de fidélité — rien
+  n'a été recopié) et rend l'identifiant de page ; `mettre_a_jour_page`
+  range l'état précédent (20 versions au plus) et dit combien de liens
+  changent ; mise à jour conditionnelle sur la version lue. Assistant PAR
+  PAGE : le basculer depuis un lien (Mon compte) vaut pour tous les liens de
+  la page. Le lien dit « mis à jour le… » (ou « à HH:MM » le jour même).
+  Slug `pages` réservé. Vérifié avec le client MCP officiel (12 contrôles,
+  mémoire locale), PAS avec Supabase : la reprise SQL n'a tourné nulle part.
+  Lots suivants : B (écrans /pages), C (accueil), puis code par e-mail
+  (Brevo), domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

@@ -6,7 +6,9 @@ import {
   CONTENU_MAX,
   NOM_OUTIL,
   OUTIL_LISTER,
+  OUTIL_METTRE_A_JOUR,
   OUTIL_REVOQUER,
+  texteListe,
   filtrerPartages,
   statutPartage,
   type ResumePartage,
@@ -54,13 +56,15 @@ describe("protocole MCP", () => {
     expect(await traiterMessage({ jsonrpc: "2.0", method: "notifications/initialized" }, contexte())).toBeNull();
   });
 
-  it("liste UN outil, au schéma exigeant le contenu complet", async () => {
+  it("liste UN outil sans contexte de gestion ; le contenu complet est exigé sauf pour une page existante", async () => {
     const r = (await traiterMessage({ jsonrpc: "2.0", id: 2, method: "tools/list" }, contexte())) as {
       result: { tools: { name: string; description: string; inputSchema: { required: string[] } }[] };
     };
     expect(r.result.tools).toHaveLength(1);
     expect(r.result.tools[0].name).toBe(NOM_OUTIL);
-    expect(r.result.tools[0].inputSchema.required).toEqual(["titre", "contenu", "format", "destinataire"]);
+    // Le schéma n'exige que le destinataire : c'est la VALIDATION qui exige le
+    // contenu quand aucune page n'est donnée (repartage sans recopie).
+    expect(r.result.tools[0].inputSchema.required).toEqual(["destinataire"]);
     expect(r.result.tools[0].description).toMatch(/COMPLET/);
   });
 
@@ -297,5 +301,82 @@ describe("gestion des partages (lot 2)", () => {
   it("un outil de gestion sans contexte reste inconnu", async () => {
     const r = (await traiterMessage(outil(OUTIL_LISTER, {}), contexte())) as { error: { code: number } };
     expect(r.error.code).toBe(-32602);
+  });
+});
+
+describe("pages (lot A)", () => {
+  const PAGE_ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
+  const outil = (name: string, args: unknown) => ({ jsonrpc: "2.0", id: 7, method: "tools/call", params: { name, arguments: args } });
+
+  it("valide un repartage : la page et le destinataire suffisent", () => {
+    expect(validerDemande({ page: PAGE_ID.toUpperCase(), destinataire: "Paul" })).toEqual({
+      ok: true,
+      demande: { titre: "", contenu: "", format: "html", destinataire: "Paul", pageId: PAGE_ID },
+    });
+    expect(validerDemande({ page: "pas-un-id", destinataire: "Paul" }).ok).toBe(false);
+    expect(validerDemande({ page: PAGE_ID }).ok).toBe(false);
+    // Sans page, le contenu reste exigé.
+    expect(validerDemande({ titre: "T", format: "html", destinataire: "Paul" }).ok).toBe(false);
+  });
+
+  it("repartage : aucun contrôle de fidélité, titre du mail pris sur la page", async () => {
+    const recus: { d: DemandePartage; f: unknown }[] = [];
+    const r = (await traiterMessage(outil(NOM_OUTIL, { page: PAGE_ID, destinataire: "Paul" }), {
+      enregistrer: async (d, f) => {
+        recus.push({ d, f });
+        return { lien: "https://getgents.ai/partage/X", pageId: PAGE_ID, titre: "Offre Acme", assistant: true };
+      },
+    })) as { result: { content: { text: string }[]; structuredContent: { objet: string; page: string; fidelite: unknown } } };
+    expect(recus[0].f).toBeNull();
+    expect(r.result.structuredContent).toMatchObject({ objet: "Offre Acme", page: PAGE_ID, fidelite: null });
+    expect(r.result.content[0].text).toMatch(/aucun contenu recopié/);
+    expect(r.result.content[0].text).toMatch(/Assistant du document ACTIVÉ/);
+  });
+
+  it("nouveau partage : l'identifiant de page est rendu au modèle pour la suite", async () => {
+    const r = (await traiterMessage(outil(NOM_OUTIL, { titre: "Offre", contenu: PAGE, format: "html", destinataire: "Marie" }), {
+      enregistrer: async () => ({ lien: "https://getgents.ai/partage/Y", pageId: PAGE_ID, nouvellePage: true, titre: "Offre" }),
+    })) as { result: { content: { text: string }[] } };
+    expect(r.result.content[0].text).toMatch(new RegExp(`Nouvelle page créée.*${PAGE_ID}`));
+    expect(r.result.content[0].text).toMatch(/aucune trace de troncature/);
+  });
+
+  it("une page inconnue du compte est un échec lisible", async () => {
+    const r = (await traiterMessage(outil(NOM_OUTIL, { page: PAGE_ID, destinataire: "Paul" }), { enregistrer: async () => null })) as {
+      result: { isError: boolean; content: { text: string }[] };
+    };
+    expect(r.result.isError).toBe(true);
+    expect(r.result.content[0].text).toMatch(/Aucune page/);
+  });
+
+  it("mettre à jour : contrôle avec le format de la page, et dit combien de liens changent", async () => {
+    const appels: unknown[] = [];
+    const ctx = {
+      enregistrer: async () => null,
+      mettreAJour: async (id: string, d: unknown) => {
+        appels.push([id, d]);
+        return { version: 3, liens: 2, format: "react" as const };
+      },
+    };
+    const liste = (await traiterMessage({ jsonrpc: "2.0", id: 1, method: "tools/list" }, ctx)) as { result: { tools: { name: string }[] } };
+    expect(liste.result.tools.map((t) => t.name)).toContain(OUTIL_METTRE_A_JOUR);
+    const r = (await traiterMessage(outil(OUTIL_METTRE_A_JOUR, { page: PAGE_ID, contenu: "export default function App() {\n  return <div>o" }), ctx)) as {
+      result: { content: { text: string }[]; structuredContent: { version: number } };
+    };
+    expect(appels[0]).toEqual([PAGE_ID, { contenu: "export default function App() {\n  return <div>o", titre: undefined, format: undefined }]);
+    expect(r.result.structuredContent.version).toBe(3);
+    expect(r.result.content[0].text).toMatch(/version 3.*2 lien/);
+    // Format React de la page : la fin manquante est repérée.
+    expect(r.result.content[0].text).toMatch(/ABSENTE/);
+    const vide = (await traiterMessage(outil(OUTIL_METTRE_A_JOUR, { page: PAGE_ID, contenu: " " }), ctx)) as { result: { isError: boolean } };
+    expect(vide.result.isError).toBe(true);
+  });
+
+  it("la liste donne l'identifiant de page de chaque partage", () => {
+    const t = texteListe(
+      [{ jeton: "J".repeat(24), titre: "Offre", format: "html", destinataire: "Marie", caracteres: 1, createdAt: "2026-11-12T09:00:00Z", expiresAt: null, revokedAt: null, pageId: PAGE_ID }],
+      "https://getgents.ai"
+    );
+    expect(t).toMatch(new RegExp(`page ${PAGE_ID}`));
   });
 });

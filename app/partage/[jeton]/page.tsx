@@ -24,7 +24,17 @@ export const metadata: Metadata = {
 export default async function PagePartage({ params }: { params: { jeton: string } }) {
   const a = await lireArtefact(params.jeton);
   if (!a) notFound();
-  const date = new Date(a.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const enFrancais = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" });
+  const date = enFrancais(a.createdAt);
+  // Le lien affiche la DERNIÈRE version de la page : on le dit, sinon le
+  // destinataire qui l'a déjà lue croirait relire le même document.
+  const heure = (iso: string) => new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+  const maj =
+    a.misAJourLe && Date.parse(a.misAJourLe) > Date.parse(a.createdAt)
+      ? enFrancais(a.misAJourLe) === date
+        ? ` · mis à jour à ${heure(a.misAJourLe)}`
+        : ` · mis à jour le ${enFrancais(a.misAJourLe)}`
+      : "";
   const assistant = a.assistant && !!a.ownerId;
 
   return (
@@ -38,6 +48,7 @@ export default async function PagePartage({ params }: { params: { jeton: string 
           <span className={styles.titre}>{a.titre}</span>
           <span className={styles.meta}>
             Pour {a.destinataire} · {date}
+            {maj}
           </span>
           <a className={styles.marque} href="/" target="_blank" rel="noopener noreferrer">
             Getgents
