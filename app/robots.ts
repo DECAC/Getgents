@@ -27,6 +27,7 @@ export default function robots(): MetadataRoute.Robots {
           "/accueil",
           "/myspace",
           "/l/",
+          "/partage/",
           "/auth/",
           "/prototype/",
         ],

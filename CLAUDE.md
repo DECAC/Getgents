@@ -322,6 +322,36 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   NON vérifié au navigateur. **Restent** (plan du 10/11) : liens d'entrée
   réellement LUS (une entrée « URL » part aujourd'hui comme une simple
   chaîne), crédit du lien non décompté sur échec, types d'entrées.
+- **Connecteur MCP « partager un artefact » — PHASE 0, essai** (12/11 ;
+  `lib/mcpPartage.ts`, `app/api/mcp/[cle]`, `/partage/<jeton>`). Idée produit :
+  un commercial génère un artefact dans Claude, ChatGPT…, et dit « partage-le
+  à marie@… » ; le connecteur rend un lien privé et le mail à envoyer. La
+  question que l'essai doit TRANCHER avant tout le reste : un connecteur ne
+  voit pas l'artefact, il ne reçoit que la COPIE que le modèle recopie dans
+  l'appel — arrive-t-elle entière et fidèle ? D'où `controleFidelite`
+  (longueur, fin attendue du format, marques d'abréviation « ... reste du
+  code ») renvoyé au modèle à chaque partage et journalisé
+  (`getgents:partage artefact_partage`, avec le User-Agent du client).
+  Protocole : JSON-RPC « Streamable HTTP » en réponses JSON simples, sans
+  dépendance (vérifié avec le client MCP OFFICIEL : initialize, liste,
+  appel). Authentification d'essai SEULEMENT : clé dans l'adresse
+  (`MCP_ESSAI_CLE`, ≥ 32 caractères, temps constant, 404 sinon) — elle
+  apparaît dans les journaux d'accès : la changer après l'essai ; la phase 1
+  la remplace par OAuth lié au compte. **Isolement** : le contenu est du code
+  ARBITRAIRE, jamais rendu dans un document Getgents. `/partage/<jeton>`
+  l'encadre depuis `/api/partage/<jeton>/contenu`, servi hors middleware sous
+  CSP `sandbox` SANS `allow-same-origin` (`CSP_ARTEFACT`) — origine opaque :
+  vérifié au navigateur, le script de l'artefact s'exécute mais cookies,
+  stockage et page parente lui sont fermés. La phase 1 ajoute quand même un
+  DOMAINE séparé (défense en profondeur). React (format Claude) : rendu « au
+  mieux » par Babel + esm.sh dans le cadre, repli sur l'erreur et le code ;
+  NON vérifié d'ici (le réseau de l'agent refuse unpkg, esm.sh, Tailwind).
+  Table `artefacts_partages` (migration 019, à passer AVANT le déploiement) ;
+  sans Supabase, en développement, une mémoire locale la remplace. Liens
+  valables 30 jours. Pas d'e-mail envoyé : le commercial envoie lui-même.
+  Plan complet (phases 1 à 3 : code par e-mail, domaine séparé, assistant
+  à côté de l'artefact, retour « ce qu'a lu et demandé le client »)
+  suspendu au résultat de l'essai.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

@@ -1,0 +1,55 @@
+/* L'artefact d'abord : un bandeau d'une ligne, le reste est à lui. */
+.page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.bandeau {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 6px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: #faf7f3;
+  font-size: 13px;
+  color: #4a4245;
+}
+
+.titre {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: #1f1b1c;
+}
+
+.meta {
+  flex: none;
+  color: #7a7174;
+}
+
+.marque {
+  margin-left: auto;
+  flex: none;
+  color: #7a7174;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.cadre {
+  flex: 1;
+  width: 100%;
+  border: none;
+}
+
+@media (max-width: 600px) {
+  .meta {
+    display: none;
+  }
+}
