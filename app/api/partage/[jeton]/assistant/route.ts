@@ -1,3 +1,6 @@
+import { cookies } from "next/headers";
+import { decisionAcces } from "@/lib/server/accesPartage";
+import { nomCookie } from "@/lib/accesCode";
 import { NextResponse } from "next/server";
 import { compterQuestion, lireArtefact } from "@/lib/server/artefactsPartages";
 import { consigneAssistant, historiqueValide, QUESTIONS_MAX_PAR_LIEN, REPONSE_MAX_TOKENS } from "@/lib/assistantDocument";
@@ -25,6 +28,9 @@ const INDISPONIBLE = "L'assistant est momentanément indisponible. Le document r
 export async function POST(req: Request, { params }: { params: { jeton: string } }) {
   const a = await lireArtefact(params.jeton);
   if (!a) return NextResponse.json({ error: "Ce lien n'existe pas ou a expiré." }, { status: 404 });
+  // Page protégée par code : sans cookie d'accès valide, rien ne sort.
+  if ((await decisionAcces(a, cookies().get(nomCookie(a.jeton))?.value)) !== "ouvert")
+    return NextResponse.json({ error: "Accès protégé : validez votre code." }, { status: 403 });
   if (!a.assistant || !a.ownerId) return NextResponse.json({ error: "L'assistant n'est pas activé sur ce document." }, { status: 403 });
 
   const corps = (await req.json().catch(() => ({}))) as { messages?: unknown };

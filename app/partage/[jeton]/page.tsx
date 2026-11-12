@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { lireArtefact } from "@/lib/server/artefactsPartages";
 import { amorcesAssistant } from "@/lib/assistantDocument";
+import { cookies } from "next/headers";
 import VuePartage from "./VuePartage";
+import EcranCode from "./EcranCode";
+import { decisionAcces } from "@/lib/server/accesPartage";
+import { masquerEmail, nomCookie } from "@/lib/accesCode";
 import styles from "./partage.module.css";
 
 /**
@@ -36,6 +40,19 @@ export default async function PagePartage({ params }: { params: { jeton: string 
         : ` · mis à jour le ${enFrancais(a.misAJourLe)}`
       : "";
   const assistant = a.assistant && !!a.ownerId;
+  // Page protégée : sans cookie d'accès valide, l'écran du code — et rien
+  // du document (ni cadre, ni titre au-delà du bandeau).
+  const decision = await decisionAcces(a, cookies().get(nomCookie(a.jeton))?.value);
+  if (decision !== "ouvert")
+    return (
+      <div className={styles.page}>
+        <header className={styles.bandeau}>
+          <span className={styles.titre}>{a.titre}</span>
+          <span className={styles.meta}>Lien privé · Getgents</span>
+        </header>
+        <EcranCode jeton={a.jeton} masque={masquerEmail(a.destinataire)} etat={decision} />
+      </div>
+    );
 
   return (
     <VuePartage

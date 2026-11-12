@@ -689,3 +689,24 @@
     height: 60vh;
   }
 }
+
+/* Accès protégé par code */
+.alerte {
+  color: var(--plum);
+  font-weight: 600;
+}
+
+.ok {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.alerteBloc {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--plum-tint, #ffe8e8);
+  color: color-mix(in srgb, var(--plum) 80%, var(--ink));
+  font-size: 12px;
+  line-height: 1.45;
+}

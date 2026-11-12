@@ -498,8 +498,27 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   « Vos dernières pages » sur l'accueil (`StudioHome`, 4 au plus, sous
   « Vos gents »), absente sans page ou sans compte — l'accueil n'en dépend
   pas. Payé en passant : les lignes « Vos gents » de l'accueil sortaient
-  SOULIGNÉES (des liens sans `text-decoration: none`). Lots suivants : code
-  par e-mail (Brevo, désormais configuré), domaine séparé.
+  SOULIGNÉES (des liens sans `text-decoration: none`). **Accès protégé par
+  code (12/11)** : interrupteur PAR PAGE dans la fiche (désactivé par
+  défaut). Le porteur du lien ne tape PAS d'adresse : le code (6 chiffres,
+  10 min, 5 essais, usage unique, renvoi ≥ 60 s, 10 envois par lien) part à
+  l'adresse ENREGISTRÉE du lien, montrée masquée (`m•••@acme.fr`) — un lien
+  transféré envoie le code au vrai destinataire. Un lien adressé à un NOM
+  est BLOQUÉ quand la protection est active, et la fiche le dit. Validé →
+  cookie `gg_acces_<jeton>` signé (HMAC dérivé de `SECRET_BOX_KEY`),
+  HttpOnly, 30 jours, propre à CE lien. La page, le document
+  (`/api/partage/<jeton>/contenu`) ET l'assistant revérifient : l'écran du
+  code n'est pas la seule garde (vérifié : document et assistant appelés
+  directement → 403). Le fond flou est un DÉCOR, le document n'est pas
+  chargé avant validation. Migration 023 : tables NOUVELLES
+  (`pages_protection`, `acces_partages`) — « table absente » (42P01 /
+  PGRST205) se lit « aucune page protégée », toute autre erreur REFUSE
+  l'accès (« Page momentanément indisponible »). La détection de table
+  absente n'est PAS vérifiée contre le vrai PostgREST : si tous les liens
+  affichent « indisponible » avant la migration, c'est elle — passer la
+  023 répare. En développement sans Brevo, le code est écrit dans le journal
+  du serveur (jamais en production). Lots suivants : domaine séparé ; ce
+  qu'a lu et demandé le client.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

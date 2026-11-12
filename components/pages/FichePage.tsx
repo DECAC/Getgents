@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { initiales, libelleFormat } from "@/lib/pagesGetsite";
 import type { FormatArtefact } from "@/lib/mcpPartage";
 import { QUESTIONS_MAX_PAR_LIEN } from "@/lib/assistantDocument";
+import { peutRecevoirCode } from "@/lib/accesCode";
 import styles from "./pages.module.css";
 
 interface Destinataire {
@@ -26,6 +27,10 @@ interface Detail {
   destinataires: Destinataire[];
   versions: { version: number; titre: string; createdAt: string }[];
   questions: number;
+  protection: boolean;
+  protectionIllisible: boolean;
+  /** Jeton → date de validation du code. */
+  valides: Record<string, string>;
 }
 
 const jour = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
@@ -230,6 +235,8 @@ export function FichePage({ id }: { id: string }) {
                 .sort((a, b) => Number(actif(b)) - Number(actif(a)) || b.createdAt.localeCompare(a.createdAt))
                 .map((d) => {
                   const ok = actif(d);
+                  const bloque = ok && page.protection && !peutRecevoirCode(d.destinataire);
+                  const valide = page.valides[d.jeton];
                   return (
                     <li key={d.jeton} className={ok ? styles.destinataire : `${styles.destinataire} ${styles.eteint}`}>
                       <span className={styles.avatar} aria-hidden="true">
@@ -244,6 +251,10 @@ export function FichePage({ id }: { id: string }) {
                               ? `Expiré le ${jour(d.expiresAt!)}`
                               : `Envoyé le ${jour(d.createdAt)}${d.expiresAt ? ` · expire le ${jour(d.expiresAt)}` : ""}`}
                           {d.questions > 0 ? ` · ${d.questions} question${d.questions > 1 ? "s" : ""}` : ""}
+                          {bloque && <span className={styles.alerte}> · Sans adresse e-mail : bloqué par la protection</span>}
+                          {ok && page.protection && !bloque && (
+                            <span className={valide ? styles.ok : undefined}>{valide ? ` · ✓ code validé le ${jour(valide)}` : " · code pas encore validé"}</span>
+                          )}
                         </span>
                       </span>
                       {ok && (
@@ -268,6 +279,40 @@ export function FichePage({ id }: { id: string }) {
                   );
                 })}
             </ul>
+          </section>
+
+          <section className={styles.bloc}>
+            <h2 className={styles.blocTitre}>Accès protégé par code</h2>
+            <label className={styles.interrupteur}>
+              <span>
+                <b>{page.protection ? "Activé" : "Désactivé"}</b>
+                Chaque destinataire reçoit un code par e-mail, à l&apos;adresse du lien, pour ouvrir la page. Un lien transféré ne s&apos;ouvre plus.
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={page.protection}
+                disabled={enCours === "protection"}
+                onChange={() =>
+                  void appel(
+                    "protection",
+                    `/api/pages/${encodeURIComponent(page.id)}`,
+                    { method: "PATCH", body: JSON.stringify({ protection: !page.protection }) },
+                    page.protection ? "Protection coupée." : "Protection activée."
+                  )
+                }
+              />
+            </label>
+            {page.protectionIllisible && <p className={styles.alerteBloc}>L&apos;état de la protection n&apos;a pas pu être lu. Rechargez la page.</p>}
+            {page.protection &&
+              actifs
+                .filter((d) => !peutRecevoirCode(d.destinataire))
+                .map((d) => (
+                  <p key={d.jeton} className={styles.alerteBloc}>
+                    « {d.destinataire} » n&apos;a pas d&apos;adresse e-mail : son lien ne s&apos;ouvre plus. Partagez la page à son adresse avec « + Partager
+                    à… ».
+                  </p>
+                ))}
           </section>
 
           <section className={styles.bloc}>

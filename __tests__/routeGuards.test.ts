@@ -69,6 +69,11 @@ const OUVERTES: Record<string, string> = {
   // partage + option activée par le propriétaire, qui paie (quota) ; plafond
   // de questions par lien.
   "app/api/partage/[jeton]/assistant/route.ts": "jeton du partage + option du propriétaire + plafond par lien",
+  // Accès protégé par code : le destinataire n'a pas de compte. Le jeton du
+  // lien fait l'accès ; le code part à l'adresse ENREGISTRÉE (jamais fournie
+  // par l'appelant), renvoi limité à 60 s, envois et essais plafonnés.
+  "app/api/partage/[jeton]/code/route.ts": "jeton du partage, code envoyé à l'adresse enregistrée, débit plafonné",
+  "app/api/partage/[jeton]/code/verifier/route.ts": "jeton du partage + code à usage unique, 5 essais",
 };
 
 function routes(dir: string, acc: string[] = []): string[] {
