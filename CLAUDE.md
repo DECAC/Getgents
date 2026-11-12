@@ -319,9 +319,11 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   verdict, pas d'auto-application. « Mettre à jour » recalcule tout : les
   retouches manuelles n'y survivent pas, la consigne le fait dire au gent.
   Le visiteur ne reçoit pas le gabarit, seulement le booléen `conversation`.
-  NON vérifié au navigateur. **Restent** (plan du 10/11) : liens d'entrée
-  réellement LUS (une entrée « URL » part aujourd'hui comme une simple
-  chaîne), crédit du lien non décompté sur échec, types d'entrées.
+  NON vérifié au navigateur. **Chantier ARRÊTÉ (12/11, décision de
+  l'utilisateur)** : lots 1 et 2 en production et gardés. Non faits, et à
+  ne pas reprendre sans demande : une entrée « URL » part toujours comme une
+  simple chaîne (jamais lue), le crédit d'un lien est décompté même sur
+  échec, pas de nouveaux types d'entrées.
 - **Connecteur MCP « partager un artefact » — PHASE 0, essai** (12/11 ;
   `lib/mcpPartage.ts`, `app/api/mcp`, `/partage/<jeton>`). Idée produit :
   un commercial génère un artefact dans Claude, ChatGPT…, et dit « partage-le
