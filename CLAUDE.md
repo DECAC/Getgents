@@ -745,6 +745,12 @@ Reste, côté utilisateur : projet Railway branché sur `main` ; variables
 `curl -H "Authorization: Bearer $CRON_SECRET" https://getgents.ai/api/routines/run` ;
 essai sur l'adresse Railway ; DNS ; Vercel gardé une semaine en secours.
 
+**Bascule MISE DE CÔTÉ (12/11, décision de l'utilisateur)** : Vercel reste
+l'hébergeur. Arrêtée au cron de test (refusé en 401 : secret différent entre
+les deux services). Les réglages de l'étape 1 restent, ils valent aussi sur
+Vercel. Le projet Railway est à supprimer ou mettre en pause côté
+utilisateur, sinon il consomme sans trafic.
+
 ## Le dépôt GitHub
 
 **PUBLIC.** Décision assumée après discussion. Conséquence : le secret scanning
