@@ -405,7 +405,13 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   d'autrui ne suffit pas. La liste ne lit jamais `contenu` (2 Mo par
   ligne). Les partages faits avec l'ancienne clé d'essai n'ont pas de
   propriétaire : ils n'apparaissent nulle part, et expirent seuls. Aucune
-  migration (colonnes de la 020). Lots suivants : code par e-mail (Brevo), domaine séparé.
+  migration (colonnes de la 020). **Essai réel CONCLUANT (12/11).** Piège
+  payé : après le déploiement, Claude affirmait n'avoir que
+  `partager_artefact` — il garde la liste d'outils lue à l'AJOUT du
+  connecteur (`listChanged: false`). Il faut le DÉCONNECTER puis le
+  reconnecter, et ouvrir une nouvelle conversation ; rouvrir une
+  conversation ne suffit pas. À dire à chaque nouvel outil. Lots suivants :
+  code par e-mail (Brevo), domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
