@@ -351,7 +351,16 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   valables 30 jours. Pas d'e-mail envoyé : le commercial envoie lui-même.
   Plan complet (phases 1 à 3 : code par e-mail, domaine séparé, assistant
   à côté de l'artefact, retour « ce qu'a lu et demandé le client »)
-  suspendu au résultat de l'essai.
+  suspendu au résultat de l'essai. **Premier essai réel (12/11)** : « le rendu est
+  bon, mais aucune donnée ne s'affiche ». Cause la plus probable (artefact non
+  relu d'ici) : le script s'arrêtait — sous `sandbox` sans
+  `allow-same-origin`, toucher `localStorage` LÈVE une erreur, et
+  `window.storage` (stockage des artefacts Claude) n'existe pas hors de
+  Claude. `AMORCE_ARTEFACT`, posée avant tout script (`avecAmorce`), les
+  remplace par une mémoire de la page (rien n'est gardé entre deux visites)
+  et affiche toute erreur restante dans un bandeau (`data-getgents-erreur`).
+  Vérifié au navigateur : tableau rempli depuis `localStorage`, lecture de
+  `window.storage`, erreur visible.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

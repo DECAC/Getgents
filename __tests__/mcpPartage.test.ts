@@ -8,7 +8,7 @@ import {
   type ContexteMcp,
   type DemandePartage,
 } from "@/lib/mcpPartage";
-import { chaineJs, CSP_ARTEFACT, documentArtefact } from "@/lib/documentArtefact";
+import { AMORCE_ARTEFACT, avecAmorce, chaineJs, CSP_ARTEFACT, documentArtefact } from "@/lib/documentArtefact";
 import { SLUGS_RESERVES } from "@/lib/slug";
 
 const PAGE = "<!DOCTYPE html>\n<html><head><title>Offre</title></head><body><h1>Offre</h1></body></html>";
@@ -157,7 +157,9 @@ describe("document de l'artefact", () => {
   });
 
   it("sert une page complète telle quelle, enveloppe un fragment", () => {
-    expect(documentArtefact(PAGE, "html", "t", (m) => m)).toBe(PAGE);
+    // La page est servie entière, l'amorce posée en tête, avant tout script de l'artefact.
+    expect(documentArtefact(PAGE, "html", "t", (m) => m)).toBe(avecAmorce(PAGE));
+    expect(avecAmorce(PAGE).replace(AMORCE_ARTEFACT, "")).toBe(PAGE);
     expect(documentArtefact("<p>Bonjour</p>", "html", "t", (m) => m)).toMatch(/^<!doctype html>[\s\S]*<meta charset="utf-8">[\s\S]*<p>Bonjour<\/p>/);
   });
 
@@ -167,6 +169,15 @@ describe("document de l'artefact", () => {
     expect(chaineJs(src)).not.toMatch(/<\/script/i);
     expect(JSON.parse(chaineJs(src))).toBe(src);
     expect(documentArtefact(src, "react", "t", (m) => m)).not.toMatch(/"<\/script><script>alert/);
+  });
+
+  it("pose l'amorce avant le premier script, quelle que soit la forme du document", () => {
+    const avant = (doc: string) => doc.indexOf(AMORCE_ARTEFACT) < doc.indexOf("<script>x");
+    expect(avant(avecAmorce('<!DOCTYPE html><html><head><title>t</title><script>x</script></head></html>'))).toBe(true);
+    expect(avant(avecAmorce("<html><body><script>x</script></body></html>"))).toBe(true);
+    expect(avant(avecAmorce("<!doctype html><script>x</script>"))).toBe(true);
+    expect(avant(avecAmorce("<script>x</script>"))).toBe(true);
+    expect(avecAmorce("<!doctype html><p>a</p>").startsWith("<!doctype html>" + AMORCE_ARTEFACT)).toBe(true);
   });
 
   it("passe le markdown par le convertisseur fourni", () => {
