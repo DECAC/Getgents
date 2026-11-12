@@ -437,8 +437,21 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   Migration 021 à passer AVANT le déploiement — `lireArtefact` lit les
   nouvelles colonnes, TOUS les liens tomberaient sans elle. Vérifié en
   local jusqu'à l'appel au modèle (pas de clé OpenRouter ici) et au
-  navigateur avec une réponse SIMULÉE. Lots suivants : code par e-mail
-  (Brevo), domaine séparé.
+  navigateur avec une réponse SIMULÉE. **Rubrique « Pages » (12/11, décidé,
+  NON codé)** : les artefacts partagés deviennent un objet de premier plan,
+  troisième mode du sélecteur `Utiliser | Construire | Pages`, marque GetSite
+  en info-bulle (comme GetSpace / GetStudio — les marques restent en second).
+  Nom choisi par l'utilisateur après « Artefacts » (mot de Claude, et déjà
+  pris par les artefacts des gents), « Documents », « Site », « Flyers » :
+  il voulait un mot commun au français et à l'anglais. Décisions : l'assistant
+  IA se règle PAR PAGE ; les liens montrent la DERNIÈRE version (anciennes
+  restaurables). Préalable : modèle `pages` + `partages` (aujourd'hui une
+  ligne = une copie + un destinataire), reprise par contenu identique, outils
+  du connecteur avec identifiant de page (« partage-la aussi à Paul » sans
+  recopier). `/pages` n'est PAS encore un slug réservé. Maquettes : liste
+  façon « Mes gents », fiche (aperçu réel, destinataires, assistant,
+  versions), écran vide qui explique le connecteur. Lots suivants : code par
+  e-mail (Brevo), domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
