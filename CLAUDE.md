@@ -499,7 +499,7 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   « Vos gents »), absente sans page ou sans compte — l'accueil n'en dépend
   pas. Payé en passant : les lignes « Vos gents » de l'accueil sortaient
   SOULIGNÉES (des liens sans `text-decoration: none`). Lots suivants : code
-  par e-mail (Brevo), domaine séparé.
+  par e-mail (Brevo, désormais configuré), domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
@@ -918,14 +918,16 @@ fichiers — ce serait juridiquement faux.
 `SECRET_BOX_KEY` : sa perte rend **illisibles** toutes les clés OpenRouter
 enregistrées par les créateurs. Elle doit vivre ailleurs que sur Vercel.
 
-**BREVO N'EST PAS CONFIGURÉ** en production. Quatre fonctionnalités en
-dépendent et ne font donc rien : invitation par e-mail, notification de
-signalement, notification d'usage par un invité, note de routine. Les échecs
-sont désormais journalisés (tag `getgents:email`) et le panneau de partage
-prévient que l'accès a été accordé mais que l'e-mail n'est pas parti. Pour
-l'activer : `BREVO_API_KEY` et `BREVO_SENDER_EMAIL`, ET l'authentification du
-domaine chez Brevo — sans elle, les envois sont refusés ou finissent en
-indésirables.
+**BREVO EST CONFIGURÉ** en production (12/11, e-mail d'invitation reçu par
+l'utilisateur). Il ne l'était pas jusque-là : invitation par e-mail,
+notification de signalement, notification d'usage par un invité et note de
+routine ne faisaient rien. Variables : `BREVO_API_KEY` (clé API `xkeysib-`,
+PAS une clé SMTP `xsmtpsib-`), `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`
+(facultatif). Piège payé : premier envoi refusé en **401** — soit le filtrage
+« IP autorisées » de Brevo (Vercel appelle depuis des adresses qui changent :
+le désactiver, pas lister des IP), soit une mauvaise clé ; le message qui suit
+le code dans `getgents:email` tranche. L'authentification du domaine chez
+Brevo (DNS) conditionne la délivrabilité : un e-mail en indésirables = DNS.
 
 Les inscriptions sont fermées **chez Supabase** (Authentication → Providers →
 Email). `lib/inscriptions.ts` ne fait que rendre l'interface honnête — il ne
