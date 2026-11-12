@@ -4,7 +4,7 @@ import { enregistrerArtefact, type Proprietaire } from "@/lib/server/artefactsPa
 
 /**
  * Transport MCP « Streamable HTTP » en réponses JSON simples, commun à la
- * route OAuth (/api/mcp) et à la route d'essai (/api/mcp/<clé>) : chaque POST
+ * route OAuth (/api/mcp) : chaque POST
  * porte un message JSON-RPC (ou un lot) et reçoit sa réponse dans le corps.
  * Aucun flux serveur (GET → 405), ce que la spécification autorise.
  */
@@ -18,7 +18,7 @@ export const ENTETES_CORS = {
   "Access-Control-Expose-Headers": "WWW-Authenticate, Mcp-Session-Id",
 };
 
-export async function repondreMcp(req: Request, origine: string, proprietaire: Proprietaire | null): Promise<NextResponse> {
+export async function repondreMcp(req: Request, origine: string, proprietaire: Proprietaire): Promise<NextResponse> {
   let corps: unknown;
   try {
     corps = await req.json();
@@ -40,8 +40,8 @@ export async function repondreMcp(req: Request, origine: string, proprietaire: P
           finPresente: fidelite.finPresente,
           abreviationSuspecte: fidelite.abreviationSuspecte,
           dependClaude: fidelite.dependClaude,
-          compte: proprietaire ? "oauth" : "cle_essai",
-          ownerId: proprietaire?.userId ?? null,
+          compte: "oauth",
+          ownerId: proprietaire.userId,
           client,
         })
       );

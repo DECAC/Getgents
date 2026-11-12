@@ -51,12 +51,6 @@ const OUVERTES: Record<string, string> = {
   // dont on veut connaître les verdicts. N'écrit qu'une ligne de journal aux
   // valeurs énumérées, sans base ni modèle, plafonnée par adresse.
   "app/api/telemetrie/artefact/route.ts": "journal seulement, valeurs énumérées, plafond par adresse",
-  // Connecteur MCP de partage (phase 0, essai) : appelé par Claude ou ChatGPT,
-  // qui n'ont pas de session Getgents. La clé dans l'adresse (MCP_ESSAI_CLE,
-  // 32 caractères au moins, comparée en temps constant ; 404 sinon) tient lieu
-  // d'authentification POUR L'ESSAI SEULEMENT — la phase 1 la remplace par
-  // une autorisation OAuth liée au compte.
-  "app/api/mcp/[cle]/route.ts": "clé d'essai dans l'adresse (phase 0), 404 sans elle",
   // Connecteur MCP (phase 1) : authentifié par un jeton porteur OAuth, émis
   // après consentement d'un commercial connecté (/oauth/autoriser, qui passe
   // par requireUser). 401 + WWW-Authenticate sans jeton valide.

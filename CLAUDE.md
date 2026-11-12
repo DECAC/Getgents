@@ -323,7 +323,7 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   réellement LUS (une entrée « URL » part aujourd'hui comme une simple
   chaîne), crédit du lien non décompté sur échec, types d'entrées.
 - **Connecteur MCP « partager un artefact » — PHASE 0, essai** (12/11 ;
-  `lib/mcpPartage.ts`, `app/api/mcp/[cle]`, `/partage/<jeton>`). Idée produit :
+  `lib/mcpPartage.ts`, `app/api/mcp`, `/partage/<jeton>`). Idée produit :
   un commercial génère un artefact dans Claude, ChatGPT…, et dit « partage-le
   à marie@… » ; le connecteur rend un lien privé et le mail à envoyer. La
   question que l'essai doit TRANCHER avant tout le reste : un connecteur ne
@@ -392,9 +392,9 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   porte `redirect_uri=https://…`, et l'ancien refus de tout `://` renvoyait
   le commercial sur « Mes gents ». Vérifié avec le client MCP OFFICIEL
   (18 contrôles, `next dev` : en `next start` la mémoire locale est refusée,
-  c'est voulu) et au navigateur (clic → retour vers claude.ai). La clé
-  d'essai `/api/mcp/<clé>` reste en service jusqu'à l'essai réel, puis
-  sera RETIRÉE. Lots suivants : page « Partages » + outils lister/révoquer,
+  c'est voulu) et au navigateur (clic → retour vers claude.ai). **Essai
+  réel CONCLUANT dans Claude (12/11)** ; la route d'essai `/api/mcp/<clé>`
+  est RETIRÉE — `MCP_ESSAI_CLE` ne sert plus, à supprimer sur Vercel. Lots suivants : page « Partages » + outils lister/révoquer,
   code par e-mail (Brevo), domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
