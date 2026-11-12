@@ -65,6 +65,10 @@ const OUVERTES: Record<string, string> = {
   // qui le lit. Le jeton (24 octets aléatoires) autorise la lecture seule ;
   // le contenu est servi sous CSP sandbox, sans accès à rien d'autre.
   "app/api/partage/[jeton]/contenu/route.ts": "authentifiée par le jeton du partage, lecture seule, sandbox",
+  // Assistant du document : le destinataire n'a pas de compte. Jeton du
+  // partage + option activée par le propriétaire, qui paie (quota) ; plafond
+  // de questions par lien.
+  "app/api/partage/[jeton]/assistant/route.ts": "jeton du partage + option du propriétaire + plafond par lien",
 };
 
 function routes(dir: string, acc: string[] = []): string[] {

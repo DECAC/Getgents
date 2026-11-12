@@ -410,8 +410,25 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   `partager_artefact` — il garde la liste d'outils lue à l'AJOUT du
   connecteur (`listChanged: false`). Il faut le DÉCONNECTER puis le
   reconnecter, et ouvrir une nouvelle conversation ; rouvrir une
-  conversation ne suffit pas. À dire à chaque nouvel outil. Lots suivants :
-  code par e-mail (Brevo), domaine séparé.
+  conversation ne suffit pas. À dire à chaque nouvel outil. **Assistant du
+  document (12/11, NON essayé avec un vrai modèle)** : option d'un partage
+  (`assistant` dans l'outil, faux par défaut ; case « Assistant IA » dans
+  Mes partages). Panneau À CÔTÉ du cadre, dans la page Getgents, jamais
+  dans le document isolé ; sur téléphone, bascule Document / Assistant (le
+  cadre est masqué, pas retiré : l'artefact garde son état). Ce n'est PAS un
+  gent : consigne fixe (`consigneAssistant`, `lib/assistantDocument.ts`) —
+  le document SEUL, jamais d'invention (un prix inventé engagerait le
+  commercial), document entre balises traité comme une donnée. Le code est
+  gardé (les données d'un artefact React y vivent), les `data:` encodés
+  retirés, 60 000 caractères au plus. Payé par le PROPRIÉTAIRE
+  (`contexteForUser(owner_id)` + son quota), 100 questions par lien
+  (`compterQuestion`, colonne `questions`) ; modèle par défaut des gents,
+  sans raisonnement ni outil. Rien n'est gardé : le fil vit dans la page.
+  Migration 021 à passer AVANT le déploiement — `lireArtefact` lit les
+  nouvelles colonnes, TOUS les liens tomberaient sans elle. Vérifié en
+  local jusqu'à l'appel au modèle (pas de clé OpenRouter ici) et au
+  navigateur avec une réponse SIMULÉE. Lots suivants : code par e-mail
+  (Brevo), domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

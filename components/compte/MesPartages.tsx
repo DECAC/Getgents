@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import styles from "@/app/compte/compte.module.css";
 import type { ResumePartage, StatutPartage } from "@/lib/mcpPartage";
+import { QUESTIONS_MAX_PAR_LIEN } from "@/lib/assistantDocument";
 
 /**
  * « Mes partages » : les artefacts partagés depuis Claude par le connecteur
@@ -34,6 +35,26 @@ export default function MesPartages() {
     };
   }, []);
 
+  async function basculerAssistant(l: Ligne) {
+    const actif = !l.assistant;
+    setEnCours(l.jeton);
+    setErreur(null);
+    try {
+      const r = await fetch(`/api/partages/${encodeURIComponent(l.jeton)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assistant: actif }),
+      });
+      if (!r.ok) throw new Error();
+      setLignes((ls) => ls?.map((x) => (x.jeton === l.jeton ? { ...x, assistant: actif } : x)) ?? null);
+    } catch {
+      setErreur("L'assistant n'a pas pu être modifié. Réessayez.");
+    } finally {
+      setEnCours(null);
+    }
+  }
+
   async function revoquer(l: Ligne) {
     if (!window.confirm(`Révoquer le lien « ${l.titre} » envoyé à ${l.destinataire} ? Il ne s'ouvrira plus.`)) return;
     setEnCours(l.jeton);
@@ -57,7 +78,8 @@ export default function MesPartages() {
       <h2 className={styles.sousTitre}>Mes partages</h2>
       <p className={styles.aide}>
         Les artefacts partagés depuis Claude avec le connecteur Getgents. Chaque lien reste valable 30 jours, sauf
-        si vous le révoquez.
+        si vous le révoquez. « Assistant IA » laisse le destinataire poser des questions sur le document : les
+        réponses vous sont facturées, {QUESTIONS_MAX_PAR_LIEN} questions au plus par lien.
       </p>
 
       {!lignes && !erreur && <p className={styles.aide}>Chargement…</p>}
@@ -87,9 +109,15 @@ export default function MesPartages() {
                   </span>
                 </div>
                 {l.statut === "actif" ? (
-                  <button type="button" className={styles.secondaire} disabled={enCours === l.jeton} onClick={() => revoquer(l)}>
-                    {enCours === l.jeton ? "Révocation…" : "Révoquer"}
-                  </button>
+                  <div className={styles.partageActions}>
+                    <label className={styles.partageOption} title="Le destinataire peut poser des questions sur le document. Les réponses vous sont facturées.">
+                      <input type="checkbox" checked={!!l.assistant} disabled={enCours === l.jeton} onChange={() => basculerAssistant(l)} />
+                      Assistant IA
+                    </label>
+                    <button type="button" className={styles.secondaire} disabled={enCours === l.jeton} onClick={() => revoquer(l)}>
+                      Révoquer
+                    </button>
+                  </div>
                 ) : (
                   <span className={styles.partageStatut}>{LIBELLE[l.statut]}</span>
                 )}

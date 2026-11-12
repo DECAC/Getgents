@@ -27,6 +27,8 @@ export interface DemandePartage {
   format: FormatArtefact;
   destinataire: string;
   message?: string;
+  /** Assistant du document : le destinataire peut poser des questions sur l'artefact. */
+  assistant?: boolean;
 }
 
 export interface Fidelite {
@@ -95,7 +97,10 @@ export function validerDemande(args: unknown): ResultatValidation {
   if (!destinataire) return { ok: false, erreur: "Destinataire vide : une adresse e-mail ou le nom du client." };
   if (destinataire.length > DESTINATAIRE_MAX) return { ok: false, erreur: "Destinataire trop long." };
   if (message.length > MESSAGE_MAX) return { ok: false, erreur: `Message trop long (${MESSAGE_MAX} caractères au plus).` };
-  return { ok: true, demande: { titre, contenu, format, destinataire, ...(message ? { message } : {}) } };
+  return {
+    ok: true,
+    demande: { titre, contenu, format, destinataire, ...(message ? { message } : {}), ...(a.assistant === true ? { assistant: true } : {}) },
+  };
 }
 
 export function estAdresseEmail(s: string): boolean {
@@ -123,6 +128,8 @@ export interface ResumePartage {
   createdAt: string;
   expiresAt: string | null;
   revokedAt: string | null;
+  /** Assistant du document activé. */
+  assistant?: boolean;
 }
 
 export type StatutPartage = "actif" | "revoque" | "expire";
@@ -203,6 +210,11 @@ export const SCHEMA_OUTIL = {
     },
     destinataire: { type: "string", description: "Adresse e-mail ou nom du client destinataire." },
     message: { type: "string", description: "Facultatif : mot d'accompagnement pour le mail." },
+    assistant: {
+      type: "boolean",
+      description:
+        "Facultatif, faux par défaut. Vrai si l'utilisateur veut que son client puisse poser des questions sur le document à un assistant IA, à côté de l'artefact (« avec l'assistant »). Les réponses sont facturées à l'utilisateur.",
+    },
   },
   required: ["titre", "contenu", "format", "destinataire"],
   additionalProperties: false,
@@ -265,7 +277,7 @@ export type ReponseRpc =
 
 const erreurRpc = (id: Id, code: number, message: string): ReponseRpc => ({ jsonrpc: "2.0", id, error: { code, message } });
 
-function texteResultat(f: Fidelite, lien: string, mail: { objet: string; corps: string }): string {
+function texteResultat(f: Fidelite, lien: string, mail: { objet: string; corps: string }, assistant = false): string {
   const alertes: string[] = [];
   if (f.finPresente === false) alertes.push("la fin attendue du document est ABSENTE : la copie est probablement tronquée");
   if (f.abreviationSuspecte) alertes.push("le contenu contient une marque d'abréviation (« ... reste du code ») : la copie est probablement incomplète");
@@ -280,6 +292,9 @@ function texteResultat(f: Fidelite, lien: string, mail: { objet: string; corps: 
     mail.corps,
     "",
     `Reçu : ${f.caracteres} caractères, ${f.lignes} lignes.`,
+    assistant
+      ? "Assistant du document ACTIVÉ : le client peut poser des questions à côté de l'artefact ; les réponses sont facturées à l'utilisateur. Il peut le couper dans Mon compte → Mes partages."
+      : "Assistant du document non activé (l'utilisateur peut l'activer dans Mon compte → Mes partages).",
     alertes.length
       ? `ATTENTION — ${alertes.join(" ; ")}. Préviens l'utilisateur et propose de recommencer avec le contenu intégral.`
       : "Contrôle de fidélité : aucune trace de troncature détectée.",
@@ -409,7 +424,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
           jsonrpc: "2.0",
           id,
           result: {
-            content: [{ type: "text", text: texteResultat(fidelite, lien, mail) }],
+            content: [{ type: "text", text: texteResultat(fidelite, lien, mail, v.demande.assistant === true) }],
             structuredContent: { lien, objet: mail.objet, corps: mail.corps, fidelite },
           },
         };
