@@ -115,6 +115,25 @@ describe("contrôle de fidélité", () => {
     expect(controleFidelite(PAGE, "html").abreviationSuspecte).toBe(false);
   });
 
+  it("repère un artefact qui lit ses données dans Claude, et le signale au modèle", async () => {
+    expect(controleFidelite("<script>const r = await window.storage.get('agenda')</script>", "html").dependClaude).toBe(true);
+    expect(controleFidelite("<p>Ouvre la page depuis claude.ai pour voir les données.</p>", "html").dependClaude).toBe(true);
+    expect(controleFidelite(PAGE, "html").dependClaude).toBe(false);
+    const r = (await traiterMessage(
+      appel({ titre: "Pilotage", contenu: "<html><body><script>window.claude.complete('x')</script></body></html>", format: "html", destinataire: "x" }),
+      contexte()
+    )) as { result: { content: { text: string }[] } };
+    expect(r.result.content[0].text).toMatch(/version FIGÉE/);
+  });
+
+  it("demande une version figée, et une vérification des données personnelles", async () => {
+    const r = (await traiterMessage({ jsonrpc: "2.0", id: 2, method: "tools/list" }, contexte())) as {
+      result: { tools: { description: string }[] };
+    };
+    expect(r.result.tools[0].description).toMatch(/version FIGÉE/);
+    expect(r.result.tools[0].description).toMatch(/donnée personnelle/);
+  });
+
   it("compte caractères et lignes, et n'invente pas de fin pour un texte", () => {
     const f = controleFidelite("un\ndeux\ntrois", "texte");
     expect(f).toMatchObject({ caracteres: 13, lignes: 3, finPresente: null });

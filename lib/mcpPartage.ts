@@ -36,6 +36,12 @@ export interface Fidelite {
   finPresente: boolean | null;
   /** Le contenu contient une marque d'abréviation typique d'un modèle (« … reste du code »). */
   abreviationSuspecte: boolean;
+  /**
+   * L'artefact lit ses données dans Claude (`window.claude`, `window.storage`…) :
+   * chez le client, il s'affichera VIDE. Vécu au premier essai (12/11) : un
+   * « Poste de pilotage » branché sur l'agenda et les e-mails, partagé tel quel.
+   */
+  dependClaude: boolean;
   debut: string;
   fin: string;
 }
@@ -51,6 +57,8 @@ const ABREVIATIONS = [
 ];
 
 /** Ce qu'on peut dire de la copie reçue, sans l'original sous les yeux. */
+const APPELS_CLAUDE = [/\bwindow\.claude\b/, /\bwindow\.storage\b/, /depuis claude\.ai/i, /\bclaude\.ai\b.{0,40}\bdonn[ée]es\b/i];
+
 export function controleFidelite(contenu: string, format: FormatArtefact): Fidelite {
   const net = contenu.trim();
   let finPresente: boolean | null = null;
@@ -62,6 +70,7 @@ export function controleFidelite(contenu: string, format: FormatArtefact): Fidel
     lignes: contenu === "" ? 0 : contenu.split("\n").length,
     finPresente,
     abreviationSuspecte: ABREVIATIONS.some((re) => re.test(contenu)),
+    dependClaude: APPELS_CLAUDE.some((re) => re.test(contenu)),
     debut: net.slice(0, 80),
     fin: net.slice(-80),
   };
@@ -112,7 +121,12 @@ export const DESCRIPTION_OUTIL =
   "Getgents qui l'affiche en pleine page, et rédige le mail à lui envoyer. " +
   "IMPORTANT : `contenu` doit être le code ou le texte COMPLET de l'artefact, recopié À L'IDENTIQUE, " +
   "du premier au dernier caractère. Ne résume pas, ne tronque pas, n'abrège pas (aucun « ... » ni " +
-  "« reste du code inchangé »), ne reformate pas : le client verra exactement ce que tu envoies.";
+  "« reste du code inchangé »), ne reformate pas : le client verra exactement ce que tu envoies. " +
+  "SEULE exception : si l'artefact lit des données EN DIRECT depuis Claude ou le compte de l'utilisateur " +
+  "(window.claude, window.storage, agenda, e-mails, tâches planifiées), elles ne s'afficheront pas chez le " +
+  "client — et ne le doivent pas. Envoie alors une version FIGÉE : les données actuelles écrites dans la " +
+  "page, datées, sans ces appels. Avant d'envoyer, signale à l'utilisateur toute donnée personnelle " +
+  "(agenda, e-mails, contacts) que la page contient, et demande-lui s'il veut vraiment la partager.";
 
 export const SCHEMA_OUTIL = {
   type: "object",
@@ -163,6 +177,10 @@ function texteResultat(f: Fidelite, lien: string, mail: { objet: string; corps: 
   const alertes: string[] = [];
   if (f.finPresente === false) alertes.push("la fin attendue du document est ABSENTE : la copie est probablement tronquée");
   if (f.abreviationSuspecte) alertes.push("le contenu contient une marque d'abréviation (« ... reste du code ») : la copie est probablement incomplète");
+  if (f.dependClaude)
+    alertes.push(
+      "l'artefact lit ses données EN DIRECT dans Claude : chez le client, ces blocs resteront vides. Propose une version FIGÉE (données actuelles écrites dans la page, datées), et vérifie avec l'utilisateur qu'elle ne contient rien de personnel"
+    );
   return [
     `Lien privé : ${lien}`,
     "",

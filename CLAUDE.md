@@ -360,7 +360,18 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   remplace par une mémoire de la page (rien n'est gardé entre deux visites)
   et affiche toute erreur restante dans un bandeau (`data-getgents-erreur`).
   Vérifié au navigateur : tableau rempli depuis `localStorage`, lecture de
-  `window.storage`, erreur visible.
+  `window.storage`, erreur visible. **Essai jugé CONCLUANT par l'utilisateur (12/11)**,
+  après correctif : page dessinée, horloge active, aucune erreur. Les blocs
+  restés vides étaient VOULUS par l'artefact lui-même (« Poste de pilotage »
+  branché sur l'agenda et les e-mails de Claude : « Ouvre la page depuis
+  claude.ai »). Enseignement : il y a deux sortes d'artefacts — AUTONOMES
+  (données dans la page : se partagent tels quels, c'est l'usage visé) et
+  BRANCHÉS sur Claude (ne marchent pas ailleurs, et ne le doivent pas : ce
+  serait exposer l'agenda du commercial). D'où la consigne de l'outil
+  (version FIGÉE et datée, vérification des données personnelles avant
+  envoi) ET un repérage côté serveur qui ne dépend pas du modèle
+  (`dependClaude` : `window.claude`, `window.storage`, mention de
+  claude.ai), signalé dans la réponse de l'outil.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
