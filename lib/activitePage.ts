@@ -235,3 +235,56 @@ export function mailPremiereLecture(a: { titre: string; destinataire: string; li
       `<p style="font-size:12px;color:#888">Un seul e-mail par destinataire : les ouvertures suivantes restent dans l'onglet Activité.</p></div>`,
   };
 }
+
+// ——— Liste des questions dans l'onglet Assistant ———
+
+/** Clé de rapprochement : sans accents, ponctuation, casse ni espaces superflus. */
+export function cleQuestionPosee(texte: string): string {
+  return texte
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+export interface QuestionRegroupee {
+  /** La plus récente du groupe : c'est à elle qu'on répond. */
+  id?: string;
+  /** Tous les identifiants du groupe : une précision rattachée à l'un vaut pour le groupe. */
+  ids: string[];
+  question: string;
+  horsPage: boolean | null;
+  occurrences: number;
+  jour: string;
+}
+
+/**
+ * Une question posée plusieurs fois n'apparaît qu'une fois, au jour de sa
+ * dernière occurrence, avec son nombre (« ×3 »). Son état est celui de la
+ * dernière réponse de l'assistant. Ordre : du jour le plus récent au plus
+ * ancien, et dans un jour, les plus posées d'abord (l'heure n'est pas gardée).
+ */
+export function regrouperQuestions(jours: Activite["questions"]): QuestionRegroupee[] {
+  const groupes = new Map<string, QuestionRegroupee>();
+  const ordre: string[] = [];
+  // Les jours arrivent du plus récent au plus ancien : la première rencontre d'une clé est la plus récente.
+  for (const j of jours) {
+    for (const q of j.items) {
+      const cle = cleQuestionPosee(q.question) || q.question;
+      const g = groupes.get(cle);
+      if (g) {
+        g.occurrences += 1;
+        if (q.id) g.ids.push(q.id);
+        continue;
+      }
+      groupes.set(cle, { ...(q.id ? { id: q.id } : {}), ids: q.id ? [q.id] : [], question: q.question, horsPage: q.horsPage, occurrences: 1, jour: j.jour });
+      ordre.push(cle);
+    }
+  }
+  // Dans un même jour, l'heure n'est pas gardée : on montre d'abord les plus posées.
+  return ordre.map((c) => groupes.get(c)!).sort((a, b) => b.jour.localeCompare(a.jour) || b.occurrences - a.occurrences);
+}
+
+/** Questions par page de l'onglet : le reste s'affiche à la demande. */
+export const QUESTIONS_PAR_PAGE = 15;

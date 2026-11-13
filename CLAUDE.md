@@ -587,8 +587,16 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   `ActivitePage` est monté dès l'ouverture de la fiche (masqué sur « Page »),
   avec une prop `vue` : la pastille « questions sans réponse » de l'onglet
   est juste avant qu'on l'ouvre, et changer d'onglet ne recharge rien. La
-  tuile « questions posées » d'Activité mène à l'onglet Assistant. Lot
-  suivant : domaine séparé.
+  tuile « questions posées » d'Activité mène à l'onglet Assistant. Liste
+  des questions BORNÉE (13/11) : doublons regroupés (`regrouperQuestions`,
+  « ×3 », état = dernière réponse, une précision sur l'un vaut pour le
+  groupe), filtre « Sans réponse (N) | Toutes (N) » ouvert sur « Sans
+  réponse » s'il y en a, 15 à la fois (« Afficher N de plus »). Dans un jour,
+  les plus posées d'abord : la base ne garde PAS l'heure d'une question,
+  l'ordre d'enregistrement ne voulait rien dire. Pastille et filtre comptent
+  les questions DISTINCTES ; « N posées » reste le nombre réel. Plafond
+  serveur inchangé : 1 000 questions lues par page. Lot suivant : domaine
+  séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

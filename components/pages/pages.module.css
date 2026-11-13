@@ -1170,3 +1170,40 @@
 .tuileLien:hover {
   border-color: var(--gold);
 }
+
+/* ——— Liste des questions : filtre, doublons ——— */
+.filtreQuestions {
+  display: inline-flex;
+  gap: 2px;
+  margin-bottom: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+}
+.filtreQuestions button {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.filtreQuestions button[aria-selected="true"] {
+  background: var(--gold-tint);
+  color: #7a5308;
+  font-weight: 600;
+}
+.occurrences {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: 1px;
+}

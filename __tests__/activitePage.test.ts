@@ -147,3 +147,25 @@ describe("précisions de l'auteur dans la consigne", () => {
     expect(consigneAssistant(base)).toMatch(/manque dans le document ET dans les informations complémentaires/);
   });
 });
+
+describe("liste des questions de l'onglet Assistant", () => {
+  const { regrouperQuestions } = jest.requireActual("@/lib/activitePage") as typeof import("@/lib/activitePage");
+  it("regroupe les doublons au jour de leur dernière occurrence, avec leur nombre", () => {
+    const g = regrouperQuestions([
+      { jour: "2026-11-13", items: [{ id: "a", question: "Quel est le total ?", horsPage: false }, { id: "b", question: "Une remise ?", horsPage: true }] },
+      { jour: "2026-11-12", items: [{ id: "c", question: "quel est le TOTAL", horsPage: false }, { id: "d", question: "Délai ?", horsPage: false }] },
+    ]);
+    expect(g.map((x) => [x.question, x.occurrences, x.jour, x.ids])).toEqual([
+      ["Quel est le total ?", 2, "2026-11-13", ["a", "c"]],
+      ["Une remise ?", 1, "2026-11-13", ["b"]],
+      ["Délai ?", 1, "2026-11-12", ["d"]],
+    ]);
+    expect(g[0].id).toBe("a");
+  });
+  it("dans un même jour, les plus posées d'abord", () => {
+    const g = regrouperQuestions([
+      { jour: "2026-11-13", items: [{ question: "Rare ?", horsPage: false }, { question: "Fréquente ?", horsPage: false }, { question: "fréquente", horsPage: false }] },
+    ]);
+    expect(g.map((x) => x.question)).toEqual(["Fréquente ?", "Rare ?"]);
+  });
+});

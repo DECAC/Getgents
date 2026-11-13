@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { dureeLisible, ilYA, type Activite } from "@/lib/activitePage";
+import { dureeLisible, ilYA, QUESTIONS_PAR_PAGE, regrouperQuestions, type Activite, type QuestionRegroupee } from "@/lib/activitePage";
 import { initiales } from "@/lib/pagesGetsite";
 import { estSuggeree, propositions, SUGGESTION_MAX, SUGGESTIONS_MAX, type Suggestion } from "@/lib/suggestionsPage";
 import styles from "./pages.module.css";
@@ -66,6 +66,9 @@ export function ActivitePage({
   // Questions suggérées aux visiteurs (levier 3). `editeur` : la suggestion en cours de relecture.
   const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
   const [suggestionsErreur, setSuggestionsErreur] = useState<string | null>(null);
+  // Liste des questions : « sans réponse » d'abord quand il y en a (null = pas encore choisi), 15 à la fois.
+  const [filtre, setFiltre] = useState<"sans" | "toutes" | null>(null);
+  const [limite, setLimite] = useState(QUESTIONS_PAR_PAGE);
   const [editeur, setEditeur] = useState<{ index: number | null; texte: string; origine: Suggestion["origine"]; questionId?: string } | null>(null);
 
   const chargerSuggestions = useCallback(async () => {
@@ -201,18 +204,27 @@ export function ActivitePage({
 
   useEffect(() => {
     if (!a) return;
-    onSansReponse?.(
-      a.questions.flatMap((j) => j.items).filter((q) => q.horsPage === true && !(q.id && precisions?.some((p) => p.questionId === q.id))).length
-    );
+    onSansReponse?.(regrouperQuestions(a.questions).filter((q) => q.horsPage === true && !q.ids.some((id) => precisions?.some((p) => p.questionId === id))).length);
   }, [a, precisions, onSansReponse]);
 
   if (erreur) return <p className={styles.erreur}>{erreur}</p>;
   if (!a) return <p className={styles.sous}>Chargement…</p>;
 
   // « Sans réponse » : ce qui reste à traiter — une question déjà précisée n'en est plus.
-  const sansReponse = a.questions
-    .flatMap((j) => j.items)
-    .filter((q) => q.horsPage === true && !(q.id && precisions?.some((p) => p.questionId === q.id))).length;
+  // Questions DISTINCTES (doublons regroupés) ; une précision rattachée à l'une vaut pour le groupe.
+  const groupes = regrouperQuestions(a.questions);
+  const precisee = (q: QuestionRegroupee) => q.ids.some((id) => precisions?.some((p) => p.questionId === id));
+  const aTraiter = groupes.filter((q) => q.horsPage === true && !precisee(q));
+  const sansReponse = aTraiter.length;
+  const filtreEffectif = filtre ?? (sansReponse > 0 ? "sans" : "toutes");
+  const listees = filtreEffectif === "sans" ? aTraiter : groupes;
+  const visibles = listees.slice(0, limite);
+  const parJour: { jour: string; items: QuestionRegroupee[] }[] = [];
+  for (const q of visibles) {
+    const dernier = parJour[parJour.length - 1];
+    if (dernier?.jour === q.jour) dernier.items.push(q);
+    else parJour.push({ jour: q.jour, items: [q] });
+  }
 
   const plein = !!suggestions && suggestions.length >= SUGGESTIONS_MAX;
   const questionsPosees = a.questions.flatMap((j) =>
@@ -341,18 +353,32 @@ export function ActivitePage({
             Questions posées sur la page <small>sans nom ni lien</small>
           </h2>
           {a.questions.length === 0 && <p className={styles.aide}>Aucune question pour l&apos;instant. Activez l&apos;assistant IA pour que vos destinataires puissent en poser.</p>}
-          {a.questions.map((j) => (
+          {groupes.length > 0 && (
+            <div className={styles.filtreQuestions} role="tablist" aria-label="Filtrer les questions">
+              <button type="button" role="tab" aria-selected={filtreEffectif === "sans"} onClick={() => (setFiltre("sans"), setLimite(QUESTIONS_PAR_PAGE))}>
+                Sans réponse ({sansReponse})
+              </button>
+              <button type="button" role="tab" aria-selected={filtreEffectif === "toutes"} onClick={() => (setFiltre("toutes"), setLimite(QUESTIONS_PAR_PAGE))}>
+                Toutes ({groupes.length})
+              </button>
+            </div>
+          )}
+          {filtreEffectif === "sans" && sansReponse === 0 && groupes.length > 0 && <p className={styles.aide}>Rien à traiter : l&apos;assistant a su répondre à toutes les questions.</p>}
+          {parJour.map((j) => (
             <div key={j.jour}>
               <div className={styles.jour}>{jourLisible(j.jour)}</div>
               {j.items.map((q, i) => {
-                const completee = !!q.id && !!precisions?.some((p) => p.questionId === q.id);
+                const completee = precisee(q);
                 const repondable = q.horsPage === true && !!q.id && !completee && !!precisions;
                 const suggerable = (q.horsPage === false || completee) && !!suggestions;
-                const suggeree = !!suggestions && estSuggeree(q, suggestions, questionsPosees);
+                const suggeree = !!suggestions && (q.ids.some((id) => suggestions.some((s) => s.questionId === id)) || estSuggeree(q, suggestions, questionsPosees));
                 return (
                   <div key={q.id ?? i} className={styles.question} data-hors-page={q.horsPage && !completee ? "oui" : "non"} data-completee={completee ? "oui" : "non"}>
                     <div className={styles.questionLigne}>
-                      <span>{q.question}</span>
+                      <span>
+                        {q.question}
+                        {q.occurrences > 1 && <b className={styles.occurrences} title={`Posée ${q.occurrences} fois`}>×{q.occurrences}</b>}
+                      </span>
                       {completee ? (
                         <small>✓ précisée par vous</small>
                       ) : repondable && ouvert !== q.id ? (
@@ -385,6 +411,11 @@ export function ActivitePage({
               })}
             </div>
           ))}
+          {listees.length > limite && (
+            <button type="button" className={styles.precisionAjout} onClick={() => setLimite((n) => n + QUESTIONS_PAR_PAGE)}>
+              Afficher {Math.min(QUESTIONS_PAR_PAGE, listees.length - limite)} de plus ({listees.length - limite} restante{listees.length - limite > 1 ? "s" : ""})
+            </button>
+          )}
           {a.horsPage > 0 && (
             <p className={styles.aide}>« La page ne le dit pas » : l&apos;information manquait. Répondez, et l&apos;assistant s&apos;en servira pour les prochains visiteurs.</p>
           )}
