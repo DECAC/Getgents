@@ -1032,7 +1032,17 @@ champ piège (accepté en silence, rien gardé), plafonds lus dans la table
 la tâche horaire (`purgerDemandesAcces`) — c'est ce qu'annonce la page
 Confidentialité. Journal `getgents:acces` (`demande_recue`,
 `notification_echouee`, `plafond`, `piege_rempli`) — sans l'adresse.
-Vérifié en local (sans Supabase ni Brevo), PAS en production.
+Vérifié en local (sans Supabase ni Brevo), PAS en production. **Essai réel (13/11)** : demande
+gardée, e-mail ACCEPTÉ par Brevo (`notifie` vrai), mais jamais reçu —
+CEO@getgents.ai n'est pas une boîte que l'éditeur lit. Depuis, les
+notifications de l'éditeur (demandes d'accès, signalements, usage d'un lien)
+partent vers `ADRESSE_NOTIFICATIONS_EDITEUR`, réglée sur Vercel SEULEMENT
+(« Sensitive ») : c'est une adresse PERSONNELLE et le dépôt est public — ne
+l'écrire NULLE PART (code, mémoire, commits, journaux, réponses au
+navigateur). Absente ou mal formée : repli sur CEO@getgents.ai
+(`lib/server/adresseEditeur.ts`). Le journal dit `destinataire: "reglee" |
+"defaut" | "invalide"`, jamais l'adresse. CEO@getgents.ai reste l'adresse de
+CONTACT affichée.
 
 Les inscriptions sont fermées **chez Supabase** (Authentication → Providers →
 Email). `lib/inscriptions.ts` ne fait que rendre l'interface honnête — il ne

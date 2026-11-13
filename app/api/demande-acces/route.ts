@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { corpsEmailDemande, MESSAGE_DEMANDE, normaliserDemande, validerDemande } from "@/lib/demandeAcces";
-import { ADRESSE_DEMANDE_ACCES } from "@/lib/inscriptions";
+import { adresseNotificationsEditeur } from "@/lib/server/adresseEditeur";
 import { sendBrevoEmail } from "@/lib/server/brevo";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 
@@ -77,13 +77,14 @@ export async function POST(req: Request) {
     journal("non_gardee", { cause: "supabase_non_configure" });
   }
 
-  const envoi = await sendBrevoEmail(ADRESSE_DEMANDE_ACCES, `Demande d'accès — ${demande.email}`, corpsEmailDemande(demande), {
+  const editeur = adresseNotificationsEditeur();
+  const envoi = await sendBrevoEmail(editeur.adresse, `Demande d'accès — ${demande.email}`, corpsEmailDemande(demande), {
     replyTo: demande.email,
   });
   if (envoi.ok && supabase && id) await supabase.from("demandes_acces").update({ notifie: true }).eq("id", id);
   // L'adresse du demandeur n'est PAS journalisée : savoir qu'une demande est
   // arrivée, et si l'e-mail est parti, suffit à diagnostiquer.
-  journal(envoi.ok ? "demande_recue" : "notification_echouee", { id, gardee: !!id, note: envoi.ok ? undefined : envoi.note });
+  journal(envoi.ok ? "demande_recue" : "notification_echouee", { id, gardee: !!id, destinataire: editeur.origine, note: envoi.ok ? undefined : envoi.note });
 
   return NextResponse.json({ ok: true });
 }

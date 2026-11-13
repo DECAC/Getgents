@@ -6,7 +6,7 @@ import {
   sujetEmailSignalement,
   type Signalement,
 } from "@/lib/signalement";
-import { ADRESSE_DEMANDE_ACCES } from "@/lib/inscriptions";
+import { adresseNotificationsEditeur } from "@/lib/server/adresseEditeur";
 
 /**
  * Enregistrement et notification des signalements d'incident.
@@ -18,8 +18,11 @@ import { ADRESSE_DEMANDE_ACCES } from "@/lib/inscriptions";
  * rattrape en lisant la table ; un signalement perdu ne se rattrape pas.
  */
 
-/** Adresse de la plateforme, en copie de tous les signalements. */
-export const ADRESSE_PLATEFORME = ADRESSE_DEMANDE_ACCES;
+/**
+ * Adresse de la plateforme, en copie de tous les signalements : celle que
+ * l'éditeur lit vraiment, réglée sur l'hébergeur (`lib/server/adresseEditeur.ts`).
+ */
+const adressePlateforme = () => adresseNotificationsEditeur().adresse;
 
 /**
  * Combien de signalements ce lien a-t-il déposés depuis `secondes` ?
@@ -103,7 +106,7 @@ export async function notifierSignalement(input: {
   });
   const sujet = sujetEmailSignalement(input.nomGent);
 
-  const destinataires = new Set<string>([ADRESSE_PLATEFORME]);
+  const destinataires = new Set<string>([adressePlateforme()]);
   const emailProprietaire = await adresseDuProprietaire(input.gentId);
   if (emailProprietaire) destinataires.add(emailProprietaire);
 
@@ -184,7 +187,7 @@ export async function notifierUsageInvite(input: {
 
     const qui = input.label?.trim();
     await sendBrevoEmail(
-      ADRESSE_PLATEFORME,
+      adressePlateforme(),
       `Votre gent « ${input.nomGent} » est utilisé`,
       [
         `<p>Quelqu'un vient de se servir de <b>${echapper(input.nomGent)}</b>` +
