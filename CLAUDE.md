@@ -545,8 +545,8 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   juridiques signalés et NON tranchés (qui est responsable de traitement,
   portée de « n'engagent pas l'auteur ») — à voir avec un juriste avant
   l'ouverture publique. Effacement : 120 jours après création (lien de 30 j
-  + 90 promis), fait à la lecture de l'onglet (`purgerActivite`), pas par un
-  cron. Vérifié au navigateur (mémoire locale, faux fournisseur d'IA) :
+  + 90 promis), par la tâche horaire (`/api/routines/run`) et à la lecture
+  de l'onglet (`purgerActivite`). Vérifié au navigateur (mémoire locale, faux fournisseur d'IA) :
   widget, refus retenu, marqueur jamais montré, 3 ouvertures dont 2
   anonymes, profondeur 100, questions marquées. PAS avec Supabase ni Brevo
   (e-mail à l'auteur non exercé). Lot suivant : domaine séparé.

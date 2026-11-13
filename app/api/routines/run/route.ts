@@ -5,6 +5,7 @@ import { isRoutineDue, runRoutine } from "@/lib/server/routineRunner";
 import type { Espace } from "@/lib/types";
 import { consommerPourVisiteur, requireGentOrDraftAccess } from "@/lib/server/gentGuard";
 import { contexteForUser } from "@/lib/server/openRouterKey";
+import { purgerActivite } from "@/lib/server/activitePages";
 
 export const dynamic = "force-dynamic";
 // Un run de veille (recherche web + synthèse) peut être long.
@@ -121,6 +122,12 @@ function checkCronSecret(req: Request): boolean {
  */
 export async function GET(req: Request) {
   if (!checkCronSecret(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  // Activité des pages partagées : effacée à la durée promise au visiteur,
+  // que l'auteur ouvre son onglet Activité ou non. Indépendante des routines :
+  // un échec de l'une n'empêche pas l'autre.
+  await purgerActivite().catch((e) =>
+    console.error(JSON.stringify({ tag: "getgents:activite", event: "purge_echouee", detail: (e as Error).message }))
+  );
   try {
     return NextResponse.json(await runBatch(null));
   } catch (e) {

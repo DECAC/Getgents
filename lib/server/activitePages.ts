@@ -185,8 +185,10 @@ export async function purgerActivite(): Promise<void> {
     m.questions = m.questions.filter((q) => q.jour >= limite);
     return;
   }
-  await sb.from("pages_lectures").delete().lt("jour", limite);
-  await sb.from("pages_questions").delete().lt("jour", limite);
+  for (const table of ["pages_lectures", "pages_questions"]) {
+    const { error } = await sb.from(table).delete().lt("jour", limite);
+    if (error && !tableAbsente(error)) throw new Error(`${table} : ${error.message}`);
+  }
 }
 
 export type ResultatActivite = { ok: true; activite: Activite } | { ok: false; raison: "introuvable" | "migration_manquante" };
