@@ -517,7 +517,7 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   absente n'est PAS vérifiée contre le vrai PostgREST : si tous les liens
   affichent « indisponible » avant la migration, c'est elle — passer la
   023 répare. En développement sans Brevo, le code est écrit dans le journal
-  du serveur (jamais en production). **Essai réel CONCLUANT (13/11)** après un premier échec : Brevo refusait en 401 — le filtrage « IP autorisées » était encore actif (l'invitation était passée par hasard d'une adresse autorisée). Chaque refus est désormais journalisé (`getgents:acces code_refuse`, `cause`) et l'écran affiche une référence (« réf. brevo-401 »). **« Ce qu'a lu le client » (13/11, écrit, NON déployé ;
+  du serveur (jamais en production). **Essai réel CONCLUANT (13/11)** après un premier échec : Brevo refusait en 401 — le filtrage « IP autorisées » était encore actif (l'invitation était passée par hasard d'une adresse autorisée). Chaque refus est désormais journalisé (`getgents:acces code_refuse`, `cause`) et l'écran affiche une référence (« réf. brevo-401 »). **« Ce qu'a lu le client » (13/11, DÉPLOYÉ, migration 024 passée, essai réel CONCLUANT — e-mail à l'auteur compris ;
   `lib/activitePage.ts`, `lib/server/activitePages.ts`, migration 024 à
   passer AVANT)** — décisions de l'utilisateur après trois maquettes :
   LECTURE et QUESTIONS sont deux flux SANS clé commune. Lecture ANONYME par
@@ -548,8 +548,8 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   + 90 promis), par la tâche horaire (`/api/routines/run`) et à la lecture
   de l'onglet (`purgerActivite`). Vérifié au navigateur (mémoire locale, faux fournisseur d'IA) :
   widget, refus retenu, marqueur jamais montré, 3 ouvertures dont 2
-  anonymes, profondeur 100, questions marquées. PAS avec Supabase ni Brevo
-  (e-mail à l'auteur non exercé). Lot suivant : domaine séparé.
+  anonymes, profondeur 100, questions marquées. Puis en production par
+  l'utilisateur (13/11) : tout concluant. Lot suivant : domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
