@@ -1141,3 +1141,32 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ——— Onglet Assistant ——— */
+.ongletPastille {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--sage);
+  color: #fff;
+  font-size: 11px;
+  vertical-align: 1px;
+}
+.ongletCorps {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.ongletCorps[hidden] {
+  display: none;
+}
+.tuileLien {
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.tuileLien:hover {
+  border-color: var(--gold);
+}
