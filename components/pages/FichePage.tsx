@@ -48,7 +48,8 @@ export function FichePage({ id }: { id: string }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [enCours, setEnCours] = useState<string | null>(null);
-  const [onglet, setOnglet] = useState<"page" | "activite">("page");
+  const [onglet, setOnglet] = useState<"page" | "activite" | "assistant">("page");
+  const [sansReponse, setSansReponse] = useState(0);
   const [partage, setPartage] = useState<{ ouvert: boolean; destinataire: string; resultat: { lien: string; objet: string; corps: string } | null }>({
     ouvert: false,
     destinataire: "",
@@ -149,11 +150,55 @@ export function FichePage({ id }: { id: string }) {
         <button type="button" role="tab" aria-selected={onglet === "activite"} className={styles.onglet} onClick={() => setOnglet("activite")}>
           Activité
         </button>
+        <button type="button" role="tab" aria-selected={onglet === "assistant"} className={styles.onglet} onClick={() => setOnglet("assistant")}>
+          Assistant
+          {page.assistant && sansReponse > 0 && (
+            <span className={styles.ongletPastille} title={`${sansReponse} question${sansReponse > 1 ? "s" : ""} sans réponse`}>
+              {sansReponse}
+            </span>
+          )}
+        </button>
       </div>
 
-      {onglet === "activite" ? (
-        <ActivitePage id={page.id} onMessage={signaler} />
-      ) : (
+      {/* Monté dès l'ouverture de la fiche (masqué sur « Page ») : la pastille de l'onglet Assistant
+          doit être juste avant même qu'on l'ouvre, et changer d'onglet ne recharge rien. */}
+      <div hidden={onglet === "page"} className={styles.ongletCorps}>
+        <ActivitePage
+          id={page.id}
+          vue={onglet === "assistant" ? "assistant" : "activite"}
+          assistantActif={page.assistant}
+          onMessage={signaler}
+          onSansReponse={setSansReponse}
+          onVoirAssistant={() => setOnglet("assistant")}
+          interrupteur={
+          <section className={styles.bloc}>
+                <h2 className={styles.blocTitre}>Assistant IA</h2>
+                <label className={styles.interrupteur}>
+                  <span>
+                    <b>{page.assistant ? "Activé pour tous les destinataires" : "Désactivé"}</b>
+                    Vos destinataires peuvent poser des questions sur la page. Réponses facturées à votre compte, {QUESTIONS_MAX_PAR_LIEN} questions au
+                    plus par lien{page.questions ? ` · ${page.questions} posée${page.questions > 1 ? "s" : ""} jusqu'ici` : ""}.
+                  </span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={page.assistant}
+                    disabled={enCours === "assistant"}
+                    onChange={() =>
+                      void appel(
+                        "assistant",
+                        `/api/pages/${encodeURIComponent(page.id)}`,
+                        { method: "PATCH", body: JSON.stringify({ assistant: !page.assistant }) },
+                        page.assistant ? "Assistant désactivé." : "Assistant activé."
+                      )
+                    }
+                  />
+                </label>
+              </section>
+              }
+        />
+      </div>
+      {onglet === "page" && (
       <div className={styles.deux}>
         <section className={styles.apercu} aria-label="Aperçu de la page">
           <div className={styles.apercuBarre}>
@@ -329,30 +374,6 @@ export function FichePage({ id }: { id: string }) {
                 ))}
           </section>
 
-          <section className={styles.bloc}>
-            <h2 className={styles.blocTitre}>Assistant IA</h2>
-            <label className={styles.interrupteur}>
-              <span>
-                <b>{page.assistant ? "Activé pour tous les destinataires" : "Désactivé"}</b>
-                Vos destinataires peuvent poser des questions sur la page. Réponses facturées à votre compte, {QUESTIONS_MAX_PAR_LIEN} questions au
-                plus par lien{page.questions ? ` · ${page.questions} posée${page.questions > 1 ? "s" : ""} jusqu'ici` : ""}.
-              </span>
-              <input
-                type="checkbox"
-                role="switch"
-                checked={page.assistant}
-                disabled={enCours === "assistant"}
-                onChange={() =>
-                  void appel(
-                    "assistant",
-                    `/api/pages/${encodeURIComponent(page.id)}`,
-                    { method: "PATCH", body: JSON.stringify({ assistant: !page.assistant }) },
-                    page.assistant ? "Assistant désactivé." : "Assistant activé."
-                  )
-                }
-              />
-            </label>
-          </section>
 
           <section className={styles.bloc}>
             <h2 className={styles.blocTitre}>Versions</h2>

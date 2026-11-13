@@ -32,7 +32,26 @@ interface Precision {
   createdAt: string;
 }
 
-export function ActivitePage({ id, onMessage }: { id: string; onMessage?: (m: string) => void }) {
+export function ActivitePage({
+  id,
+  vue = "activite",
+  assistantActif = true,
+  interrupteur,
+  onMessage,
+  onSansReponse,
+  onVoirAssistant,
+}: {
+  id: string;
+  /** « activite » : chiffres et lectures. « assistant » : réglage, questions, suggestions, précisions. */
+  vue?: "activite" | "assistant";
+  assistantActif?: boolean;
+  /** L'interrupteur de l'assistant, fourni par la fiche (il agit sur la page). */
+  interrupteur?: React.ReactNode;
+  onMessage?: (m: string) => void;
+  /** Questions restées sans réponse (ni dans la page, ni précisées) : la pastille de l'onglet Assistant. */
+  onSansReponse?: (n: number) => void;
+  onVoirAssistant?: () => void;
+}) {
   const [a, setA] = useState<Activite | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [precisions, setPrecisions] = useState<Precision[] | null>(null);
@@ -180,6 +199,13 @@ export function ActivitePage({ id, onMessage }: { id: string; onMessage?: (m: st
     };
   }, [id]);
 
+  useEffect(() => {
+    if (!a) return;
+    onSansReponse?.(
+      a.questions.flatMap((j) => j.items).filter((q) => q.horsPage === true && !(q.id && precisions?.some((p) => p.questionId === q.id))).length
+    );
+  }, [a, precisions, onSansReponse]);
+
   if (erreur) return <p className={styles.erreur}>{erreur}</p>;
   if (!a) return <p className={styles.sous}>Chargement…</p>;
 
@@ -221,6 +247,8 @@ export function ActivitePage({ id, onMessage }: { id: string; onMessage?: (m: st
 
   return (
     <div className={styles.activite}>
+      {vue === "assistant" && interrupteur}
+      {vue === "activite" && (
       <div className={styles.tuiles}>
         <div className={styles.tuile}>
           <b>{a.ouvertures}</b>
@@ -234,20 +262,29 @@ export function ActivitePage({ id, onMessage }: { id: string; onMessage?: (m: st
           </b>
           <span>destinataires ont partagé leurs données</span>
         </div>
-        <div className={styles.tuile}>
+        <button type="button" className={`${styles.tuile} ${styles.tuileLien}`} onClick={onVoirAssistant} title="Voir les questions dans l'onglet Assistant">
           <b>{a.totalQuestions}</b>
           <span>
             question{a.totalQuestions > 1 ? "s" : ""} posée{a.totalQuestions > 1 ? "s" : ""}
             {sansReponse ? ` · ${sansReponse} sans réponse` : ""}
           </span>
-        </div>
+        </button>
         <div className={styles.tuile}>
           <b>{ilYA(a.derniere)}</b>
           <span>dernière ouverture{precisions?.length ? ` · ${precisions.length} précision${precisions.length > 1 ? "s" : ""} de l'auteur` : ""}</span>
         </div>
       </div>
+      )}
+
+      {vue === "assistant" && !assistantActif && (
+        <p className={styles.aide}>
+          L&apos;assistant est désactivé : vos destinataires ne peuvent pas poser de questions sur la page. Activez-le pour retrouver ici leurs questions, vos
+          précisions et les questions suggérées.
+        </p>
+      )}
 
       <div className={styles.activiteCols}>
+        {vue === "activite" && (
         <section className={`${styles.bloc} ${styles.pleineLargeur}`} aria-label="Lectures partagées">
           <h2 className={styles.blocTitre}>
             Lectures partagées <small>avec l&apos;accord du destinataire</small>
@@ -295,6 +332,10 @@ export function ActivitePage({ id, onMessage }: { id: string; onMessage?: (m: st
           <p className={styles.aide}>« N&apos;a pas partagé » ne dit pas si la page a été ouverte : un destinataire qui refuse ne laisse rien deviner.</p>
         </section>
 
+        )}
+
+        {vue === "assistant" && assistantActif && (
+        <>
         <section className={styles.bloc} aria-label="Questions posées sur la page">
           <h2 className={styles.blocTitre}>
             Questions posées sur la page <small>sans nom ni lien</small>
@@ -460,6 +501,8 @@ export function ActivitePage({ id, onMessage }: { id: string; onMessage?: (m: st
             devient importante, ajoutez-la plutôt à la page elle-même (nouvelle version depuis Claude).
           </p>
         </section>
+        </>
+        )}
       </div>
     </div>
   );

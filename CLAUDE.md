@@ -578,7 +578,15 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   question restait proposée (vu au test). Rien n'indique au visiteur
   qu'elles viennent d'autres visiteurs. Vérifié au navigateur (faux modèle) :
   regroupement, reformulation, plafond de 4, ordre, retrait, bulles chez le
-  visiteur sans la question d'origine. Lot suivant : domaine séparé.
+  visiteur sans la question d'origine. **Onglet « Assistant » de la fiche
+  (13/11, demande de l'utilisateur)** : trois onglets — Page & destinataires
+  / Activité (chiffres, lectures) / Assistant (interrupteur, questions,
+  suggestions, précisions ; désactivé = interrupteur et explication seuls).
+  `ActivitePage` est monté dès l'ouverture de la fiche (masqué sur « Page »),
+  avec une prop `vue` : la pastille « questions sans réponse » de l'onglet
+  est juste avant qu'on l'ouvre, et changer d'onglet ne recharge rien. La
+  tuile « questions posées » d'Activité mène à l'onglet Assistant. Lot
+  suivant : domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
