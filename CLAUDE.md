@@ -1112,7 +1112,8 @@ enregistrées par les créateurs. Elle doit vivre ailleurs que sur Vercel.
 des comptes qui gardent les GENTS, séparés par des virgules. Tout compte
 absent est « Getgents Pages ». Y mettre SON PROPRE identifiant AVANT de la
 régler, sinon on se ferme ses propres gents (la retirer rouvre tout). Lue
-à l'exécution (middleware et routes), un redéploiement suffit.
+à l'exécution (middleware et routes), un redéploiement suffit. RÉGLÉE en
+production (13/11) avec le compte de l'éditeur.
 
 `DOMAINE_CONTENU` = `www.getgents-pages.com` (domaine acheté chez
 Squarespace le 13/11). Le `www` est VOULU : Vercel a fait de `www` le
