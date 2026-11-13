@@ -614,8 +614,8 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   diffère (pas de comparaison complète, choix de l'utilisateur) et le nombre
   de liens concernés ; même mécanique de versions que le connecteur. Vérifié
   au navigateur (mémoire locale). NON vérifié avec un vrai canvas ChatGPT :
-  ce que donne son bouton « copier ». Lot suivant : domaine séparé. **Payé en passant (13/11)** : une page collée (aucun lien) était cachée par le filtre par défaut « Actives » — elle n'apparaissait que sur l'accueil. « Actives » inclut désormais les pages jamais partagées (« Pas encore partagée ») ; « Sans lien actif » = des liens, tous révoqués ou expirés. Et `.wrap` n'est plus bridé à 1 200 px : sur grand écran, la grille prend la largeur. Déployé, essai réel CONCLUANT (13/11). **Domaine de contenu `getgents-pages.com` (13/11, écrit, NON
-  activé ; `lib/domaineContenu.ts`, `lib/adresseSignee.ts`,
+  ce que donne son bouton « copier ». Lot suivant : domaine séparé. **Payé en passant (13/11)** : une page collée (aucun lien) était cachée par le filtre par défaut « Actives » — elle n'apparaissait que sur l'accueil. « Actives » inclut désormais les pages jamais partagées (« Pas encore partagée ») ; « Sans lien actif » = des liens, tous révoqués ou expirés. Et `.wrap` n'est plus bridé à 1 200 px : sur grand écran, la grille prend la largeur. Déployé, essai réel CONCLUANT (13/11). **Domaine de contenu `www.getgents-pages.com` (13/11, ACTIVÉ,
+  essai réel CONCLUANT ; `lib/domaineContenu.ts`, `lib/adresseSignee.ts`,
   `app/api/contenu/[token]`)** — défense en profondeur choisie par
   l'utilisateur (domaine DISTINCT plutôt qu'un sous-domaine, même site pour le
   navigateur). Le cadre ne reçoit PAS les cookies de getgents.ai (cookies
@@ -1057,7 +1057,11 @@ fichiers — ce serait juridiquement faux.
 `SECRET_BOX_KEY` : sa perte rend **illisibles** toutes les clés OpenRouter
 enregistrées par les créateurs. Elle doit vivre ailleurs que sur Vercel.
 
-`DOMAINE_CONTENU` (`getgents-pages.com`, acheté chez Squarespace le 13/11) :
+`DOMAINE_CONTENU` = `www.getgents-pages.com` (domaine acheté chez
+Squarespace le 13/11). Le `www` est VOULU : Vercel a fait de `www` le
+domaine principal et redirige le domaine nu vers lui (308) — avec le
+domaine nu dans la variable, chaque cadre suivrait la redirection vers un
+hôte qui n'est plus celui configuré, et le code répondrait 404. Elle
 active le domaine de contenu des pages partagées. Lue À LA CONSTRUCTION par
 `next.config.mjs` — la régler ou la changer exige un REDÉPLOIEMENT. Ordre :
 domaine ajouté au projet Vercel et DNS pointé AVANT la variable, sinon les
