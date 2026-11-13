@@ -1157,6 +1157,13 @@ navigateur). Absente ou mal formée : repli sur CEO@getgents.ai
 "defaut" | "invalide"`, jamais l'adresse. CEO@getgents.ai reste l'adresse de
 CONTACT affichée.
 
+**Supabase envoie ses e-mails d'authentification PAR BREVO** (SMTP
+personnalisé, 13/11) : invitations, réinitialisations. Avant, l'envoi
+intégré de Supabase plafonnait à quelques e-mails par heure — une
+invitation tombait en 429 (`/auth/v1/invite`) après deux essais. Clé SMTP
+Brevo (`xsmtpsib-`) DISTINCTE de la clé API de l'application ; elle vit dans
+Supabase seulement. Plafond d'envoi réglé dans Authentication → Rate Limits.
+
 Les inscriptions sont fermées **chez Supabase** (Authentication → Providers →
 Email). `lib/inscriptions.ts` ne fait que rendre l'interface honnête — il ne
 ferme rien à lui seul.
