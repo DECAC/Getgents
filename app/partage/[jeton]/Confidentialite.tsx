@@ -82,7 +82,6 @@ export default function Confidentialite({
           <div className={styles.confCol} data-ton="rouge">
             <h3>Jamais</h3>
             <ul>
-              <li>Votre adresse IP n&apos;est pas conservée.</li>
               <li>Aucune localisation.</li>
               <li>Rien de ce que vous faites hors de cette page.</li>
               <li>Aucune publicité, aucune revente.</li>
