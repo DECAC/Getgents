@@ -614,7 +614,7 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   diffère (pas de comparaison complète, choix de l'utilisateur) et le nombre
   de liens concernés ; même mécanique de versions que le connecteur. Vérifié
   au navigateur (mémoire locale). NON vérifié avec un vrai canvas ChatGPT :
-  ce que donne son bouton « copier ». Lot suivant : domaine séparé. **Payé en passant (13/11)** : une page collée (aucun lien) était cachée par le filtre par défaut « Actives » — elle n'apparaissait que sur l'accueil. « Actives » inclut désormais les pages jamais partagées (« Pas encore partagée ») ; « Sans lien actif » = des liens, tous révoqués ou expirés. Et `.wrap` n'est plus bridé à 1 200 px : sur grand écran, la grille prend la largeur.
+  ce que donne son bouton « copier ». Lot suivant : domaine séparé. **Payé en passant (13/11)** : une page collée (aucun lien) était cachée par le filtre par défaut « Actives » — elle n'apparaissait que sur l'accueil. « Actives » inclut désormais les pages jamais partagées (« Pas encore partagée ») ; « Sans lien actif » = des liens, tous révoqués ou expirés. Et `.wrap` n'est plus bridé à 1 200 px : sur grand écran, la grille prend la largeur. Déployé, essai réel CONCLUANT (13/11).
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
