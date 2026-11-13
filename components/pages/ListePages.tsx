@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { GuideConnexion } from "./GuideConnexion";
+import { ImportPage } from "./ImportPage";
+import { libelleOrigine } from "@/lib/importPage";
 import { Vignette } from "./Vignette";
 import { filtrerParTitre, filtrePage, libelleFormat, type FiltrePages, type LignePage } from "@/lib/pagesGetsite";
 import styles from "./pages.module.css";
@@ -16,6 +18,7 @@ export function ListePages() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [recherche, setRecherche] = useState("");
   const [filtre, setFiltre] = useState<FiltrePages>("actives");
+  const [importOuvert, setImport] = useState(false);
 
   useEffect(() => {
     let vivant = true;
@@ -34,12 +37,18 @@ export function ListePages() {
 
   return (
     <div className={styles.wrap}>
-      <div>
-        <h1 className={styles.titre}>Mes pages</h1>
-        <p className={styles.sous}>
-          Les pages créées dans Claude et partagées avec vos clients. Ouvrez-en une pour voir à qui vous l&apos;avez envoyée.
-        </p>
+      <div className={styles.listeTete}>
+        <div>
+          <h1 className={styles.titre}>Mes pages</h1>
+          <p className={styles.sous}>
+            Les pages créées dans Claude, ChatGPT ou ailleurs, et partagées avec vos clients. Ouvrez-en une pour voir à qui vous l&apos;avez envoyée.
+          </p>
+        </div>
+        <button type="button" className={styles.principal} onClick={() => setImport(true)}>
+          + Nouvelle page
+        </button>
       </div>
+      {importOuvert && <ImportPage onFermer={() => setImport(false)} />}
 
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       {!pages && !erreur && <p className={styles.sous}>Chargement…</p>}
@@ -78,7 +87,7 @@ export function ListePages() {
                 <span className={styles.carteCorps}>
                   <span className={styles.carteTitre}>{p.titre}</span>
                   <span className={styles.meta}>
-                    {[p.origine, p.version > 1 ? `version ${p.version}` : null, `mise à jour le ${date(p.updatedAt)}`].filter(Boolean).join(" · ")}
+                    {[libelleOrigine(p.origine), p.version > 1 ? `version ${p.version}` : null, `mise à jour le ${date(p.updatedAt)}`].filter(Boolean).join(" · ")}
                   </span>
                   <span className={styles.puces}>
                     <span className={p.actifs ? styles.puceDest : styles.puceEteinte}>

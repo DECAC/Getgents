@@ -6,6 +6,8 @@ import type { FormatArtefact } from "@/lib/mcpPartage";
 import { QUESTIONS_MAX_PAR_LIEN } from "@/lib/assistantDocument";
 import { peutRecevoirCode } from "@/lib/accesCode";
 import { ActivitePage } from "./ActivitePage";
+import { ImportPage } from "./ImportPage";
+import { libelleOrigine } from "@/lib/importPage";
 import styles from "./pages.module.css";
 
 interface Destinataire {
@@ -73,6 +75,16 @@ export function FichePage({ id }: { id: string }) {
     void charger();
   }, [charger]);
 
+  const [nouvelleVersion, setNouvelleVersion] = useState(false);
+  // Arrivée depuis « Nouvelle page » avec un code déjà connu : on le dit, sans créer de doublon.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("existante") !== "1") return;
+    setMessage("Ce code correspond à une page existante : la voici.");
+    window.history.replaceState(null, "", window.location.pathname);
+    const t = window.setTimeout(() => setMessage(null), 4000);
+    return () => window.clearTimeout(t);
+  }, []);
+
   const signaler = (m: string) => {
     setMessage(m);
     window.setTimeout(() => setMessage(null), 2500);
@@ -125,7 +137,7 @@ export function FichePage({ id }: { id: string }) {
         <div className={styles.enteteTexte}>
           <h1 className={styles.titreFiche}>{page.titre}</h1>
           <div className={styles.meta}>
-            {[page.origine ? `Créée dans ${page.origine}` : null, libelleFormat(page.format), `version ${page.version}, mise à jour le ${jourHeure(page.updatedAt)}`]
+            {[libelleOrigine(page.origine), libelleFormat(page.format), `version ${page.version}, mise à jour le ${jourHeure(page.updatedAt)}`]
               .filter(Boolean)
               .join(" · ")}
           </div>
@@ -135,7 +147,20 @@ export function FichePage({ id }: { id: string }) {
             Voir comme le client
           </a>
         )}
+        <button type="button" className={styles.secondaire} onClick={() => setNouvelleVersion(true)}>
+          Nouvelle version
+        </button>
       </div>
+      {nouvelleVersion && (
+        <ImportPage
+          page={{ id: page.id, titre: page.titre, format: page.format }}
+          onFermer={() => setNouvelleVersion(false)}
+          onPubliee={(m) => {
+            signaler(m);
+            void charger();
+          }}
+        />
+      )}
 
       {message && (
         <div className={styles.message} role="status">

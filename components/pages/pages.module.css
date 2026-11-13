@@ -1207,3 +1207,247 @@
   font-weight: 600;
   vertical-align: 1px;
 }
+
+/* ——— « + Nouvelle page » / « Nouvelle version » : collage d'un artefact ——— */
+.listeTete {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.listeTete > div {
+  flex: 1;
+  min-width: 0;
+}
+.importVoile {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(30, 20, 15, 0.45);
+}
+.importFenetre {
+  display: flex;
+  flex-direction: column;
+  width: 1120px;
+  max-width: 100%;
+  height: min(860px, 100%);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.importTete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line);
+}
+.importTete h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.importFermer {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  color: var(--faint);
+  font-size: 18px;
+  cursor: pointer;
+}
+.importCorps {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px 22px;
+  overflow-y: auto;
+}
+.importCol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  min-width: 0;
+}
+.importLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 0;
+}
+.importLabel > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.importLabel small {
+  font-weight: 400;
+  color: var(--muted);
+}
+.importLabel:has(.importCode) {
+  flex: 1;
+  min-height: 0;
+}
+.importCode {
+  flex: 1;
+  min-height: 260px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--gold);
+  border-radius: 12px;
+  background: #1e1b2e;
+  color: #e4e0f2;
+  font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+  resize: none;
+  white-space: pre;
+  overflow: auto;
+}
+.importDepot {
+  flex: 1;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px;
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.importDepot b {
+  color: var(--ink);
+}
+.importDepot input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.importLigne {
+  display: flex;
+  gap: 10px;
+}
+.importLigne > :first-child {
+  flex: 1;
+}
+.importFormat {
+  width: 170px;
+  flex: none;
+}
+.chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.chipOk {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--success-tint);
+  color: #2f6e33;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.importApercu {
+  flex: 1;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.importAlerte {
+  display: flex;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  background: #fff4e0;
+  color: #7a5308;
+}
+.importAlerte[data-niveau="info"] {
+  background: var(--blue-tint);
+  color: #2d5aa6;
+}
+.importAlerte[data-niveau="bloquant"] {
+  background: #fff1f1;
+  color: #a33;
+}
+.importDiff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.importDiff > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  font-size: 12.5px;
+  min-width: 0;
+}
+.importDiff b {
+  font-size: 13px;
+}
+.diffAvant {
+  color: #a33;
+  text-decoration: line-through;
+  overflow-wrap: anywhere;
+}
+.diffApres {
+  color: #2f6e33;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.importPied {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--line);
+}
+.importPied > span {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+@media (max-width: 860px) {
+  .importVoile {
+    padding: 0;
+  }
+  .importFenetre {
+    height: 100%;
+    border-radius: 0;
+  }
+  .importCorps {
+    grid-template-columns: 1fr;
+  }
+  .importCode,
+  .importDepot {
+    min-height: 200px;
+  }
+  .listeTete {
+    flex-direction: column;
+  }
+}

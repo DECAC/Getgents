@@ -595,8 +595,26 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   les plus posées d'abord : la base ne garde PAS l'heure d'une question,
   l'ordre d'enregistrement ne voulait rien dire. Pastille et filtre comptent
   les questions DISTINCTES ; « N posées » reste le nombre réel. Plafond
-  serveur inchangé : 1 000 questions lues par page. Lot suivant : domaine
-  séparé.
+  serveur inchangé : 1 000 questions lues par page. **Page par COLLAGE
+  (13/11, revirement assumé : l'absence de « + Nouvelle page » était une
+  décision du 12/11)** — `lib/importPage.ts`, `components/pages/ImportPage.tsx`,
+  `POST /api/pages`, `POST /api/pages/apercu`, `POST /api/pages/<id>/version`.
+  Contourne le MCP : marche avec ChatGPT, Mistral, un fichier… et sans
+  question de fidélité (l'utilisateur colle le code exact). Titre et format
+  DÉDUITS (modifiables) ; un bloc ```…``` qui entoure tout est déballé. L'aperçu
+  passe par un FORMULAIRE posté dans le cadre (même CSP `sandbox` que chez le
+  client) : un `srcdoc` hériterait de la CSP de Getgents, qui bloquerait les
+  scripts de l'artefact. Alertes du même module côté navigateur et serveur :
+  coordonnées écrites dans la page (`lib/donneesPersonnelles.ts`, règles
+  simples, SANS modèle — une alerte, pas une garantie ; vaut AUSSI pour le
+  connecteur, dont le journal ne garde que le NOMBRE), artefact branché sur
+  Claude, abréviation. Un code déjà connu rouvre SA page (`?existante=1`).
+  Origine `collage` → « Collée à la main » (`libelleOrigine`). « Nouvelle
+  version » dans la fiche : `simuler` rend la PREMIÈRE ligne de texte qui
+  diffère (pas de comparaison complète, choix de l'utilisateur) et le nombre
+  de liens concernés ; même mécanique de versions que le connecteur. Vérifié
+  au navigateur (mémoire locale). NON vérifié avec un vrai canvas ChatGPT :
+  ce que donne son bouton « copier ». Lot suivant : domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

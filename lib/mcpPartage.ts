@@ -12,6 +12,8 @@
  * stockage est injecté. Testable sans serveur ni base.
  */
 
+import { donneesPersonnelles, type DonneesPersonnelles } from "./donneesPersonnelles";
+
 export const FORMATS_ARTEFACT = ["html", "markdown", "svg", "react", "texte"] as const;
 export type FormatArtefact = (typeof FORMATS_ARTEFACT)[number];
 
@@ -50,6 +52,8 @@ export interface Fidelite {
    * « Poste de pilotage » branché sur l'agenda et les e-mails, partagé tel quel.
    */
   dependClaude: boolean;
+  /** Adresses e-mail et téléphones écrits dans la page (repérage simple). */
+  donnees: DonneesPersonnelles;
   debut: string;
   fin: string;
 }
@@ -79,6 +83,7 @@ export function controleFidelite(contenu: string, format: FormatArtefact): Fidel
     finPresente,
     abreviationSuspecte: ABREVIATIONS.some((re) => re.test(contenu)),
     dependClaude: APPELS_CLAUDE.some((re) => re.test(contenu)),
+    donnees: donneesPersonnelles(contenu),
     debut: net.slice(0, 80),
     fin: net.slice(-80),
   };
@@ -354,6 +359,14 @@ function alertesFidelite(f: Fidelite): string[] {
   return alertes;
 }
 
+/** Coordonnées écrites dans la page : à faire relire, sans parler de troncature. */
+const ligneDonnees = (f: Fidelite) => {
+  const t = [...f.donnees.emails, ...f.donnees.telephones];
+  return t.length
+    ? `Données personnelles repérées dans la page (${t.slice(0, 3).join(", ")}${t.length > 3 ? "…" : ""}) : demande à l'utilisateur de confirmer qu'elles peuvent être vues par le destinataire.`
+    : "";
+};
+
 const ligneFidelite = (f: Fidelite) => {
   const alertes = alertesFidelite(f);
   return alertes.length
@@ -386,6 +399,7 @@ function texteResultat(
       ? "Assistant du document ACTIVÉ sur cette page : le client peut poser des questions à côté ; les réponses sont facturées à l'utilisateur."
       : "Assistant du document non activé (l'utilisateur peut l'activer sur la page, dans Getgents).",
     f ? ligneFidelite(f) : "",
+    f ? ligneDonnees(f) : "",
     "",
     "Donne à l'utilisateur le lien et le modèle de mail ci-dessus, et rappelle-lui que c'est à lui d'envoyer le mail.",
   ]

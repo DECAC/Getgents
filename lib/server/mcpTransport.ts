@@ -47,6 +47,8 @@ export async function repondreMcp(req: Request, base: string, proprietaire: Prop
           finPresente: fidelite?.finPresente ?? null,
           abreviationSuspecte: fidelite?.abreviationSuspecte ?? null,
           dependClaude: fidelite?.dependClaude ?? null,
+          // Le NOMBRE seulement : les coordonnées elles-mêmes ne vont pas au journal.
+          coordonnees: fidelite ? fidelite.donnees.emails.length + fidelite.donnees.telephones.length : null,
           compte: "oauth",
           ownerId: proprietaire.userId,
           client,
