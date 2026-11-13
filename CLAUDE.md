@@ -434,8 +434,20 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   gardé (les données d'un artefact React y vivent), les `data:` encodés
   retirés, 60 000 caractères au plus. Payé par le PROPRIÉTAIRE
   (`contexteForUser(owner_id)` + son quota), 100 questions par lien
-  (`compterQuestion`, colonne `questions`) ; modèle par défaut des gents,
-  sans raisonnement ni outil. Rien n'est gardé : le fil vit dans la page.
+  (`compterQuestion`, colonne `questions`) ; sans raisonnement ni outil.
+  **Modèle PROPRE depuis le 13/11 : `MODELE_ASSISTANT_PAGES` = Claude Haiku
+  5.5** (`lib/assistantDocument.ts`), il prenait le défaut des gents (Sonnet
+  5.5) — changer celui-ci aurait changé l'assistant en silence. Motif :
+  tâche étroite (lire, ne rien inventer, marquer `[HORS PAGE]`) et coût —
+  prix OpenRouter lus le 13/11, 0,10 $ / 0,50 $ par million de jetons contre
+  2 $ / 10 $, soit ~0,85 $ contre ~17 $ pour 500 questions sur une page
+  pleine, payés par la clé PLATEFORME pour les invités. Ajouté au catalogue
+  (`MODEL_CATALOG`, donc aussi proposé aux gents) : hors catalogue, la clé
+  plateforme l'aurait remplacé par Kimi K3 — un test le garde. Qualité NON
+  mesurée d'ici : essai à faire sur de vraies pages (React compris), avec
+  questions hors page et une question piège sur un prix absent. Si Haiku
+  déçoit : mise en cache de la consigne (non vérifiée via OpenRouter) avant
+  de revenir à Sonnet. Rien n'est gardé : le fil vit dans la page.
   Migration 021 à passer AVANT le déploiement — `lireArtefact` lit les
   nouvelles colonnes, TOUS les liens tomberaient sans elle. Vérifié en
   local jusqu'à l'appel au modèle (pas de clé OpenRouter ici) et au

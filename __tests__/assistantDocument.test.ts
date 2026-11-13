@@ -51,3 +51,15 @@ describe("assistant du document", () => {
     expect((validerDemande({ ...base, assistant: "oui" }) as { demande: object }).demande).not.toHaveProperty("assistant");
   });
 });
+
+describe("modèle de l'assistant des pages", () => {
+  it("a son propre modèle, payable par la clé de la plateforme", () => {
+    const { MODELE_ASSISTANT_PAGES } = require("@/lib/assistantDocument");
+    const { isPlatformModel, resolveModelId } = require("@/lib/allowedModels");
+    const { MODELE_CHAT_PAR_DEFAUT } = require("@/lib/modeleConversation");
+    expect(MODELE_ASSISTANT_PAGES).not.toBe(MODELE_CHAT_PAR_DEFAUT);
+    // Hors catalogue, la clé plateforme le remplacerait EN SILENCE par le modèle du builder.
+    expect(isPlatformModel(MODELE_ASSISTANT_PAGES)).toBe(true);
+    expect(resolveModelId(MODELE_ASSISTANT_PAGES)).toBe(MODELE_ASSISTANT_PAGES);
+  });
+});

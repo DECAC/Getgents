@@ -51,6 +51,17 @@ export function documentPourModele(contenu: string, max = DOCUMENT_MAX): { texte
  * délai inventé engagerait celui qui a partagé le document.
  */
 /** Précisions de l'auteur lues par l'assistant : au plus ce nombre, et cette longueur chacune. */
+/**
+ * Modèle de l'assistant des PAGES (13/11) — distinct de celui des gents :
+ * changer le défaut des gents ne doit pas changer l'assistant en silence.
+ * La tâche est étroite (lire un document, ne rien inventer, marquer
+ * `[HORS PAGE]`) : un petit modèle suffit, à ~1/20e du prix de Sonnet 5.5,
+ * et c'est la clé de la PLATEFORME qui paie pour les comptes invités.
+ * Doit figurer au catalogue (`MODEL_CATALOG`) : sur la clé plateforme, un
+ * identifiant inconnu retomberait sur le modèle du builder.
+ */
+export const MODELE_ASSISTANT_PAGES = "anthropic/claude-haiku-5.5";
+
 export const COMPLEMENTS_MAX = 40;
 export const COMPLEMENT_MAX = 1_500;
 

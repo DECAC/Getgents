@@ -3,11 +3,10 @@ import { decisionAcces } from "@/lib/server/accesPartage";
 import { nomCookie } from "@/lib/accesCode";
 import { NextResponse } from "next/server";
 import { compterQuestion, lireArtefact } from "@/lib/server/artefactsPartages";
-import { consigneAssistant, historiqueValide, QUESTIONS_MAX_PAR_LIEN, REPONSE_MAX_TOKENS } from "@/lib/assistantDocument";
+import { consigneAssistant, historiqueValide, MODELE_ASSISTANT_PAGES, QUESTIONS_MAX_PAR_LIEN, REPONSE_MAX_TOKENS } from "@/lib/assistantDocument";
 import { chatResponseFor } from "@/lib/server/chatEngine";
 import { contexteForUser } from "@/lib/server/openRouterKey";
 import { consommerPourVisiteur } from "@/lib/server/gentGuard";
-import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import { contenuLigneSse, sansMarqueur } from "@/lib/activitePage";
 import { enregistrerQuestion, marquerQuestion } from "@/lib/server/activitePages";
 import { getUser } from "@/lib/server/session";
@@ -97,7 +96,8 @@ export async function POST(req: Request, { params }: { params: { jeton: string }
       { status: 429 }
     );
 
-  const modele = modeleConversationEffectif(undefined).id;
+  // Son propre modèle (lib/assistantDocument.ts), pas le défaut des gents.
+  const modele = MODELE_ASSISTANT_PAGES;
   // Précisions de l'auteur : lues avec la page, invisibles comme telles pour le visiteur.
   const complements = await complementsDeLaPage(a.pageId).catch((e) => {
     console.error(JSON.stringify({ tag: "getgents:activite", event: "complements_illisibles", detail: (e as Error).message }));

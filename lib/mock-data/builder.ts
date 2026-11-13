@@ -53,6 +53,15 @@ export const MODEL_CATALOG: OpenRouterModel[] = [
     tagline: "Excellent raisonnement et suivi d'instructions longues.",
   },
   {
+    id: "anthropic/claude-haiku-5.5",
+    label: "Claude Haiku 5.5",
+    provider: "Anthropic",
+    capability: "chat",
+    contextWindow: 1_000_000,
+    pricing: { input: 0.1, output: 0.5 },
+    tagline: "Rapide et économique : réponses fidèles à un document.",
+  },
+  {
     id: "mistralai/mistral-large",
     label: "Mistral Large",
     provider: "Mistral AI",
