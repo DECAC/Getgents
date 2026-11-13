@@ -4,6 +4,7 @@ import { decisionAcces } from "@/lib/server/accesPartage";
 import { nomCookie } from "@/lib/accesCode";
 import { lireArtefact } from "@/lib/server/artefactsPartages";
 import { CSP_ARTEFACT, documentArtefact } from "@/lib/documentArtefact";
+import { versDomaineContenu } from "@/lib/server/domaineContenu";
 
 /**
  * Le document de l'artefact, chargé dans le cadre de /partage/<jeton>.
@@ -14,16 +15,24 @@ import { CSP_ARTEFACT, documentArtefact } from "@/lib/documentArtefact";
  * authentifié vers Getgents. Ouvert directement dans un onglet, le document
  * reste isolé de la même façon : la protection est dans la réponse, pas dans
  * le cadre.
+ *
+ * Avec `DOMAINE_CONTENU`, cette route vérifie l'accès puis REDIRIGE vers le
+ * domaine de contenu (`app/api/contenu/[token]`) : le document n'est plus
+ * servi par getgents.ai.
  */
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: Request, { params }: { params: { jeton: string } }) {
+export async function GET(req: Request, { params }: { params: { jeton: string } }) {
   const a = await lireArtefact(params.jeton);
   if (!a) return new Response("Ce lien n'existe pas ou a expiré.", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   // Page protégée par code : sans cookie d'accès valide, rien ne sort.
   if ((await decisionAcces(a, cookies().get(nomCookie(a.jeton))?.value)) !== "ouvert")
     return new Response("Accès protégé : validez votre code sur la page du lien.", { status: 403, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  // Domaine de contenu configuré : l'accès est vérifié ICI (le cookie du code
+  // n'arriverait pas là-bas), le cadre part vers une adresse signée.
+  const ailleurs = versDomaineContenu(req, { t: "partage", j: a.jeton });
+  if (ailleurs) return ailleurs;
   const html = documentArtefact(a.contenu, a.format, a.titre, (md) => marked.parse(md, { async: false }) as string);
   return new Response(html, {
     headers: {

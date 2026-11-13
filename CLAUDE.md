@@ -614,7 +614,31 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   diffère (pas de comparaison complète, choix de l'utilisateur) et le nombre
   de liens concernés ; même mécanique de versions que le connecteur. Vérifié
   au navigateur (mémoire locale). NON vérifié avec un vrai canvas ChatGPT :
-  ce que donne son bouton « copier ». Lot suivant : domaine séparé. **Payé en passant (13/11)** : une page collée (aucun lien) était cachée par le filtre par défaut « Actives » — elle n'apparaissait que sur l'accueil. « Actives » inclut désormais les pages jamais partagées (« Pas encore partagée ») ; « Sans lien actif » = des liens, tous révoqués ou expirés. Et `.wrap` n'est plus bridé à 1 200 px : sur grand écran, la grille prend la largeur. Déployé, essai réel CONCLUANT (13/11).
+  ce que donne son bouton « copier ». Lot suivant : domaine séparé. **Payé en passant (13/11)** : une page collée (aucun lien) était cachée par le filtre par défaut « Actives » — elle n'apparaissait que sur l'accueil. « Actives » inclut désormais les pages jamais partagées (« Pas encore partagée ») ; « Sans lien actif » = des liens, tous révoqués ou expirés. Et `.wrap` n'est plus bridé à 1 200 px : sur grand écran, la grille prend la largeur. Déployé, essai réel CONCLUANT (13/11). **Domaine de contenu `getgents-pages.com` (13/11, écrit, NON
+  activé ; `lib/domaineContenu.ts`, `lib/adresseSignee.ts`,
+  `app/api/contenu/[token]`)** — défense en profondeur choisie par
+  l'utilisateur (domaine DISTINCT plutôt qu'un sous-domaine, même site pour le
+  navigateur). Le cadre ne reçoit PAS les cookies de getgents.ai (cookies
+  tiers, bloqués sur iPhone) : les trois routes d'origine
+  (`/api/partage/<jeton>/contenu`, `/api/pages/<id>/apercu`,
+  `/api/pages/apercu`) vérifient l'accès comme avant (cookie du code,
+  session), puis REDIRIGENT vers une adresse SIGNÉE (HMAC dérivé de
+  `SECRET_BOX_KEY`, 10 min) qui dit quoi servir, à qui (propriétaire), et
+  quelle origine peut l'encadrer (`frame-ancestors`). Brouillon collé : 307,
+  le navigateur reposte le MÊME corps, dont l'adresse porte l'empreinte
+  (sinon elle servirait n'importe quel code). Le domaine de contenu ne sert
+  QUE `/api/contenu/<adresse>` : middleware (pages) et réécriture
+  `beforeFiles` de `next.config.mjs` (routes API, fichiers) répondent 404 à
+  tout le reste ; l'adresse présentée à getgents.ai répond 404 aussi.
+  `form-action` et `frame-src` de l'application nomment le domaine
+  (`form-action` vaut pour les redirections). Sans `DOMAINE_CONTENU` : rien
+  ne change, la route nouvelle répond 404. Vérifié au navigateur avec un vrai
+  second site (application sur `localhost`, contenu sur `127.0.0.1`) :
+  brouillon, fiche, vignettes, lien, page protégée par code (403 sans code,
+  aucune adresse émise), adresse retouchée → 404, aucune violation CSP. Piège
+  de l'essai local : `upgrade-insecure-requests` réécrivait le domaine local
+  en https — levée SEULEMENT pour un domaine de contenu en `http://`. NON
+  vérifié : Safari/iPhone réel, et la réécriture par hôte sur Vercel.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
@@ -1032,6 +1056,13 @@ fichiers — ce serait juridiquement faux.
 
 `SECRET_BOX_KEY` : sa perte rend **illisibles** toutes les clés OpenRouter
 enregistrées par les créateurs. Elle doit vivre ailleurs que sur Vercel.
+
+`DOMAINE_CONTENU` (`getgents-pages.com`, acheté chez Squarespace le 13/11) :
+active le domaine de contenu des pages partagées. Lue À LA CONSTRUCTION par
+`next.config.mjs` — la régler ou la changer exige un REDÉPLOIEMENT. Ordre :
+domaine ajouté au projet Vercel et DNS pointé AVANT la variable, sinon les
+cadres partent vers un domaine qui ne répond pas. La retirer + redéployer
+revient à l'état d'avant (repli immédiat en cas de souci).
 
 **BREVO EST CONFIGURÉ** en production (12/11, e-mail d'invitation reçu par
 l'utilisateur). Il ne l'était pas jusque-là : invitation par e-mail,

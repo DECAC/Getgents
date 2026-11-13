@@ -13,20 +13,29 @@ import type { FormatArtefact } from "./mcpPartage";
  * c'est la ligne qui fait l'isolement. Le reste est large exprès — un
  * artefact charge ses bibliothèques depuis un CDN, ses polices, ses images.
  */
-export const CSP_ARTEFACT = [
-  "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads",
-  "default-src 'none'",
-  "script-src 'unsafe-inline' 'unsafe-eval' https: blob:",
-  "style-src 'unsafe-inline' https:",
-  "img-src data: blob: https:",
-  "font-src data: https:",
-  "connect-src https:",
-  "media-src data: blob: https:",
-  "frame-src https:",
-  "form-action https:",
-  "base-uri 'none'",
-  "frame-ancestors 'self'",
-].join("; ");
+export function cspArtefact(ancetres = "'self'"): string {
+  return [
+    "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads",
+    "default-src 'none'",
+    "script-src 'unsafe-inline' 'unsafe-eval' https: blob:",
+    "style-src 'unsafe-inline' https:",
+    "img-src data: blob: https:",
+    "font-src data: https:",
+    "connect-src https:",
+    "media-src data: blob: https:",
+    "frame-src https:",
+    "form-action https:",
+    "base-uri 'none'",
+    `frame-ancestors ${ancetres}`,
+  ].join("; ");
+}
+
+/**
+ * Servi par getgents.ai : seule l'application peut l'encadrer. Sur le domaine
+ * de contenu, `frame-ancestors` nomme l'origine qui a signé l'adresse
+ * (`cspArtefact(origine)`) : `'self'` y désignerait le domaine de contenu.
+ */
+export const CSP_ARTEFACT = cspArtefact();
 
 export function echapperHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");

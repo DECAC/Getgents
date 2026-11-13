@@ -5,6 +5,7 @@ import { createAuthClient } from "@/lib/server/supabaseAuth";
 import { isAuthConfigured } from "@/lib/authConfig";
 import { politiqueCsp, nouveauNonce } from "@/lib/csp";
 import { authInjoignable } from "@/lib/delaiFetch";
+import { estDomaineContenu, lireDomaineContenu } from "@/lib/domaineContenu";
 
 /**
  * Rafraîchit la session et garde les pages privées.
@@ -56,6 +57,13 @@ function estPrive(pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Domaine de contenu des pages partagées : il ne sert QUE des documents
+  // signés (`/api/contenu/…`, hors de ce middleware). Aucune page de
+  // l'application n'y répond — ni accueil, ni connexion.
+  const domaine = lireDomaineContenu(process.env.DOMAINE_CONTENU);
+  if (estDomaineContenu(request.headers.get("host"), domaine))
+    return new NextResponse("Introuvable.", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8", "X-Robots-Tag": "noindex, nofollow" } });
+
   /*
    * Le nonce doit atteindre DEUX destinataires :
    *
@@ -77,6 +85,7 @@ export async function middleware(request: NextRequest) {
     // Le serveur de développement recharge à chaud par `eval` : la politique
     // de production l'en empêche et rien ne s'hydrate en local.
     developpement: process.env.NODE_ENV !== "production",
+    origineContenu: domaine?.origine,
   });
 
   const enTetes = new Headers(request.headers);

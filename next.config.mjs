@@ -23,12 +23,39 @@ const SECURITY_HEADERS = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
 ];
 
+/**
+ * Domaine de contenu des pages partagées (`lib/domaineContenu.ts`). Lu À LA
+ * CONSTRUCTION : le régler sur Vercel exige un redéploiement. Sur ce domaine,
+ * toute adresse hors `/api/contenu/` (pages, autres routes API, fichiers) est
+ * réécrite vers une réponse 404 : il ne sert que des documents signés. Le
+ * middleware ferme aussi les pages, au cas où.
+ */
+const DOMAINE_CONTENU = (process.env.DOMAINE_CONTENU ?? "")
+  .trim()
+  .toLowerCase()
+  .replace(/^https?:\/\//, "")
+  .replace(/\/+$/, "")
+  .replace(/:\d+$/, "");
+
 const nextConfig = {
   reactStrictMode: true,
   // Aucune page n'utilise `next/image`. Couper l'optimiseur ferme
   // `/_next/image`, visé par un avis de sécurité (déni de service) qui ne
   // touche QUE l'auto-hébergement — préalable à la sortie de Vercel.
   images: { unoptimized: true },
+  async rewrites() {
+    if (!DOMAINE_CONTENU) return [];
+    return {
+      beforeFiles: [
+        {
+          source: "/:chemin((?!api/contenu/).*)",
+          // La valeur est une expression régulière : les points sont échappés.
+          has: [{ type: "host", value: DOMAINE_CONTENU.replace(/\./g, "\\.") }],
+          destination: "/api/contenu/introuvable",
+        },
+      ],
+    };
+  },
   async headers() {
     return [
       {
@@ -41,7 +68,9 @@ const nextConfig = {
         // reste pour les navigateurs qui l'ignorent, et se limite donc aux
         // pages qui ne doivent JAMAIS être encadrées — l'en-tête ne connaît
         // pas de variante « partout sauf ici ».
-        source: "/((?!l/).*)",
+        // Les documents du domaine de contenu sont encadrés par getgents.ai :
+        // leur `frame-ancestors` le dit, `SAMEORIGIN` le contredirait.
+        source: "/((?!l/|api/contenu/).*)",
         headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
       },
     ];

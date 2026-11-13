@@ -66,6 +66,9 @@ const OUVERTES: Record<string, string> = {
   // qui le lit. Le jeton (24 octets aléatoires) autorise la lecture seule ;
   // le contenu est servi sous CSP sandbox, sans accès à rien d'autre.
   "app/api/partage/[jeton]/contenu/route.ts": "authentifiée par le jeton du partage, lecture seule, sandbox",
+  // Domaine de contenu : aucune session là-bas, l'adresse SIGNÉE par getgents.ai
+  // (après vérification de l'accès) fait foi — lecture seule, sandbox.
+  "app/api/contenu/[token]/route.ts": "adresse signée (HMAC, 10 min) émise après contrôle d'accès, lecture seule, sandbox",
   // Assistant du document : le destinataire n'a pas de compte. Jeton du
   // partage + option activée par le propriétaire, qui paie (quota) ; plafond
   // de questions par lien.

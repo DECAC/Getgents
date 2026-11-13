@@ -35,14 +35,22 @@ export interface OptionsCsp {
    * malgré tout le reste.
    */
   developpement?: boolean;
+  /**
+   * Origine du domaine de contenu des pages partagées
+   * (`lib/domaineContenu.ts`) : le cadre du document y est chargé, et le
+   * formulaire d'aperçu d'un code collé y est reposté (307) — `form-action`
+   * vaut aussi pour les redirections.
+   */
+  origineContenu?: string | null;
 }
 
-export function politiqueCsp({ nonce, encadrable = false, developpement = false }: OptionsCsp): string {
+export function politiqueCsp({ nonce, encadrable = false, developpement = false, origineContenu = null }: OptionsCsp): string {
+  const contenu = origineContenu ? ` ${origineContenu}` : "";
   return [
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
-    "form-action 'self'",
+    `form-action 'self'${contenu}`,
     `frame-ancestors ${encadrable ? "*" : "'self'"}`,
 
     // `strict-dynamic` : un script porteur du nonce peut en charger d'autres.
@@ -79,10 +87,12 @@ export function politiqueCsp({ nonce, encadrable = false, developpement = false 
     "worker-src 'self' blob:",
 
     // Turnstile s'affiche dans son propre cadre.
-    "frame-src 'self' https://challenges.cloudflare.com",
+    `frame-src 'self' https://challenges.cloudflare.com${contenu}`,
 
     "manifest-src 'self'",
-    "upgrade-insecure-requests",
+    // Sauf pour un domaine de contenu LOCAL (essai en développement, en
+    // http) : la règle réécrirait son adresse en https, et le cadre tomberait.
+    ...(origineContenu?.startsWith("http://") ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");
 }
 
