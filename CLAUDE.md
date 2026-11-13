@@ -670,7 +670,21 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   change. NON vérifié : plafond de questions (il faut 500 appels à
   l'assistant), Mon compte (exige Supabase), et en production. Pas fait :
   la carte « Connecteur Claude » de la maquette (lire et révoquer les jetons
-  OAuth du compte).
+  OAuth du compte). **Lien d'invitation (13/11, `lib/invitation.ts`)** :
+  vécu, l'invité arrivait DÉCONNECTÉ sur l'accueil public (« Demander un
+  accès »). Le modèle d'e-mail par défaut de Supabase renvoie la session
+  dans le FRAGMENT (`#access_token=…&type=invite`), que le serveur ne voit
+  jamais, et `/auth/callback` n'attend qu'un `?code=`. Deux chemins mènent
+  désormais à `/bienvenue` (mot de passe + nom affiché facultatif, puis
+  `/accueil` → `/pages`) : (1) RECOMMANDÉ, modèle « Invite user » réglé sur
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite` —
+  vérifié CÔTÉ SERVEUR (`verifyOtp`, `app/auth/confirm`) ; (2) repli,
+  `AtterrissageLien` (layout racine) lit le fragment, n'ouvre une session
+  que pour `invite` ou `recovery` (sinon un lien piégé connecterait à un
+  autre compte), efface les jetons de l'adresse. Lien expiré : message qui
+  dit quoi faire. Vérifié au navigateur SANS Supabase (erreur expirée,
+  jetons effacés, ancre ordinaire intacte) ; le formulaire avec une vraie
+  session, PAS vérifié d'ici.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

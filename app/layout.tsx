@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { NavMobileProvider } from "@/lib/context/NavMobileContext";
+import { AtterrissageLien } from "@/components/shared/AtterrissageLien";
 
 /**
  * Aucune page n'est pré-générée.
@@ -30,6 +31,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr">
       <body>
+        {/* Lien d'invitation au modèle Supabase par défaut : session dans le fragment. */}
+        <AtterrissageLien />
         <NavMobileProvider>{children}</NavMobileProvider>
       </body>
     </html>
