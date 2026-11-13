@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { dureeLisible, ilYA, type Activite } from "@/lib/activitePage";
 import { initiales } from "@/lib/pagesGetsite";
+import { estSuggeree, propositions, SUGGESTION_MAX, SUGGESTIONS_MAX, type Suggestion } from "@/lib/suggestionsPage";
 import styles from "./pages.module.css";
 
 const jourLisible = (jour: string) => {
@@ -42,6 +43,57 @@ export function ActivitePage({ id, onMessage }: { id: string; onMessage?: (m: st
   const [texte, setTexte] = useState("");
   const [enCours, setEnCours] = useState(false);
   const [formErreur, setFormErreur] = useState<string | null>(null);
+
+  // Questions suggérées aux visiteurs (levier 3). `editeur` : la suggestion en cours de relecture.
+  const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
+  const [suggestionsErreur, setSuggestionsErreur] = useState<string | null>(null);
+  const [editeur, setEditeur] = useState<{ index: number | null; texte: string; origine: Suggestion["origine"]; questionId?: string } | null>(null);
+
+  const chargerSuggestions = useCallback(async () => {
+    const r = await fetch(`/api/pages/${encodeURIComponent(id)}/suggestions`, { credentials: "include" });
+    const j = (await r.json().catch(() => ({}))) as { suggestions?: Suggestion[]; error?: string };
+    if (r.ok) {
+      setSuggestions(j.suggestions ?? []);
+      setSuggestionsErreur(null);
+    } else setSuggestionsErreur(j.error || "Les questions suggérées n'ont pas pu être chargées.");
+  }, [id]);
+
+  useEffect(() => {
+    void chargerSuggestions();
+  }, [chargerSuggestions]);
+
+  async function enregistrerSuggestions(liste: Suggestion[], message: string) {
+    const r = await fetch(`/api/pages/${encodeURIComponent(id)}/suggestions`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ suggestions: liste }),
+    });
+    const j = (await r.json().catch(() => ({}))) as { suggestions?: Suggestion[]; error?: string };
+    if (!r.ok) return onMessage?.(j.error || "L'enregistrement a échoué. Réessayez.");
+    setSuggestions(j.suggestions ?? liste);
+    setEditeur(null);
+    onMessage?.(message);
+  }
+
+  const proposer = (texte: string, questionId?: string) =>
+    setEditeur({ index: null, texte: texte.slice(0, SUGGESTION_MAX), origine: questionId ? "question" : "libre", ...(questionId ? { questionId } : {}) });
+
+  const validerEditeur = () => {
+    if (!editeur || !suggestions || !editeur.texte.trim()) return;
+    const s: Suggestion = { texte: editeur.texte.trim(), origine: editeur.origine, ...(editeur.questionId ? { questionId: editeur.questionId } : {}) };
+    const liste = editeur.index === null ? [...suggestions, s] : suggestions.map((x, i) => (i === editeur.index ? s : x));
+    void enregistrerSuggestions(liste, editeur.index === null ? "Question suggérée : les visiteurs la verront dans l'assistant." : "Question suggérée modifiée.");
+  };
+
+  const deplacer = (i: number, sens: -1 | 1) => {
+    if (!suggestions) return;
+    const j = i + sens;
+    if (j < 0 || j >= suggestions.length) return;
+    const l = [...suggestions];
+    [l[i], l[j]] = [l[j], l[i]];
+    void enregistrerSuggestions(l, "Ordre enregistré.");
+  };
 
   const chargerPrecisions = useCallback(async () => {
     const r = await fetch(`/api/pages/${encodeURIComponent(id)}/complements`, { credentials: "include" });
@@ -136,6 +188,37 @@ export function ActivitePage({ id, onMessage }: { id: string; onMessage?: (m: st
     .flatMap((j) => j.items)
     .filter((q) => q.horsPage === true && !(q.id && precisions?.some((p) => p.questionId === q.id))).length;
 
+  const plein = !!suggestions && suggestions.length >= SUGGESTIONS_MAX;
+  const questionsPosees = a.questions.flatMap((j) =>
+    j.items.map((q) => ({ id: q.id, question: q.question, repondue: q.horsPage === false || (!!q.id && !!precisions?.some((p) => p.questionId === q.id)) }))
+  );
+  const proposees = suggestions ? propositions(questionsPosees, suggestions) : [];
+  const relecture = editeur && (
+    <div className={styles.suggestionEditeur}>
+      <label className={styles.precisionLabel}>
+        {editeur.index === null ? "Nouvelle question suggérée" : "Modifier la question suggérée"}
+        <span>Relisez : retirez tout détail propre à un client (nom, montant, entreprise).</span>
+        <input
+          className={styles.champ}
+          value={editeur.texte}
+          maxLength={SUGGESTION_MAX}
+          autoFocus
+          onChange={(e) => setEditeur({ ...editeur, texte: e.target.value })}
+          onKeyDown={(e) => e.key === "Enter" && validerEditeur()}
+        />
+      </label>
+      <p className={styles.precisionPortee}>Visible par tous les destinataires, dans l&apos;assistant.</p>
+      <div className={styles.precisionActions}>
+        <button type="button" className={styles.principal} disabled={!editeur.texte.trim()} onClick={validerEditeur}>
+          Publier
+        </button>
+        <button type="button" className={styles.secondaire} onClick={() => setEditeur(null)}>
+          Annuler
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className={styles.activite}>
       <div className={styles.tuiles}>
@@ -223,6 +306,8 @@ export function ActivitePage({ id, onMessage }: { id: string; onMessage?: (m: st
               {j.items.map((q, i) => {
                 const completee = !!q.id && !!precisions?.some((p) => p.questionId === q.id);
                 const repondable = q.horsPage === true && !!q.id && !completee && !!precisions;
+                const suggerable = (q.horsPage === false || completee) && !!suggestions;
+                const suggeree = !!suggestions && estSuggeree(q, suggestions, questionsPosees);
                 return (
                   <div key={q.id ?? i} className={styles.question} data-hors-page={q.horsPage && !completee ? "oui" : "non"} data-completee={completee ? "oui" : "non"}>
                     <div className={styles.questionLigne}>
@@ -236,6 +321,22 @@ export function ActivitePage({ id, onMessage }: { id: string; onMessage?: (m: st
                       ) : (
                         <small>{q.horsPage === true ? "la page ne le dit pas" : q.horsPage === false ? "répondu" : "—"}</small>
                       )}
+                      {suggerable &&
+                        (suggeree ? (
+                          <span className={styles.suggerer} data-actif="oui">
+                            ★ Suggérée
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className={styles.suggerer}
+                            disabled={plein}
+                            title={plein ? `${SUGGESTIONS_MAX} questions suggérées au plus : retirez-en une d'abord.` : "Proposer cette question aux visiteurs"}
+                            onClick={() => proposer(q.question, q.id)}
+                          >
+                            ☆ Suggérer
+                          </button>
+                        ))}
                     </div>
                     {ouvert === q.id && formulaire(q.id!)}
                   </div>
@@ -248,7 +349,79 @@ export function ActivitePage({ id, onMessage }: { id: string; onMessage?: (m: st
           )}
         </section>
 
-        <section className={styles.bloc} aria-label="Précisions de l'auteur">
+        <section className={styles.bloc} aria-label="Questions suggérées aux visiteurs">
+          <h2 className={styles.blocTitre}>
+            Questions suggérées aux visiteurs <small>{SUGGESTIONS_MAX} au plus, dans l&apos;assistant</small>
+          </h2>
+          {suggestionsErreur && <p className={styles.aide}>{suggestionsErreur}</p>}
+          {suggestions && (
+            <ol className={styles.suggestions}>
+              {suggestions.map((s, i) =>
+                editeur?.index === i ? (
+                  <li key={i}>{relecture}</li>
+                ) : (
+                  <li key={i} className={styles.suggestion}>
+                    <span className={styles.ordre}>
+                      <button type="button" aria-label="Monter" disabled={i === 0} onClick={() => deplacer(i, -1)}>
+                        ↑
+                      </button>
+                      <button type="button" aria-label="Descendre" disabled={i === suggestions.length - 1} onClick={() => deplacer(i, 1)}>
+                        ↓
+                      </button>
+                    </span>
+                    <span className={styles.suggestionTexte}>{s.texte}</span>
+                    {s.origine === "defaut" && <span className={styles.pastilleGrise}>par défaut</span>}
+                    {s.origine === "question" && s.questionId && !questionsPosees.some((q) => q.id === s.questionId && q.question.trim() === s.texte) && (
+                      <span className={styles.pastilleGrise}>reformulée</span>
+                    )}
+                    {s.origine !== "defaut" && (
+                      <button type="button" className={styles.lienBleu} onClick={() => setEditeur({ index: i, texte: s.texte, origine: s.origine, ...(s.questionId ? { questionId: s.questionId } : {}) })}>
+                        Modifier
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className={styles.lienRouge}
+                      onClick={() => void enregistrerSuggestions(suggestions.filter((_, k) => k !== i), "Question suggérée retirée.")}
+                    >
+                      Retirer
+                    </button>
+                  </li>
+                )
+              )}
+            </ol>
+          )}
+          {editeur?.index === null && relecture}
+          {suggestions && !editeur && (
+            <button type="button" className={styles.precisionAjout} disabled={plein} onClick={() => proposer("")}>
+              {plein ? `${SUGGESTIONS_MAX} questions suggérées au plus` : "+ Écrire une question suggérée"}
+            </button>
+          )}
+          {proposees.length > 0 && (
+            <>
+              <h3 className={styles.sousTitre}>Proposées d&apos;après les questions posées</h3>
+              {proposees.map((p) => (
+                <div key={p.texte} className={styles.proposition}>
+                  <div className={styles.propositionTexte}>
+                    <b>{p.texte}</b>
+                    <span>
+                      posée {p.occurrences} fois{p.formulations > 1 ? ` · ${p.formulations} formulations proches` : ""}
+                    </span>
+                  </div>
+                  <button type="button" className={styles.principalPetit} disabled={plein || !!editeur} onClick={() => proposer(p.texte, p.questionId)}>
+                    Ajouter
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
+          <p className={styles.aide}>
+            Rien n&apos;est montré aux visiteurs sans votre accord : relisez chaque question, une formulation peut révéler un détail propre à un client. Seules les
+            questions auxquelles l&apos;assistant sait répondre sont proposées.
+          </p>
+        </section>
+
+        <section className={`${styles.bloc} ${styles.pleineLargeur}`} aria-label="Précisions de l'auteur">
           <h2 className={styles.blocTitre}>
             Précisions de l&apos;auteur <small>lues par l&apos;assistant avec la page</small>
           </h2>

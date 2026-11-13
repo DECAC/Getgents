@@ -7,6 +7,7 @@ import VuePartage from "./VuePartage";
 import EcranCode from "./EcranCode";
 import { decisionAcces, protectionActive } from "@/lib/server/accesPartage";
 import { nomAuteur } from "@/lib/server/activitePages";
+import { suggestionsDeLaPage } from "@/lib/server/suggestionsPages";
 import { masquerEmail, nomCookie } from "@/lib/accesCode";
 import styles from "./partage.module.css";
 
@@ -56,12 +57,15 @@ export default async function PagePartage({ params }: { params: { jeton: string 
     );
 
   const protegee = await protectionActive(a.pageId).catch(() => false);
+  // Questions suggérées choisies par l'auteur ; sans choix (ou sans migration 026), celles par défaut.
+  const choisies = assistant ? await suggestionsDeLaPage(a.pageId).catch(() => null) : null;
+  const amorces = choisies ? choisies.map((s) => s.texte) : amorcesAssistant(a.format);
   return (
     <VuePartage
       jeton={a.jeton}
       titre={a.titre}
       assistant={assistant}
-      amorces={amorcesAssistant(a.format)}
+      amorces={amorces}
       bandeau={
         <>
           <span className={styles.titre}>{a.titre}</span>

@@ -564,8 +564,21 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   jamais publiée ; le « sujet » (prérempli avec elle, modifiable) ne sert
   qu'au repérage. 40 précisions au plus, 1 500 caractères chacune. Vérifié
   au navigateur avec un faux modèle : hors page avant, réponse avec la
-  précision après, rien côté visiteur, modifier, retirer. Lot suivant :
-  domaine séparé.
+  précision après, rien côté visiteur, modifier, retirer. **Questions
+  suggérées (13/11, écrit, NON déployé ; `lib/suggestionsPage.ts`,
+  `lib/server/suggestionsPages.ts`, migration 026 à passer AVANT — sans elle
+  les bulles par défaut restent)** : les bulles de l'assistant (4 au plus,
+  ordonnées) remplacent « Résume ce document »… par des questions CHOISIES et
+  RELUES par l'auteur — jamais publiées automatiquement : une question peut
+  porter un détail propre à un client (« chez Acme »). « ☆ Suggérer » sur une
+  question répondue (ou précisée) ; propositions calculées SANS modèle
+  (`propositions` : mêmes mots à la ponctuation, aux accents et à la casse
+  près, posées ≥ 2 fois, répondues). Une suggestion REFORMULÉE couvre encore
+  sa question d'origine et ses variantes (`clesSuggerees`) — sinon la même
+  question restait proposée (vu au test). Rien n'indique au visiteur
+  qu'elles viennent d'autres visiteurs. Vérifié au navigateur (faux modèle) :
+  regroupement, reformulation, plafond de 4, ordre, retrait, bulles chez le
+  visiteur sans la question d'origine. Lot suivant : domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
