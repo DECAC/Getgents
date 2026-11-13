@@ -209,7 +209,7 @@ export async function activitePage(ownerId: string, pageId: string): Promise<Res
   } else {
     const [l, q] = await Promise.all([
       sb.from("pages_lectures").select("jeton, jour, debut, duree_s, profondeur, appareil, version").eq("page_id", pageId).limit(5000),
-      sb.from("pages_questions").select("jour, question, hors_page").eq("page_id", pageId).order("jour", { ascending: false }).limit(1000),
+      sb.from("pages_questions").select("id, jour, question, hors_page").eq("page_id", pageId).order("jour", { ascending: false }).limit(1000),
     ]);
     if (tableAbsente(l.error) || tableAbsente(q.error)) return { ok: false, raison: "migration_manquante" };
     if (l.error) throw new Error(l.error.message);
@@ -223,7 +223,7 @@ export async function activitePage(ownerId: string, pageId: string): Promise<Res
       appareil: d.appareil,
       version: d.version,
     }));
-    questions = (q.data ?? []).map((d) => ({ jour: d.jour, question: d.question, horsPage: d.hors_page }));
+    questions = (q.data ?? []).map((d) => ({ id: d.id, jour: d.jour, question: d.question, horsPage: d.hors_page }));
   }
   return { ok: true, activite: syntheseActivite(destinataires, lectures, questions) };
 }

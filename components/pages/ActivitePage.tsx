@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { dureeLisible, ilYA, type Activite } from "@/lib/activitePage";
 import { initiales } from "@/lib/pagesGetsite";
 import styles from "./pages.module.css";
@@ -23,9 +23,96 @@ const quand = (iso: string) => {
  * Les deux colonnes ne partagent AUCUNE clé : on ne peut pas rattacher une
  * question à un lecteur.
  */
-export function ActivitePage({ id }: { id: string }) {
+interface Precision {
+  id: string;
+  questionId: string | null;
+  sujet: string;
+  texte: string;
+  createdAt: string;
+}
+
+export function ActivitePage({ id, onMessage }: { id: string; onMessage?: (m: string) => void }) {
   const [a, setA] = useState<Activite | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [precisions, setPrecisions] = useState<Precision[] | null>(null);
+  const [precisionsErreur, setPrecisionsErreur] = useState<string | null>(null);
+  /** Formulaire ouvert : une question (son id), une précision (« p:<id> »), ou une nouvelle (« nouvelle »). */
+  const [ouvert, setOuvert] = useState<string | null>(null);
+  const [sujet, setSujet] = useState("");
+  const [texte, setTexte] = useState("");
+  const [enCours, setEnCours] = useState(false);
+  const [formErreur, setFormErreur] = useState<string | null>(null);
+
+  const chargerPrecisions = useCallback(async () => {
+    const r = await fetch(`/api/pages/${encodeURIComponent(id)}/complements`, { credentials: "include" });
+    const j = (await r.json().catch(() => ({}))) as { complements?: Precision[]; error?: string };
+    if (r.ok) {
+      setPrecisions(j.complements ?? []);
+      setPrecisionsErreur(null);
+    } else setPrecisionsErreur(j.error || "Les précisions n'ont pas pu être chargées.");
+  }, [id]);
+
+  useEffect(() => {
+    void chargerPrecisions();
+  }, [chargerPrecisions]);
+
+  const ouvrir = (cle: string, s: string, t: string) => {
+    setOuvert(cle);
+    setSujet(s);
+    setTexte(t);
+    setFormErreur(null);
+  };
+
+  async function enregistrer(questionId: string | null) {
+    if (!texte.trim() || enCours) return;
+    setEnCours(true);
+    setFormErreur(null);
+    const modif = ouvert?.startsWith("p:") ? ouvert.slice(2) : null;
+    const r = await fetch(`/api/pages/${encodeURIComponent(id)}/complements${modif ? `/${modif}` : ""}`, {
+      method: modif ? "PATCH" : "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sujet, texte, questionId }),
+    });
+    const j = (await r.json().catch(() => ({}))) as { error?: string };
+    setEnCours(false);
+    if (!r.ok) return setFormErreur(j.error || "L'enregistrement a échoué. Réessayez.");
+    setOuvert(null);
+    onMessage?.(modif ? "Précision modifiée." : "Précision ajoutée : l'assistant s'en sert dès maintenant.");
+    void chargerPrecisions();
+  }
+
+  async function retirer(p: Precision) {
+    if (!window.confirm("Retirer cette précision ? L'assistant ne s'en servira plus.")) return;
+    const r = await fetch(`/api/pages/${encodeURIComponent(id)}/complements/${p.id}`, { method: "DELETE", credentials: "include" });
+    if (r.ok) {
+      onMessage?.("Précision retirée.");
+      void chargerPrecisions();
+    } else onMessage?.("Le retrait a échoué. Réessayez.");
+  }
+
+  const formulaire = (questionId: string | null) => (
+    <div className={styles.precisionForm}>
+      <label className={styles.precisionLabel}>
+        Sujet <span>(pour vous repérer — jamais montré aux visiteurs)</span>
+        <input className={styles.champ} value={sujet} maxLength={300} onChange={(e) => setSujet(e.target.value)} />
+      </label>
+      <label className={styles.precisionLabel}>
+        Votre précision <span>— l&apos;assistant s&apos;en servira pour répondre</span>
+        <textarea className={styles.precisionTexte} value={texte} maxLength={1500} rows={3} autoFocus onChange={(e) => setTexte(e.target.value)} />
+      </label>
+      <p className={styles.precisionPortee}>Elle vaut pour tous les destinataires de la page, sans leur être signalée.</p>
+      {formErreur && <p className={styles.erreur}>{formErreur}</p>}
+      <div className={styles.precisionActions}>
+        <button type="button" className={styles.principal} disabled={!texte.trim() || enCours} onClick={() => void enregistrer(questionId)}>
+          {enCours ? "Enregistrement…" : "Enregistrer"}
+        </button>
+        <button type="button" className={styles.secondaire} onClick={() => setOuvert(null)}>
+          Annuler
+        </button>
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     let vivant = true;
@@ -43,6 +130,11 @@ export function ActivitePage({ id }: { id: string }) {
 
   if (erreur) return <p className={styles.erreur}>{erreur}</p>;
   if (!a) return <p className={styles.sous}>Chargement…</p>;
+
+  // « Sans réponse » : ce qui reste à traiter — une question déjà précisée n'en est plus.
+  const sansReponse = a.questions
+    .flatMap((j) => j.items)
+    .filter((q) => q.horsPage === true && !(q.id && precisions?.some((p) => p.questionId === q.id))).length;
 
   return (
     <div className={styles.activite}>
@@ -63,17 +155,17 @@ export function ActivitePage({ id }: { id: string }) {
           <b>{a.totalQuestions}</b>
           <span>
             question{a.totalQuestions > 1 ? "s" : ""} posée{a.totalQuestions > 1 ? "s" : ""}
-            {a.horsPage ? ` · ${a.horsPage} sans réponse dans la page` : ""}
+            {sansReponse ? ` · ${sansReponse} sans réponse` : ""}
           </span>
         </div>
         <div className={styles.tuile}>
           <b>{ilYA(a.derniere)}</b>
-          <span>dernière ouverture</span>
+          <span>dernière ouverture{precisions?.length ? ` · ${precisions.length} précision${precisions.length > 1 ? "s" : ""} de l'auteur` : ""}</span>
         </div>
       </div>
 
       <div className={styles.activiteCols}>
-        <section className={styles.bloc} aria-label="Lectures partagées">
+        <section className={`${styles.bloc} ${styles.pleineLargeur}`} aria-label="Lectures partagées">
           <h2 className={styles.blocTitre}>
             Lectures partagées <small>avec l&apos;accord du destinataire</small>
           </h2>
@@ -128,15 +220,72 @@ export function ActivitePage({ id }: { id: string }) {
           {a.questions.map((j) => (
             <div key={j.jour}>
               <div className={styles.jour}>{jourLisible(j.jour)}</div>
-              {j.items.map((q, i) => (
-                <div key={i} className={styles.question} data-hors-page={q.horsPage ? "oui" : "non"}>
-                  <span>{q.question}</span>
-                  <small>{q.horsPage === true ? "la page ne le dit pas" : q.horsPage === false ? "répondu" : "—"}</small>
-                </div>
-              ))}
+              {j.items.map((q, i) => {
+                const completee = !!q.id && !!precisions?.some((p) => p.questionId === q.id);
+                const repondable = q.horsPage === true && !!q.id && !completee && !!precisions;
+                return (
+                  <div key={q.id ?? i} className={styles.question} data-hors-page={q.horsPage && !completee ? "oui" : "non"} data-completee={completee ? "oui" : "non"}>
+                    <div className={styles.questionLigne}>
+                      <span>{q.question}</span>
+                      {completee ? (
+                        <small>✓ précisée par vous</small>
+                      ) : repondable && ouvert !== q.id ? (
+                        <button type="button" className={styles.repondre} onClick={() => ouvrir(q.id!, q.question, "")}>
+                          Répondre
+                        </button>
+                      ) : (
+                        <small>{q.horsPage === true ? "la page ne le dit pas" : q.horsPage === false ? "répondu" : "—"}</small>
+                      )}
+                    </div>
+                    {ouvert === q.id && formulaire(q.id!)}
+                  </div>
+                );
+              })}
             </div>
           ))}
-          {a.horsPage > 0 && <p className={styles.aide}>« La page ne le dit pas » : l&apos;information manquait. C&apos;est ce qu&apos;il faudrait ajouter à la page.</p>}
+          {a.horsPage > 0 && (
+            <p className={styles.aide}>« La page ne le dit pas » : l&apos;information manquait. Répondez, et l&apos;assistant s&apos;en servira pour les prochains visiteurs.</p>
+          )}
+        </section>
+
+        <section className={styles.bloc} aria-label="Précisions de l'auteur">
+          <h2 className={styles.blocTitre}>
+            Précisions de l&apos;auteur <small>lues par l&apos;assistant avec la page</small>
+          </h2>
+          {precisionsErreur && <p className={styles.aide}>{precisionsErreur}</p>}
+          {precisions?.map((p) => (
+            <div key={p.id} className={styles.precision}>
+              {ouvert === `p:${p.id}` ? (
+                formulaire(p.questionId)
+              ) : (
+                <>
+                  {p.sujet && <div className={styles.precisionSujet}>{p.sujet}</div>}
+                  <div className={styles.precisionCorps}>{p.texte}</div>
+                  <div className={styles.precisionMeta}>
+                    Ajoutée le {new Date(p.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: "Europe/Paris" })} ·{" "}
+                    <button type="button" className={styles.lienBleu} onClick={() => ouvrir(`p:${p.id}`, p.sujet, p.texte)}>
+                      Modifier
+                    </button>{" "}
+                    ·{" "}
+                    <button type="button" className={styles.lienRouge} onClick={() => void retirer(p)}>
+                      Retirer
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+          {precisions && (ouvert === "nouvelle" ? (
+            <div className={styles.precision}>{formulaire(null)}</div>
+          ) : (
+            <button type="button" className={styles.precisionAjout} onClick={() => ouvrir("nouvelle", "", "")}>
+              + Ajouter une précision
+            </button>
+          ))}
+          <p className={styles.aide}>
+            Une précision vaut pour <b>tous</b> les destinataires de la page. Pour une condition propre à un client, écrivez-lui directement. Quand une précision
+            devient importante, ajoutez-la plutôt à la page elle-même (nouvelle version depuis Claude).
+          </p>
         </section>
       </div>
     </div>

@@ -11,6 +11,7 @@ import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import { contenuLigneSse, sansMarqueur } from "@/lib/activitePage";
 import { enregistrerQuestion, marquerQuestion } from "@/lib/server/activitePages";
 import { getUser } from "@/lib/server/session";
+import { complementsDeLaPage } from "@/lib/server/complementsPages";
 
 /**
  * Laisse passer le flux tel quel, en lisant au passage le DÉBUT de la
@@ -82,7 +83,13 @@ export async function POST(req: Request, { params }: { params: { jeton: string }
     );
 
   const modele = modeleConversationEffectif(undefined).id;
+  // Précisions de l'auteur : lues avec la page, invisibles comme telles pour le visiteur.
+  const complements = await complementsDeLaPage(a.pageId).catch((e) => {
+    console.error(JSON.stringify({ tag: "getgents:activite", event: "complements_illisibles", detail: (e as Error).message }));
+    return [];
+  });
   const consigne = consigneAssistant({
+    complements,
     titre: a.titre,
     format: a.format,
     contenu: a.contenu,
@@ -95,6 +102,7 @@ export async function POST(req: Request, { params }: { params: { jeton: string }
       ownerId: a.ownerId,
       questions: a.questions + 1,
       consigneCaracteres: consigne.length,
+      complements: complements.length,
       historique: historique.length,
       modele,
     })

@@ -105,6 +105,7 @@ export interface LigneLecture {
 }
 
 export interface LigneQuestion {
+  id?: string;
   jour: string;
   question: string;
   horsPage: boolean | null;
@@ -137,7 +138,7 @@ export interface Activite {
   /** ISO si connue à l'heure près (lecture partagée), sinon le jour (AAAA-MM-JJ). */
   derniere: string | null;
   lecteurs: LecteurActivite[];
-  questions: { jour: string; items: { question: string; horsPage: boolean | null }[] }[];
+  questions: { jour: string; items: { id?: string; question: string; horsPage: boolean | null }[] }[];
   totalQuestions: number;
   horsPage: number;
 }
@@ -172,10 +173,10 @@ export function syntheseActivite(
   // Ceux qui ont partagé d'abord, du plus récent au plus ancien ; les autres dans l'ordre d'envoi.
   lecteurs.sort((a, b) => Number(b.partage) - Number(a.partage) || (b.derniere ?? "").localeCompare(a.derniere ?? ""));
 
-  const parJour = new Map<string, { question: string; horsPage: boolean | null }[]>();
+  const parJour = new Map<string, { id?: string; question: string; horsPage: boolean | null }[]>();
   for (const q of questions) {
     const l = parJour.get(q.jour) ?? [];
-    l.push({ question: q.question, horsPage: q.horsPage });
+    l.push({ ...(q.id ? { id: q.id } : {}), question: q.question, horsPage: q.horsPage });
     parJour.set(q.jour, l);
   }
   const jours = Array.from(parJour.keys()).sort().reverse();

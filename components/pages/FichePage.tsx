@@ -152,7 +152,7 @@ export function FichePage({ id }: { id: string }) {
       </div>
 
       {onglet === "activite" ? (
-        <ActivitePage id={page.id} />
+        <ActivitePage id={page.id} onMessage={signaler} />
       ) : (
       <div className={styles.deux}>
         <section className={styles.apercu} aria-label="Aperçu de la page">

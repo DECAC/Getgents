@@ -90,7 +90,7 @@ export default function Confidentialite({
         </div>
 
         <h3 className={styles.confSection}>Les réponses de l&apos;assistant</h3>
-        <p className={styles.confTexte}>Elles sont produites par une IA, d&apos;après le contenu de cette page uniquement. Elles peuvent se tromper et n&apos;engagent pas l&apos;auteur.</p>
+        <p className={styles.confTexte}>Elles sont produites par une IA, à partir du contenu de cette page. Elles peuvent se tromper et n&apos;engagent pas l&apos;auteur.</p>
         <h3 className={styles.confSection}>Qui traite ces données</h3>
         <p className={styles.confTexte}>
           Getgents héberge la page et l&apos;assistant. Pour répondre, votre question et le texte de la page sont envoyés à un fournisseur de modèles d&apos;IA.

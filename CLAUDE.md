@@ -549,7 +549,23 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   de l'onglet (`purgerActivite`). Vérifié au navigateur (mémoire locale, faux fournisseur d'IA) :
   widget, refus retenu, marqueur jamais montré, 3 ouvertures dont 2
   anonymes, profondeur 100, questions marquées. Puis en production par
-  l'utilisateur (13/11) : tout concluant. Lot suivant : domaine séparé.
+  l'utilisateur (13/11) : tout concluant. **Précisions de l'auteur (13/11,
+  écrit, NON déployé ; `lib/server/complementsPages.ts`, migration 025 à
+  passer AVANT — sans elle l'assistant lit la page seule, rien ne casse)** :
+  « Répondre » sous une question « la page ne le dit pas » (ou « + Ajouter
+  une précision ») ; la réponse est lue par l'assistant avec la page, pour
+  TOUS les destinataires (choix de l'utilisateur). INVISIBLES pour le
+  visiteur (choix de l'utilisateur : qu'il ne se sente pas suivi) — ni
+  pastille ni sous-titre ; la consigne (`blocComplements`) dit de s'en
+  servir sans mentionner leur existence, SANS prétendre qu'elles sont dans
+  le document. En contrepartie, plus aucun texte ne dit « d'après ce
+  document UNIQUEMENT » / « page SEULE » (sous-titre, mention, page de
+  confidentialité) : ce serait devenu faux. La question du visiteur n'est
+  jamais publiée ; le « sujet » (prérempli avec elle, modifiable) ne sert
+  qu'au repérage. 40 précisions au plus, 1 500 caractères chacune. Vérifié
+  au navigateur avec un faux modèle : hors page avant, réponse avec la
+  précision après, rien côté visiteur, modifier, retirer. Lot suivant :
+  domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

@@ -83,7 +83,7 @@ export default function AssistantDocument({
         <span className={styles.avatar} aria-hidden="true">✦</span>
         <div>
           <div className={styles.assistantNom}>Assistant du document</div>
-          <div className={styles.assistantSous}>D&apos;après ce document uniquement</div>
+          <div className={styles.assistantSous}>Vos questions sur ce document</div>
         </div>
         <div className={styles.outils}>
           <button type="button" className={`${styles.outil} ${styles.outilAgrandir}`} onClick={onAgrandir} aria-label={agrandi ? "Réduire" : "Agrandir"}>
@@ -150,7 +150,7 @@ export default function AssistantDocument({
         </button>
       </form>
       <p className={styles.mention}>
-        Réponses d&apos;une IA, d&apos;après cette page seule : elles peuvent se tromper et n&apos;engagent pas l&apos;auteur. ·{" "}
+        Réponses d&apos;une IA : elles peuvent se tromper et n&apos;engagent pas l&apos;auteur. ·{" "}
         <button type="button" className={styles.mentionLien} onClick={onConfidentialite}>
           Confidentialité
         </button>
