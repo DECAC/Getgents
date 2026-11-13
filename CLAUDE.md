@@ -684,7 +684,12 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   autre compte), efface les jetons de l'adresse. Lien expiré : message qui
   dit quoi faire. Vérifié au navigateur SANS Supabase (erreur expirée,
   jetons effacés, ancre ordinaire intacte) ; le formulaire avec une vraie
-  session, PAS vérifié d'ici.
+  session, PAS vérifié d'ici. **Essai réel CONCLUANT (13/11)**, d'abord
+  par le fragment, puis par le modèle personnalisé
+  (`supabase/templates/invitation.html`, collé dans Supabase → Invite user,
+  objet « Votre accès à Getgents Pages ») : le chemin `/auth/confirm` est
+  celui en service. Modifier le modèle exige le SMTP personnalisé (Brevo),
+  pas l'offre Pro.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
