@@ -411,12 +411,23 @@
   overflow-wrap: anywhere;
 }
 
+/* Statut d'une action (« Lien copié »…) : FLOTTANT, en bas au centre. Dans le
+   flux, il poussait l'aperçu et le volet de droite, qui remontaient à sa
+   disparition. */
 .message {
-  align-self: flex-start;
-  padding: 8px 14px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--success) 12%, transparent);
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 50;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--success) 30%, var(--line));
+  background: color-mix(in srgb, var(--success) 14%, var(--card));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
   font-size: 13px;
+  pointer-events: none;
 }
 
 .deux {
