@@ -396,7 +396,7 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (18 contrôles, `next dev` : en `next start` la mémoire locale est refusée,
   c'est voulu) et au navigateur (clic → retour vers claude.ai). **Essai
   réel CONCLUANT dans Claude (12/11)** ; la route d'essai `/api/mcp/<clé>`
-  est RETIRÉE — `MCP_ESSAI_CLE` ne sert plus, à supprimer sur Vercel. **Lot 2 — gérer
+  est RETIRÉE — `MCP_ESSAI_CLE` ne sert plus, SUPPRIMÉE de Vercel (13/11). **Lot 2 — gérer
   ses partages (12/11)** : section « Mes partages » de /compte
   (`MesPartages`, `/api/partages`, révocation `DELETE /api/partages/<jeton>`)
   et deux outils du connecteur, `lister_partages` (recherche sans accents
@@ -1014,8 +1014,8 @@ essai sur l'adresse Railway ; DNS ; Vercel gardé une semaine en secours.
 **Bascule MISE DE CÔTÉ (12/11, décision de l'utilisateur)** : Vercel reste
 l'hébergeur. Arrêtée au cron de test (refusé en 401 : secret différent entre
 les deux services). Les réglages de l'étape 1 restent, ils valent aussi sur
-Vercel. Le projet Railway est à supprimer ou mettre en pause côté
-utilisateur, sinon il consomme sans trafic.
+Vercel. Le projet Railway est passé sur l'offre GRATUITE (13/11) : plus de
+facture, mais il existe encore — à supprimer si la bascule est abandonnée.
 
 ## Le dépôt GitHub
 
