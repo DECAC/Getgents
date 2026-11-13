@@ -1,6 +1,8 @@
 import { createHash, randomUUID } from "crypto";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import type { FormatArtefact } from "@/lib/mcpPartage";
+import { PlafondAtteint } from "@/lib/offre";
+import { plafondsDuCompte } from "@/lib/server/offre";
 
 /**
  * Pages (rubrique GetSite, migration 022) : le document partagé, sa version
@@ -100,6 +102,8 @@ export async function trouverOuCreerPage(
       if (d.assistant) existante.assistant = true;
       return { page: existante, nouvelle: false };
     }
+    const plafond = plafondsDuCompte(ownerId)?.pages;
+    if (plafond != null && Array.from(m.pages.values()).filter((p) => p.ownerId === ownerId && !p.supprimeeAt).length >= plafond) throw new PlafondAtteint("pages", plafond);
     const page = {
       id: randomUUID(),
       ownerId,
@@ -134,6 +138,13 @@ export async function trouverOuCreerPage(
       page.assistant = true;
     }
     return { page, nouvelle: false };
+  }
+  // Offre « pages » : plafond vérifié pour une NOUVELLE page seulement (lib/offre.ts).
+  const plafond = plafondsDuCompte(ownerId)?.pages;
+  if (plafond != null) {
+    const { count, error: e2 } = await sb.from("pages").select("id", { count: "exact", head: true }).eq("owner_id", ownerId).is("supprimee_at", null);
+    if (e2) throw new Error(e2.message);
+    if ((count ?? 0) >= plafond) throw new PlafondAtteint("pages", plafond);
   }
   const { data, error } = await sb
     .from("pages")
@@ -411,6 +422,15 @@ export async function supprimerPage(ownerId: string, id: string): Promise<boolea
 }
 
 /** Contenu d'une page pour l'aperçu de son PROPRIÉTAIRE (fiche, vignettes). */
+/** Identifiants des pages d'un compte (supprimées comprises : leurs questions du mois comptent). */
+export async function idsDesPages(ownerId: string): Promise<string[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return Array.from(memoire().pages.values()).filter((p) => p.ownerId === ownerId).map((p) => p.id);
+  const { data, error } = await sb.from("pages").select("id").eq("owner_id", ownerId).limit(1000);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((l) => (l as { id: string }).id);
+}
+
 export async function contenuPourProprietaire(ownerId: string, id: string): Promise<Page | null> {
   return lirePage(ownerId, id);
 }

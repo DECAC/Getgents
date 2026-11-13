@@ -639,6 +639,38 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   de l'essai local : `upgrade-insecure-requests` réécrivait le domaine local
   en https — levée SEULEMENT pour un domaine de contenu en `http://`. NON
   vérifié : Safari/iPhone réel, et la réécriture par hôte sur Vercel.
+- **Offre « Getgents Pages », sur invitation (13/11 ; `lib/offre.ts`,
+  `lib/server/offre.ts`)** — décisions de l'utilisateur : ouvrir les pages
+  SEULES à des invités, inscriptions toujours fermées (on invite depuis
+  Supabase → « Invite user »), marque « Getgents Pages » (pas « GetSite » en
+  premier plan : on a retiré les marques du premier plan le 12/11). Deux
+  offres : « complète » et « pages ». Les comptes complets sont LISTÉS dans
+  `COMPTES_COMPLETS` (identifiants Supabase) ; variable absente = tout le
+  monde complet, l'état d'avant. Fermeture à TROIS niveaux (masquer n'est
+  pas fermer) : menu (`produitSeul` de `SelecteurMode` : le nom du produit
+  à la place des modes), middleware (`/builder`, `/espace`, `/apercu`,
+  `/accueil`, `/myspace` → `/pages`, cookies de session recopiés sur la
+  redirection), gardes serveur (`refusOffrePages` dans les quatre gardes de
+  `gentGuard.ts` ET dans `/api/chat`, qui résout son quota à la main — un
+  test exige une garde dans toute route qui appelle `consommerSiPlateforme`).
+  Les gents DIFFUSÉS restent en ligne : leurs visiteurs ne passent pas par
+  ces gardes. Plafonds (validés) : 50 pages, 200 liens actifs, 500 questions
+  à l'assistant par mois (toutes ses pages, depuis le 1er à Paris) —
+  `PlafondAtteint`, 409 avec un message qui dit quoi faire, transmis tel
+  quel au modèle par le connecteur. Liens vérifiés AVANT de créer une page
+  (sinon un refus laisserait une page sans lien). Le plafond de questions
+  dit au VISITEUR « l'assistant fait une pause », jamais l'état du compte de
+  l'auteur ; une lecture en échec du compteur LAISSE PASSER (le quota de la
+  plateforme reste en place). Mon compte d'un compte « pages » : identité,
+  « Votre accès » (jauges), zone sensible — ni clé OpenRouter, ni
+  consommation des gents. Écran sans page : `AccueilPages` (coller / Claude),
+  pour TOUS les comptes. Vérifié au navigateur (mémoire locale, compte
+  `dev-local` hors liste) : redirections, menu, accueil, 50 pages puis 409,
+  200 liens puis 409 et message dans la fiche ; sans la liste, rien ne
+  change. NON vérifié : plafond de questions (il faut 500 appels à
+  l'assistant), Mon compte (exige Supabase), et en production. Pas fait :
+  la carte « Connecteur Claude » de la maquette (lire et révoquer les jetons
+  OAuth du compte).
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
@@ -1056,6 +1088,12 @@ fichiers — ce serait juridiquement faux.
 
 `SECRET_BOX_KEY` : sa perte rend **illisibles** toutes les clés OpenRouter
 enregistrées par les créateurs. Elle doit vivre ailleurs que sur Vercel.
+
+`COMPTES_COMPLETS` : identifiants Supabase (Authentication → Users → UID)
+des comptes qui gardent les GENTS, séparés par des virgules. Tout compte
+absent est « Getgents Pages ». Y mettre SON PROPRE identifiant AVANT de la
+régler, sinon on se ferme ses propres gents (la retirer rouvre tout). Lue
+à l'exécution (middleware et routes), un redéploiement suffit.
 
 `DOMAINE_CONTENU` = `www.getgents-pages.com` (domaine acheté chez
 Squarespace le 13/11). Le `www` est VOULU : Vercel a fait de `www` le

@@ -12,6 +12,10 @@ import { contenuLigneSse, sansMarqueur } from "@/lib/activitePage";
 import { enregistrerQuestion, marquerQuestion } from "@/lib/server/activitePages";
 import { getUser } from "@/lib/server/session";
 import { complementsDeLaPage } from "@/lib/server/complementsPages";
+import { debutDuMois } from "@/lib/offre";
+import { plafondsDuCompte } from "@/lib/server/offre";
+import { idsDesPages } from "@/lib/server/pages";
+import { questionsDepuis } from "@/lib/server/activitePages";
 
 /**
  * Laisse passer le flux tel quel, en lisant au passage le DÉBUT de la
@@ -71,6 +75,17 @@ export async function POST(req: Request, { params }: { params: { jeton: string }
   const corps = (await req.json().catch(() => ({}))) as { messages?: unknown };
   const historique = historiqueValide(corps.messages);
   if (!historique) return NextResponse.json({ error: "Question vide." }, { status: 400 });
+
+  // Offre « pages » : questions plafonnées par mois, pour toutes les pages de l'auteur.
+  const plafond = plafondsDuCompte(a.ownerId)?.questionsParMois;
+  if (plafond != null) {
+    const posees = await questionsDepuis(await idsDesPages(a.ownerId), debutDuMois()).catch(() => 0);
+    if (posees >= plafond) {
+      console.info(JSON.stringify({ tag: "getgents:offre", event: "plafond", genre: "questionsParMois" }));
+      // Au visiteur, pas le détail du compte de l'auteur : l'assistant fait une pause.
+      return NextResponse.json({ error: "L'assistant de cette page fait une pause jusqu'au début du mois prochain. Le document reste consultable." }, { status: 429 });
+    }
+  }
 
   const ctx = await contexteForUser(a.ownerId);
   if (!ctx.cle) return NextResponse.json({ error: INDISPONIBLE }, { status: 503 });

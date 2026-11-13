@@ -2,6 +2,8 @@ import { randomBytes } from "crypto";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import type { DemandePartage, Fidelite, FormatArtefact, ResumePartage } from "@/lib/mcpPartage";
 import { definirAssistantPage, lirePage, pagePourLien, trouverOuCreerPage, type Page } from "@/lib/server/pages";
+import { PlafondAtteint } from "@/lib/offre";
+import { plafondsDuCompte } from "@/lib/server/offre";
 
 /**
  * Artefacts partagés par le connecteur MCP. Table `artefacts_partages`
@@ -65,6 +67,10 @@ export async function enregistrerArtefact(
   proprietaire: Proprietaire,
   origine: string | null = null
 ): Promise<(ArtefactPartage & { nouvellePage: boolean }) | null> {
+  // Offre « pages » : liens actifs plafonnés, vérifié AVANT de créer une page
+  // (sinon un refus laisserait une page sans lien).
+  const plafond = plafondsDuCompte(proprietaire.userId)?.liensActifs;
+  if (plafond != null && (await liensActifs(proprietaire.userId)) >= plafond) throw new PlafondAtteint("liensActifs", plafond);
   let page: Page | null;
   let nouvellePage = false;
   if (d.pageId) {
@@ -129,6 +135,22 @@ export async function enregistrerArtefact(
     throw new Error(error.message);
   }
   return { ...a, nouvellePage };
+}
+
+/** Liens d'un compte qui s'ouvrent encore : ni révoqués, ni expirés. */
+export async function liensActifs(ownerId: string): Promise<number> {
+  const maintenant = new Date().toISOString();
+  const supabase = getSupabaseAdmin();
+  if (!supabase)
+    return Array.from(memoire().values()).filter((a) => a.ownerId === ownerId && !a.revokedAt && (!a.expiresAt || a.expiresAt > maintenant)).length;
+  const { count, error } = await supabase
+    .from("artefacts_partages")
+    .select("jeton", { count: "exact", head: true })
+    .eq("owner_id", ownerId)
+    .is("revoked_at", null)
+    .gt("expires_at", maintenant);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }
 
 /**

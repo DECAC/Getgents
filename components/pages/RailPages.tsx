@@ -4,16 +4,17 @@ import { useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { SelecteurMode } from "@/components/shared/SelecteurMode";
 import { MenuCompte } from "@/components/compte/MenuCompte";
+import type { Offre } from "@/lib/offre";
 import { useNavMobile } from "@/lib/context/NavMobileContext";
 import styles from "@/components/builder/BuilderRail.module.css";
 
 /**
  * Rail de la rubrique « Pages » (GetSite). Mêmes styles et même tiroir que le
  * rail du studio, pour que les trois modes se ressemblent ; ses entrées sont
- * les siennes. Pas de « + Nouvelle page » : une page naît dans Claude ou
- * ChatGPT — d'où « Connecter Claude / ChatGPT ».
+ * les siennes. Compte « pages » (lib/offre.ts) : le nom du produit à la
+ * place des modes — il n'y a rien d'autre où aller.
  */
-export function RailPages() {
+export function RailPages({ offre = "complete" }: { offre?: Offre }) {
   const { ouvert } = useNavMobile();
   const [replie, setReplie] = useState(false);
   const chemin = usePathname();
@@ -38,6 +39,7 @@ export function RailPages() {
         <SelecteurMode
           mode="pages"
           compact={replie}
+          produitSeul={offre === "pages" ? { nom: "Getgents Pages", sousTitre: "Partagez vos artefacts", href: "/pages" } : undefined}
           aCote={
             <button className={styles.railToggle} onClick={() => setReplie((r) => !r)} aria-label={replie ? "Déployer la colonne" : "Réduire la colonne"}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: replie ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }}>

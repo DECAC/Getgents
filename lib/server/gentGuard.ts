@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { refusOffrePages } from "@/lib/server/offre";
 import { gentPrive } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { requireUser, type SessionUser } from "@/lib/server/session";
@@ -56,6 +57,9 @@ export async function requireGentAccess(
 ): Promise<GuardOutcome<GentContext>> {
   const auth = await requireUser();
   if ("response" in auth) return { ok: false, response: auth.response };
+  // Offre « Getgents Pages » : les gents sont fermés à ce compte (lib/offre.ts).
+  const horsOffre = refusOffrePages(auth.user.id);
+  if (horsOffre) return { ok: false, response: horsOffre };
 
   const supabase = getSupabaseAdmin();
   if (!supabase) return refus(503, "supabase_not_configured");
@@ -94,6 +98,9 @@ export async function requireGentAccess(
 export async function requireDraftOwner(draftId: string): Promise<GuardOutcome<{ user: SessionUser }>> {
   const auth = await requireUser();
   if ("response" in auth) return { ok: false, response: auth.response };
+  // Offre « Getgents Pages » : les gents sont fermés à ce compte (lib/offre.ts).
+  const horsOffre = refusOffrePages(auth.user.id);
+  if (horsOffre) return { ok: false, response: horsOffre };
 
   const supabase = getSupabaseAdmin();
   if (!supabase) return refus(503, "supabase_not_configured");
@@ -157,6 +164,9 @@ export async function requireGentOrDraftAccess(
 ): Promise<GuardOutcome<SessionUser>> {
   const auth = await requireUser();
   if ("response" in auth) return { ok: false, response: auth.response };
+  // Offre « Getgents Pages » : les gents sont fermés à ce compte (lib/offre.ts).
+  const horsOffre = refusOffrePages(auth.user.id);
+  if (horsOffre) return { ok: false, response: horsOffre };
 
   const supabase = getSupabaseAdmin();
   if (!supabase) return refus(503, "supabase_not_configured");
@@ -235,6 +245,9 @@ export async function requireUserWithQuota(
 ): Promise<GuardOutcome<UserAvecContexte>> {
   const auth = await requireUser();
   if ("response" in auth) return { ok: false, response: auth.response };
+  // Offre « Getgents Pages » : les gents sont fermés à ce compte (lib/offre.ts).
+  const horsOffre = refusOffrePages(auth.user.id);
+  if (horsOffre) return { ok: false, response: horsOffre };
 
   const ctx = await contexteForUser(auth.user.id);
 

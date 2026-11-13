@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PlafondAtteint } from "@/lib/offre";
 import { requireUser } from "@/lib/server/session";
 import { listerPages, trouverOuCreerPage } from "@/lib/server/pages";
 import { alertesImport, nettoyerCollage, ORIGINE_COLLAGE } from "@/lib/importPage";
@@ -40,6 +41,10 @@ export async function POST(req: Request) {
     console.log(JSON.stringify({ tag: "getgents:pages", event: "page_collee", nouvelle, format, caracteres: contenu.length }));
     return NextResponse.json({ id: page.id, nouvelle });
   } catch (e) {
+    if (e instanceof PlafondAtteint) {
+      console.info(JSON.stringify({ tag: "getgents:offre", event: "plafond", genre: e.genre }));
+      return NextResponse.json({ error: e.message, plafond: e.genre }, { status: 409 });
+    }
     console.error(JSON.stringify({ tag: "getgents:pages", event: "collage_echoue", detail: (e as Error).message }));
     return NextResponse.json({ error: "La page n'a pas pu être créée. Réessayez." }, { status: 500 });
   }

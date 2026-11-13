@@ -7,6 +7,9 @@ import CleOpenRouter, { type EtatCle } from "@/components/compte/CleOpenRouter";
 import Consommation from "@/components/compte/Consommation";
 import Identifiants from "@/components/compte/Identifiants";
 import ZoneSensible from "@/components/compte/ZoneSensible";
+import VotreAcces from "@/components/compte/VotreAcces";
+import { offreDe, usageDuCompte } from "@/lib/server/offre";
+import { plafondsDe } from "@/lib/offre";
 import styles from "./compte.module.css";
 
 /**
@@ -119,6 +122,32 @@ export default async function ComptePage() {
 
   const user = await getUser();
   if (!user) redirect("/connexion?next=/compte");
+
+  // Offre « Getgents Pages » (lib/offre.ts) : ni gents, ni clé, ni
+  // consommation des gents — l'accès et ses plafonds à la place.
+  const plafonds = plafondsDe(offreDe(user.id));
+  if (plafonds) {
+    const usage = await usageDuCompte(user.id);
+    return (
+      <main className={styles.page}>
+        <div className={styles.contenu}>
+          <Link href="/pages" className={styles.retourHaut}>
+            <span className={styles.fleche} aria-hidden="true">
+              ←
+            </span>
+            Mes pages
+          </Link>
+          <h1 className={styles.titre}>Mon compte</h1>
+          <Identifiants email={user.confirmedEmail} nomAffiche={user.nomAffiche} />
+          <VotreAcces plafonds={plafonds} usage={usage} />
+          <ZoneSensible email={user.confirmedEmail} />
+          <p className={styles.retour}>
+            <Link href="/pages">← Revenir à mes pages</Link>
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   const etatCle = await lireEtatCle(user.id);
 

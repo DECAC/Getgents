@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { GuideConnexion } from "./GuideConnexion";
+import { AccueilPages } from "./AccueilPages";
+import type { Offre } from "@/lib/offre";
 import { ImportPage } from "./ImportPage";
 import { libelleOrigine } from "@/lib/importPage";
 import { Vignette } from "./Vignette";
@@ -12,7 +14,7 @@ import styles from "./pages.module.css";
 const date = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 
 /** « Mes pages » : une carte par PAGE, quel que soit le nombre de destinataires. */
-export function ListePages() {
+export function ListePages({ offre = "complete" }: { offre?: Offre }) {
   const guide = useSearchParams().get("guide") === "1";
   const [pages, setPages] = useState<LignePage[] | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -35,6 +37,15 @@ export function ListePages() {
 
   if (guide) return <GuideConnexion titre="Connecter Claude à Getgents" />;
 
+  // Aucune page encore : les deux façons d'en créer une, à la place de la liste.
+  if (pages && pages.length === 0)
+    return (
+      <div className={styles.wrap}>
+        <AccueilPages offre={offre} onNouvelle={() => setImport(true)} />
+        {importOuvert && <ImportPage onFermer={() => setImport(false)} />}
+      </div>
+    );
+
   return (
     <div className={styles.wrap}>
       <div className={styles.listeTete}>
@@ -52,7 +63,6 @@ export function ListePages() {
 
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       {!pages && !erreur && <p className={styles.sous}>Chargement…</p>}
-      {pages && pages.length === 0 && <GuideConnexion />}
 
       {pages && pages.length > 0 && (
         <>

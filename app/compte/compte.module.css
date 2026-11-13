@@ -249,3 +249,56 @@
 .danger .sousTitre {
   color: var(--plum);
 }
+
+/* Offre « Getgents Pages » : plafonds */
+.offre {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--blue-tint);
+  color: #2d5aa6;
+  font-weight: 600;
+  font-size: 12px;
+}
+.jauges {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.jauge {
+  display: grid;
+  grid-template-columns: minmax(0, 190px) 1fr 70px;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+}
+.jaugeBarre {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.jaugeBarre i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--gold);
+}
+.jauge[data-plein] .jaugeBarre i {
+  background: var(--plum, #a03a5a);
+}
+.jaugeNombre {
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 520px) {
+  .jauge {
+    grid-template-columns: 1fr auto;
+  }
+  .jaugeBarre {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}

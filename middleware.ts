@@ -6,6 +6,7 @@ import { isAuthConfigured } from "@/lib/authConfig";
 import { politiqueCsp, nouveauNonce } from "@/lib/csp";
 import { authInjoignable } from "@/lib/delaiFetch";
 import { estDomaineContenu, lireDomaineContenu } from "@/lib/domaineContenu";
+import { cheminReserveAuxGents, offreDuCompte } from "@/lib/offre";
 
 /**
  * Rafraîchit la session et garde les pages privées.
@@ -109,7 +110,10 @@ export async function middleware(request: NextRequest) {
   if (encadrable) return avecCsp(response);
 
   if (!isAuthConfigured()) {
-    // Développement local sans Supabase : mode maquette, on ne redirige pas.
+    // Développement local sans Supabase : mode maquette, on ne redirige pas —
+    // sauf l'offre, essayée avec l'utilisateur local (`dev-local`).
+    if (process.env.NODE_ENV !== "production" && cheminReserveAuxGents(pathname) && offreDuCompte("dev-local", process.env.COMPTES_COMPLETS) === "pages")
+      return avecCsp(versPages(request));
     return avecCsp(response);
   }
 
@@ -145,6 +149,11 @@ export async function middleware(request: NextRequest) {
     return avecCsp(NextResponse.redirect(connexion));
   }
 
+  // Offre « Getgents Pages » (lib/offre.ts) : les pages des gents mènent à
+  // la rubrique Pages. Les routes serveur refusent de leur côté (403).
+  if (user && cheminReserveAuxGents(pathname) && offreDuCompte(user.id, process.env.COMPTES_COMPLETS) === "pages")
+    return avecCsp(versPages(request, response));
+
   // Le secret d'instance n'existe plus : les routes de données contrôlent
   // désormais le PROPRIÉTAIRE de chaque gent. Le cookie ayant été distribué à
   // tous les visiteurs pendant la vie du prototype, on l'efface activement
@@ -155,6 +164,17 @@ export async function middleware(request: NextRequest) {
   }
 
   return avecCsp(response);
+}
+
+function versPages(request: NextRequest, avecCookiesDe?: NextResponse): NextResponse {
+  const cible = request.nextUrl.clone();
+  cible.pathname = "/pages";
+  cible.search = "";
+  const r = NextResponse.redirect(cible);
+  // Les cookies de session rafraîchis par Supabase suivent la redirection :
+  // les perdre déconnecterait l'utilisateur.
+  for (const c of avecCookiesDe?.cookies.getAll() ?? []) r.cookies.set(c);
+  return r;
 }
 
 /** Réponse honnête quand l'authentification ne répond pas — jamais une attente sans fin. */

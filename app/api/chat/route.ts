@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { chatResponseFor, type ChatBody } from "@/lib/server/chatEngine";
 import { consommerSiPlateforme } from "@/lib/server/gentGuard";
 import { requireUser } from "@/lib/server/session";
+import { refusOffrePages } from "@/lib/server/offre";
 import { contexteForUser } from "@/lib/server/openRouterKey";
 import { messageCleOpenRouter } from "@/lib/openRouterKey";
 import { MOTEUR_ELYSEE } from "@/lib/elysee2027/moteur";
@@ -19,6 +20,10 @@ export async function POST(req: NextRequest) {
   // qu'aucun contrôle ne soit passé.
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
+  // Offre « Getgents Pages » : pas de conversation avec un gent (lib/offre.ts).
+  // Cette route résout son quota à la main : la garde centrale ne la couvre pas.
+  const horsOffre = refusOffrePages(auth.user.id);
+  if (horsOffre) return horsOffre;
 
   let body: ChatBody;
   try {

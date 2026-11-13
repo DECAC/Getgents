@@ -12,6 +12,7 @@
  * stockage est injecté. Testable sans serveur ni base.
  */
 
+import { PlafondAtteint } from "./offre";
 import { donneesPersonnelles, type DonneesPersonnelles } from "./donneesPersonnelles";
 
 export const FORMATS_ARTEFACT = ["html", "markdown", "svg", "react", "texte"] as const;
@@ -583,7 +584,9 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
             structuredContent: { lien: res.lien, page: res.pageId ?? null, objet: mail.objet, corps: mail.corps, fidelite },
           },
         };
-      } catch {
+      } catch (e) {
+        // Plafond de l'offre « pages » : un message à transmettre tel quel, pas une panne.
+        if (e instanceof PlafondAtteint) return echec(`${e.message} Dis-le à l'utilisateur ; ne réessaie pas.`);
         return echec("Le partage n'a pas pu être enregistré. Réessaie dans un instant.");
       }
     }

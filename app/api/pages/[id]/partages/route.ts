@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PlafondAtteint } from "@/lib/offre";
 import { requireUser } from "@/lib/server/session";
 import { enregistrerArtefact } from "@/lib/server/artefactsPartages";
 import { modeleMail, validerDemande } from "@/lib/mcpPartage";
@@ -25,6 +26,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     console.log(JSON.stringify({ tag: "getgents:pages", event: "partage_depuis_getgents", ownerId: auth.user.id }));
     return NextResponse.json({ lien, jeton: a.jeton, objet: mail.objet, corps: mail.corps });
   } catch (e) {
+    if (e instanceof PlafondAtteint) {
+      console.info(JSON.stringify({ tag: "getgents:offre", event: "plafond", genre: e.genre }));
+      return NextResponse.json({ error: e.message, plafond: e.genre }, { status: 409 });
+    }
     console.error(JSON.stringify({ tag: "getgents:pages", event: "partage_echoue", detail: (e as Error).message }));
     return NextResponse.json({ error: "Le lien n'a pas pu être créé. Réessayez." }, { status: 500 });
   }

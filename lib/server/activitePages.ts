@@ -163,6 +163,23 @@ export async function enregistrerQuestion(pageId: string | null, question: strin
   return data.id as string;
 }
 
+/**
+ * Questions posées depuis `depuis` (AAAA-MM-JJ) aux assistants des pages
+ * données — plafond mensuel de l'offre « pages ». Table absente : 0.
+ */
+export async function questionsDepuis(pageIds: string[], depuis: string): Promise<number> {
+  if (!pageIds.length) return 0;
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    const ids = new Set(pageIds);
+    return memoire().questions.filter((q) => ids.has(q.pageId) && q.jour >= depuis).length;
+  }
+  const { count, error } = await sb.from("pages_questions").select("id", { count: "exact", head: true }).in("page_id", pageIds).gte("jour", depuis);
+  if (tableAbsente(error)) return 0;
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
 /** Une fois la réponse écrite : l'information manquait-elle dans la page ? */
 export async function marquerQuestion(id: string, horsPage: boolean): Promise<void> {
   const sb = getSupabaseAdmin();

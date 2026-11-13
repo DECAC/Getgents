@@ -19,6 +19,7 @@ export function SelecteurMode({
   compact = false,
   enTete = false,
   aCote,
+  produitSeul,
 }: {
   /** Mode courant ; absent sur l'accueil, qui n'appartient à aucun des deux. */
   mode?: Mode;
@@ -30,7 +31,27 @@ export function SelecteurMode({
   enTete?: boolean;
   /** Commande posée sur la ligne du logo, à droite (le repli du rail). */
   aCote?: React.ReactNode;
+  /**
+   * Compte limité à un seul produit (offre « Getgents Pages », lib/offre.ts) :
+   * son nom à la place des modes, et le logo y ramène.
+   */
+  produitSeul?: { nom: string; sousTitre: string; href: string };
 }) {
+  if (produitSeul)
+    return (
+      <div className={[styles.wrap, compact ? styles.compact : ""].filter(Boolean).join(" ")}>
+        <a href={produitSeul.href} className={styles.logo} title={produitSeul.nom} aria-label={produitSeul.nom}>
+          <BrandIcon size={22} />
+        </a>
+        {!compact && (
+          <span className={styles.produit}>
+            <b>{produitSeul.nom}</b>
+            <small>{produitSeul.sousTitre}</small>
+          </span>
+        )}
+        {aCote && <span className={styles.aCote}>{aCote}</span>}
+      </div>
+    );
   return (
     <div className={[styles.wrap, compact ? styles.compact : "", enTete ? styles.enTete : ""].filter(Boolean).join(" ")}>
       <a href="/accueil" className={styles.logo} title="Accueil Getgents" aria-label="Accueil Getgents">
