@@ -5,7 +5,8 @@ import { amorcesAssistant } from "@/lib/assistantDocument";
 import { cookies } from "next/headers";
 import VuePartage from "./VuePartage";
 import EcranCode from "./EcranCode";
-import { decisionAcces } from "@/lib/server/accesPartage";
+import { decisionAcces, protectionActive } from "@/lib/server/accesPartage";
+import { nomAuteur } from "@/lib/server/activitePages";
 import { masquerEmail, nomCookie } from "@/lib/accesCode";
 import styles from "./partage.module.css";
 
@@ -54,6 +55,7 @@ export default async function PagePartage({ params }: { params: { jeton: string 
       </div>
     );
 
+  const protegee = await protectionActive(a.pageId).catch(() => false);
   return (
     <VuePartage
       jeton={a.jeton}
@@ -67,11 +69,10 @@ export default async function PagePartage({ params }: { params: { jeton: string 
             Pour {a.destinataire} · {date}
             {maj}
           </span>
-          <a className={styles.marque} href="/" target="_blank" rel="noopener noreferrer">
-            Getgents
-          </a>
         </>
       }
+      auteur={a.ownerId ? await nomAuteur(a.ownerId) : null}
+      protegee={protegee}
     />
   );
 }

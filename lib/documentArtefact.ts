@@ -50,6 +50,11 @@ const TETE = '<meta charset="utf-8"><meta name="viewport" content="width=device-
  *
  * Toute erreur restante s'affiche dans un bandeau discret au lieu de laisser
  * une page muette : c'est le témoin de l'essai.
+ *
+ * Profondeur de lecture (13/11) : le document dit à la page Getgents jusqu'où
+ * il a défilé (en %, par paliers de 5), y compris dans une zone intérieure
+ * qui défile. Un nombre, rien d'autre ; la page ne l'écoute que de SON cadre
+ * et ne le garde que si le visiteur a accepté de partager ses données.
  */
 export const AMORCE_ARTEFACT = `<script>(function(){
 function memoire(){var d=Object.create(null);return{getItem:function(k){k=String(k);return k in d?d[k]:null},setItem:function(k,v){d[String(k)]=String(v)},removeItem:function(k){delete d[String(k)]},clear:function(){d=Object.create(null)},key:function(i){var c=Object.keys(d);return i<c.length?c[i]:null},get length(){return Object.keys(d).length}}}
@@ -60,6 +65,9 @@ set:function(k,v){s[String(k)]=v;return Promise.resolve({key:String(k),value:v,s
 delete:function(k){delete s[String(k)];return Promise.resolve({key:String(k),deleted:true,shared:false})},
 list:function(p){p=p?String(p):"";return Promise.resolve({keys:Object.keys(s).filter(function(k){return k.indexOf(p)===0}),prefix:p,shared:false})}};}
 var vues=0;function signaler(m){if(vues++>2)return;function poser(){var b=document.createElement("div");b.setAttribute("data-getgents-erreur","");b.style.cssText="position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483647;padding:8px 12px;border-radius:8px;background:#fff4f2;color:#7a1c12;font:12px/1.4 system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.15)";b.textContent="Erreur dans l'artefact : "+m;(document.body||document.documentElement).appendChild(b)}document.body?poser():document.addEventListener("DOMContentLoaded",poser)}
+var pmax=-1;function mesurer(e,force){try{var t=e&&e.target&&e.target!==document&&e.target.scrollHeight?e.target:document.scrollingElement||document.documentElement;var h=t.scrollHeight,v=t===document.scrollingElement||t===document.documentElement?window.innerHeight:t.clientHeight;if(!h)return;var p=Math.min(100,Math.round((t.scrollTop+v)/h*100));if(p>pmax+4||(p===100&&pmax<100)||force){pmax=Math.max(pmax,p);parent.postMessage({getgents:"profondeur",v:pmax},"*")}}catch(x){}}
+window.addEventListener("message",function(e){if(e.source===parent&&e.data&&e.data.getgents==="profondeur?")mesurer(null,true)});
+var minuteur=0;document.addEventListener("scroll",function(e){if(minuteur)return;minuteur=setTimeout(function(){minuteur=0;mesurer(e)},400)},true);window.addEventListener("load",function(){mesurer(null)});
 window.addEventListener("error",function(e){signaler(e.message||"ressource introuvable")});
 window.addEventListener("unhandledrejection",function(e){var r=e.reason;signaler(r&&r.message?r.message:String(r))});
 })();</script>`;

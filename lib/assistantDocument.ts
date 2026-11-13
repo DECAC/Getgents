@@ -10,6 +10,7 @@
  */
 
 import type { FormatArtefact } from "./mcpPartage";
+import { MARQUEUR_HORS_PAGE } from "./activitePage";
 
 /** Ce que le modèle lit du document. Au-delà, il est coupé — et le sait. */
 export const DOCUMENT_MAX = 60_000;
@@ -57,6 +58,7 @@ export function consigneAssistant(a: { titre: string; format: FormatArtefact; co
     "Règles :",
     "- Réponds UNIQUEMENT à partir du document ci-dessous. Tu n'as ni internet, ni outils, ni autre source.",
     "- Si la réponse n'y est pas, dis-le clairement, et propose de poser la question à la personne qui a partagé le document. N'invente JAMAIS un chiffre, un prix, une date, un nom ou un engagement.",
+    `- Dans ce cas SEULEMENT (l'information demandée manque dans le document), commence ta réponse par ${MARQUEUR_HORS_PAGE}, puis réponds normalement. Ce marqueur n'est pas montré à ton interlocuteur. Ne le mets jamais quand le document répond, même en partie.`,
     "- Quand c'est utile, indique la partie du document d'où vient l'information (titre de section, tableau…).",
     "- Sois bref : quelques phrases, une liste si elle aide. Pas de titre.",
     "- Réponds dans la langue de ton interlocuteur.",

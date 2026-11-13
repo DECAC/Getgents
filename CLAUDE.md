@@ -517,8 +517,39 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   absente n'est PAS vérifiée contre le vrai PostgREST : si tous les liens
   affichent « indisponible » avant la migration, c'est elle — passer la
   023 répare. En développement sans Brevo, le code est écrit dans le journal
-  du serveur (jamais en production). **Essai réel CONCLUANT (13/11)** après un premier échec : Brevo refusait en 401 — le filtrage « IP autorisées » était encore actif (l'invitation était passée par hasard d'une adresse autorisée). Chaque refus est désormais journalisé (`getgents:acces code_refuse`, `cause`) et l'écran affiche une référence (« réf. brevo-401 »). Lots suivants : domaine séparé ; ce
-  qu'a lu et demandé le client.
+  du serveur (jamais en production). **Essai réel CONCLUANT (13/11)** après un premier échec : Brevo refusait en 401 — le filtrage « IP autorisées » était encore actif (l'invitation était passée par hasard d'une adresse autorisée). Chaque refus est désormais journalisé (`getgents:acces code_refuse`, `cause`) et l'écran affiche une référence (« réf. brevo-401 »). **« Ce qu'a lu le client » (13/11, écrit, NON déployé ;
+  `lib/activitePage.ts`, `lib/server/activitePages.ts`, migration 024 à
+  passer AVANT)** — décisions de l'utilisateur après trois maquettes :
+  LECTURE et QUESTIONS sont deux flux SANS clé commune. Lecture ANONYME par
+  défaut (une ligne par ouverture, le JOUR seulement, ni lien ni appareil) ;
+  nominative (dates, durée onglet visible, profondeur, appareil, version, un
+  e-mail à l'auteur à la PREMIÈRE lecture partagée) seulement si le visiteur
+  clique « Partager » dans un widget (après 10 s, jamais à l'arrivée, ✕ =
+  refus, choix gardé par lien dans le navigateur). Questions à l'assistant
+  TOUJOURS gardées, sans nom ni lien, datées du jour : jamais rattachables à
+  un lecteur. « N'a pas partagé ses données » ne dit PAS si la page a été
+  ouverte. Une visite ne change jamais de nature (nouvel identifiant à chaque
+  changement de choix) ; sans choix, l'ouverture anonyme part à 30 s ou au
+  départ — sinon celui qui accepte comptait deux fois (vu au test). Visites
+  et questions de l'AUTEUR non comptées. « La page ne le dit pas » :
+  l'assistant commence par `[HORS PAGE]` quand l'information manque
+  (`consigneAssistant`), le serveur le lit au passage du flux
+  (`avecSuivi`, marquage dans `flush` pour ne pas être coupé), le navigateur
+  l'efface. Profondeur : `AMORCE_ARTEFACT` poste `{getgents:"profondeur"}` à
+  la page (et répond à `profondeur?`, sinon la valeur du chargement était
+  perdue) ; la page n'écoute que SON cadre. « l'auteur » partout ; son nom
+  (nom affiché de Mon compte) seulement dans « Vos données sur cette page »
+  — sans nom affiché, il n'apparaît pas. Formulations VOULUES par
+  l'utilisateur (widget « pour un meilleur suivi », pas de phrase sur les
+  questions sous l'assistant, juste un lien « Confidentialité ») ; points
+  juridiques signalés et NON tranchés (qui est responsable de traitement,
+  portée de « n'engagent pas l'auteur ») — à voir avec un juriste avant
+  l'ouverture publique. Effacement : 120 jours après création (lien de 30 j
+  + 90 promis), fait à la lecture de l'onglet (`purgerActivite`), pas par un
+  cron. Vérifié au navigateur (mémoire locale, faux fournisseur d'IA) :
+  widget, refus retenu, marqueur jamais montré, 3 ouvertures dont 2
+  anonymes, profondeur 100, questions marquées. PAS avec Supabase ni Brevo
+  (e-mail à l'auteur non exercé). Lot suivant : domaine séparé.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

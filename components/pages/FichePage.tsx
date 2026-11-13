@@ -5,6 +5,7 @@ import { initiales, libelleFormat } from "@/lib/pagesGetsite";
 import type { FormatArtefact } from "@/lib/mcpPartage";
 import { QUESTIONS_MAX_PAR_LIEN } from "@/lib/assistantDocument";
 import { peutRecevoirCode } from "@/lib/accesCode";
+import { ActivitePage } from "./ActivitePage";
 import styles from "./pages.module.css";
 
 interface Destinataire {
@@ -47,6 +48,7 @@ export function FichePage({ id }: { id: string }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [enCours, setEnCours] = useState<string | null>(null);
+  const [onglet, setOnglet] = useState<"page" | "activite">("page");
   const [partage, setPartage] = useState<{ ouvert: boolean; destinataire: string; resultat: { lien: string; objet: string; corps: string } | null }>({
     ouvert: false,
     destinataire: "",
@@ -140,6 +142,18 @@ export function FichePage({ id }: { id: string }) {
         </div>
       )}
 
+      <div className={styles.onglets} role="tablist">
+        <button type="button" role="tab" aria-selected={onglet === "page"} className={styles.onglet} onClick={() => setOnglet("page")}>
+          Page &amp; destinataires
+        </button>
+        <button type="button" role="tab" aria-selected={onglet === "activite"} className={styles.onglet} onClick={() => setOnglet("activite")}>
+          Activité
+        </button>
+      </div>
+
+      {onglet === "activite" ? (
+        <ActivitePage id={page.id} />
+      ) : (
       <div className={styles.deux}>
         <section className={styles.apercu} aria-label="Aperçu de la page">
           <div className={styles.apercuBarre}>
@@ -389,6 +403,7 @@ export function FichePage({ id }: { id: string }) {
           </section>
         </div>
       </div>
+      )}
     </div>
   );
 }

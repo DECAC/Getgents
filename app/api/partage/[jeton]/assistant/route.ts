@@ -8,6 +8,40 @@ import { chatResponseFor } from "@/lib/server/chatEngine";
 import { contexteForUser } from "@/lib/server/openRouterKey";
 import { consommerPourVisiteur } from "@/lib/server/gentGuard";
 import { modeleConversationEffectif } from "@/lib/modeleConversation";
+import { contenuLigneSse, sansMarqueur } from "@/lib/activitePage";
+import { enregistrerQuestion, marquerQuestion } from "@/lib/server/activitePages";
+import { getUser } from "@/lib/server/session";
+
+/**
+ * Laisse passer le flux tel quel, en lisant au passage le DÉBUT de la
+ * réponse : le marqueur « hors page » dit que l'information manquait. La
+ * question est marquée avant la fin du flux (flush), pour que la fonction ne
+ * soit pas arrêtée entre les deux.
+ */
+function avecSuivi(corps: ReadableStream<Uint8Array>, questionId: string): ReadableStream<Uint8Array> {
+  const lecteur = new TextDecoder();
+  let reste = "";
+  let debut = "";
+  return corps.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(morceau, sortie) {
+        sortie.enqueue(morceau);
+        if (debut.length > 60) return;
+        reste += lecteur.decode(morceau, { stream: true });
+        const lignes = reste.split("\n");
+        reste = lignes.pop() ?? "";
+        for (const l of lignes) debut += contenuLigneSse(l);
+      },
+      async flush() {
+        if (reste) debut += contenuLigneSse(reste);
+        if (!debut.trim()) return;
+        await marquerQuestion(questionId, sansMarqueur(debut).horsPage).catch((e) =>
+          console.error(JSON.stringify({ tag: "getgents:activite", event: "question_non_marquee", detail: (e as Error).message }))
+        );
+      },
+    })
+  );
+}
 
 /**
  * Assistant du document d'un artefact partagé. Le destinataire n'a pas de
@@ -66,6 +100,17 @@ export async function POST(req: Request, { params }: { params: { jeton: string }
     })
   );
 
+  // La question est gardée pour l'auteur, SANS nom ni lien (page et jour
+  // seulement). Les essais de l'auteur sur sa propre page ne comptent pas.
+  let questionId: string | null = null;
+  const moi = await getUser();
+  if (!moi || moi.id !== a.ownerId) {
+    questionId = await enregistrerQuestion(a.pageId, historique[historique.length - 1].content).catch((e) => {
+      console.error(JSON.stringify({ tag: "getgents:activite", event: "question_non_enregistree", detail: (e as Error).message }));
+      return null;
+    });
+  }
+
   const amont = await chatResponseFor(
     { model: modele, messages: [{ role: "system", content: consigne }, ...historique], stream: true, max_tokens: REPONSE_MAX_TOKENS },
     ctx,
@@ -76,7 +121,7 @@ export async function POST(req: Request, { params }: { params: { jeton: string }
     console.error(JSON.stringify({ tag: "getgents:partage", event: "assistant_echec", status: amont.status, detail: detail.slice(0, 300) }));
     return NextResponse.json({ error: "L'assistant n'a pas pu répondre. Réessayez dans un instant." }, { status: 502 });
   }
-  return new Response(amont.body, {
+  return new Response(questionId ? avecSuivi(amont.body, questionId) : amont.body, {
     headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" },
   });
 }

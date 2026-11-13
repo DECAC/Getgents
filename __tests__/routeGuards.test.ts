@@ -74,6 +74,10 @@ const OUVERTES: Record<string, string> = {
   // par l'appelant), renvoi limité à 60 s, envois et essais plafonnés.
   "app/api/partage/[jeton]/code/route.ts": "jeton du partage, code envoyé à l'adresse enregistrée, débit plafonné",
   "app/api/partage/[jeton]/code/verifier/route.ts": "jeton du partage + code à usage unique, 5 essais",
+  // Mesure de lecture : le destinataire n'a pas de compte. Jeton du lien +
+  // garde du code d'accès ; anonyme sans son accord (le jour seulement),
+  // n'écrit qu'une ligne par visite, ne lit rien et répond toujours 204.
+  "app/api/partage/[jeton]/lecture/route.ts": "jeton du partage + accès par code, une ligne par visite, rien en lecture",
 };
 
 function routes(dir: string, acc: string[] = []): string[] {

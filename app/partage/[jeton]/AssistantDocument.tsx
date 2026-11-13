@@ -1,5 +1,6 @@
 "use client";
 
+import { sansMarqueur } from "@/lib/activitePage";
 import { useEffect, useRef, useState } from "react";
 import { streamChatCompletion } from "@/lib/streamChat";
 import { renderMarkdown } from "@/lib/markdown";
@@ -18,6 +19,7 @@ export default function AssistantDocument({
   agrandi,
   onFermer,
   onAgrandir,
+  onConfidentialite,
 }: {
   jeton: string;
   amorces: string[];
@@ -25,6 +27,7 @@ export default function AssistantDocument({
   agrandi: boolean;
   onFermer: () => void;
   onAgrandir: () => void;
+  onConfidentialite: () => void;
 }) {
   const [fil, setFil] = useState<MessageAssistant[]>([]);
   const [saisie, setSaisie] = useState("");
@@ -56,13 +59,15 @@ export default function AssistantDocument({
     try {
       const r = await streamChatCompletion(
         { model: "", messages: historique },
-        (texte) => setFil([...historique, { role: "assistant", content: texte }]),
+        // Le marqueur « hors page » est pour l'auteur, pas pour le visiteur.
+        (texte) => setFil([...historique, { role: "assistant", content: sansMarqueur(texte).texte }]),
         undefined,
         undefined,
         `/api/partage/${encodeURIComponent(jeton)}/assistant`
       );
-      if (!r.text.trim()) throw new Error("L'assistant n'a rien répondu. Reformulez votre question.");
-      setFil([...historique, { role: "assistant", content: r.text }]);
+      const reponse = sansMarqueur(r.text).texte;
+      if (!reponse.trim()) throw new Error("L'assistant n'a rien répondu. Reformulez votre question.");
+      setFil([...historique, { role: "assistant", content: reponse }]);
     } catch (e) {
       setFil(historique.slice(0, -1));
       setSaisie(q);
@@ -144,7 +149,12 @@ export default function AssistantDocument({
           →
         </button>
       </form>
-      <p className={styles.mention}>Vous échangez avec une IA : elle peut se tromper.</p>
+      <p className={styles.mention}>
+        Réponses d&apos;une IA, d&apos;après cette page seule : elles peuvent se tromper et n&apos;engagent pas l&apos;auteur. ·{" "}
+        <button type="button" className={styles.mentionLien} onClick={onConfidentialite}>
+          Confidentialité
+        </button>
+      </p>
     </aside>
   );
 }
