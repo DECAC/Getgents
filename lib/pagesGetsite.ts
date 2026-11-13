@@ -22,10 +22,16 @@ export interface LignePage {
 
 export type FiltrePages = "actives" | "expirees" | "toutes";
 
-/** « Actives » : au moins un lien qui s'ouvre encore. « Sans lien actif » : tous révoqués ou expirés. */
-export function filtrePage(p: Pick<LignePage, "actifs">, f: FiltrePages): boolean {
+/**
+ * « Actives » : au moins un lien qui s'ouvre encore, OU aucun lien encore —
+ * une page collée n'a pas de destinataire, et la cacher par défaut la faisait
+ * disparaître de « Mes pages » (13/11). « Sans lien actif » : des liens, tous
+ * révoqués ou expirés.
+ */
+export function filtrePage(p: Pick<LignePage, "actifs" | "liens">, f: FiltrePages): boolean {
   if (f === "toutes") return true;
-  return f === "actives" ? p.actifs > 0 : p.actifs === 0;
+  const actives = p.actifs > 0 || p.liens === 0;
+  return f === "actives" ? actives : !actives;
 }
 
 const sansAccents = (s: string) =>

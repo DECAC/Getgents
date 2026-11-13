@@ -2,11 +2,16 @@ import { filtrePage, filtrerParTitre, initiales, libelleFormat } from "@/lib/pag
 import { SLUGS_RESERVES } from "@/lib/slug";
 
 describe("rubrique Pages", () => {
-  it("filtre : active = au moins un lien qui s'ouvre encore", () => {
-    expect(filtrePage({ actifs: 2 }, "actives")).toBe(true);
-    expect(filtrePage({ actifs: 0 }, "actives")).toBe(false);
-    expect(filtrePage({ actifs: 0 }, "expirees")).toBe(true);
-    expect(filtrePage({ actifs: 3 }, "toutes")).toBe(true);
+  it("filtre : active = au moins un lien qui s'ouvre encore, ou aucun lien encore", () => {
+    expect(filtrePage({ actifs: 2, liens: 3 }, "actives")).toBe(true);
+    expect(filtrePage({ actifs: 0, liens: 2 }, "actives")).toBe(false);
+    expect(filtrePage({ actifs: 0, liens: 2 }, "expirees")).toBe(true);
+    expect(filtrePage({ actifs: 3, liens: 3 }, "toutes")).toBe(true);
+  });
+
+  it("une page jamais partagée (collée) reste dans la vue par défaut", () => {
+    expect(filtrePage({ actifs: 0, liens: 0 }, "actives")).toBe(true);
+    expect(filtrePage({ actifs: 0, liens: 0 }, "expirees")).toBe(false);
   });
 
   it("recherche sans accents ni casse, titre et plateforme", () => {

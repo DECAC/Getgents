@@ -91,7 +91,7 @@ export function ListePages() {
                   </span>
                   <span className={styles.puces}>
                     <span className={p.actifs ? styles.puceDest : styles.puceEteinte}>
-                      {p.actifs ? `${p.actifs} destinataire${p.actifs > 1 ? "s" : ""}` : "Aucun lien actif"}
+                      {p.actifs ? `${p.actifs} destinataire${p.actifs > 1 ? "s" : ""}` : p.liens ? "Aucun lien actif" : "Pas encore partagée"}
                     </span>
                     {p.assistant && <span className={styles.puceIa}>✦ Assistant IA</span>}
                   </span>
