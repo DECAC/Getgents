@@ -1,3 +1,4 @@
+import { purgerDemandesAcces } from "@/lib/server/demandesAcces";
 import { NextResponse } from "next/server";
 import { diffusedEspace, DIFFUSED_COLUMNS } from "@/lib/server/gentVersions";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
@@ -127,6 +128,9 @@ export async function GET(req: Request) {
   // un échec de l'une n'empêche pas l'autre.
   await purgerActivite().catch((e) =>
     console.error(JSON.stringify({ tag: "getgents:activite", event: "purge_echouee", detail: (e as Error).message }))
+  );
+  await purgerDemandesAcces().catch((e) =>
+    console.error(JSON.stringify({ tag: "getgents:acces", event: "purge_echouee", detail: (e as Error).message }))
   );
   try {
     return NextResponse.json(await runBatch(null));

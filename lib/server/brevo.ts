@@ -14,7 +14,15 @@ export interface EmailResult {
 }
 
 /** Envoie un e-mail HTML. Le sujet et le corps sont composés par l'appelant. */
-export async function sendBrevoEmail(to: string, subject: string, htmlContent: string): Promise<EmailResult> {
+export async function sendBrevoEmail(
+  to: string,
+  subject: string,
+  htmlContent: string,
+  options: {
+    /** Adresse à laquelle « Répondre » écrit — ex. le visiteur d'un formulaire. */
+    replyTo?: string;
+  } = {}
+): Promise<EmailResult> {
   if (!isBrevoConfigured()) return echec("Brevo non configuré (BREVO_API_KEY / BREVO_SENDER_EMAIL)");
   const senderEmail = process.env.BREVO_SENDER_EMAIL!;
   const senderName = process.env.BREVO_SENDER_NAME ?? "Getgents";
@@ -32,6 +40,7 @@ export async function sendBrevoEmail(to: string, subject: string, htmlContent: s
         to: [{ email: to.trim() }],
         subject: subject.slice(0, 200),
         htmlContent,
+        ...(options.replyTo ? { replyTo: { email: options.replyTo.trim() } } : {}),
       }),
       cache: "no-store",
     });

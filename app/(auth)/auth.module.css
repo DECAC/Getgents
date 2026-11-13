@@ -180,3 +180,26 @@
   color: var(--ink);
   border: 1px solid var(--line);
 }
+
+/* Demande d'accès : la motivation tient sur plusieurs lignes. */
+.zoneTexte {
+  resize: vertical;
+  min-height: 96px;
+  line-height: 1.5;
+  font-family: inherit;
+}
+.compteur {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: right;
+}
+/* Champ piège : hors de l'écran, hors du clavier, hors des lecteurs d'écran. */
+.piege {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

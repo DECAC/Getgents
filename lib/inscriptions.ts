@@ -31,11 +31,12 @@ export const MESSAGE_ACCES_RESTREINT =
   "premiers créateurs un par un, le temps de faire mûrir la plateforme.";
 
 export const INVITATION_DEMANDE_ACCES =
-  "Écrivez-nous pour demander un accès, en disant en deux lignes ce que vous " +
-  "aimeriez construire.";
+  "Demandez un accès en nous disant en deux lignes ce que vous aimeriez construire : " +
+  "nous vous répondons par e-mail.";
 
 /**
- * Lien `mailto` prérempli.
+ * Lien `mailto` prérempli — SECOURS seulement (page Contact) : la demande
+ * se fait par le formulaire de /inscription.
  *
  * L'objet est fixé pour que les demandes se retrouvent d'un coup d'œil dans
  * une boîte de réception, et le corps amorce la réponse à la seule question

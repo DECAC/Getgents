@@ -1010,6 +1010,22 @@ le désactiver, pas lister des IP), soit une mauvaise clé ; le message qui suit
 le code dans `getgents:email` tranche. L'authentification du domaine chez
 Brevo (DNS) conditionne la délivrabilité : un e-mail en indésirables = DNS.
 
+**Demande d'accès par FORMULAIRE** (13/11 ; `/inscription`,
+`lib/demandeAcces.ts`, `/api/demande-acces`) : le bouton `mailto:` ouvrait
+la messagerie du visiteur (et affichait CEO@getgents.ai) ; on perdait ceux
+qui n'allaient pas au bout. Désormais adresse + « ce que vous aimeriez
+construire » (20 à 1 500 caractères) + Envoyer. La demande est GARDÉE
+d'abord (table `demandes_acces`, migration 027 à passer AVANT le
+déploiement), l'e-mail part ensuite vers `ADRESSE_DEMANDE_ACCES` avec
+`replyTo` = le demandeur (« Répondre » lui écrit directement) ; un e-mail
+en échec ne fait pas perdre la demande (`notifie` reste faux). Route OUVERTE :
+champ piège (accepté en silence, rien gardé), plafonds lus dans la table
+(3 par adresse sur 24 h, 30 au total par heure). Effacées après 12 mois par
+la tâche horaire (`purgerDemandesAcces`) — c'est ce qu'annonce la page
+Confidentialité. Journal `getgents:acces` (`demande_recue`,
+`notification_echouee`, `plafond`, `piege_rempli`) — sans l'adresse.
+Vérifié en local (sans Supabase ni Brevo), PAS en production.
+
 Les inscriptions sont fermées **chez Supabase** (Authentication → Providers →
 Email). `lib/inscriptions.ts` ne fait que rendre l'interface honnête — il ne
 ferme rien à lui seul.

@@ -10,33 +10,76 @@ import {
   INVITATION_DEMANDE_ACCES,
   MESSAGE_ACCES_RESTREINT,
   TITRE_ACCES_RESTREINT,
-  ADRESSE_DEMANDE_ACCES,
-  lienDemandeAcces,
 } from "@/lib/inscriptions";
+import { MESSAGE_DEMANDE, MOTIVATION_MAX, MOTIVATION_MIN, validerDemande } from "@/lib/demandeAcces";
 import styles from "../auth.module.css";
 
 /**
- * Écran d'accès restreint, servi à la place du formulaire.
+ * Écran d'accès restreint, servi à la place du formulaire d'inscription.
  *
  * Il occupe l'adresse `/inscription` plutôt qu'une page à part : c'est là que
  * mènent tous les appels à l'action du site, et c'est là qu'on arrive en
  * cherchant à s'inscrire. Rediriger ailleurs ferait perdre l'intention.
+ *
+ * La demande se fait ICI, par un formulaire : le lien `mailto` d'avant
+ * ouvrait la messagerie du visiteur (quand il en avait une de configurée),
+ * et l'on perdait ceux qui n'allaient pas au bout.
  */
 function AccesRestreint() {
+  const [email, setEmail] = useState("");
+  const [motivation, setMotivation] = useState("");
+  // Champ piège : invisible et hors du parcours au clavier. Un humain le
+  // laisse vide ; un robot qui remplit tout se trahit.
+  const [piege, setPiege] = useState("");
+
   return (
-    <>
-      <h1 className={styles.title}>{TITRE_ACCES_RESTREINT}</h1>
-      <p className={styles.lede}>{MESSAGE_ACCES_RESTREINT}</p>
-      <p className={styles.lede}>{INVITATION_DEMANDE_ACCES}</p>
-      {/* Même apparence que le bouton d'envoi du formulaire qu'il remplace :
-          c'est l'action principale de l'écran, elle doit en avoir le poids. */}
-      <a className={styles.submit} href={lienDemandeAcces()}>
-        Écrire à {ADRESSE_DEMANDE_ACCES}
-      </a>
-      <div className={styles.aside}>
-        <Link href="/connexion">J&apos;ai déjà un compte</Link>
-      </div>
-    </>
+    <AuthForm
+      titre={TITRE_ACCES_RESTREINT}
+      lede={
+        <>
+          {MESSAGE_ACCES_RESTREINT} {INVITATION_DEMANDE_ACCES}
+        </>
+      }
+      bouton="Envoyer ma demande"
+      succes={(m) => m}
+      onSubmit={async () => {
+        const probleme = validerDemande({ email, motivation, piege });
+        if (probleme && probleme !== "robot") throw new Error(MESSAGE_DEMANDE[probleme]);
+        const res = await fetch("/api/demande-acces", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, motivation, piege }),
+        }).catch(() => null);
+        if (!res) throw new Error("Connexion impossible. Vérifiez votre réseau et réessayez.");
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) throw new Error(data.error ?? MESSAGE_DEMANDE.serveur);
+        return `Demande reçue. Nous vous répondrons à ${email.trim().toLowerCase()}.`;
+      }}
+      aside={<Link href="/connexion">J&apos;ai déjà un compte</Link>}
+    >
+      <Champ label="Votre adresse e-mail" type="email" value={email} onChange={setEmail} autoComplete="email" />
+      <label className={styles.field}>
+        <span className={styles.label}>Ce que vous aimeriez construire avec Getgents</span>
+        <textarea
+          className={[styles.input, styles.zoneTexte].join(" ")}
+          value={motivation}
+          onChange={(e) => setMotivation(e.target.value)}
+          rows={4}
+          maxLength={MOTIVATION_MAX}
+          placeholder="Ex. : un assistant qui suit les devis de mes chantiers et me prépare les relances."
+          required
+        />
+        <span className={styles.compteur} aria-live="polite">
+          {motivation.trim().length < MOTIVATION_MIN
+            ? `${MOTIVATION_MIN} caractères au moins`
+            : `${motivation.length} / ${MOTIVATION_MAX}`}
+        </span>
+      </label>
+      <label className={styles.piege} aria-hidden="true">
+        Site web
+        <input type="text" tabIndex={-1} autoComplete="off" value={piege} onChange={(e) => setPiege(e.target.value)} />
+      </label>
+    </AuthForm>
   );
 }
 

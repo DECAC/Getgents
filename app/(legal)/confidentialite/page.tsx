@@ -48,6 +48,11 @@ export default function ConfidentialitePage() {
             votre conversation. Ils sont transmis à la personne qui gère le gent, qui n&apos;a
             donc aucun moyen de vous répondre.
           </li>
+          <li>
+            <b>Les demandes d&apos;accès</b> : l&apos;adresse e-mail et le message laissés dans
+            le formulaire de demande, pour pouvoir vous répondre. Ils sont transmis par e-mail
+            à l&apos;éditeur, et effacés au bout de 12 mois.
+          </li>
         </ul>
       </section>
 
