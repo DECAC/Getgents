@@ -1,0 +1,78 @@
+<!doctype html>
+<!--
+  Modèle d'e-mail « Invite user » de Supabase (Authentication → Emails).
+  Objet conseillé : Votre accès à Getgents Pages
+  Le lien passe par /auth/confirm : le jeton est vérifié CÔTÉ SERVEUR
+  (lib/invitation.ts). Styles en ligne et tableaux : la plupart des
+  messageries ignorent les feuilles de style et les polices externes.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Votre accès à Getgents Pages</title>
+</head>
+<body style="margin:0;padding:0;background:#fbf3ed;">
+<!-- Aperçu affiché par la messagerie à côté de l'objet -->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Créez votre mot de passe et partagez vos premières pages.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fbf3ed;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#fffdf9;border:1px solid #eadbd3;border-radius:16px;">
+        <tr>
+          <td style="padding:32px 32px 8px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <span style="display:inline-block;width:32px;height:32px;line-height:32px;border-radius:8px;background:#ffdee2;color:#e65d76;font-weight:700;font-size:12px;text-align:center;">GG</span>
+            <span style="font-size:15px;font-weight:700;color:#2a1f19;vertical-align:middle;padding-left:8px;">Getgents Pages</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 32px 0;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#2a1f19;">
+            <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;">Vous avez reçu une invitation</h1>
+            <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#4a3f39;">
+              Un accès à Getgents Pages vous est ouvert pour <b>{{ .Email }}</b>.
+            </p>
+            <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#4a3f39;">
+              Partagez les artefacts que vous créez avec Claude ou ChatGPT par un lien privé, voyez ce que vos clients ont lu, et laissez un assistant répondre à leurs questions sur la page.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td align="left" style="padding:0 32px 8px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="border-radius:999px;background:#c98a12;">
+                  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite"
+                     style="display:inline-block;padding:13px 26px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:999px;">
+                    Créer mon mot de passe
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 32px 0;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#73665f;">
+              Ce lien ne sert qu'une fois et pour une durée limitée. S'il a expiré, utilisez « Mot de passe oublié » sur la page de connexion avec cette adresse.
+            </p>
+            <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#73665f;">
+              Le bouton ne s'ouvre pas ? Copiez cette adresse dans votre navigateur :
+            </p>
+            <p style="margin:0 0 24px;font-size:12px;line-height:1.5;word-break:break-all;">
+              <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite" style="color:#a0700e;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=invite</a>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 32px 28px;border-top:1px solid #eadbd3;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <p style="margin:0;font-size:12px;line-height:1.6;color:#a2958f;">
+              Vous ne vous attendiez pas à cette invitation ? Ignorez simplement ce message : sans ce lien, aucun mot de passe n'est créé.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
