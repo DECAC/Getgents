@@ -550,7 +550,7 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   widget, refus retenu, marqueur jamais montré, 3 ouvertures dont 2
   anonymes, profondeur 100, questions marquées. Puis en production par
   l'utilisateur (13/11) : tout concluant. **Précisions de l'auteur (13/11,
-  écrit, NON déployé ; `lib/server/complementsPages.ts`, migration 025 à
+  DÉPLOYÉ, migration 025 passée, essai réel CONCLUANT ; `lib/server/complementsPages.ts`, migration 025 à
   passer AVANT — sans elle l'assistant lit la page seule, rien ne casse)** :
   « Répondre » sous une question « la page ne le dit pas » (ou « + Ajouter
   une précision ») ; la réponse est lue par l'assistant avec la page, pour
