@@ -31,9 +31,18 @@ export default function EcranCode({
     setMessage(null);
     try {
       const r = await fetch(`/api/partage/${encodeURIComponent(jeton)}/code`, { method: "POST" });
-      const j = (await r.json().catch(() => ({}))) as { error?: string; cause?: string };
-      // La référence (cause, ou statut HTTP brut) rend le message diagnostiquable.
-      if (!r.ok) throw new Error(`${j.error || "Le code n'a pas pu être envoyé."} (réf. ${j.cause ?? `http-${r.status}`})`);
+      const brut = await r.text();
+      let j: { error?: string; cause?: string } = {};
+      try {
+        j = JSON.parse(brut);
+      } catch {
+        // Réponse qui n'est PAS celle de la route (page d'erreur de
+        // l'hébergeur) : l'en-tête x-vercel-error ou le début du corps la nomment.
+      }
+      if (!r.ok) {
+        const hebergeur = r.headers.get("x-vercel-error") ?? (j.cause ? "" : brut.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 60));
+        throw new Error(`${j.error || "Le code n'a pas pu être envoyé."} (réf. ${j.cause ?? `http-${r.status}`}${hebergeur ? ` · ${hebergeur}` : ""})`);
+      }
       setEtape("saisie");
       setCode("");
       window.setTimeout(() => champ.current?.focus(), 50);
