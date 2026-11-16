@@ -1136,7 +1136,18 @@ active le domaine de contenu des pages partagées. Lue À LA CONSTRUCTION par
 `next.config.mjs` — la régler ou la changer exige un REDÉPLOIEMENT. Ordre :
 domaine ajouté au projet Vercel et DNS pointé AVANT la variable, sinon les
 cadres partent vers un domaine qui ne répond pas. La retirer + redéployer
-revient à l'état d'avant (repli immédiat en cas de souci).
+revient à l'état d'avant (repli immédiat en cas de souci). **Piège payé (16/11)** : un
+filtre web d'entreprise a BLOQUÉ le domaine (« Newly Registered and
+Observed Domains ») — la plupart des filtres bloquent un domaine de moins
+de ~30 jours, certains ensuite tout domaine non catégorisé ; les
+destinataires visés sont justement en entreprise. Demandes de
+catégorisation faites le 16/11 (catégorie « Business », second choix
+« Computers and Internet » ; jamais « Web Hosting » / « File Sharing »,
+les plus bloquées) chez Palo Alto, Fortinet, Cisco Talos, Broadcom,
+Trellix — PAS Zscaler (formulaire réservé à ses clients). Parade prévue :
+repli automatique vers getgents.ai si le document ne se signale pas, et
+une page d'accueil explicative à la racine du domaine (un vérificateur
+qui tombe sur « Introuvable » classe en « Parked » ou suspect).
 
 **BREVO EST CONFIGURÉ** en production (12/11, e-mail d'invitation reçu par
 l'utilisateur). Il ne l'était pas jusque-là : invitation par e-mail,
