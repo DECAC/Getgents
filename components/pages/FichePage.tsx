@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { initiales, libelleFormat } from "@/lib/pagesGetsite";
+import { CadreApercu } from "./CadreApercu";
 import type { FormatArtefact } from "@/lib/mcpPartage";
 import { QUESTIONS_MAX_PAR_LIEN } from "@/lib/assistantDocument";
 import { peutRecevoirCode } from "@/lib/accesCode";
@@ -232,13 +233,11 @@ export function FichePage({ id }: { id: string }) {
               Plein écran ⤢
             </a>
           </div>
-          <iframe
+          <CadreApercu
             key={page.version}
             className={styles.apercuCadre}
             src={`/api/pages/${encodeURIComponent(page.id)}/apercu?v=${page.version}`}
-            title={`Aperçu — ${page.titre}`}
-            sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals"
-            referrerPolicy="no-referrer"
+            titre={`Aperçu — ${page.titre}`}
           />
         </section>
 

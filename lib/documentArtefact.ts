@@ -60,12 +60,17 @@ const TETE = '<meta charset="utf-8"><meta name="viewport" content="width=device-
  * Toute erreur restante s'affiche dans un bandeau discret au lieu de laisser
  * une page muette : c'est le témoin de l'essai.
  *
+ * Signal « prêt » (16/11) : posté au tout premier script, il dit à la page
+ * que le cadre affiche bien NOTRE document — sans lui, la page recharge
+ * depuis getgents.ai (`useCadreAvecRepli`, domaine de contenu bloqué).
+ *
  * Profondeur de lecture (13/11) : le document dit à la page Getgents jusqu'où
  * il a défilé (en %, par paliers de 5), y compris dans une zone intérieure
  * qui défile. Un nombre, rien d'autre ; la page ne l'écoute que de SON cadre
  * et ne le garde que si le visiteur a accepté de partager ses données.
  */
 export const AMORCE_ARTEFACT = `<script>(function(){
+try{parent.postMessage({getgents:"pret"},"*")}catch(e){}
 function memoire(){var d=Object.create(null);return{getItem:function(k){k=String(k);return k in d?d[k]:null},setItem:function(k,v){d[String(k)]=String(v)},removeItem:function(k){delete d[String(k)]},clear:function(){d=Object.create(null)},key:function(i){var c=Object.keys(d);return i<c.length?c[i]:null},get length(){return Object.keys(d).length}}}
 ["localStorage","sessionStorage"].forEach(function(n){var ok=false;try{ok=!!window[n];window[n].getItem("__");}catch(e){ok=false}if(!ok){try{Object.defineProperty(window,n,{value:memoire(),configurable:true})}catch(e){}}});
 if(!window.storage){var s=Object.create(null);window.storage={

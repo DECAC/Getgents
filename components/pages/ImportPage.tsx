@@ -5,6 +5,7 @@ import { alertesImport, detecterFormat, nettoyerCollage, tailleLisible, titreDet
 import { FORMATS_ARTEFACT, type FormatArtefact } from "@/lib/mcpPartage";
 import { libelleFormat } from "@/lib/pagesGetsite";
 import styles from "./pages.module.css";
+import { useCadreAvecRepli } from "@/components/shared/useCadreAvecRepli";
 
 const EXTENSIONS = ".html,.htm,.jsx,.tsx,.js,.md,.markdown,.svg,.txt";
 const DELAI_APERCU_MS = 600;
@@ -48,6 +49,9 @@ export function ImportPage({
   const [erreur, setErreur] = useState<string | null>(null);
   const [resume, setResume] = useState<Resume | null>(null);
   const formulaire = useRef<HTMLFormElement>(null);
+  // Domaine de contenu bloqué : chaque aperçu est jugé, puis reposté ici avec `direct`.
+  const [envoi, setEnvoi] = useState(0);
+  const repli = useCadreAvecRepli(String(envoi));
 
   const contenu = nettoyerCollage(code);
   const detecte = contenu ? detecterFormat(contenu, nomFichier) : null;
@@ -66,9 +70,26 @@ export function ImportPage({
 
   // L'aperçu se refait après une pause de frappe : le formulaire caché poste le code dans le cadre.
   useEffect(() => {
-    const t = window.setTimeout(() => formulaire.current?.submit(), contenu ? DELAI_APERCU_MS : 0);
+    const t = window.setTimeout(
+      () => {
+        setEnvoi((n) => n + 1);
+        formulaire.current?.submit();
+      },
+      contenu ? DELAI_APERCU_MS : 0
+    );
     return () => window.clearTimeout(t);
   }, [contenu, formatEffectif, titreEffectif]);
+
+  // Bascule en direct : le même aperçu est reposté, servi par getgents.ai.
+  useEffect(() => {
+    if (!repli.direct) return;
+    // Après le rendu : le champ `direct` doit être dans le formulaire.
+    const t = window.setTimeout(() => {
+      setEnvoi((n) => n + 1);
+      formulaire.current?.submit();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [repli.direct]);
 
   // Nouvelle version : ce qui change, et combien de liens sont concernés (sans rien publier).
   useEffect(() => {
@@ -221,6 +242,8 @@ export function ImportPage({
                 <span>isolé, sans accès à votre compte</span>
               </div>
               <iframe
+                ref={repli.cadre}
+                onLoad={repli.onLoad}
                 name="apercu-import"
                 className={styles.apercuCadre}
                 title="Aperçu de la page"
@@ -280,6 +303,7 @@ export function ImportPage({
           <input type="hidden" name="contenu" value={contenu} readOnly />
           <input type="hidden" name="format" value={formatEffectif} readOnly />
           <input type="hidden" name="titre" value={titreEffectif} readOnly />
+          {repli.direct && <input type="hidden" name="direct" value="1" readOnly />}
         </form>
       </div>
     </div>

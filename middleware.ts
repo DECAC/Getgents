@@ -62,8 +62,13 @@ export async function middleware(request: NextRequest) {
   // signés (`/api/contenu/…`, hors de ce middleware). Aucune page de
   // l'application n'y répond — ni accueil, ni connexion.
   const domaine = lireDomaineContenu(process.env.DOMAINE_CONTENU);
-  if (estDomaineContenu(request.headers.get("host"), domaine))
+  if (estDomaineContenu(request.headers.get("host"), domaine)) {
+    // La RACINE dit ce qu'est ce domaine : les filtres web d'entreprise le
+    // catégorisent sur ce qu'ils y voient, et « Introuvable » se classe en
+    // domaine parqué ou suspect (16/11). Du texte seul, aucun contenu d'auteur.
+    if (pathname === "/") return new NextResponse(PAGE_DOMAINE_CONTENU, { status: 200, headers: ENTETES_DOMAINE_CONTENU });
     return new NextResponse("Introuvable.", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8", "X-Robots-Tag": "noindex, nofollow" } });
+  }
 
   /*
    * Le nonce doit atteindre DEUX destinataires :
@@ -165,6 +170,28 @@ export async function middleware(request: NextRequest) {
 
   return avecCsp(response);
 }
+
+/** Page d'accueil du domaine de contenu : statique, sans script ni ressource externe. */
+const PAGE_DOMAINE_CONTENU =
+  '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+  "<title>Getgents Pages — domaine de contenu</title>" +
+  '<meta name="description" content="Domaine de contenu de getgents.ai : documents professionnels partagés par lien privé.">' +
+  "<style>body{font:16px/1.6 system-ui,-apple-system,'Segoe UI',sans-serif;color:#2a1f19;background:#fbf3ed;margin:0;padding:12vh 20px}" +
+  "main{max-width:36rem;margin:0 auto;background:#fffdf9;border:1px solid #eadbd3;border-radius:16px;padding:32px}" +
+  "h1{font-size:22px;margin:0 0 12px}p{margin:0 0 12px;color:#4a3f39}a{color:#a0700e}small{color:#73665f}</style></head><body><main>" +
+  "<h1>Getgents Pages</h1>" +
+  "<p>Ce domaine sert les documents professionnels (propositions, devis, rapports) que les utilisateurs de " +
+  '<a href="https://getgents.ai">getgents.ai</a> partagent à leurs clients par des liens privés et à durée limitée.</p>' +
+  "<p>Aucun document n'est consultable ici directement : chacun s'ouvre depuis son lien, dans un cadre isolé de getgents.ai.</p>" +
+  "<p><small>Domain serving business documents shared through private, expiring links by users of getgents.ai. " +
+  "Signaler un contenu / Report abuse : CEO@getgents.ai</small></p>" +
+  "</main></body></html>";
+
+const ENTETES_DOMAINE_CONTENU = {
+  "Content-Type": "text/html; charset=utf-8",
+  "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  "Cache-Control": "public, max-age=3600",
+};
 
 function versPages(request: NextRequest, avecCookiesDe?: NextResponse): NextResponse {
   const cible = request.nextUrl.clone();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { adresseDirecte, useCadreAvecRepli } from "@/components/shared/useCadreAvecRepli";
 import AssistantDocument from "./AssistantDocument";
 import Confidentialite from "./Confidentialite";
 import { BATTEMENT_MS, cleConsentement, DELAI_WIDGET_MS, type Consentement } from "@/lib/activitePage";
@@ -135,6 +136,9 @@ export default function VuePartage({
   protegee: boolean;
 }) {
   const cadre = useRef<HTMLIFrameElement>(null);
+  const srcDocument = `/api/partage/${encodeURIComponent(jeton)}/contenu`;
+  // Domaine de contenu bloqué (filtre d'entreprise) : rechargement depuis getgents.ai.
+  const repli = useCadreAvecRepli(srcDocument, cadre);
   const [choix, setChoix] = useState<Consentement | null>(null);
   const [choixLu, setChoixLu] = useState(false);
   const [widget, setWidget] = useState(false);
@@ -230,7 +234,8 @@ export default function VuePartage({
         <iframe
           ref={cadre}
           className={styles.cadre}
-          src={`/api/partage/${encodeURIComponent(jeton)}/contenu`}
+          src={repli.direct ? adresseDirecte(srcDocument) : srcDocument}
+          onLoad={repli.onLoad}
           title={titre}
           sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads"
           referrerPolicy="no-referrer"

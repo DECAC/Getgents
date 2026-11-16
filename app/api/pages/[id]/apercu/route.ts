@@ -19,7 +19,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // Domaine de contenu : la session est vérifiée ICI ; le propriétaire est
   // dans l'adresse signée, et la lecture là-bas le revérifie.
   if (!/^[0-9a-f-]{36}$/i.test(params.id)) return new Response("Page introuvable.", { status: 404 });
-  const ailleurs = versDomaineContenu(req, { t: "page", id: params.id, u: auth.user.id });
+  // `?direct=1` : repli du navigateur quand le domaine de contenu est bloqué
+  // (useCadreAvecRepli) — le document est servi ici, isolé comme avant.
+  const ailleurs = new URL(req.url).searchParams.get("direct") === "1" ? null : versDomaineContenu(req, { t: "page", id: params.id, u: auth.user.id });
   if (ailleurs) return ailleurs;
   const page = await contenuPourProprietaire(auth.user.id, params.id).catch(() => null);
   if (!page) return new Response("Page introuvable.", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });

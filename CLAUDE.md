@@ -1144,10 +1144,25 @@ destinataires visés sont justement en entreprise. Demandes de
 catégorisation faites le 16/11 (catégorie « Business », second choix
 « Computers and Internet » ; jamais « Web Hosting » / « File Sharing »,
 les plus bloquées) chez Palo Alto, Fortinet, Cisco Talos, Broadcom,
-Trellix — PAS Zscaler (formulaire réservé à ses clients). Parade prévue :
-repli automatique vers getgents.ai si le document ne se signale pas, et
-une page d'accueil explicative à la racine du domaine (un vérificateur
-qui tombe sur « Introuvable » classe en « Parked » ou suspect).
+Trellix — PAS Zscaler (formulaire réservé à ses clients). **Parades
+écrites (16/11)** : (1) REPLI AUTOMATIQUE (`useCadreAvecRepli`) — le
+document poste `{getgents:"pret"}` au tout premier script de
+`AMORCE_ARTEFACT` ; si le cadre a fini de charger sans ce signal (page de
+blocage du filtre), la page recharge depuis getgents.ai avec `?direct=1`
+(ou le champ `direct` pour l'aperçu collé), qui saute la redirection —
+l'état d'avant le domaine séparé, mêmes gardes d'accès, même CSP
+`sandbox`. Seul le PREMIER chargement de chaque document est jugé (une
+navigation interne de l'artefact ne déclenche rien), le repli dure le
+temps de la page. Partout : lien du destinataire, fiche, vignettes, aperçu
+collé (dont l'aperçu vide, qui porte désormais l'amorce, sinon il forçait
+le repli). (2) RACINE du domaine de contenu : page statique qui dit ce
+qu'est le domaine (middleware, CSP `default-src 'none'`), pour les
+vérificateurs des filtres. Vérifié au navigateur contre un FAUX FILTRE
+(domaine de contenu pointé sur un serveur qui ne rend que « Website
+blocked ») : document affiché chez le destinataire en ~4 s, fiche,
+vignette et aperçu repliés ; sans filtre, rien ne bascule. Piège de test :
+`context.route` de Playwright n'intercepte pas la requête qui SUIT une
+redirection — le premier essai « réussissait » sans rien bloquer.
 
 **BREVO EST CONFIGURÉ** en production (12/11, e-mail d'invitation reçu par
 l'utilisateur). Il ne l'était pas jusque-là : invitation par e-mail,
