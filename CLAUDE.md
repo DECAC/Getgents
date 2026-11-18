@@ -9,7 +9,8 @@ les dettes assumées, et les pièges qui ont déjà coûté cher.
 
 ## Le projet
 
-Plateforme de création d'assistants (« gents »). Next.js 14 App Router,
+Plateforme de création d'assistants (« gents »), dont seule la partie
+« Getgents Pages » est ouverte au public. Next.js 15 App Router (React 19),
 français partout — code, commentaires, commits, interface. CSS Modules et
 `styles/tokens.css`, jamais Tailwind. Supabase pour la base et
 l'authentification. Déploiement Vercel depuis `main`.
@@ -723,6 +724,19 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   objet « Votre accès à Getgents Pages ») : le chemin `/auth/confirm` est
   celui en service. Modifier le modèle exige le SMTP personnalisé (Brevo),
   pas l'offre Pro.
+- **La racine getgents.ai est la VITRINE de Getgents Pages** (18/11, décision
+  de l'éditeur ; `components/public/VitrinePages.tsx`). Elle présentait les
+  gents, qui ne sont pas ouverts au public : on demandait un accès aux gents
+  et on recevait Pages. Promesse LARGE choisie par l'éditeur (« Ce que vous
+  créez avec l'IA, envoyé à la bonne personne, par un lien privé » ; clients,
+  équipe, proches), pas réservée aux vendeurs : l'essai doit dire quels
+  usages viennent — la demande d'accès demande « avec qui, et quoi ».
+  Formulations gardées par un test (`vitrinePages.test.ts`) : l'assistant
+  répond « à partir de la page » (jamais « uniquement »), le détail de
+  lecture « seulement si votre lecteur accepte », plafonds lus dans
+  `PLAFONDS_PAGES`. Connecté → `/accueil` (→ `/pages` pour un compte
+  « pages »). Connexion, demande d'accès, Contact, À propos parlent de Pages ;
+  les gents diffusés gardent leur adresse.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

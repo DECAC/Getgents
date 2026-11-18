@@ -16,7 +16,7 @@ export type ProblemeDemande = "email" | "motivation_courte" | "motivation_longue
 
 export const MESSAGE_DEMANDE: Record<ProblemeDemande | "trop" | "serveur", string> = {
   email: "Cette adresse e-mail ne semble pas valide.",
-  motivation_courte: `Dites-nous en quelques mots ce que vous aimeriez construire (${MOTIVATION_MIN} caractères au moins).`,
+  motivation_courte: `Dites-nous en quelques mots avec qui vous voulez partager, et quoi (${MOTIVATION_MIN} caractères au moins).`,
   motivation_longue: `Votre message dépasse ${MOTIVATION_MAX} caractères : resserrez-le un peu.`,
   robot: "La demande n'a pas pu être envoyée.",
   trop: "Vous avez déjà envoyé une demande récemment. Nous vous répondrons à cette adresse.",
@@ -57,7 +57,7 @@ export function corpsEmailDemande(d: DemandeAcces, date: Date = new Date()): str
   return (
     `<p><b>Nouvelle demande d'accès à Getgents</b> — ${echapper(quand)}</p>` +
     `<p><b>Adresse :</b> ${echapper(d.email)}</p>` +
-    `<p><b>Ce que la personne aimerait construire :</b></p>` +
+    `<p><b>Ce que la personne veut partager, et avec qui :</b></p>` +
     `<blockquote style="margin:0 0 0 8px;padding-left:12px;border-left:3px solid #ccc">${motivation}</blockquote>` +
     `<p style="color:#777">« Répondre » écrit directement à cette personne.</p>`
   );

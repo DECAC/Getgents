@@ -5,7 +5,7 @@ import styles from "../legal.module.css";
 export const metadata: Metadata = {
   title: "À propos — Getgents",
   description:
-    "Getgents permet de construire un assistant à partir d'une description, de le partager ou de le publier.",
+    "Getgents Pages : partagez ce que vous créez avec l'IA, par un lien privé, avec un assistant qui répond aux questions de votre lecteur.",
   alternates: { canonical: "/a-propos" },
 };
 
@@ -14,24 +14,25 @@ export default function AProposPage() {
     <>
       <h1 className={styles.titre}>À propos de Getgents</h1>
       <p className={styles.chapeau}>
-        Décrivez ce dont vous avez besoin, et Getgents en fait un gent : un assistant qui
-        connaît vos documents, interroge vos sources et produit ce que vous lui demandez.
+        Getgents Pages transforme ce que vous créez avec l&apos;IA — un artefact Claude, un
+        canvas ChatGPT ou Mistral — en une page que vous envoyez à la bonne personne, par un
+        lien privé.
       </p>
 
       <section className={styles.section}>
         <h2 className={styles.sousTitre}>Ce qu&apos;on y fait</h2>
         <ul className={styles.liste}>
           <li>
-            <b>Construire.</b> On décrit un rôle en une phrase ; l&apos;assistant de
-            configuration propose une première version qu&apos;on affine.
+            <b>Partager.</b> Un lien privé par destinataire, qu&apos;il ouvre sans compte.
+            L&apos;accès peut être protégé par un code envoyé à son adresse.
           </li>
           <li>
-            <b>Brancher.</b> Documents, sources ouvertes, API, boîte mail : le gent travaille
-            sur ce qu&apos;on lui donne.
+            <b>Répondre.</b> Un assistant répond aux questions du lecteur à partir de la page ;
+            quand elle ne dit rien, il le dit, et l&apos;auteur peut compléter.
           </li>
           <li>
-            <b>Partager.</b> À une personne, par un lien — sans qu&apos;elle ait de compte à
-            créer — ou publiquement, à une adresse qui lui est propre.
+            <b>Suivre.</b> L&apos;auteur voit quand la page est ouverte. Le détail de lecture
+            seulement si le lecteur accepte de le partager.
           </li>
         </ul>
       </section>
@@ -39,14 +40,22 @@ export default function AProposPage() {
       <section className={styles.section}>
         <h2 className={styles.sousTitre}>Ce que nous tenons</h2>
         <p className={styles.texte}>
-          Un gent appartient à son créateur. Ses instructions ne sont jamais montrées à ceux
-          qui l&apos;utilisent, ses documents restent les siens, et rien de tout cela ne sert
-          à entraîner de modèle. Un créateur peut brancher sa propre clé de modèle : il paie
-          alors ses appels, et n&apos;est plus tributaire de nos plafonds.
+          Une page appartient à son auteur. Elle est affichée isolée, sur un domaine distinct,
+          sans accès au compte de personne ; rien de ce qu&apos;elle contient ne sert à
+          entraîner de modèle. La lecture est anonyme par défaut.
         </p>
         <p className={styles.texte}>
           Le détail de ce qui est traité, et par qui, est sur{" "}
           <a href="/confidentialite">la page confidentialité</a>.
+        </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sousTitre}>Et les gents ?</h2>
+        <p className={styles.texte}>
+          Getgents est né comme un atelier d&apos;assistants — des « gents » — qu&apos;on
+          construit puis partage. Cet atelier n&apos;est pas ouvert au public ; les gents déjà
+          diffusés restent accessibles à leur adresse.
         </p>
       </section>
 

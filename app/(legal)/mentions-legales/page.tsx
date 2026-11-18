@@ -4,7 +4,7 @@ import styles from "../legal.module.css";
 
 export const metadata: Metadata = {
   title: "Mentions légales — Getgents",
-  description: "Éditeur, directeur de la publication et hébergeurs du service Getgents.",
+  description: "Éditeur et hébergeurs du service Getgents.",
   alternates: { canonical: "/mentions-legales" },
 };
 
@@ -13,8 +13,8 @@ export default function MentionsLegalesPage() {
     <>
       <h1 className={styles.titre}>Mentions légales</h1>
       <p className={styles.chapeau}>
-        Getgents est une plateforme qui permet de construire des assistants — des « gents » —
-        et de les partager ou de les publier.
+        Getgents permet de partager par un lien privé ce que l&apos;on crée avec l&apos;IA
+        (Getgents Pages), et de construire des assistants — des « gents ».
       </p>
 
       <section className={styles.section}>

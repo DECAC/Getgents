@@ -21,9 +21,9 @@ export default function ContactPage() {
       <section className={styles.section}>
         <h2 className={styles.sousTitre}>Demander un accès</h2>
         <p className={styles.texte}>
-          Getgents est en accès restreint : nous accueillons les premiers créateurs un par
-          un. <a href="/inscription">Demandez un accès</a> en disant en deux lignes ce que
-          vous aimeriez construire — ou, si vous préférez,{" "}
+          Getgents Pages ouvre sur invitation : nous accueillons les premiers utilisateurs un
+          par un. <a href="/inscription">Demandez un accès</a> en disant en deux lignes avec
+          qui vous voulez partager, et quoi — ou, si vous préférez,{" "}
           <a href={lienDemandeAcces()}>écrivez-nous</a>.
         </p>
       </section>

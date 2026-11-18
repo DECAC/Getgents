@@ -59,14 +59,14 @@ function AccesRestreint() {
     >
       <Champ label="Votre adresse e-mail" type="email" value={email} onChange={setEmail} autoComplete="email" />
       <label className={styles.field}>
-        <span className={styles.label}>Ce que vous aimeriez construire avec Getgents</span>
+        <span className={styles.label}>Avec qui voulez-vous partager, et quoi ?</span>
         <textarea
           className={[styles.input, styles.zoneTexte].join(" ")}
           value={motivation}
           onChange={(e) => setMotivation(e.target.value)}
           rows={4}
           maxLength={MOTIVATION_MAX}
-          placeholder="Ex. : un assistant qui suit les devis de mes chantiers et me prépare les relances."
+          placeholder="Ex. : les propositions que je prépare avec Claude, pour mes clients."
           required
         />
         <span className={styles.compteur} aria-live="polite">

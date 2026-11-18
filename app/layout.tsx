@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Getgents",
-  description: "Construisez vos gents, puis servez-vous-en au quotidien.",
+  description: "Ce que vous créez avec l'IA, envoyé à la bonne personne, par un lien privé.",
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-icon.png",

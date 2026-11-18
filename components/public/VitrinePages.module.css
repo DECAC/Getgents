@@ -1,0 +1,479 @@
+/* Vitrine Getgents Pages (racine). `globals.css` pose `overflow: hidden` sur
+   html et body : la page porte SA propre zone de défilement. */
+
+.page {
+  --principal: color-mix(in srgb, var(--gold) 68%, #000);
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg);
+  color: var(--ink);
+  scroll-behavior: smooth;
+}
+
+.barre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px clamp(16px, 4vw, 48px);
+}
+
+.marque {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 14px;
+}
+
+.nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.btn {
+  display: inline-block;
+  padding: 11px 22px;
+  border-radius: var(--r-pill);
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nav a.primaire,
+.primaire {
+  background: var(--principal);
+  color: #fff;
+}
+
+.secondaire {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.petit {
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+/* ——— Ouverture ——— */
+
+.hero {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px clamp(16px, 4vw, 48px) 64px;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.etiquette {
+  display: inline-block;
+  margin-bottom: 18px;
+  padding: 5px 10px;
+  border-radius: var(--r-pill);
+  background: var(--gold-tint);
+  color: #7a5408;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.titre {
+  margin: 0 0 18px;
+  font-size: clamp(30px, 4.4vw, 48px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.lede {
+  max-width: 52ch;
+  margin: 0 0 28px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.note {
+  margin: 14px 0 0;
+  color: var(--faint);
+  font-size: 12.5px;
+}
+
+.note a {
+  color: var(--muted);
+}
+
+/* Illustration */
+
+.sceneCadre {
+  position: relative;
+  padding-bottom: 28px;
+}
+
+.scene {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--card);
+  box-shadow: 0 24px 60px -30px rgba(80, 40, 20, 0.35);
+}
+
+.sceneHaut {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sceneHaut b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.verrou {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  background: var(--success-tint);
+  color: #2f6b33;
+  font-size: 11px;
+}
+
+.sceneCorps {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  min-height: 330px;
+}
+
+.doc {
+  padding: 22px;
+  border-right: 1px solid var(--line-soft);
+}
+
+.docTitre {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.docSous {
+  margin: 0 0 14px;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.ligne,
+.total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.ligne {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.total {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.barres {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 60px;
+  margin-top: 16px;
+}
+
+.barres i {
+  flex: 1;
+  border-radius: 4px;
+  background: var(--sage-tint);
+}
+
+.barres i.barreForte {
+  background: var(--sage);
+}
+
+.assist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: #fffaf6;
+}
+
+.assist p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.assist .assistTitre {
+  font-weight: 700;
+}
+
+.assist .q {
+  align-self: flex-end;
+  max-width: 90%;
+  padding: 8px 11px;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--ink);
+  color: #fff;
+}
+
+.assist .r {
+  max-width: 95%;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 14px 4px;
+  background: var(--card);
+}
+
+.assist .saisie {
+  margin-top: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: #fff;
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+.vu {
+  position: absolute;
+  right: -6px;
+  bottom: 0;
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 12px 30px -16px rgba(80, 40, 20, 0.4);
+  font-size: 12px;
+}
+
+.vu span {
+  color: var(--muted);
+}
+
+/* ——— Sections ——— */
+
+.section {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 56px clamp(16px, 4vw, 48px);
+  scroll-margin-top: 12px;
+}
+
+.h2 {
+  margin: 0 0 8px;
+  font-size: clamp(22px, 2.6vw, 30px);
+  letter-spacing: -0.02em;
+}
+
+.intro {
+  max-width: 60ch;
+  margin: 0 0 28px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.carte {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--card);
+}
+
+.carte h3,
+.atout h3 {
+  margin: 0 0 6px;
+  font-size: 15.5px;
+}
+
+.carte p,
+.atout p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.etapes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: etape;
+}
+
+.etapes > li::before {
+  counter-increment: etape;
+  content: counter(etape);
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: var(--sage-tint);
+  color: var(--sage);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.outils {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.outils span {
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.atouts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.atout {
+  display: flex;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--card);
+}
+
+.ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--gold-tint);
+  font-size: 17px;
+}
+
+.publics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.publics .ic {
+  margin-bottom: 12px;
+}
+
+.essai {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 32px;
+  align-items: center;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--card);
+}
+
+.essai .intro {
+  margin-bottom: 20px;
+}
+
+.plafonds {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.plafonds li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    padding-top: 16px;
+  }
+
+  .etapes,
+  .atouts,
+  .publics,
+  .essai {
+    grid-template-columns: 1fr;
+  }
+
+  .essai {
+    padding: 24px;
+  }
+
+  .sceneCorps {
+    grid-template-columns: 1fr;
+  }
+
+  .doc {
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .vu {
+    right: 10px;
+  }
+
+  /* L'en-tête garde la marque et l'appel : « Se connecter » est sous les boutons. */
+  .lienLarge {
+    display: none;
+  }
+}

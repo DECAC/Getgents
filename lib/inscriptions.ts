@@ -24,14 +24,14 @@ export const INSCRIPTIONS_OUVERTES = false;
 /** Où demander un accès. Une seule occurrence : elle changera un jour. */
 export const ADRESSE_DEMANDE_ACCES = "CEO@getgents.ai";
 
-export const TITRE_ACCES_RESTREINT = "Getgents est en accès restreint";
+export const TITRE_ACCES_RESTREINT = "Getgents Pages ouvre sur invitation";
 
 export const MESSAGE_ACCES_RESTREINT =
   "La création de compte n'est pas ouverte pour le moment : nous accueillons les " +
-  "premiers créateurs un par un, le temps de faire mûrir la plateforme.";
+  "premiers utilisateurs un par un, gratuitement, le temps de faire mûrir le service.";
 
 export const INVITATION_DEMANDE_ACCES =
-  "Demandez un accès en nous disant en deux lignes ce que vous aimeriez construire : " +
+  "Demandez un accès en nous disant en deux lignes avec qui vous voulez partager, et quoi : " +
   "nous vous répondons par e-mail.";
 
 /**
@@ -46,7 +46,7 @@ export function lienDemandeAcces(): string {
   const objet = encodeURIComponent("Demande d'accès à Getgents");
   const corps = encodeURIComponent(
     "Bonjour,\n\nJ'aimerais accéder à Getgents.\n\n" +
-      "Ce que je souhaite construire :\n\n"
+      "Ce que je souhaite partager, et avec qui :\n\n"
   );
   return `mailto:${ADRESSE_DEMANDE_ACCES}?subject=${objet}&body=${corps}`;
 }

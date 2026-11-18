@@ -16,7 +16,7 @@ function Connexion() {
   return (
     <AuthForm
       titre="Se connecter"
-      lede="Retrouvez vos gents et reprenez où vous en étiez."
+      lede="Retrouvez vos pages et reprenez où vous en étiez."
       bouton="Se connecter"
       onSubmit={async () => {
         const supabase = getSupabaseBrowser();
