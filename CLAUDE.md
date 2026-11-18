@@ -1251,10 +1251,9 @@ compteur en échec = FERMÉ. 10 par heure au plus, champ piège. E-mail de
 confirmation par BREVO (pas Supabase) vers `/auth/confirm?type=signup` →
 `/accueil` → `/pages` ; e-mail non parti = compte retiré. Adresse déjà
 inscrite : même écran, e-mail « vous avez déjà un compte » à elle seule
-(pas d'énumération). L'éditeur reçoit un e-mail par compte. NON vérifié
-avec Supabase : que `generateLink` passe inscriptions fermées (si
-`creation_refusee` « Signups not allowed » au journal, c'est ça), et une
-adresse inscrite NON confirmée (reçoit « déjà un compte » sans pouvoir se
+(pas d'énumération). L'éditeur reçoit un e-mail par compte. **Essai réel CONCLUANT (18/11)** : `generateLink` passe bien avec les
+inscriptions Supabase fermées ; lien de l'e-mail → Mes pages. NON vérifié :
+une adresse inscrite NON confirmée (reçoit « déjà un compte » sans pouvoir se
 connecter). Deux inscriptions simultanées à la 50ᵉ place peuvent faire 51.
 
 **Demande d'accès par FORMULAIRE** (13/11 ; `/inscription`,
