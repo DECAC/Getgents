@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BrandIcon } from "@/components/shared/BrandMark";
 import { PiedLegal } from "@/components/shared/PiedLegal";
-import { libelleAppelAction } from "@/lib/inscriptions";
+import { libelleAppelAction, type EtatInscriptions } from "@/lib/inscriptions";
 import { PLAFONDS_PAGES } from "@/lib/offre";
 import styles from "./VitrinePages.module.css";
 
@@ -20,8 +20,9 @@ import styles from "./VitrinePages.module.css";
  * précisions de l'auteur s'y ajoutent) ; on voit qu'une page est OUVERTE, le
  * détail de lecture seulement si le lecteur l'accepte.
  */
-export function VitrinePages() {
-  const appel = libelleAppelAction();
+export function VitrinePages({ inscriptions = { genre: "fermees" } }: { inscriptions?: EtatInscriptions }) {
+  const appel = libelleAppelAction(inscriptions);
+  const ouvertes = inscriptions.genre === "ouvertes";
   return (
     <div className={styles.page}>
       <header className={styles.barre}>
@@ -42,7 +43,9 @@ export function VitrinePages() {
       <main>
         <section className={styles.hero}>
           <div>
-            <span className={styles.etiquette}>Accès sur invitation · gratuit pendant l&apos;essai</span>
+            <span className={styles.etiquette}>
+              {ouvertes ? "Essai gratuit · places limitées" : "Accès sur invitation · gratuit pendant l'essai"}
+            </span>
             <h1 className={styles.titre}>
               Ce que vous créez avec l&apos;IA, envoyé à la bonne personne, par un lien privé.
             </h1>
@@ -60,7 +63,7 @@ export function VitrinePages() {
               </a>
             </div>
             <p className={styles.note}>
-              Déjà invité ? <Link href="/connexion">Se connecter</Link>
+              Déjà un compte ? <Link href="/connexion">Se connecter</Link>
             </p>
           </div>
 
@@ -226,8 +229,11 @@ export function VitrinePages() {
             <div>
               <h2 className={styles.h2}>Un accès d&apos;essai, gratuit</h2>
               <p className={styles.intro}>
-                Getgents Pages ouvre sur invitation. Dites-nous en deux lignes avec qui vous voulez
-                partager, et quoi : nous vous envoyons votre accès par e-mail.
+                {inscriptions.genre === "ouvertes"
+                  ? `Créez votre compte en une minute : l'essai est gratuit, dans la limite de ${inscriptions.plafond} places — il en reste ${inscriptions.restantes}.`
+                  : inscriptions.genre === "completes"
+                    ? "Les places de l'essai sont toutes prises. Laissez votre adresse : nous vous écrirons dès qu'une place se libère."
+                    : "Getgents Pages ouvre sur invitation. Dites-nous en deux lignes avec qui vous voulez partager, et quoi : nous vous envoyons votre accès par e-mail."}
               </p>
               <Link className={`${styles.btn} ${styles.primaire}`} href="/inscription">
                 {appel}

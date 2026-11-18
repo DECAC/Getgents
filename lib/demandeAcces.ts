@@ -23,7 +23,7 @@ export const MESSAGE_DEMANDE: Record<ProblemeDemande | "trop" | "serveur", strin
   serveur: "La demande n'a pas pu être enregistrée. Réessayez dans un instant.",
 };
 
-const EMAIL = /^[^\s@<>"]{1,64}@[^\s@<>"]{1,190}\.[a-z]{2,24}$/i;
+export const EMAIL_VALIDE = /^[^\s@<>"]{1,64}@[^\s@<>"]{1,190}\.[a-z]{2,24}$/i;
 
 /** Adresse et motivation nettoyées, telles qu'elles seront gardées. */
 export function normaliserDemande(d: DemandeAcces): DemandeAcces {
@@ -38,7 +38,7 @@ export function normaliserDemande(d: DemandeAcces): DemandeAcces {
 export function validerDemande(brute: DemandeAcces): ProblemeDemande | null {
   const d = normaliserDemande(brute);
   if (d.piege) return "robot";
-  if (!EMAIL.test(d.email)) return "email";
+  if (!EMAIL_VALIDE.test(d.email)) return "email";
   if (d.motivation.length < MOTIVATION_MIN) return "motivation_courte";
   if (d.motivation.length > MOTIVATION_MAX) return "motivation_longue";
   return null;

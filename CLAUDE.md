@@ -1236,6 +1236,27 @@ le désactiver, pas lister des IP), soit une mauvaise clé ; le message qui suit
 le code dans `getgents:email` tranche. L'authentification du domaine chez
 Brevo (DNS) conditionne la délivrabilité : un e-mail en indésirables = DNS.
 
+**Inscription LIBRE PLAFONNÉE (18/11, choix de l'éditeur : option A,
+50 comptes ; `/api/inscription`, `lib/server/inscriptions.ts`, migration 030
+à passer AVANT le déploiement)** : `INSCRIPTIONS_PLAFOND` (Vercel, lue à
+l'exécution) ouvre `/inscription` (adresse, mot de passe, « avec qui, et
+quoi » FACULTATIF) tant qu'il reste des places ; absente ou 0 = demande
+d'accès comme avant ; plafond atteint = « places prises » + demande d'accès,
+et la vitrine suit. Supabase garde ses inscriptions publiques FERMÉES (mon
+conseil était l'option B, invitation automatique ; l'éditeur a choisi A) :
+c'est le SERVEUR qui crée le compte (`auth.admin.generateLink`
+type `signup`, clé de service) APRÈS lecture du compteur — ouvrir Supabase
+aurait laissé créer des comptes par son API sans plafond. Lecture du
+compteur en échec = FERMÉ. 10 par heure au plus, champ piège. E-mail de
+confirmation par BREVO (pas Supabase) vers `/auth/confirm?type=signup` →
+`/accueil` → `/pages` ; e-mail non parti = compte retiré. Adresse déjà
+inscrite : même écran, e-mail « vous avez déjà un compte » à elle seule
+(pas d'énumération). L'éditeur reçoit un e-mail par compte. NON vérifié
+avec Supabase : que `generateLink` passe inscriptions fermées (si
+`creation_refusee` « Signups not allowed » au journal, c'est ça), et une
+adresse inscrite NON confirmée (reçoit « déjà un compte » sans pouvoir se
+connecter). Deux inscriptions simultanées à la 50ᵉ place peuvent faire 51.
+
 **Demande d'accès par FORMULAIRE** (13/11 ; `/inscription`,
 `lib/demandeAcces.ts`, `/api/demande-acces`) : le bouton `mailto:` ouvrait
 la messagerie du visiteur (et affichait CEO@getgents.ai) ; on perdait ceux

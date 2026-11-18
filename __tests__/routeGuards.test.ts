@@ -39,6 +39,7 @@ const OUVERTES: Record<string, string> = {
   "app/api/gmail/callback/route.ts": "atterrissage OAuth Google — état signé + requireUser",
   "app/api/whatsapp/webhook/route.ts": "webhook Meta — vérifié par WHATSAPP_VERIFY_TOKEN",
   "app/api/demande-acces/route.ts": "demande d'accès d'un visiteur sans compte — champ piège et plafonds lus dans la table",
+  "app/api/inscription/route.ts": "inscription d'un visiteur sans compte — plafond INSCRIPTIONS_PLAFOND, plafond horaire, champ piège ; compte créé par la clé de service",
   "app/api/powens/connect/route.ts": "redirection vers la webview bancaire, sans donnée du compte",
   // Salon collaboratif : mêmes règles que /l/<jeton>. Le jeton du lien fait
   // l'authentification (resolveCollabLink + canChat), puis l'identité du

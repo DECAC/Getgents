@@ -21,6 +21,32 @@
 
 export const INSCRIPTIONS_OUVERTES = false;
 
+/**
+ * INSCRIPTION LIBRE PLAFONNÉE (18/11, décision de l'éditeur) — distincte du
+ * drapeau ci-dessus, qui reste FAUX : Supabase garde les inscriptions
+ * publiques FERMÉES, et c'est le SERVEUR qui crée le compte
+ * (`/api/inscription`, clé de service) après avoir vérifié le plafond. Ouvrir
+ * Supabase laisserait créer des comptes par son API sans passer par lui.
+ *
+ * `INSCRIPTIONS_PLAFOND` (Vercel) : nombre de comptes créables par ce
+ * formulaire. Absente, vide ou 0 = fermé, retour à la demande d'accès.
+ */
+export type EtatInscriptions =
+  | { genre: "fermees" }
+  | { genre: "ouvertes"; restantes: number; plafond: number }
+  | { genre: "completes"; plafond: number };
+
+export function lirePlafondInscriptions(brut: string | undefined | null): number | null {
+  const n = Number.parseInt((brut ?? "").trim(), 10);
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 100_000) : null;
+}
+
+export function etatDesInscriptions(plafond: number | null, comptesCrees: number): EtatInscriptions {
+  if (!plafond) return { genre: "fermees" };
+  if (comptesCrees >= plafond) return { genre: "completes", plafond };
+  return { genre: "ouvertes", restantes: plafond - comptesCrees, plafond };
+}
+
 /** Où demander un accès. Une seule occurrence : elle changera un jour. */
 export const ADRESSE_DEMANDE_ACCES = "CEO@getgents.ai";
 
@@ -52,6 +78,30 @@ export function lienDemandeAcces(): string {
 }
 
 /** Libellé des boutons qui menaient vers la création de compte. */
-export function libelleAppelAction(): string {
-  return INSCRIPTIONS_OUVERTES ? "Créer un compte" : "Demander un accès";
+export function libelleAppelAction(etat: EtatInscriptions = { genre: "fermees" }): string {
+  return INSCRIPTIONS_OUVERTES || etat.genre === "ouvertes" ? "Créer un compte" : "Demander un accès";
 }
+
+export const POUR_QUOI_MAX = 1500;
+
+export interface DemandeInscription {
+  email: string;
+  motDePasse: string;
+  /** Facultatif : « avec qui voulez-vous partager, et quoi ? ». */
+  pourQuoi: string;
+  /** Champ piège, invisible pour un humain. */
+  piege: string;
+}
+
+/** Le premier problème d'une inscription, ou null. `robot` : accepter en silence. */
+export function validerInscription(d: DemandeInscription, emailValide: RegExp, verifierMotDePasse: (m: string) => string | null): string | "robot" | null {
+  if (d.piege.trim()) return "robot";
+  if (!emailValide.test(d.email.trim())) return "Cette adresse e-mail ne semble pas valide.";
+  const mdp = verifierMotDePasse(d.motDePasse);
+  if (mdp) return mdp;
+  if (d.pourQuoi.length > POUR_QUOI_MAX) return `Votre réponse dépasse ${POUR_QUOI_MAX} caractères : resserrez-la un peu.`;
+  return null;
+}
+
+export const MESSAGE_INSCRIPTIONS_COMPLETES =
+  "Les places de l'essai sont toutes prises pour le moment. Laissez votre adresse : nous vous écrirons dès qu'une place se libère.";

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getUser } from "@/lib/server/session";
 import { isAuthConfigured } from "@/lib/authConfig";
 import { VitrinePages } from "@/components/public/VitrinePages";
+import { etatInscriptions } from "@/lib/server/inscriptions";
 
 /**
  * Racine du site : la vitrine de Getgents Pages (18/11), seul produit ouvert
@@ -23,10 +24,10 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   // Sans Supabase (développement local), pas de session : la vitrine.
-  if (!isAuthConfigured()) return <VitrinePages />;
+  if (!isAuthConfigured()) return <VitrinePages inscriptions={await etatInscriptions()} />;
 
   const user = await getUser();
   if (user) redirect("/accueil");
 
-  return <VitrinePages />;
+  return <VitrinePages inscriptions={await etatInscriptions()} />;
 }
