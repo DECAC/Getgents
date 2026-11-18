@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { GuideConnexion } from "./GuideConnexion";
+import { assistantDuGuide } from "@/lib/guidesAssistants";
 import { AccueilPages } from "./AccueilPages";
 import type { Offre } from "@/lib/offre";
 import { ImportPage } from "./ImportPage";
@@ -15,7 +16,7 @@ const date = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "
 
 /** « Mes pages » : une carte par PAGE, quel que soit le nombre de destinataires. */
 export function ListePages({ offre = "complete" }: { offre?: Offre }) {
-  const guide = useSearchParams().get("guide") === "1";
+  const guide = useSearchParams().get("guide");
   const [pages, setPages] = useState<LignePage[] | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [recherche, setRecherche] = useState("");
@@ -35,7 +36,13 @@ export function ListePages({ offre = "complete" }: { offre?: Offre }) {
 
   const visibles = useMemo(() => filtrerParTitre((pages ?? []).filter((p) => filtrePage(p, filtre)), recherche), [pages, filtre, recherche]);
 
-  if (guide) return <GuideConnexion titre="Connecter Claude à Getgents" />;
+  if (guide)
+    return (
+      <div className={styles.wrap}>
+        <GuideConnexion assistant={assistantDuGuide(guide)} onNouvelle={() => setImport(true)} />
+        {importOuvert && <ImportPage onFermer={() => setImport(false)} />}
+      </div>
+    );
 
   // Aucune page encore : les deux façons d'en créer une, à la place de la liste.
   if (pages && pages.length === 0)

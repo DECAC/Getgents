@@ -32,13 +32,13 @@ export function AccueilPages({ offre, onNouvelle }: { offre: Offre; onNouvelle: 
         <div className={`${styles.chemin} ${styles.cheminReco}`}>
           <span className={styles.cheminTag}>Le plus rapide ensuite</span>
           <h2>Partager depuis Claude</h2>
-          <p>Une fois le connecteur ajouté, dites simplement à Claude : « partage cette page à marie@acme.fr ».</p>
+          <p>Une fois le connecteur ajouté, dites simplement à Claude : « partage cette page à marie@acme.fr ». Guides pour ChatGPT, Mistral et Perplexity au même endroit.</p>
           <ol>
             <li>Ajouter le connecteur Getgents dans Claude</li>
             <li>Autoriser votre compte</li>
             <li>Demander le partage dans la conversation</li>
           </ol>
-          <a href="/pages?guide=1" className={styles.secondaire} style={{ textDecoration: "none" }}>
+          <a href="/pages?guide=claude" className={styles.secondaire} style={{ textDecoration: "none" }}>
             Connecter Claude
           </a>
         </div>

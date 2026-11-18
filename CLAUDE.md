@@ -630,7 +630,16 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   n'est PAS essayé : il exige le mode développeur, donc un abonnement
   payant, que l'éditeur n'a pas. Risque connu pour ce jour-là : notre
   inscription n'accepte que les clients PUBLICS (`validerInscription`),
-  et un refus n'y est pas journalisé — à revoir avant l'essai. Lot suivant : domaine séparé. **Payé en passant (13/11)** : une page collée (aucun lien) était cachée par le filtre par défaut « Actives » — elle n'apparaissait que sur l'accueil. « Actives » inclut désormais les pages jamais partagées (« Pas encore partagée ») ; « Sans lien actif » = des liens, tous révoqués ou expirés. Et `.wrap` n'est plus bridé à 1 200 px : sur grand écran, la grille prend la largeur. Déployé, essai réel CONCLUANT (13/11). **Domaine de contenu `www.getgents-pages.com` (13/11, ACTIVÉ,
+  et un refus n'y est pas journalisé — à revoir avant l'essai. **Guides
+  par assistant (18/11, demande de l'utilisateur ; `lib/guidesAssistants.ts`,
+  `GuideConnexion`)** : entrée du rail « Connecter un assistant IA »
+  (`/pages?guide=claude|chatgpt|mistral|perplexity`, l'ancien `?guide=1`
+  vaut Claude), un onglet par assistant, deux chemins : copier-coller
+  (« marche avec l'offre gratuite ») et connecteur. Le connecteur n'est
+  marqué « Essayé » QUE pour Claude ; ailleurs « Pas encore essayé par
+  Getgents », copier-coller en premier, et AUCUN menu précis pour Mistral
+  et Perplexity (jamais vus d'ici) — un test garde qu'aucun autre guide ne
+  se dise essayé. Remplace la mention « ChatGPT et Mistral : bientôt ». Lot suivant : domaine séparé. **Payé en passant (13/11)** : une page collée (aucun lien) était cachée par le filtre par défaut « Actives » — elle n'apparaissait que sur l'accueil. « Actives » inclut désormais les pages jamais partagées (« Pas encore partagée ») ; « Sans lien actif » = des liens, tous révoqués ou expirés. Et `.wrap` n'est plus bridé à 1 200 px : sur grand écran, la grille prend la largeur. Déployé, essai réel CONCLUANT (13/11). **Domaine de contenu `www.getgents-pages.com` (13/11, ACTIVÉ,
   essai réel CONCLUANT ; `lib/domaineContenu.ts`, `lib/adresseSignee.ts`,
   `app/api/contenu/[token]`)** — défense en profondeur choisie par
   l'utilisateur (domaine DISTINCT plutôt qu'un sous-domaine, même site pour le

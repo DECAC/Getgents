@@ -18,7 +18,7 @@ export function RailPages({ offre = "complete" }: { offre?: Offre }) {
   const { ouvert } = useNavMobile();
   const [replie, setReplie] = useState(false);
   const chemin = usePathname();
-  const guide = useSearchParams().get("guide") === "1";
+  const guide = !!useSearchParams().get("guide");
 
   const entree = (href: string, libelle: string, icone: React.ReactNode, on: boolean) => (
     <a href={href} className={[styles.navItem, on ? styles.navItemOn : ""].filter(Boolean).join(" ")}
@@ -61,8 +61,8 @@ export function RailPages({ offre = "complete" }: { offre?: Offre }) {
             !!chemin?.startsWith("/pages") && !guide
           )}
           {entree(
-            "/pages?guide=1",
-            "Connecter Claude / ChatGPT",
+            "/pages?guide=claude",
+            "Connecter un assistant IA",
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 7V3M15 7V3M6 7h12v4a6 6 0 0 1-12 0zM12 17v4" />
             </svg>,

@@ -1545,3 +1545,31 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Guides par assistant (GuideConnexion) */
+.guideBloc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.guideSousTitre {
+  margin: 0;
+  font-size: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.filtreQuestions a.ongletAssistant {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.filtreQuestions a.ongletAssistant[aria-selected="true"] {
+  background: var(--gold-tint);
+  color: #7a5308;
+  font-weight: 600;
+}
