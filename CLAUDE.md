@@ -1070,6 +1070,13 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
 
 ## Dette assumée, à traiter avant l'ouverture publique
 
+- **Security Advisor de Supabase (18/11)** : traité par les migrations 028
+  (vue d'annuaire SECURITY DEFINER retirée, elle n'était plus lue) et 029
+  (`search_path` figé sur huit fonctions, `purge_usage_counters` et
+  `increment_share_refresh` fermées à `anon`). RESTE, accepté : « Leaked
+  password protection » exige l'offre Pro de Supabase. Compensé par
+  l'invitation (peu de comptes) et la limite d'essais de Supabase.
+
 - Environ 21 boutons textuels sous 40 px sur `/espace/[id]` (décision de
   densité, proposée et non tranchée).
 
