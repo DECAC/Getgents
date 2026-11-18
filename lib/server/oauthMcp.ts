@@ -68,6 +68,21 @@ export async function inscrireClient(nom: string, adressesRetour: string[]): Pro
   return client;
 }
 
+/**
+ * Inscriptions de la dernière heure. L'inscription est OUVERTE (RFC 7591) :
+ * sans plafond, n'importe qui pourrait remplir la table. Une lecture en
+ * échec compte 0 — on ne bloque pas Claude pour une panne de comptage.
+ */
+export async function inscriptionsRecentes(maintenant = Date.now()): Promise<number> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return 0;
+  const { count, error } = await sb
+    .from("mcp_clients")
+    .select("client_id", { count: "exact", head: true })
+    .gte("created_at", new Date(maintenant - 3_600_000).toISOString());
+  return error ? 0 : count ?? 0;
+}
+
 export async function lireClient(clientId: string | undefined | null): Promise<ClientOAuth | null> {
   if (!clientId || clientId.length > 100) return null;
   const sb = getSupabaseAdmin();

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { validerInscription } from "@/lib/oauthMcp";
-import { inscrireClient } from "@/lib/server/oauthMcp";
+import { inscrireClient, inscriptionsRecentes } from "@/lib/server/oauthMcp";
 import { ENTETES_CORS } from "@/lib/server/mcpTransport";
 
 /**
@@ -11,10 +11,35 @@ import { ENTETES_CORS } from "@/lib/server/mcpTransport";
  */
 export const dynamic = "force-dynamic";
 
+/** Au-delà, l'inscription attend : un vrai usage en fait quelques-unes par jour. */
+const PLAFOND_INSCRIPTIONS_HEURE = 200;
+
 export async function POST(req: Request) {
   const corps = await req.json().catch(() => null);
   const v = validerInscription(corps);
-  if (!v.ok) return NextResponse.json({ error: v.erreur, error_description: v.description }, { status: 400, headers: ENTETES_CORS });
+  if (!v.ok) {
+    // Journalisé : un client refusé (ChatGPT, un autre assistant) serait sinon invisible.
+    const brut = corps && typeof corps === "object" ? (corps as Record<string, unknown>) : {};
+    console.info(
+      JSON.stringify({
+        tag: "getgents:oauth-mcp",
+        event: "inscription_refusee",
+        erreur: v.erreur,
+        description: v.description,
+        nom: typeof brut.client_name === "string" ? brut.client_name.slice(0, 80) : null,
+        methode: typeof brut.token_endpoint_auth_method === "string" ? brut.token_endpoint_auth_method : null,
+        agent: (req.headers.get("user-agent") ?? "").slice(0, 120),
+      })
+    );
+    return NextResponse.json({ error: v.erreur, error_description: v.description }, { status: 400, headers: ENTETES_CORS });
+  }
+  if ((await inscriptionsRecentes()) >= PLAFOND_INSCRIPTIONS_HEURE) {
+    console.warn(JSON.stringify({ tag: "getgents:oauth-mcp", event: "inscription_plafond" }));
+    return NextResponse.json(
+      { error: "temporarily_unavailable", error_description: "Trop d'inscriptions : réessayez dans une heure." },
+      { status: 429, headers: { "Retry-After": "3600", ...ENTETES_CORS } }
+    );
+  }
   try {
     const c = await inscrireClient(v.nom, v.adressesRetour);
     return NextResponse.json(
