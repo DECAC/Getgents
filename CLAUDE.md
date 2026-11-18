@@ -1144,8 +1144,9 @@ destinataires visés sont justement en entreprise. Demandes de
 catégorisation faites le 16/11 (catégorie « Business », second choix
 « Computers and Internet » ; jamais « Web Hosting » / « File Sharing »,
 les plus bloquées) chez Palo Alto, Fortinet, Cisco Talos, Broadcom,
-Trellix — PAS Zscaler (formulaire réservé à ses clients). **Parades
-écrites (16/11)** : (1) REPLI AUTOMATIQUE (`useCadreAvecRepli`) — le
+Trellix, puis Zscaler (Site Review, 18/11) : les six principaux sont
+demandés. **Parades
+écrites (16/11), DÉPLOYÉES, essai réel CONCLUANT (18/11)** : (1) REPLI AUTOMATIQUE (`useCadreAvecRepli`) — le
 document poste `{getgents:"pret"}` au tout premier script de
 `AMORCE_ARTEFACT` ; si le cadre a fini de charger sans ce signal (page de
 blocage du filtre), la page recharge depuis getgents.ai avec `?direct=1`
