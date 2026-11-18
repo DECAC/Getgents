@@ -14,8 +14,16 @@ français partout — code, commentaires, commits, interface. CSS Modules et
 `styles/tokens.css`, jamais Tailwind. Supabase pour la base et
 l'authentification. Déploiement Vercel depuis `main`.
 
-Éditeur : **Charles de Cassan**, à titre **personnel et non professionnel** —
-il n'y a **pas de société**. Les mentions légales l'ont un temps affirmé
+Éditeur : un particulier, à titre **personnel et non professionnel** —
+il n'y a **pas de société**. **Son nom n'apparaît NULLE PART sur le site
+(18/11, demande de l'éditeur)**, sauf dans les CRÉDITS de /a-propos (`CREDITS`,
+`lib/legal.ts`, avec son profil LinkedIn) : régime ANONYME de la LCEN
+(identité communiquée à l'hébergeur). Un test (`legal.test.ts`) refuse le nom
+dans `app/`, `components/`, `public/`, `supabase/templates/`. **Ce régime
+tombe dès que le service ENCAISSE** : il faut alors des mentions
+professionnelles (identité, adresse, SIREN). Restent hors site : `LICENSE`,
+`README.md`, l'historique Git (dépôt public), et l'adresse du vérificateur
+Turnstile (`*.charles-decassan.workers.dev`, dans le JavaScript des gents). Les mentions légales l'ont un temps affirmé
 (« The G Company », directeur « Gary Gentle ») : c'était faux, et corrigé au
 commit `929d4c1`. Ne pas réintroduire de raison sociale sans immatriculation :
 un test (`__tests__/legal.test.ts`) l'interdit.
@@ -1079,7 +1087,16 @@ réparer, donc, mais il fallait la couper plutôt que la tolérer : **un contrô
 qui échoue toujours ne signale plus rien**, et on apprend à passer outre le
 rouge le jour où il est vrai. Ne pas la rebrancher sans adaptateur.
 
-**Deux avis de sécurité restent ouverts**, et ils exigent Next 16 — deux
+**Next 15.5.29 + React 19 depuis le 18/11** : Next 14.2.35 (dernière 14.x)
+cumulait une vingtaine d'avis (dont des dénis de service sur les Server
+Components et un XSS lié aux nonces CSP), tous corrigés en 15.5.28. API de
+requête asynchrones migrées par le codemod officiel (`await props.params`,
+`await cookies()`). Restent deux avis de CONSTRUCTION (postcss embarqué par
+Next, source-map-js) : ils ne jouent que sur nos propres feuilles de style.
+Inscription OAuth dynamique plafonnée à 200 par heure, refus journalisés
+(`getgents:oauth-mcp inscription_refusee`).
+
+Historique : **deux avis de sécurité restaient ouverts**, et ils exigeaient Next 16 — deux
 majeures d'écart. « DoS via Image Optimizer » ne vise que les applications
 **auto-hébergées** : sur Vercel l'optimiseur est celui de la plateforme, donc
 l'avis ne s'applique pas. **Il s'appliquerait sur Railway** — à traiter AVANT
