@@ -19,6 +19,16 @@ export default function ConfidentialitePage() {
       </p>
 
       <section className={styles.section}>
+        <h2 className={styles.sousTitre}>Responsable du traitement</h2>
+        <p className={styles.texte}>
+          L&apos;éditeur de Getgents, particulier agissant à titre non professionnel (voir{" "}
+          <a href="/mentions-legales">les mentions légales</a> et{" "}
+          <a href="/a-propos#credits">les crédits</a>), joignable à{" "}
+          <a href={`mailto:${EDITEUR.contact}`}>{EDITEUR.contact}</a>.
+        </p>
+      </section>
+
+      <section className={styles.section}>
         <h2 className={styles.sousTitre}>Ce que nous conservons</h2>
         <ul className={styles.liste}>
           <li>
@@ -28,6 +38,18 @@ export default function ConfidentialitePage() {
           <li>
             <b>Vos gents</b> : leurs instructions, leur configuration, les documents que vous
             leur confiez et les conversations qu&apos;ils tiennent.
+          </li>
+          <li>
+            <b>Vos pages</b> : le code des pages que vous collez ou partagez, leurs versions
+            précédentes, les destinataires (adresse e-mail ou nom) de chaque lien, et les
+            précisions que vous donnez à leur assistant.
+          </li>
+          <li>
+            <b>La lecture d&apos;une page partagée</b> : par défaut, une ouverture anonyme datée
+            du jour. Le détail (dates, durée, partie lue, appareil) seulement si le lecteur
+            accepte de le partager avec l&apos;auteur. Les questions posées à l&apos;assistant
+            de la page sont gardées sans nom ni lien. Tout est effacé 120 jours après sa
+            création.
           </li>
           <li>
             <b>Vos partages</b> : les adresses que vous invitez, et les liens que vous créez.
@@ -118,7 +140,8 @@ export default function ConfidentialitePage() {
           Vous pouvez accéder à vos données, les rectifier, les effacer, ou vous opposer à
           leur traitement. La suppression est directement à votre main depuis « Mon compte ».
           Pour toute autre demande, écrivez à{" "}
-          <a href={`mailto:${EDITEUR.contact}`}>{EDITEUR.contact}</a>.
+          <a href={`mailto:${EDITEUR.contact}`}>{EDITEUR.contact}</a>. Vous pouvez aussi
+          adresser une réclamation à la CNIL (cnil.fr).
         </p>
       </section>
 

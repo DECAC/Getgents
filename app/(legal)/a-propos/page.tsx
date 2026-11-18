@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { EDITEUR } from "@/lib/legal";
+import { CREDITS, EDITEUR } from "@/lib/legal";
 import styles from "../legal.module.css";
 
 export const metadata: Metadata = {
@@ -53,9 +53,20 @@ export default function AProposPage() {
       <section className={styles.section}>
         <h2 className={styles.sousTitre}>Qui édite le service</h2>
         <p className={styles.texte}>
-          {EDITEUR.nom}. Les informations complètes sont sur{" "}
+          Un particulier, à titre non professionnel. Les informations complètes sont sur{" "}
           <a href="/mentions-legales">les mentions légales</a>, et l&apos;on nous écrit à{" "}
           <a href={`mailto:${EDITEUR.contact}`}>{EDITEUR.contact}</a>.
+        </p>
+      </section>
+
+      <section className={styles.section} id="credits">
+        <h2 className={styles.sousTitre}>Crédits</h2>
+        <p className={styles.texte}>
+          Conçu et développé par{" "}
+          <a href={CREDITS.profil} target="_blank" rel="noreferrer noopener">
+            {CREDITS.auteur}
+          </a>
+          .
         </p>
       </section>
     </>

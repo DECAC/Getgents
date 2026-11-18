@@ -1,4 +1,4 @@
-import { EDITEUR, HEBERGEURS, SOUS_TRAITANTS, securityTxt } from "@/lib/legal";
+import { CREDITS, EDITEUR, HEBERGEURS, SOUS_TRAITANTS, securityTxt } from "@/lib/legal";
 import { SLUGS_RESERVES } from "@/lib/slug";
 
 describe("identité de l'éditeur", () => {
@@ -18,21 +18,31 @@ describe("identité de l'éditeur", () => {
 
   it("n'annonce aucune société tant qu'il n'y en a pas", () => {
     // Ces pages ont d'abord publié « Raison sociale : The G Company », pour
-    // une société qui n'existait pas. Une mention fausse est pire qu'une
-    // mention incomplète : elle est vérifiable, et un catégoriseur qui
-    // cherche une société introuvable au registre conclut à l'inverse de ce
-    // qu'on recherchait. Ce test empêche la rechute.
+    // une société qui n'existait pas. Ce test empêche la rechute.
     const societe = /\b(SAS|SASU|SARL|EURL|SA|SCI|société|company|inc\.?|ltd)\b/i;
-    expect(societe.test(EDITEUR.nom)).toBe(false);
+    expect(societe.test(EDITEUR.designation)).toBe(false);
     if (EDITEUR.immatriculation === null) {
       expect(EDITEUR.qualite).toMatch(/non professionnelle|personne physique/i);
     }
   });
 
-  it("le directeur de la publication est l'éditeur lui-même", () => {
-    // Un directeur de publication fictif a le même défaut qu'une société
-    // fictive : il est invérifiable et se retourne contre le domaine.
-    expect(EDITEUR.directeurPublication).toBe(EDITEUR.nom);
+  it("le nom de l'auteur n'apparaît que dans les crédits", () => {
+    // Régime anonyme de la LCEN (18/11) : le nom n'est affiché NULLE PART,
+    // sauf dans la section Crédits de la page À propos (via `CREDITS`).
+    const fs = require("fs") as typeof import("fs");
+    const path = require("path") as typeof import("path");
+    const nom = CREDITS.auteur.split(" ").pop()!.toLowerCase();
+    const fautifs: string[] = [];
+    const parcourir = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) parcourir(p);
+        else if (/\.(tsx?|css|html|json|txt)$/.test(e.name) && fs.readFileSync(p, "utf8").toLowerCase().includes(nom)) fautifs.push(p);
+      }
+    };
+    for (const d of ["app", "components", "public", "supabase/templates"]) parcourir(path.join(process.cwd(), d));
+    expect(fautifs).toEqual([]);
+    expect(Object.values(EDITEUR).join(" ").toLowerCase()).not.toContain(nom);
   });
 });
 

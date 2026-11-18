@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { EDITEUR } from "@/lib/legal";
 import styles from "./PiedLegal.module.css";
 
 /**
@@ -13,7 +12,7 @@ import styles from "./PiedLegal.module.css";
 export function PiedLegal() {
   return (
     <footer className={styles.pied}>
-      <span>© {EDITEUR.nom}</span>
+      <span>© Getgents</span>
       <Link href="/a-propos">À propos</Link>
       <Link href="/mentions-legales">Mentions légales</Link>
       <Link href="/confidentialite">Confidentialité</Link>

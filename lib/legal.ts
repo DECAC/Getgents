@@ -24,23 +24,21 @@ export const EDITEUR = {
    *
    * Ces pages ont d'abord annoncé « Raison sociale : The G Company ». C'était
    * inexact : la société n'existe pas. Une mention légale fausse est pire
-   * qu'une mention incomplète — elle est vérifiable, et un service de
-   * catégorisation qui cherche une société introuvable au registre en tire la
-   * conclusion inverse de celle qu'on recherchait.
+   * qu'une mention incomplète — elle est vérifiable.
    *
-   * L'article 6 III de la LCEN prévoit ce cas : un éditeur non professionnel
-   * peut ne rendre publique que l'identité de son hébergeur, à condition de
-   * lui avoir communiqué la sienne. C'est le régime retenu ici — d'où une
-   * identité d'éditeur donnée, mais pas d'adresse postale privée.
+   * Régime ANONYME de la LCEN (18/11, choix de l'éditeur) : un éditeur non
+   * professionnel peut ne rendre publique que l'identité de son hébergeur, à
+   * condition de lui avoir communiqué la sienne. Son nom n'apparaît donc
+   * NULLE PART sur le site, sauf dans les CRÉDITS (`CREDITS`, page À propos),
+   * qui sont une signature, pas une mention légale.
    *
-   * À REVOIR le jour où une société est immatriculée, ou dès que le service
-   * encaisse des paiements : le régime professionnel s'applique alors, et
-   * exige l'adresse du siège et le numéro d'immatriculation.
+   * À REVOIR dès que le service encaisse des paiements ou qu'une structure
+   * est immatriculée : le régime professionnel s'applique alors (identité,
+   * adresse, immatriculation publiques) et l'anonymat n'est plus permis.
    */
-  nom: "Charles de Cassan",
+  designation: "Particulier, à titre non professionnel",
   /** Nature de l'édition, dite explicitement plutôt que laissée à deviner. */
   qualite: "Éditeur personne physique — projet personnel, édition non professionnelle",
-  directeurPublication: "Charles de Cassan",
   /**
    * Contact public. `getgents.ai` et non `.com` : c'est le domaine dont vous
    * êtes propriétaire, dont le DNS porte les enregistrements de messagerie
@@ -59,6 +57,16 @@ export const EDITEUR = {
   adressePostale: null as string | null,
   /** Immatriculation : aucune, il n'y a pas de société. */
   immatriculation: null as string | null,
+} as const;
+
+/**
+ * CRÉDITS — le SEUL endroit du site où figure le nom de l'auteur, avec un
+ * lien vers son profil. Un test interdit son nom partout ailleurs dans
+ * `app/` et `components/`.
+ */
+export const CREDITS = {
+  auteur: "Charles de Cassan",
+  profil: "https://www.linkedin.com/in/charlesdecassan/",
 } as const;
 
 export const HEBERGEURS = [
@@ -96,7 +104,7 @@ export const SOUS_TRAITANTS: readonly SousTraitant[] = [
   {
     nom: "OpenRouter",
     role: "Accès aux modèles de langage",
-    donnees: "Le contenu des conversations et des documents soumis au gent.",
+    donnees: "Le contenu des conversations et des documents soumis au gent, ou de la page interrogée par son assistant.",
     optionnel: false,
   },
   {
@@ -132,7 +140,7 @@ export const SOUS_TRAITANTS: readonly SousTraitant[] = [
 ] as const;
 
 /** Date de dernière révision des textes légaux, affichée en pied de page. */
-export const DERNIERE_REVISION = "8 septembre 2026";
+export const DERNIERE_REVISION = "18 novembre 2026";
 
 /**
  * Contenu de `/.well-known/security.txt` (RFC 9116).

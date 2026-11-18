@@ -21,11 +21,9 @@ export default function MentionsLegalesPage() {
         <h2 className={styles.sousTitre}>Éditeur</h2>
         <dl className={styles.dl}>
           <dt>Éditeur</dt>
-          <dd>{EDITEUR.nom}</dd>
+          <dd>{EDITEUR.designation}</dd>
           <dt>Qualité</dt>
           <dd>{EDITEUR.qualite}</dd>
-          <dt>Directeur de la publication</dt>
-          <dd>{EDITEUR.directeurPublication}</dd>
           <dt>Contact</dt>
           <dd>
             <a href={`mailto:${EDITEUR.contact}`}>{EDITEUR.contact}</a>
@@ -52,9 +50,10 @@ export default function MentionsLegalesPage() {
             dissimulation. */}
         <p className={styles.texte}>
           Getgents est édité à titre personnel et non professionnel. À ce titre, et conformément
-          à l&apos;article 6 III de la loi pour la confiance dans l&apos;économie numérique,
-          l&apos;adresse postale de l&apos;éditeur est communiquée à l&apos;hébergeur et
-          n&apos;est pas rendue publique. Il n&apos;existe aucune société éditrice à ce jour, et
+          à la loi pour la confiance dans l&apos;économie numérique (LCEN), les éléments
+          d&apos;identification de l&apos;éditeur sont communiqués à l&apos;hébergeur et ne
+          sont pas rendus publics. L&apos;éditeur est joignable à l&apos;adresse de contact
+          ci-dessus. Il n&apos;existe aucune société éditrice à ce jour, et
           donc aucun numéro d&apos;immatriculation. Ces mentions seront complétées le jour où
           une structure sera immatriculée.
         </p>
