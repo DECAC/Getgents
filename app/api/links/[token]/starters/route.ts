@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 interface Params {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }
 
 /**
@@ -27,7 +27,8 @@ interface Params {
  * C'est aussi ce qui permet aux gents diffusés AVANT l'arrivée des
  * déclencheurs d'en afficher sans que leur créateur ait à republier.
  */
-export async function POST(_req: Request, { params }: Params) {
+export async function POST(_req: Request, props: Params) {
+  const params = await props.params;
   const token = params.token;
   if (!TOKEN_RE.test(token)) return NextResponse.json({ error: "invalid_token" }, { status: 400 });
 

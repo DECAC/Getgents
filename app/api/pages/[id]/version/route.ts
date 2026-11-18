@@ -12,7 +12,8 @@ import { FORMATS_ARTEFACT, statutPartage, TITRE_MAX, type FormatArtefact } from 
  */
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
   if (!estIdPage(params.id)) return NextResponse.json({ error: "Page introuvable." }, { status: 404 });

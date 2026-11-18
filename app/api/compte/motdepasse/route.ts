@@ -50,7 +50,8 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const client = createAuthClient(readOnlyBridge(() => cookies().getAll()));
+  const magasin = await cookies();
+  const client = createAuthClient(readOnlyBridge(() => magasin.getAll()));
   if (!client) return NextResponse.json({ error: "Authentification indisponible." }, { status: 503 });
 
   const { error: reauth } = await client.auth.signInWithPassword({

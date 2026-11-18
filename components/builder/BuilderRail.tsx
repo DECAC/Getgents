@@ -1,4 +1,5 @@
 "use client";
+import type { JSX } from "react";
 
 import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";

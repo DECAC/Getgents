@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 interface Params {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }
 
 /**
@@ -39,7 +39,8 @@ interface Params {
  * pour CE salon, on rend le participant existant plutôt que d'en créer un
  * double à chaque rafraîchissement.
  */
-export async function POST(req: Request, { params }: Params) {
+export async function POST(req: Request, props: Params) {
+  const params = await props.params;
   const lien = await resolveCollabLink(params.token);
   if (!lien.ok) return lien.response;
   const { link, espace, collab } = lien.value;

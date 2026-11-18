@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 
 const introuvable = () => NextResponse.json({ error: "Page introuvable." }, { status: 404 });
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
   const page = await detailPage(auth.user.id, params.id).catch(() => null);
@@ -27,7 +28,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 }
 
 /** Active ou coupe l'assistant, ou la protection par code, de la page (tous ses liens). */
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
   const corps = (await req.json().catch(() => ({}))) as { assistant?: unknown; protection?: unknown };
@@ -48,7 +50,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 /** Supprime la page : tous ses liens tombent. */
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
   const ok = await supprimerPage(auth.user.id, params.id).catch(() => false);

@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
 
 const MIGRATION = "Les questions suggérées ne sont pas encore en place (migration 026 à passer dans Supabase).";
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
   if (!estIdPage(params.id)) return NextResponse.json({ error: "Page introuvable." }, { status: 404 });
@@ -23,7 +24,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   return NextResponse.json({ suggestions: r.suggestions ?? suggestionsParDefaut(amorcesAssistant(page!.format)), parDefaut: r.suggestions === null });
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
   if (!estIdPage(params.id)) return NextResponse.json({ error: "Page introuvable." }, { status: 404 });

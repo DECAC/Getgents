@@ -34,7 +34,7 @@ function nouvelleVisite(): string {
  * 15 s et quand l'onglet se cache. Changer d'avis ouvre une NOUVELLE
  * visite : une visite anonyme ne devient jamais nominative.
  */
-function useLecture(jeton: string, choix: Consentement | null, cadre: React.RefObject<HTMLIFrameElement>) {
+function useLecture(jeton: string, choix: Consentement | null, cadre: React.RefObject<HTMLIFrameElement | null>) {
   useEffect(() => {
     const partage = choix === "partage";
     const visite = nouvelleVisite();

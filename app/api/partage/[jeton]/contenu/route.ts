@@ -23,11 +23,12 @@ import { versDomaineContenu } from "@/lib/server/domaineContenu";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request, { params }: { params: { jeton: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ jeton: string }> }) {
+  const params = await props.params;
   const a = await lireArtefact(params.jeton);
   if (!a) return new Response("Ce lien n'existe pas ou a expiré.", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   // Page protégée par code : sans cookie d'accès valide, rien ne sort.
-  if ((await decisionAcces(a, cookies().get(nomCookie(a.jeton))?.value)) !== "ouvert")
+  if ((await decisionAcces(a, (await cookies()).get(nomCookie(a.jeton))?.value)) !== "ouvert")
     return new Response("Accès protégé : validez votre code sur la page du lien.", { status: 403, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   // Domaine de contenu configuré : l'accès est vérifié ICI (le cookie du code
   // n'arriverait pas là-bas), le cadre part vers une adresse signée.

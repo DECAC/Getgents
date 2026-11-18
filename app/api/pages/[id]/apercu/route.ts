@@ -13,7 +13,8 @@ import { versDomaineContenu } from "@/lib/server/domaineContenu";
  */
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return new Response("Connexion requise.", { status: 401 });
   // Domaine de contenu : la session est vérifiée ICI ; le propriétaire est

@@ -5,7 +5,8 @@ import { restaurerVersion } from "@/lib/server/pages";
 /** Remet une ancienne version en tête — comme une NOUVELLE version : rien n'est détruit. */
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
   const corps = (await req.json().catch(() => ({}))) as { version?: unknown };

@@ -1,4 +1,5 @@
 "use client";
+import type { JSX } from "react";
 
 import { ARTEFACT_EXAMPLES } from "@/lib/mock-data/builder";
 import { useBuilder } from "@/lib/context/BuilderContext";

@@ -18,7 +18,8 @@ function refus(status: number, error: string, cause: string, detail?: string) {
   return NextResponse.json({ error, cause }, { status });
 }
 
-export async function POST(_req: Request, { params }: { params: { jeton: string } }) {
+export async function POST(_req: Request, props: { params: Promise<{ jeton: string }> }) {
+  const params = await props.params;
   try {
     const a = await lireArtefact(params.jeton);
     if (!a) return refus(404, "Ce lien n'existe pas ou a expiré.", "lien-introuvable");

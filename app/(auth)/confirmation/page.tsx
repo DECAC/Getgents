@@ -8,11 +8,12 @@ import { libelleAppelAction } from "@/lib/inscriptions";
  * C'est la situation la plus fréquente et la plus déroutante — l'écran doit
  * dire quoi faire, pas seulement constater l'échec.
  */
-export default function ConfirmationPage({
-  searchParams,
-}: {
-  searchParams: { erreur?: string };
-}) {
+export default async function ConfirmationPage(
+  props: {
+    searchParams: Promise<{ erreur?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const echec = !!searchParams.erreur;
 
   return (

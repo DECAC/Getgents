@@ -8,13 +8,14 @@ export const metadata = { title: "Utiliser · GetSpace" };
 export const dynamic = "force-dynamic";
 
 interface Props {
-  params: { espaceId: string };
+  params: Promise<{ espaceId: string }>;
 }
 
 // Un identifiant absent du catalogue statique (ex. un gent tout juste publié
 // depuis le builder, stocké côté client dans localStorage) est accepté :
 // EspaceProvider l'initialise avec un placeholder puis le complète au montage.
-export default function EspacePage({ params }: Props) {
+export default async function EspacePage(props: Props) {
+  const params = await props.params;
   return <EspaceShell initialId={params.espaceId} />;
 }
 

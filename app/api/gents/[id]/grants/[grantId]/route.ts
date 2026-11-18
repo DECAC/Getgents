@@ -9,11 +9,12 @@ const ID_RE = /^[a-z0-9][a-z0-9_-]{0,80}$/i;
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 interface Params {
-  params: { id: string; grantId: string };
+  params: Promise<{ id: string; grantId: string }>;
 }
 
 /** Retirer l'accès d'une personne — immédiat. */
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(_req: Request, props: Params) {
+  const params = await props.params;
   if (!ID_RE.test(params.id) || !UUID_RE.test(params.grantId)) {
     return NextResponse.json({ error: "invalid_id" }, { status: 400 });
   }

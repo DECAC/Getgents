@@ -22,7 +22,7 @@ export function adresseDirecte(src: string): string {
  * interne de l'artefact ne doit pas déclencher de repli. Le repli est
  * durable pour la vie du composant : un domaine bloqué le reste.
  */
-export function useCadreAvecRepli(cle: string, cadreExistant?: RefObject<HTMLIFrameElement>) {
+export function useCadreAvecRepli(cle: string, cadreExistant?: RefObject<HTMLIFrameElement | null>) {
   const interne = useRef<HTMLIFrameElement>(null);
   const cadre = cadreExistant ?? interne;
   const [direct, setDirect] = useState(false);

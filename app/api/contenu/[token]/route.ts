@@ -48,7 +48,8 @@ function adresse(req: Request, token: string): AdresseLue | Response {
   return r.raison === "expiree" ? texte("Ce lien a expiré : rechargez la page.", 410) : texte("Introuvable.", 404);
 }
 
-export async function GET(req: Request, { params }: { params: { token: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const a = adresse(req, params.token);
   if (a instanceof Response) return a;
   if (a.t === "partage") {
@@ -65,7 +66,8 @@ export async function GET(req: Request, { params }: { params: { token: string } 
   return texte("Introuvable.", 404);
 }
 
-export async function POST(req: Request, { params }: { params: { token: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const a = adresse(req, params.token);
   if (a instanceof Response) return a;
   if (a.t !== "brouillon") return texte("Introuvable.", 404);

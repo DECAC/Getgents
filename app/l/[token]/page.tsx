@@ -22,7 +22,8 @@ function Refus({ titre, message }: { titre: string; message: string }) {
   );
 }
 
-export default async function SharedLinkPage({ params }: { params: { token: string } }) {
+export default async function SharedLinkPage(props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const token = params.token;
   if (!TOKEN_RE.test(token)) {
     return <Refus titre="Lien invalide" message="Ce lien n'est pas reconnu. Vérifiez l'adresse reçue." />;

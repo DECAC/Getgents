@@ -10,7 +10,8 @@ import { codeSaisi, DUREE_ACCES_MS, nomCookie, signerAcces } from "@/lib/accesCo
  */
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request, { params }: { params: { jeton: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ jeton: string }> }) {
+  const params = await props.params;
   const a = await lireArtefact(params.jeton);
   if (!a) return NextResponse.json({ error: "Ce lien n'existe pas ou a expiré." }, { status: 404 });
   const corps = (await req.json().catch(() => ({}))) as { code?: unknown };

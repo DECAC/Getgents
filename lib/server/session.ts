@@ -30,7 +30,8 @@ export interface SessionUser {
 }
 
 export async function getUser(): Promise<SessionUser | null> {
-  const client = createAuthClient(readOnlyBridge(() => cookies().getAll()));
+  const magasin = await cookies();
+  const client = createAuthClient(readOnlyBridge(() => magasin.getAll()));
   if (!client) return null;
 
   try {

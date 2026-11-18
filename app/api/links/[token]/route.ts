@@ -6,11 +6,12 @@ import { describeShareLinksFailure, getShareLink, revokeShareLink, TOKEN_RE } fr
 export const dynamic = "force-dynamic";
 
 interface Params {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }
 
 /** Révocation d'un lien — immédiate et définitive. */
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(_req: Request, props: Params) {
+  const params = await props.params;
   if (!TOKEN_RE.test(params.token)) return NextResponse.json({ error: "invalid_token" }, { status: 400 });
 
   const auth = await requireUser();

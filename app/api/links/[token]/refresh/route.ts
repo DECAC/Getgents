@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 interface Params {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }
 
 /**
@@ -31,7 +31,8 @@ interface Params {
  * quota `max_refresh` — sans lui, un lien partagé serait un générateur d'appels
  * LLM facturés ouvert à tous.
  */
-export async function POST(req: Request, { params }: Params) {
+export async function POST(req: Request, props: Params) {
+  const params = await props.params;
   const token = params.token;
   if (!TOKEN_RE.test(token)) return NextResponse.json({ error: "invalid_token" }, { status: 400 });
 

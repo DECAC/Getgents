@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 
 const idValide = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
 
-export async function PATCH(req: Request, { params }: { params: { id: string; cid: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string; cid: string }> }) {
+  const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
   if (!estIdPage(params.id) || !idValide(params.cid)) return NextResponse.json({ error: "Précision introuvable." }, { status: 404 });
@@ -19,7 +20,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string; ci
     : NextResponse.json({ error: "Précision introuvable." }, { status: 404 });
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string; cid: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string; cid: string }> }) {
+  const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
   if (!estIdPage(params.id) || !idValide(params.cid)) return NextResponse.json({ error: "Précision introuvable." }, { status: 404 });

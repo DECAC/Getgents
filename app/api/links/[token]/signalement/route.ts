@@ -30,7 +30,8 @@ export const maxDuration = 30;
  * Limitée en débit : une route ouverte qui envoie des e-mails est un
  * distributeur de courrier indésirable si on la laisse sans garde-fou.
  */
-export async function POST(req: Request, { params }: { params: { token: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const token = params.token;
 
   const lien = await getShareLink(token);

@@ -9,7 +9,7 @@ export const metadata = { title: "Construire · GetStudio" };
 export const dynamic = "force-dynamic";
 
 interface Props {
-  params: { gentId: string };
+  params: Promise<{ gentId: string }>;
 }
 
 // Un identifiant absent du catalogue (ex. un brouillon tout juste créé) est
@@ -18,7 +18,8 @@ interface Props {
 // cette route étant prégénérée, `searchParams` arrive vide sur les pages
 // statiques et lors des navigations côté client — le paramètre était alors
 // silencieusement ignoré.
-export default function BuilderGentPage({ params }: Props) {
+export default async function BuilderGentPage(props: Props) {
+  const params = await props.params;
   return (
     <Suspense fallback={null}>
       <BuilderShell initialId={params.gentId} />

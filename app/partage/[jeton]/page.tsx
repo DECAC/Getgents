@@ -27,7 +27,8 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
 };
 
-export default async function PagePartage({ params }: { params: { jeton: string } }) {
+export default async function PagePartage(props: { params: Promise<{ jeton: string }> }) {
+  const params = await props.params;
   const a = await lireArtefact(params.jeton);
   if (!a) notFound();
   const enFrancais = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" });
@@ -44,7 +45,7 @@ export default async function PagePartage({ params }: { params: { jeton: string 
   const assistant = a.assistant && !!a.ownerId;
   // Page protégée : sans cookie d'accès valide, l'écran du code — et rien
   // du document (ni cadre, ni titre au-delà du bandeau).
-  const decision = await decisionAcces(a, cookies().get(nomCookie(a.jeton))?.value);
+  const decision = await decisionAcces(a, (await cookies()).get(nomCookie(a.jeton))?.value);
   if (decision !== "ouvert")
     return (
       <div className={styles.page}>

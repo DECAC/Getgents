@@ -44,7 +44,8 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: MESSAGE_NOM_INVALIDE }, { status: 400 });
   }
 
-  const client = createAuthClient(readOnlyBridge(() => cookies().getAll()));
+  const magasin = await cookies();
+  const client = createAuthClient(readOnlyBridge(() => magasin.getAll()));
   if (!client) return NextResponse.json({ error: "Authentification indisponible." }, { status: 503 });
 
   const { error } = await client.auth.updateUser({ data: { nom_affiche: nom } });

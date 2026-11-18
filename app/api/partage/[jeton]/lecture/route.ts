@@ -21,13 +21,14 @@ export const dynamic = "force-dynamic";
 
 const rien = () => new NextResponse(null, { status: 204 });
 
-export async function POST(req: Request, { params }: { params: { jeton: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ jeton: string }> }) {
+  const params = await props.params;
   try {
     const b = battementValide(await req.json().catch(() => null));
     if (!b) return rien();
     const a = await lireArtefact(params.jeton);
     if (!a?.pageId) return rien();
-    if ((await decisionAcces(a, cookies().get(nomCookie(a.jeton))?.value)) !== "ouvert") return rien();
+    if ((await decisionAcces(a, (await cookies()).get(nomCookie(a.jeton))?.value)) !== "ouvert") return rien();
     const moi = await getUser();
     if (moi && moi.id === a.ownerId) return rien();
     await enregistrerLecture(a, b, appareilDe(req.headers.get("user-agent")), origineDeRequete(req.url, req.headers));

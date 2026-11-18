@@ -22,14 +22,15 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 function baseUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL ?? "https://getgents.ai").replace(/\/+$/, "");
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   if (slugProbleme(params.slug)) return { title: "Page introuvable" };
 
   const gent = await lireGentPublic(params.slug);
@@ -60,7 +61,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function GentPublicPage({ params }: Props) {
+export default async function GentPublicPage(props: Props) {
+  const params = await props.params;
   if (slugProbleme(params.slug)) notFound();
 
   const gent = await lireGentPublic(params.slug);
@@ -88,7 +90,7 @@ export default async function GentPublicPage({ params }: Props) {
         // navigateurs appliquent `script-src` à toute balise <script>, même
         // celles qui ne contiennent pas de code exécutable. Le gent
         // disparaîtrait alors des résultats enrichis de Google.
-        nonce={headers().get("x-nonce") ?? undefined}
+        nonce={(await headers()).get("x-nonce") ?? undefined}
         // Contenu construit par nous à partir de champs déjà projetés par la
         // liste blanche publique : aucune donnée du créateur n'y transite.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(donneesStructurees) }}

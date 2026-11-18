@@ -27,7 +27,7 @@ export function BulleSelection({
   onEnSavoirPlus,
   desactive,
 }: {
-  conteneur: RefObject<HTMLElement>;
+  conteneur: RefObject<HTMLElement | null>;
   onEnSavoirPlus: (extrait: string) => void;
   desactive?: boolean;
 }) {

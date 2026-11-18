@@ -9,7 +9,8 @@ import { definirAssistant, revoquerPartage } from "@/lib/server/artefactsPartage
  */
 export const dynamic = "force-dynamic";
 
-export async function DELETE(_req: Request, { params }: { params: { jeton: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ jeton: string }> }) {
+  const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
   try {
@@ -21,7 +22,8 @@ export async function DELETE(_req: Request, { params }: { params: { jeton: strin
 }
 
 /** Active ou coupe l'assistant du document — même double garde. */
-export async function PATCH(req: Request, { params }: { params: { jeton: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ jeton: string }> }) {
+  const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
   const corps = (await req.json().catch(() => ({}))) as { assistant?: unknown };

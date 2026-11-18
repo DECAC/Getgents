@@ -63,11 +63,12 @@ export const maxDuration = 120;
 // Le destinataire n'a jamais vu de « gent » : le message générique des liens ne lui parlerait pas.
 const INDISPONIBLE = "L'assistant est momentanément indisponible. Le document reste consultable ; réessayez plus tard.";
 
-export async function POST(req: Request, { params }: { params: { jeton: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ jeton: string }> }) {
+  const params = await props.params;
   const a = await lireArtefact(params.jeton);
   if (!a) return NextResponse.json({ error: "Ce lien n'existe pas ou a expiré." }, { status: 404 });
   // Page protégée par code : sans cookie d'accès valide, rien ne sort.
-  if ((await decisionAcces(a, cookies().get(nomCookie(a.jeton))?.value)) !== "ouvert")
+  if ((await decisionAcces(a, (await cookies()).get(nomCookie(a.jeton))?.value)) !== "ouvert")
     return NextResponse.json({ error: "Accès protégé : validez votre code." }, { status: 403 });
   if (!a.assistant || !a.ownerId) return NextResponse.json({ error: "L'assistant n'est pas activé sur ce document." }, { status: 403 });
 

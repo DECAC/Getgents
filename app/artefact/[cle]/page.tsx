@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 import { CorpsArtefact } from "@/components/shared/ArtefactModal";
 import { OutilsArtefact } from "@/components/shared/outils/OutilsArtefact";
 import { cleOnglet, ID_ONGLET, lireMessageOnglet, type MessageOnglet } from "@/lib/ongletArtefact";
@@ -15,7 +15,8 @@ import styles from "./page.module.css";
  * l'applique, en créant une version pour une édition. Fermer cet onglet ne
  * perd donc rien.
  */
-export default function PageArtefact({ params }: { params: { cle: string } }) {
+export default function PageArtefact(props: { params: Promise<{ cle: string }> }) {
+  const params = use(props.params);
   const [message, setMessage] = useState<MessageOnglet | null>(null);
   const [etat, setEtat] = useState<"chargement" | "pret" | "introuvable">("chargement");
   const [outils, setOutils] = useState(false);

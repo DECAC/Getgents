@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function ApercuGentPage({ params }: { params: { gentId: string } }) {
+export default async function ApercuGentPage(props: { params: Promise<{ gentId: string }> }) {
+  const params = await props.params;
   return <ApercuPage gentId={params.gentId} />;
 }

@@ -13,7 +13,7 @@ import { collabProgress, collabVoteTallies, messagesForParticipant } from "@/lib
 export const dynamic = "force-dynamic";
 
 interface Params {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }
 
 /**
@@ -26,7 +26,8 @@ interface Params {
  * brute (verbatim des réponses) ne sort pas non plus — seule la progression
  * en compteurs, et la synthèse écrite pour tous.
  */
-export async function GET(req: Request, { params }: Params) {
+export async function GET(req: Request, props: Params) {
+  const params = await props.params;
   const lien = await resolveCollabLink(params.token);
   if (!lien.ok) return lien.response;
   const { link, espace, collab } = lien.value;
