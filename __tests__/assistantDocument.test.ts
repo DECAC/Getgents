@@ -63,3 +63,20 @@ describe("modèle de l'assistant des pages", () => {
     expect(resolveModelId(MODELE_ASSISTANT_PAGES)).toBe(MODELE_ASSISTANT_PAGES);
   });
 });
+
+describe("messageEchecAssistant", () => {
+  const { messageEchecAssistant } = require("@/lib/assistantDocument") as typeof import("@/lib/assistantDocument");
+
+  it("limite ou crédit OpenRouter atteint : une pause, jamais « réessayez »", () => {
+    for (const s of [401, 402, 403]) {
+      const m = messageEchecAssistant(s);
+      expect(m).toMatch(/fait une pause/);
+      expect(m).toMatch(/reste consultable/);
+      expect(m).not.toMatch(/réessayez|crédit|clé|OpenRouter/i);
+    }
+  });
+
+  it("saturation passagère : réessayer a un sens", () => {
+    expect(messageEchecAssistant(429)).toMatch(/Réessayez/);
+  });
+});

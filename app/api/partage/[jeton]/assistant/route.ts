@@ -3,7 +3,7 @@ import { decisionAcces } from "@/lib/server/accesPartage";
 import { nomCookie } from "@/lib/accesCode";
 import { NextResponse } from "next/server";
 import { compterQuestion, lireArtefact } from "@/lib/server/artefactsPartages";
-import { consigneAssistant, historiqueValide, MODELE_ASSISTANT_PAGES, QUESTIONS_MAX_PAR_LIEN, REPONSE_MAX_TOKENS } from "@/lib/assistantDocument";
+import { consigneAssistant, historiqueValide, messageEchecAssistant, MODELE_ASSISTANT_PAGES, QUESTIONS_MAX_PAR_LIEN, REPONSE_MAX_TOKENS } from "@/lib/assistantDocument";
 import { chatResponseFor } from "@/lib/server/chatEngine";
 import { contexteForUser } from "@/lib/server/openRouterKey";
 import { consommerPourVisiteur } from "@/lib/server/gentGuard";
@@ -142,8 +142,18 @@ export async function POST(req: Request, props: { params: Promise<{ jeton: strin
   );
   if (!amont.ok || !amont.body) {
     const detail = await amont.text().catch(() => "");
-    console.error(JSON.stringify({ tag: "getgents:partage", event: "assistant_echec", status: amont.status, detail: detail.slice(0, 300) }));
-    return NextResponse.json({ error: "L'assistant n'a pas pu répondre. Réessayez dans un instant." }, { status: 502 });
+    // Clé refusée (limite de crédit atteinte, crédit épuisé) : journal dédié, à chercher en premier.
+    const cleRefusee = amont.status === 401 || amont.status === 402 || amont.status === 403;
+    console.error(
+      JSON.stringify({
+        tag: "getgents:partage",
+        event: cleRefusee ? "assistant_cle_refusee" : "assistant_echec",
+        status: amont.status,
+        source: ctx.source,
+        detail: detail.slice(0, 300),
+      })
+    );
+    return NextResponse.json({ error: messageEchecAssistant(amont.status) }, { status: cleRefusee ? 503 : 502 });
   }
   return new Response(questionId ? avecSuivi(amont.body, questionId) : amont.body, {
     headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" },

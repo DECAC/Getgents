@@ -81,11 +81,12 @@ export function messageCleOpenRouter({ source, status }: DiagnosticCle): string 
     );
   }
 
-  // 402 : le crédit de la plateforme est épuisé. Conseiller de réessayer
-  // serait faux — aucune tentative n'y changera rien — et laisserait le
-  // visiteur croire qu'il s'y prend mal. On dit que ce n'est pas de son fait,
-  // sans détailler notre configuration.
-  if (status === 402) {
+  // 402 : le crédit de la plateforme est épuisé ; 401 / 403 : clé refusée,
+  // dont la LIMITE de crédit réglée sur la clé (« Key limit exceeded », 18/11).
+  // Conseiller de réessayer serait faux — aucune tentative n'y changera
+  // rien — et laisserait le visiteur croire qu'il s'y prend mal. On dit que
+  // ce n'est pas de son fait, sans détailler notre configuration.
+  if (status === 401 || status === 402 || status === 403) {
     return (
       "Ce gent est momentanément indisponible : ce n'est pas de votre fait. " +
       "Réessayez plus tard, ou prévenez la personne qui vous l'a partagé."

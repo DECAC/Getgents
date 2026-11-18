@@ -1065,6 +1065,15 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   en vol. Ça a coûté trois diagnostics.
 - **`last_seen_at` n'est pas un ordre de tri** : il est réécrit à chaque
   sondage du client, toutes les 2,5 s.
+- **Limite de crédit de la clé OpenRouter de la plateforme (réglée le 18/11)** :
+  atteinte, OpenRouter répond 403 « Key limit exceeded ». Le lecteur d'une
+  page lisait « Réessayez dans un instant », le visiteur d'un gent « La
+  génération a échoué. Réessayez… » — faux, aucune tentative n'y change rien.
+  Depuis : « l'assistant de cette page fait une pause » (`messageEchecAssistant`)
+  et « ce n'est pas de votre fait » pour les gents (401/402/403). Le journal
+  dit la vraie cause : `getgents:openrouter cle_refusee` (`message` d'OpenRouter)
+  et `getgents:partage assistant_cle_refusee`. Remède : relever la limite sur
+  openrouter.ai, pas de redéploiement.
 - **Un état d'échec muet est pire qu'une erreur.** `busy_or_capped` confondait
   « il réfléchit » et « plafond atteint » ; Turnstile échouait sans un mot.
 

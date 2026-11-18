@@ -126,9 +126,12 @@ describe("messageCleOpenRouter — clé plateforme", () => {
   it("ne conseille pas de réessayer quand réessayer ne peut rien changer", () => {
     // 402 = crédit épuisé côté plateforme. « Réessayez » serait faux, et
     // laisserait le visiteur croire qu'il s'y prend mal.
-    const m = messageCleOpenRouter({ source: "plateforme", status: 402 });
-    expect(m).toMatch(/pas de votre fait/i);
-    expect(m).not.toMatch(/réessayez dans quelques instants/i);
+    // 403 = limite de crédit de la clé atteinte (« Key limit exceeded »).
+    for (const status of [401, 402, 403]) {
+      const m = messageCleOpenRouter({ source: "plateforme", status });
+      expect(m).toMatch(/pas de votre fait/i);
+      expect(m).not.toMatch(/réessayez dans quelques instants/i);
+    }
   });
 
   it("invite à réessayer sur une saturation passagère", () => {

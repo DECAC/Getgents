@@ -151,3 +151,20 @@ export function amorcesAssistant(format: FormatArtefact): string[] {
   if (format === "svg") return ["Que représente ce schéma ?", "Quels sont les éléments principaux ?"];
   return ["Résume ce document", "Quels sont les points clés ?", "Qu'est-ce qui m'est demandé ?"];
 }
+
+/**
+ * Message montré au LECTEUR quand l'appel au modèle échoue (18/11).
+ *
+ * 401 / 402 / 403 = la clé est refusée : crédit épuisé, LIMITE de la clé
+ * atteinte (réglée sur OpenRouter), clé révoquée. Aucune nouvelle tentative
+ * n'y changera rien — dire « réessayez dans un instant » ferait insister le
+ * lecteur pour rien. On dit que l'assistant fait une pause, que le document
+ * reste lisible, et à qui s'adresser — jamais l'état du compte de l'auteur.
+ */
+export function messageEchecAssistant(status: number): string {
+  if (status === 401 || status === 402 || status === 403) {
+    return "L'assistant de cette page fait une pause. Le document reste consultable ; pour vos questions, adressez-vous à la personne qui vous l'a partagé.";
+  }
+  if (status === 429) return "L'assistant reçoit trop de demandes en même temps. Réessayez dans quelques instants.";
+  return "L'assistant n'a pas pu répondre. Réessayez dans un instant.";
+}

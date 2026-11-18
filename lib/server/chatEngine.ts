@@ -229,6 +229,18 @@ export async function chatResponseFor(
     // panne côté OpenRouter, et effacer serait irréversible pour le builder.
     if (upstream.status === 401 || upstream.status === 402 || upstream.status === 403) {
       await noterEchecCle(ctx, upstream.status);
+      // Le message d'OpenRouter (« Key limit exceeded », crédit épuisé…) ne va
+      // qu'au journal : c'est lui qui dit QUELLE limite est atteinte.
+      const brut = (data as { error?: { message?: unknown } })?.error?.message;
+      console.error(
+        JSON.stringify({
+          tag: "getgents:openrouter",
+          event: "cle_refusee",
+          status: upstream.status,
+          source: ctx.source,
+          message: typeof brut === "string" ? brut.slice(0, 200) : null,
+        })
+      );
       return NextResponse.json(
         { error: messageCleOpenRouter({ source: ctx.source, status: upstream.status }) },
         { status: upstream.status }
