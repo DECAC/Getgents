@@ -737,6 +737,29 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   `PLAFONDS_PAGES`. Connecté → `/accueil` (→ `/pages` pour un compte
   « pages »). Connexion, demande d'accès, Contact, À propos parlent de Pages ;
   les gents diffusés gardent leur adresse.
+- **Accueil d'un compte sans page : l'EXEMPLE d'abord** (18/11, piste D
+  parmi quatre maquettes ; `AccueilPages`, `lib/exemplesPages.ts`,
+  `POST /api/pages/exemple`). Vécu : l'invité arrivait sans artefact sous la
+  main et devait repartir dans Claude avant de rien voir. Deux exemples
+  FICTIFS d'un clic — une proposition commerciale (Boulangerie des Halles)
+  et un « CV du futur » ludique (Léa Moreau : niveaux, cartes à retourner,
+  défi, barre d'exploration). Pages ORDINAIRES (comptées, supprimables),
+  `origine` = `exemple:<id>` (colonne libre, aucune migration), assistant
+  ACTIVÉ, questions suggérées posées ; un même exemple recliqué rouvre sa
+  page. Chacun porte une QUESTION PIÈGE dont il ne dit rien (« payer en
+  trois fois », « temps partiel ») : l'assistant répond « la page ne le dit
+  pas », l'auteur découvre les précisions. Univers graphique VOLONTAIREMENT
+  loin de Claude (pas de crème ni de serif : demande de l'éditeur). Pages
+  autonomes, sans coordonnées — un test le garde. **Guide « Découvrez ce que
+  vivra votre lecteur »** (`GuideDecouverte`, `lib/guideDecouverte.ts`) sur
+  une page d'exemple OU la première page du compte : s'envoyer le lien
+  (adresse préremplie), l'ouvrir en NAVIGATION PRIVÉE (les visites de
+  l'auteur ne comptent pas), puis — exemple — RÉPONDRE à la question piège
+  (choix de l'éditeur : cochée à la précision, pas à l'arrivée), ou — vraie
+  page — recevoir une question. Étapes lues dans les faits (liens,
+  activité), la fiche se relit au retour sur l'onglet (`focus`) ; « Masquer »
+  par page dans le navigateur. Vérifié au navigateur (mémoire locale, faux
+  modèle) de bout en bout, PAS en production.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

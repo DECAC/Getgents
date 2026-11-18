@@ -9,6 +9,8 @@ import { peutRecevoirCode } from "@/lib/accesCode";
 import { ActivitePage } from "./ActivitePage";
 import { ImportPage } from "./ImportPage";
 import { libelleOrigine } from "@/lib/importPage";
+import { exempleDeOrigine } from "@/lib/exemplesPages";
+import { GuideDecouverte } from "./GuideDecouverte";
 import styles from "./pages.module.css";
 
 interface Destinataire {
@@ -35,6 +37,10 @@ interface Detail {
   protectionIllisible: boolean;
   /** Jeton → date de validation du code. */
   valides: Record<string, string>;
+  /** Seule page du compte : le guide de découverte s'affiche. */
+  premiere?: boolean;
+  /** Adresse confirmée de l'auteur, pour s'envoyer le lien (guide). */
+  moi?: string | null;
 }
 
 const jour = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
@@ -53,6 +59,10 @@ export function FichePage({ id }: { id: string }) {
   const [enCours, setEnCours] = useState<string | null>(null);
   const [onglet, setOnglet] = useState<"page" | "activite" | "assistant">("page");
   const [sansReponse, setSansReponse] = useState(0);
+  // Guide de découverte : chiffres de l'activité, et relecture quand on revient sur l'onglet
+  // (après avoir ouvert le lien en navigation privée, la fiche doit le savoir).
+  const [etatActivite, setEtatActivite] = useState<{ ouvertures: number; questions: number; precisions: number } | null>(null);
+  const [tic, setTic] = useState(0);
   const [partage, setPartage] = useState<{ ouvert: boolean; destinataire: string; resultat: { lien: string; objet: string; corps: string } | null }>({
     ouvert: false,
     destinataire: "",
@@ -74,6 +84,20 @@ export function FichePage({ id }: { id: string }) {
 
   useEffect(() => {
     void charger();
+  }, [charger]);
+
+  useEffect(() => {
+    const revenir = () => {
+      if (document.visibilityState !== "visible") return;
+      void charger();
+      setTic((t) => t + 1);
+    };
+    window.addEventListener("focus", revenir);
+    document.addEventListener("visibilitychange", revenir);
+    return () => {
+      window.removeEventListener("focus", revenir);
+      document.removeEventListener("visibilitychange", revenir);
+    };
   }, [charger]);
 
   const [nouvelleVersion, setNouvelleVersion] = useState(false);
@@ -128,6 +152,7 @@ export function FichePage({ id }: { id: string }) {
   const actifs = page.destinataires.filter(actif);
   const dernierActif = [...actifs].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   const base = typeof window === "undefined" ? "" : window.location.origin;
+  const exemple = exempleDeOrigine(page.origine);
 
   return (
     <div className={styles.fiche}>
@@ -136,7 +161,10 @@ export function FichePage({ id }: { id: string }) {
       </a>
       <div className={styles.entete}>
         <div className={styles.enteteTexte}>
-          <h1 className={styles.titreFiche}>{page.titre}</h1>
+          <h1 className={styles.titreFiche}>
+            {page.titre}
+            {exemple && <span className={styles.badgeExemple}>Exemple</span>}
+          </h1>
           <div className={styles.meta}>
             {[libelleOrigine(page.origine), libelleFormat(page.format), `version ${page.version}, mise à jour le ${jourHeure(page.updatedAt)}`]
               .filter(Boolean)
@@ -195,6 +223,8 @@ export function FichePage({ id }: { id: string }) {
           assistantActif={page.assistant}
           onMessage={signaler}
           onSansReponse={setSansReponse}
+          onEtat={setEtatActivite}
+          actualiser={tic}
           onVoirAssistant={() => setOnglet("assistant")}
           interrupteur={
           <section className={styles.bloc}>
@@ -224,6 +254,34 @@ export function FichePage({ id }: { id: string }) {
               }
         />
       </div>
+      {onglet === "page" && (exemple || page.premiere) && etatActivite && (
+        <GuideDecouverte
+          pageId={page.id}
+          etat={{
+            liens: page.destinataires.length,
+            ouvertures: etatActivite.ouvertures,
+            questions: etatActivite.questions,
+            precisions: etatActivite.precisions,
+            assistant: page.assistant,
+            exemple: !!exemple,
+            questionPiege: exemple?.questionPiege ?? null,
+            questionArrivee: etatActivite.questions > 0,
+          }}
+          moi={page.moi ?? null}
+          lienCree={dernierActif ? `${base}/partage/${dernierActif.jeton}` : null}
+          enCours={enCours === "partager"}
+          onCreerLien={(destinataire) =>
+            void appel(
+              "partager",
+              `/api/pages/${encodeURIComponent(page.id)}/partages`,
+              { method: "POST", body: JSON.stringify({ destinataire }) },
+              "Lien créé : ouvrez-le en navigation privée."
+            )
+          }
+          onCopierLien={(lien) => copier(lien, "Lien")}
+          onVoirAssistant={() => setOnglet("assistant")}
+        />
+      )}
       {onglet === "page" && (
       <div className={styles.deux}>
         <section className={styles.apercu} aria-label="Aperçu de la page">

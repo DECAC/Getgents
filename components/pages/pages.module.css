@@ -1451,22 +1451,37 @@
   }
 }
 
-/* Écran d'un compte sans page (AccueilPages) */
+/* Écran d'un compte sans page (AccueilPages, piste D : l'exemple d'abord) */
 .accueil {
-  max-width: 820px;
-  margin: 32px auto 0;
-  text-align: center;
+  position: relative;
+  min-height: 100%;
+  padding: 16px 0 32px;
+}
+.accueilDecor {
+  position: absolute;
+  inset: -24px;
+  width: calc(100% + 48px);
+  height: calc(100% + 48px);
+  pointer-events: none;
+  z-index: 0;
+}
+.accueilContenu {
+  position: relative;
+  z-index: 1;
+  max-width: 980px;
+  margin: 16px auto 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 .accueilTitre {
-  font-size: 24px;
+  font-size: clamp(24px, 3vw, 30px);
+  letter-spacing: -0.02em;
   margin: 0;
   text-wrap: balance;
 }
 .accueilLede {
-  margin: 0 auto;
+  margin: 0;
   max-width: 62ch;
   color: var(--muted);
   line-height: 1.55;
@@ -1525,6 +1540,69 @@
   padding: 2px 8px;
   border-radius: 999px;
 }
+.exemples {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 10px;
+}
+.exempleCarte {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 18px;
+  align-items: center;
+  padding: 20px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--card) 0%, #fff4e6 100%);
+  border: 1px solid #f1d9b4;
+  min-width: 0;
+}
+.exempleCarte h2 {
+  margin: 8px 0 6px;
+  font-size: 16px;
+}
+.exempleCarte p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+/* Vignette dessinée aux couleurs de l'exemple (pas un rendu : la page n'existe pas encore). */
+.exempleApercu {
+  display: block;
+  height: 120px;
+  border-radius: 14px;
+  transform: rotate(-3deg);
+  box-shadow: 0 14px 30px -18px rgba(40, 20, 10, 0.5);
+}
+.exempleCarte[data-exemple="proposition"] .exempleApercu {
+  background:
+    linear-gradient(#13214a, #13214a) 12px 18px / 70% 9px no-repeat,
+    linear-gradient(#13214a, #13214a) 12px 32px / 50% 9px no-repeat,
+    radial-gradient(circle at 100% 100%, #e5542b 0 34px, transparent 35px),
+    linear-gradient(#fff, #fff) 0 62px / 100% 100% no-repeat,
+    #ffc935;
+}
+.exempleCarte[data-exemple="cv"] .exempleApercu {
+  background:
+    linear-gradient(#c6f432, #c6f432) 12px 16px / 28px 28px no-repeat,
+    linear-gradient(#f1eeff, #f1eeff) 48px 20px / 50% 8px no-repeat,
+    linear-gradient(90deg, #3fd6ff, #c6f432) 12px 58px / 80% 7px no-repeat,
+    linear-gradient(#2c2366, #2c2366) 12px 76px / 38% 30px no-repeat,
+    linear-gradient(#2c2366, #2c2366) 56% 76px / 38% 30px no-repeat,
+    #120d2b;
+}
+.cheminTagGris {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--line-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
 .atouts {
   list-style: none;
   margin: 16px 0 0;
@@ -1540,9 +1618,22 @@
   content: "✓ ";
   color: var(--success);
 }
+@media (max-width: 900px) {
+  .exemples {
+    grid-template-columns: 1fr;
+  }
+}
 @media (max-width: 720px) {
   .chemins {
     grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .exempleCarte {
+    grid-template-columns: 1fr;
+  }
+  .exempleApercu {
+    height: 90px;
   }
 }
 
@@ -1572,4 +1663,137 @@
   background: var(--gold-tint);
   color: #7a5308;
   font-weight: 600;
+}
+
+/* Guide « Découvrez ce que vivra votre lecteur » (GuideDecouverte) */
+.badgeExemple {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--gold-tint);
+  color: #7a5308;
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.guideDecouverte {
+  margin: 0 0 16px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1px solid #f1d9b4;
+  background: linear-gradient(135deg, var(--card) 0%, #fff4e6 100%);
+}
+.guideHaut {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.guideHaut b {
+  font-size: 15px;
+}
+.guideEtat {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.guideMasquer {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--faint);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.guideEtapes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.guideEtape {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 13.5px;
+}
+.guideEtape h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+}
+.guideEtape p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.guideEtape > button {
+  align-self: flex-start;
+}
+.guideNum {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--line-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+.guideEtape[data-statut="active"] {
+  border-color: #e7c88c;
+  box-shadow: 0 0 0 3px #fdf0d8;
+}
+.guideEtape[data-statut="active"] .guideNum {
+  background: color-mix(in srgb, var(--gold) 68%, #000);
+  color: #fff;
+}
+.guideEtape[data-statut="faite"] {
+  background: #f6fbf6;
+  border-color: #cfe8cf;
+}
+.guideEtape[data-statut="faite"] .guideNum {
+  background: var(--success);
+  color: #fff;
+}
+.guideEtape[data-statut="faite"] h3 {
+  color: #3f7a43;
+}
+.guideEtape[data-statut="attente"] {
+  opacity: 0.65;
+}
+.guideQuestion {
+  align-self: flex-start;
+  padding: 6px 10px;
+  border-radius: 12px 12px 4px 12px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12.5px;
+}
+.guideAstuce {
+  margin: 12px 0 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #fff7e0;
+  color: #7a5308;
+  font-size: 12px;
+  line-height: 1.45;
+}
+@media (max-width: 900px) {
+  .guideEtapes {
+    grid-template-columns: 1fr;
+  }
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/server/session";
-import { definirAssistantPage, detailPage, supprimerPage } from "@/lib/server/pages";
+import { definirAssistantPage, detailPage, listerPages, supprimerPage } from "@/lib/server/pages";
 import { definirProtection, protectionActive, validations } from "@/lib/server/accesPartage";
 
 /**
@@ -21,8 +21,10 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
   // avec l'information pour que la fiche le dise.
   const protection = await protectionActive(page.id).catch(() => null);
   const valides = await validations(page.destinataires.map((d) => d.jeton)).catch(() => ({}));
+  // Guide « Découvrez ce que vivra votre lecteur » : sur la PREMIÈRE page du compte, et l'adresse de l'auteur pour s'envoyer le lien.
+  const premiere = await listerPages(auth.user.id).then((l) => l.length <= 1).catch(() => false);
   return NextResponse.json(
-    { page: { ...page, protection: protection === true, protectionIllisible: protection === null, valides } },
+    { page: { ...page, protection: protection === true, protectionIllisible: protection === null, valides, premiere, moi: auth.user.confirmedEmail } },
     { headers: { "Cache-Control": "no-store" } }
   );
 }

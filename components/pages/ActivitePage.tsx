@@ -40,6 +40,8 @@ export function ActivitePage({
   onMessage,
   onSansReponse,
   onVoirAssistant,
+  actualiser = 0,
+  onEtat,
 }: {
   id: string;
   /** « activite » : chiffres et lectures. « assistant » : réglage, questions, suggestions, précisions. */
@@ -51,6 +53,10 @@ export function ActivitePage({
   /** Questions restées sans réponse (ni dans la page, ni précisées) : la pastille de l'onglet Assistant. */
   onSansReponse?: (n: number) => void;
   onVoirAssistant?: () => void;
+  /** Change quand la fiche revient au premier plan : l'activité est relue (guide de découverte). */
+  actualiser?: number;
+  /** Chiffres lus par le guide de découverte de la fiche. */
+  onEtat?: (e: { ouvertures: number; questions: number; precisions: number }) => void;
 }) {
   const [a, setA] = useState<Activite | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -128,7 +134,7 @@ export function ActivitePage({
 
   useEffect(() => {
     void chargerPrecisions();
-  }, [chargerPrecisions]);
+  }, [chargerPrecisions, actualiser]);
 
   const ouvrir = (cle: string, s: string, t: string) => {
     setOuvert(cle);
@@ -200,7 +206,12 @@ export function ActivitePage({
     return () => {
       vivant = false;
     };
-  }, [id]);
+  }, [id, actualiser]);
+
+  useEffect(() => {
+    if (!a) return;
+    onEtat?.({ ouvertures: a.ouvertures, questions: a.totalQuestions, precisions: precisions?.length ?? 0 });
+  }, [a, precisions, onEtat]);
 
   useEffect(() => {
     if (!a) return;
