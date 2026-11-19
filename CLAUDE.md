@@ -1257,7 +1257,11 @@ même sans `load` — un domaine injoignable peut ne jamais le livrer ; ignoré
 sans cadre ou pour une vignette `lazy`). Chaque repli est JOURNALISÉ
 (`getgents:contenu repli_direct`) : le repli masquait un domaine injoignable
 pour tous. Beaucoup de `repli_direct` d'un coup = vérifier DNS et Vercel. Ne
-jamais ouvrir un document du domaine de contenu hors d'un cadre avec repli.
+jamais ouvrir un document du domaine de contenu hors d'un cadre avec repli. Cause
+CONFIRMÉE (19/11) : le réseau d'ENTREPRISE de l'éditeur (connexion
+réinitialisée, pas de page « bloqué ») ; tout passe en 4G. Un filtre qui
+COUPE la connexion au lieu d'afficher une page n'envoie pas de `load` à
+temps : c'est le cas que couvre le filet de 8 s.
 
 **BREVO EST CONFIGURÉ** en production (12/11, e-mail d'invitation reçu par
 l'utilisateur). Il ne l'était pas jusque-là : invitation par e-mail,
