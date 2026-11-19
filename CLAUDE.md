@@ -850,6 +850,7 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   réponse. Sans bouton d'engagement, un lien de groupe ne demande pas de
   prénom. Vérifié au navigateur (mémoire locale) : deux réponses, prénom
   hors liste refusé (400), double réponse refusée (409), relance, mobile.
+  **Déployé (19/11)**, migrations 032 et 033 passées, essai réel CONCLUANT.
 - **Onglet ACTIVITÉ réorganisé** (19/11, maquette validée ; `ReponsesPage`
   devenu le tableau de l'onglet, `lib/syntheseReponses.ts`). Ordre : bandeau
   « N réponses sur M attendues » (un lien personnel compte un, un lien de
@@ -866,7 +867,8 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   « activite » : il fournit ses chiffres par `onActivite`. Volontairement
   ABSENT : « a ouvert sans répondre » par destinataire (lecture anonyme sans
   accord). Vérifié au navigateur (mémoire locale) : 3 réponses dont 2 de
-  groupe, filtres, CSV téléchargé, téléphone sans débordement.
+  groupe, filtres, CSV téléchargé, téléphone sans débordement. **Déployé,
+  essai réel CONCLUANT (19/11).**
 - **Rubrique « Modèles »** (19/11, maquette validée ; « Exemples » renommé
   par l'éditeur — le mot dit qu'on part de la page pour en faire la sienne ;
   `GalerieModeles`, `/pages/modeles`, `modelesEssayes`, `modelesASuggerer`).
