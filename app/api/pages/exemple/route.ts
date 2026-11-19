@@ -4,13 +4,15 @@ import { PlafondAtteint } from "@/lib/offre";
 import { requireUser } from "@/lib/server/session";
 import { trouverOuCreerPage } from "@/lib/server/pages";
 import { definirSuggestions } from "@/lib/server/suggestionsPages";
+import { definirEngagement } from "@/lib/server/engagementPages";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Crée une PAGE D'EXEMPLE (`lib/exemplesPages.ts`) dans le compte : une page
  * ordinaire (supprimable, comptée dans le plafond), assistant ACTIVÉ et
- * questions suggérées posées — dont la question piège. Recliquer rouvre la
+ * questions suggérées posées — dont la question piège —, et pour certains
+ * le bouton d'engagement. Recliquer rouvre la
  * même page : un contenu identique retrouve la sienne (`trouverOuCreerPage`).
  */
 export async function POST(req: Request) {
@@ -34,6 +36,11 @@ export async function POST(req: Request) {
         page.id,
         ex.suggestions.map((texte) => ({ texte, origine: "libre" as const }))
       ).catch((e) => console.error(JSON.stringify({ tag: "getgents:pages", event: "exemple_suggestions_echouees", detail: (e as Error).message })));
+      // Devis, week-end : le bouton d'engagement est posé, pour découvrir la réponse du lecteur.
+      if (ex.engagement)
+        await definirEngagement(auth.user.id, page.id, { actif: true, intitule: ex.engagement, mot: true }).catch((e) =>
+          console.error(JSON.stringify({ tag: "getgents:pages", event: "exemple_engagement_echoue", detail: (e as Error).message }))
+        );
     }
     console.log(JSON.stringify({ tag: "getgents:pages", event: "exemple_cree", exemple: ex.id, nouvelle }));
     return NextResponse.json({ id: page.id, nouvelle });

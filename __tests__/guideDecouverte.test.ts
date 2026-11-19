@@ -1,5 +1,5 @@
 import { etapesDecouverte, type EtatDecouverte } from "@/lib/guideDecouverte";
-import { EXEMPLES, exempleDeOrigine, origineExemple } from "@/lib/exemplesPages";
+import { consigneAdaptation, EXEMPLES, exempleDeOrigine, exemplesDuPublic, origineExemple, PUBLICS } from "@/lib/exemplesPages";
 import { donneesPersonnelles } from "@/lib/donneesPersonnelles";
 
 const base: EtatDecouverte = { liens: 0, ouvertures: 0, questions: 0, precisions: 0, assistant: true, exemple: true, questionPiege: "Peut-on payer en trois fois ?", questionArrivee: false };
@@ -44,10 +44,23 @@ describe("pages d'exemple", () => {
   it("la question piège est suggérée, et la page n'en dit rien", () => {
     for (const ex of EXEMPLES) {
       expect(ex.suggestions).toContain(ex.questionPiege);
-      expect(ex.contenu).toMatch(/fictif/i);
+      expect(ex.contenu).toMatch(/ficti(f|v)/i);
     }
     expect(EXEMPLES.find((e) => e.id === "proposition")!.contenu).not.toMatch(/trois fois|plusieurs fois|échelonn/i);
     expect(EXEMPLES.find((e) => e.id === "cv")!.contenu).not.toMatch(/temps partiel|mi-temps/i);
+    expect(EXEMPLES.find((e) => e.id === "devis")!.contenu).not.toMatch(/noël|décembre|démarr|début des travaux/i);
+    expect(EXEMPLES.find((e) => e.id === "weekend")!.contenu).not.toMatch(/chien|animal|animaux/i);
+    // Vernay : la page dit que les montants viendront à la prochaine séance, sans les donner.
+    expect(EXEMPLES.find((e) => e.id === "comite")!.contenu).not.toMatch(/Vernay[^<]{0,80}\d+\s?(k|€|M€)/i);
+  });
+
+  it("chaque public de l'accueil a au moins un exemple, et la consigne d'adaptation porte le code entier", () => {
+    for (const p of PUBLICS) expect(exemplesDuPublic(p.id).length).toBeGreaterThan(0);
+    for (const ex of EXEMPLES) {
+      const c = consigneAdaptation(ex);
+      expect(c.endsWith(ex.contenu)).toBe(true);
+      expect(c).toMatch(/plutôt que de l'inventer/);
+    }
   });
 
   it("l'origine d'une page d'exemple retrouve son exemple", () => {

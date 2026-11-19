@@ -1942,3 +1942,164 @@
   background: var(--line-soft, #f3e9e3);
   color: var(--muted);
 }
+
+/* ——— Accueil : « Avec qui voulez-vous partager ? » (19/11) ——— */
+.publicsQuestion {
+  margin: 6px 0 14px;
+  font-size: 18px;
+}
+.publics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.publicCarte {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 18px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.publicCarte b {
+  font-size: 16px;
+}
+.publicCarte span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.publicCarte[aria-pressed="true"] {
+  border-color: #e7c88c;
+  box-shadow: 0 0 0 3px #fdf0d8;
+  background: linear-gradient(135deg, var(--card), #fff4e6);
+}
+.publicCarte:focus-visible {
+  outline: 3px solid var(--sage);
+  outline-offset: 2px;
+}
+.publicPicto {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 10px;
+  transition: transform 0.2s ease;
+}
+.publicCarte:hover .publicPicto {
+  transform: rotate(-4deg) scale(1.04);
+}
+@media (prefers-reduced-motion: reduce) {
+  .publicPicto {
+    transition: none;
+  }
+}
+.lienTexteFort {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.exempleCarte[data-exemple="devis"] .exempleApercu {
+  background:
+    linear-gradient(#ffd447, #ffd447) 12px 16px / 24px 24px no-repeat,
+    linear-gradient(#fff, #fff) 44px 20px / 50% 7px no-repeat,
+    linear-gradient(#fff, #fff) 12px 64px / 86% 44px no-repeat,
+    linear-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px) 0 0 / 14px 14px,
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px) 0 0 / 14px 14px,
+    #1d4e96;
+}
+.exempleCarte[data-exemple="comite"] .exempleApercu {
+  background:
+    linear-gradient(#111316, #111316) 12px 16px / 74% 9px no-repeat,
+    linear-gradient(#111316, #111316) 12px 32px / 100% 2px no-repeat,
+    linear-gradient(#fff, #fff) 12px 44px / 26% 26px no-repeat,
+    linear-gradient(#fff, #fff) 40% 44px / 26% 26px no-repeat,
+    linear-gradient(#fff, #fff) 86% 44px / 26% 26px no-repeat,
+    linear-gradient(#2f5bff, #2f5bff) 12px 82px / 40% 4px no-repeat,
+    linear-gradient(#2f5bff, #2f5bff) 56% 82px / 30% 4px no-repeat,
+    #e9ebef;
+}
+.exempleCarte[data-exemple="weekend"] .exempleApercu {
+  background:
+    radial-gradient(circle at 50% 30%, #ffd27a 0 16px, #ff7f6b 17px 18px, transparent 19px),
+    linear-gradient(#fff, #fff) 14px 66px / 40% 38px no-repeat,
+    linear-gradient(#ff7f6b, #ff7f6b) 58% 66px / 34% 38px no-repeat,
+    linear-gradient(180deg, #bfe3f2, #e9f6fb);
+}
+@media (max-width: 900px) {
+  .publics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 380px) {
+  .publicCarte {
+    padding: 14px;
+  }
+  .publicPicto {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* ——— « Adapter avec mon IA » (19/11) ——— */
+.adapterFenetre {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+.adapterEtapes {
+  margin: 0;
+  padding: 18px 22px 22px;
+  display: grid;
+  gap: 16px;
+  list-style: none;
+  counter-reset: etape;
+}
+.adapterEtapes li {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  padding-left: 40px;
+  counter-increment: etape;
+}
+.adapterEtapes li::before {
+  content: counter(etape);
+  position: absolute;
+  left: 0;
+  top: -2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--sage-tint);
+  color: var(--sage);
+  font-weight: 800;
+  font-size: 13px;
+}
+.adapterEtapes li[data-fait="oui"]::before {
+  content: "✓";
+  background: var(--success-tint);
+  color: #2f6e33;
+}
+.adapterEtapes span {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.adapterEtapes button {
+  margin-top: 6px;
+}

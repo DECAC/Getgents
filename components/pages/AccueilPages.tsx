@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { EXEMPLES, type IdExemple } from "@/lib/exemplesPages";
+import { EXEMPLES, exemplesDuPublic, PUBLICS, type IdExemple, type Public } from "@/lib/exemplesPages";
+import { PictoPublic } from "./PictoPublic";
 import type { Offre } from "@/lib/offre";
 import styles from "./pages.module.css";
 
@@ -14,10 +15,16 @@ import styles from "./pages.module.css";
  * l'envoie, on l'ouvre en lecteur, on interroge son assistant — et l'on sait
  * ce que vivra son propre client. Coller son code et connecter Claude
  * viennent ensuite.
+ *
+ * Question d'accueil (19/11) : « Avec qui voulez-vous partager ? » — quatre
+ * publics, chacun ouvre SES exemples ; « Voir les cinq exemples » les montre
+ * tous. Rien n'est gardé : la question oriente, elle ne règle rien.
  */
 export function AccueilPages({ offre, onNouvelle }: { offre: Offre; onNouvelle: () => void }) {
   const [enCours, setEnCours] = useState<IdExemple | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [choix, setChoix] = useState<Public | "tous" | null>(null);
+  const montres = choix === "tous" ? EXEMPLES : choix ? exemplesDuPublic(choix) : [];
 
   async function creerExemple(id: IdExemple) {
     setEnCours(id);
@@ -59,21 +66,43 @@ export function AccueilPages({ offre, onNouvelle }: { offre: Offre; onNouvelle: 
           trois minutes.
         </p>
 
-        <div className={styles.exemples}>
-          {EXEMPLES.map((ex) => (
-            <div key={ex.id} className={styles.exempleCarte} data-exemple={ex.id}>
-              <span className={styles.exempleApercu} aria-hidden="true" />
-              <div>
-                <span className={styles.cheminTag}>Page d&apos;exemple</span>
-                <h2>{ex.titre}</h2>
-                <p>{ex.resume}</p>
-                <button type="button" className={styles.principal} disabled={enCours !== null} onClick={() => void creerExemple(ex.id)}>
-                  {enCours === ex.id ? "Création…" : "Essayer cet exemple"}
-                </button>
-              </div>
-            </div>
+        <h2 className={styles.publicsQuestion}>Avec qui voulez-vous partager ?</h2>
+        <div className={styles.publics} role="group" aria-label="Avec qui voulez-vous partager ?">
+          {PUBLICS.map((p) => (
+            <button key={p.id} type="button" className={styles.publicCarte} aria-pressed={choix === p.id} onClick={() => setChoix(p.id)}>
+              <PictoPublic public={p.id} className={styles.publicPicto} />
+              <b>{p.titre}</b>
+              <span>{p.sous}</span>
+            </button>
           ))}
         </div>
+
+        {montres.length > 0 && (
+          <div className={styles.exemples}>
+            {montres.map((ex) => (
+              <div key={ex.id} className={styles.exempleCarte} data-exemple={ex.id}>
+                <span className={styles.exempleApercu} aria-hidden="true" />
+                <div>
+                  <span className={styles.cheminTag}>Page d&apos;exemple</span>
+                  <h2>{ex.titre}</h2>
+                  <p>{ex.resume}</p>
+                  <button type="button" className={styles.principal} disabled={enCours !== null} onClick={() => void creerExemple(ex.id)}>
+                    {enCours === ex.id ? "Création…" : "Essayer cet exemple"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {choix !== "tous" && (
+          <p className={styles.aide}>
+            {choix ? "Ou " : "Vous préférez choisir vous-même ? "}
+            <button type="button" className={styles.lienTexteFort} onClick={() => setChoix("tous")}>
+              {choix ? "voir" : "Voir"} les {EXEMPLES.length} exemples
+            </button>
+            .
+          </p>
+        )}
         {erreur && (
           <p className={styles.erreur} role="alert">
             {erreur}

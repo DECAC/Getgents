@@ -12,6 +12,7 @@ import { libelleOrigine } from "@/lib/importPage";
 import { exempleDeOrigine } from "@/lib/exemplesPages";
 import { GuideDecouverte } from "./GuideDecouverte";
 import { BlocEngagement } from "./BlocEngagement";
+import { AdapterExemple } from "./AdapterExemple";
 import { ReponsesPage } from "./ReponsesPage";
 import styles from "./pages.module.css";
 
@@ -106,6 +107,7 @@ export function FichePage({ id }: { id: string }) {
   }, [charger]);
 
   const [nouvelleVersion, setNouvelleVersion] = useState(false);
+  const [adapter, setAdapter] = useState(false);
   // Arrivée depuis « Nouvelle page » avec un code déjà connu : on le dit, sans créer de doublon.
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("existante") !== "1") return;
@@ -181,10 +183,17 @@ export function FichePage({ id }: { id: string }) {
             Voir comme le client
           </a>
         )}
-        <button type="button" className={styles.secondaire} onClick={() => setNouvelleVersion(true)}>
-          Nouvelle version
-        </button>
+        {exemple ? (
+          <button type="button" className={styles.principal} onClick={() => setAdapter(true)}>
+            Adapter avec mon IA
+          </button>
+        ) : (
+          <button type="button" className={styles.secondaire} onClick={() => setNouvelleVersion(true)}>
+            Nouvelle version
+          </button>
+        )}
       </div>
+      {adapter && exemple && <AdapterExemple exemple={exemple} onFermer={() => setAdapter(false)} onMessage={signaler} />}
       {nouvelleVersion && (
         <ImportPage
           page={{ id: page.id, titre: page.titre, format: page.format }}

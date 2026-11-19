@@ -786,6 +786,23 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (pas à 120 jours comme la lecture). Vérifié au navigateur (mémoire locale,
   devis d'exemple). **Déployé, essai réel CONCLUANT (19/11)**, migration 031
   passée, e-mail à l'auteur compris.
+- **Cinq exemples, question d'accueil, « Adapter avec mon IA »** (19/11 ;
+  `lib/exemplesPages.ts`, `AccueilPages`, `PictoPublic`, `AdapterExemple`).
+  Trois exemples de plus (devis de salle de bains, comité de direction,
+  week-end à Étretat), chacun avec sa question piège (« commencer avant
+  Noël », « budget de Vernay », « venir avec son chien »), gardée par un test.
+  Devis et week-end posent le BOUTON D'ENGAGEMENT à la création (« Je souhaite
+  donner suite », « Je viens », mot autorisé) : on découvre la réponse du
+  lecteur et ses choix. L'accueil demande « Avec qui voulez-vous partager ? »
+  (clients / équipe / proches / recruteur, pictos « mini-pages » choisis par
+  l'éditeur, variante A) ; rien n'est gardé, la question oriente. « Adapter
+  avec mon IA » (fiche d'un exemple, à la place de « Nouvelle version ») :
+  Getgents n'appelle AUCUN modèle — il copie une consigne + le code
+  (`consigneAdaptation` : garder la forme, remplacer tout le fictif, demander
+  plutôt qu'inventer, retirer le bandeau, code complet), l'IA de l'utilisateur
+  adapte, le résultat se colle en NOUVELLE page — jamais en version de
+  l'exemple (recommandation acceptée par l'éditeur). Vérifié au navigateur
+  (mémoire locale), ordinateur et téléphone.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
