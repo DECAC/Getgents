@@ -802,7 +802,9 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   plutôt qu'inventer, retirer le bandeau, code complet), l'IA de l'utilisateur
   adapte, le résultat se colle en NOUVELLE page — jamais en version de
   l'exemple (recommandation acceptée par l'éditeur). Vérifié au navigateur
-  (mémoire locale), ordinateur et téléphone.
+  (mémoire locale), ordinateur et téléphone. **Déployé, essai réel CONCLUANT
+  (19/11).** Manque connu : l'accueil n'existe que SANS page — après un
+  premier exemple, plus aucun chemin vers les autres.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
