@@ -287,7 +287,7 @@ export function FichePage({ id }: { id: string }) {
         <section className={styles.apercu} aria-label="Aperçu de la page">
           <div className={styles.apercuBarre}>
             <span>Aperçu — la page telle que la voient vos destinataires</span>
-            <a href={`/api/pages/${encodeURIComponent(page.id)}/apercu?v=${page.version}`} target="_blank" rel="noopener noreferrer">
+            <a href={`/pages/${encodeURIComponent(page.id)}/plein-ecran?v=${page.version}`} target="_blank" rel="noopener noreferrer">
               Plein écran ⤢
             </a>
           </div>

@@ -44,3 +44,21 @@ export function versDomaineContenu(req: Request, objet: ObjetContenu, statut: 30
     },
   });
 }
+
+/**
+ * Le navigateur a REPLIÉ un document sur getgents.ai : le domaine de contenu
+ * n'a pas répondu chez lui (filtre d'entreprise, DNS). Journalisé — sans ce
+ * journal, un domaine injoignable pour TOUT LE MONDE passerait inaperçu,
+ * puisque le repli le masque. Beaucoup de `repli_direct` d'un coup : vérifier
+ * le domaine (DNS, Vercel) avant tout.
+ */
+export function journalRepli(objet: "partage" | "page" | "brouillon"): void {
+  console.info(JSON.stringify({ tag: "getgents:contenu", event: "repli_direct", objet }));
+}
+
+/** `?direct=1` sur la requête : sert le document ici, et le journalise. */
+export function repliDirect(req: Request, objet: "partage" | "page"): boolean {
+  const direct = new URL(req.url).searchParams.get("direct") === "1";
+  if (direct) journalRepli(objet);
+  return direct;
+}

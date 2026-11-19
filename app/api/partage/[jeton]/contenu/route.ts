@@ -1,3 +1,4 @@
+import { repliDirect } from "@/lib/server/domaineContenu";
 import { marked } from "marked";
 import { cookies } from "next/headers";
 import { decisionAcces } from "@/lib/server/accesPartage";
@@ -34,7 +35,7 @@ export async function GET(req: Request, props: { params: Promise<{ jeton: string
   // n'arriverait pas là-bas), le cadre part vers une adresse signée.
   // `?direct=1` : repli du navigateur quand le domaine de contenu est bloqué
   // (useCadreAvecRepli) — le document est servi ici, isolé comme avant.
-  const ailleurs = new URL(req.url).searchParams.get("direct") === "1" ? null : versDomaineContenu(req, { t: "partage", j: a.jeton });
+  const ailleurs = repliDirect(req, "partage") ? null : versDomaineContenu(req, { t: "partage", j: a.jeton });
   if (ailleurs) return ailleurs;
   const html = documentArtefact(a.contenu, a.format, a.titre, (md) => marked.parse(md, { async: false }) as string);
   return new Response(html, {

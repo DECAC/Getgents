@@ -1,3 +1,4 @@
+import { repliDirect } from "@/lib/server/domaineContenu";
 import { marked } from "marked";
 import { requireUser } from "@/lib/server/session";
 import { contenuPourProprietaire } from "@/lib/server/pages";
@@ -22,7 +23,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
   if (!/^[0-9a-f-]{36}$/i.test(params.id)) return new Response("Page introuvable.", { status: 404 });
   // `?direct=1` : repli du navigateur quand le domaine de contenu est bloqué
   // (useCadreAvecRepli) — le document est servi ici, isolé comme avant.
-  const ailleurs = new URL(req.url).searchParams.get("direct") === "1" ? null : versDomaineContenu(req, { t: "page", id: params.id, u: auth.user.id });
+  const ailleurs = repliDirect(req, "page") ? null : versDomaineContenu(req, { t: "page", id: params.id, u: auth.user.id });
   if (ailleurs) return ailleurs;
   const page = await contenuPourProprietaire(auth.user.id, params.id).catch(() => null);
   if (!page) return new Response("Page introuvable.", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });

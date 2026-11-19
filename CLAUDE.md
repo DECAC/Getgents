@@ -1246,7 +1246,18 @@ vérificateurs des filtres. Vérifié au navigateur contre un FAUX FILTRE
 blocked ») : document affiché chez le destinataire en ~4 s, fiche,
 vignette et aperçu repliés ; sans filtre, rien ne bascule. Piège de test :
 `context.route` de Playwright n'intercepte pas la requête qui SUIT une
-redirection — le premier essai « réussissait » sans rien bloquer.
+redirection — le premier essai « réussissait » sans rien bloquer. **« Plein écran » → « Ce site est inaccessible » (19/11, vécu)** : le
+lien ouvrait le DOCUMENT lui-même dans un onglet, donc directement le domaine
+de contenu, SANS le repli du cadre — sur un réseau qui ne le joint pas,
+erreur sèche (le cadre de la fiche, lui, se repliait sans bruit). Depuis :
+`/pages/<id>/plein-ecran`, le même `CadreApercu` sur toute la fenêtre, monté
+APRÈS l'hydratation (rendu au serveur, son `load` précédait React et rien
+n'était jugé). Et un FILET dans `useCadreAvecRepli` (8 s sans signal `pret`,
+même sans `load` — un domaine injoignable peut ne jamais le livrer ; ignoré
+sans cadre ou pour une vignette `lazy`). Chaque repli est JOURNALISÉ
+(`getgents:contenu repli_direct`) : le repli masquait un domaine injoignable
+pour tous. Beaucoup de `repli_direct` d'un coup = vérifier DNS et Vercel. Ne
+jamais ouvrir un document du domaine de contenu hors d'un cadre avec repli.
 
 **BREVO EST CONFIGURÉ** en production (12/11, e-mail d'invitation reçu par
 l'utilisateur). Il ne l'était pas jusque-là : invitation par e-mail,

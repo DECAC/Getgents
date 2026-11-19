@@ -1,3 +1,4 @@
+import { journalRepli } from "@/lib/server/domaineContenu";
 import { marked } from "marked";
 import { requireUser } from "@/lib/server/session";
 import { avecAmorce, CSP_ARTEFACT, documentArtefact } from "@/lib/documentArtefact";
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
   // Domaine de contenu : 307, le navigateur y reposte le MÊME corps, dont
   // l'adresse signée porte l'empreinte (un autre code n'y passerait pas).
   // `direct` : repli du navigateur quand le domaine de contenu est bloqué.
+  if (f?.get("direct") === "1") journalRepli("brouillon");
   if (contenu && f?.get("direct") !== "1") {
     const h = empreinteBrouillon(brutContenu, brut, String(f?.get("titre") ?? ""));
     const ailleurs = versDomaineContenu(req, { t: "brouillon", u: auth.user.id, h }, 307);

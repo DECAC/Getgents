@@ -5,6 +5,15 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from "react"
 /** Délai, après le chargement du cadre, pour recevoir le signal du document. */
 export const DELAI_SIGNAL_MS = 1500;
 
+/**
+ * Filet, SANS attendre l'événement `load` : un domaine injoignable (DNS,
+ * connexion refusée) peut ne jamais le faire parvenir à la page, et un cadre
+ * rendu avant l'hydratation le perd. Vécu le 19/11 (« Ce site est
+ * inaccessible » en plein écran). Le signal `pret` part au tout premier
+ * script du document : 8 s laissent passer un réseau lent.
+ */
+export const DELAI_FILET_MS = 8000;
+
 /** L'adresse du document servi DIRECTEMENT par getgents.ai (sans domaine de contenu). */
 export function adresseDirecte(src: string): string {
   return src + (src.includes("?") ? "&" : "?") + "direct=1";
@@ -41,6 +50,20 @@ export function useCadreAvecRepli(cle: string, cadreExistant?: RefObject<HTMLIFr
     window.addEventListener("message", surMessage);
     return () => window.removeEventListener("message", surMessage);
   }, [cadre]);
+
+  useEffect(() => {
+    if (direct) return;
+    const t = window.setTimeout(() => {
+      // Pas de cadre (page protégée par code, pas encore ouverte) ou cadre différé
+      // (vignettes `loading="lazy"` hors écran) : rien à juger, `onLoad` s'en chargera.
+      const c = cadre.current;
+      if (recu.current || !c || c.loading === "lazy") return;
+      juge.current = true;
+      console.info("[getgents] aucun signal du document : rechargement depuis getgents.ai");
+      setDirect(true);
+    }, DELAI_FILET_MS);
+    return () => window.clearTimeout(t);
+  }, [cle, direct, cadre]);
 
   const onLoad = useCallback(() => {
     if (direct || juge.current) return;
