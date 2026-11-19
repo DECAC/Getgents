@@ -15,7 +15,21 @@
 export const INTITULE_MAX = 30;
 export const MOT_MAX = 500;
 
-export const INTITULES_SUGGERES = ["Je suis intéressé", "Prendre rendez-vous", "Je souhaite donner suite", "Je viens"] as const;
+export const INTITULES_SUGGERES = ["Valider mes choix", "Je suis intéressé", "Prendre rendez-vous", "Je souhaite donner suite", "Je viens"] as const;
+
+/**
+ * Combien de CHOIX la page offre-t-elle (cases, radios, listes, curseurs,
+ * nombres, `<output>`) ? Lu dans le code, sans l'exécuter : une estimation
+ * pour le bloc Engagement de la fiche (« cette page contient 6 choix »), pas
+ * la liste exacte — c'est l'amorce, dans la page du lecteur, qui relève les
+ * choix réels. Marche pour le HTML et pour le JSX d'un artefact React.
+ */
+export function compterChoix(code: string): number {
+  const champs = code.match(/<input\b[^>]*\btype\s*=\s*["'{]?\s*["']?(checkbox|radio|range|number)\b/gi)?.length ?? 0;
+  const listes = code.match(/<select\b/gi)?.length ?? 0;
+  const sorties = code.match(/<output\b/gi)?.length ?? 0;
+  return champs + listes + sorties;
+}
 
 export interface ReglageEngagement {
   actif: boolean;

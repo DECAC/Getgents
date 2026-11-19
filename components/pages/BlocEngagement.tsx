@@ -15,13 +15,15 @@ export function BlocEngagement({ pageId, onMessage }: { pageId: string; onMessag
   const [brouillon, setBrouillon] = useState("");
   const [migration, setMigration] = useState(false);
   const [enCours, setEnCours] = useState(false);
+  const [choix, setChoix] = useState(0);
 
   useEffect(() => {
     let vivant = true;
     void fetch(`/api/pages/${encodeURIComponent(pageId)}/engagement`, { credentials: "include" })
       .then(async (r) => {
-        const d = (await r.json().catch(() => ({}))) as { engagement?: ReglageEngagement; migration?: boolean };
+        const d = (await r.json().catch(() => ({}))) as { engagement?: ReglageEngagement; migration?: boolean; choix?: number };
         if (!vivant) return;
+        setChoix(d.choix ?? 0);
         if (d.migration) setMigration(true);
         const e = d.engagement ?? ENGAGEMENT_PAR_DEFAUT;
         setReglage(e);
@@ -70,15 +72,17 @@ export function BlocEngagement({ pageId, onMessage }: { pageId: string; onMessag
 
   return (
     <section className={styles.bloc}>
-      <h2 className={styles.blocTitre}>Engagement</h2>
+      <h2 className={styles.blocTitre}>Bouton de réponse</h2>
       {migration ? (
         <p className={styles.aide}>Le bouton d&apos;engagement n&apos;est pas encore installé sur ce service (migration 031).</p>
       ) : (
         <>
           <label className={styles.interrupteur}>
             <span>
-              <b>{reglage.actif ? "Bouton proposé aux lecteurs" : "Désactivé"}</b>
-              Un bouton sur la page de vos destinataires. Leur clic vous est transmis, avec leur nom et les choix qu&apos;ils ont faits dans la page.
+              <b>{reglage.actif ? "Activé : vos lecteurs peuvent vous répondre" : "Désactivé"}</b>
+              Un bouton en bas de la page. En le cliquant, le lecteur vous envoie sa réponse : son nom,{" "}
+              {choix > 0 ? "les cases et options qu'il a choisies dans la page" : "les choix éventuels faits dans la page"} et, si vous
+              l&apos;autorisez, un mot. Vous la recevez par e-mail et dans l&apos;onglet Activité.
             </span>
             <input
               type="checkbox"
@@ -88,6 +92,15 @@ export function BlocEngagement({ pageId, onMessage }: { pageId: string; onMessag
               onChange={() => void enregistrer({ ...reglage, actif: !reglage.actif }, reglage.actif ? "Bouton retiré." : "Bouton activé.")}
             />
           </label>
+
+          {choix > 0 ? (
+            <p className={styles.engagementChoixPage}>
+              ✓ Cette page contient des choix à faire (cases, options…).{" "}
+              {reglage.actif ? "Ils seront joints à chaque réponse." : "Activez le bouton pour recevoir ceux de vos lecteurs."}
+            </p>
+          ) : (
+            <p className={styles.aide}>Aucune case ni option repérée dans cette page : la réponse portera le nom du lecteur et son mot.</p>
+          )}
 
           {reglage.actif && (
             <div className={styles.engagementReglages}>
@@ -142,7 +155,9 @@ export function BlocEngagement({ pageId, onMessage }: { pageId: string; onMessag
                 <span className={styles.engagementBouton}>{brouillon.trim() || reglage.intitule}</span>
                 <p>{mentionReponse(null, true)}</p>
               </div>
-              <p className={styles.aide}>Cette mention est fixe : le lecteur voit ses choix avant d&apos;envoyer et peut en retirer chacun.</p>
+              <p className={styles.aide}>
+                Au clic, le lecteur voit la liste de ses choix et peut en retirer avant d&apos;envoyer. Cette mention est fixe.
+              </p>
             </div>
           )}
         </>

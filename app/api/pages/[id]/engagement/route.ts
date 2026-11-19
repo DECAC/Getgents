@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { reglageValide } from "@/lib/engagement";
+import { compterChoix, reglageValide } from "@/lib/engagement";
+import { lirePage } from "@/lib/server/pages";
 import { requireUser } from "@/lib/server/session";
 import { definirEngagement, lireEngagement } from "@/lib/server/engagementPages";
 
@@ -15,7 +16,9 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
   const r = await lireEngagement(auth.user.id, id).catch(() => null);
   if (!r) return NextResponse.json({ error: "Le réglage n'a pas pu être lu." }, { status: 500 });
   if (!r.ok) return r.raison === "introuvable" ? NextResponse.json({ error: "Page introuvable." }, { status: 404 }) : NextResponse.json({ error: MIGRATION, migration: true }, { status: 503 });
-  return NextResponse.json({ engagement: r.valeur }, { headers: { "Cache-Control": "no-store" } });
+  // Estimation lue dans le code : le bloc dit si la page offre des choix à joindre à la réponse.
+  const page = await lirePage(auth.user.id, id).catch(() => null);
+  return NextResponse.json({ engagement: r.valeur, choix: page ? compterChoix(page.contenu) : 0 }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {

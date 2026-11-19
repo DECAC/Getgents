@@ -78,3 +78,15 @@ describe("lecture jointe à une réponse", () => {
     expect(mentionReponse("Marie", false, false)).not.toMatch(/lecture/);
   });
 });
+
+describe("choix repérés dans le code de la page", () => {
+  const { compterChoix, INTITULES_SUGGERES } = jest.requireActual("@/lib/engagement") as typeof import("@/lib/engagement");
+  it("compte cases, radios, listes et sorties, en HTML comme en JSX", () => {
+    expect(compterChoix('<label><input type="checkbox"> A</label><input type=radio name=x><select></select><output>8</output>')).toBe(4);
+    expect(compterChoix('<input type={"checkbox"} checked={x} />')).toBe(1);
+    expect(compterChoix('<input type="text"><textarea></textarea>')).toBe(0);
+  });
+  it("propose « Valider mes choix » en premier", () => {
+    expect(INTITULES_SUGGERES[0]).toBe("Valider mes choix");
+  });
+});
