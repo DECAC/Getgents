@@ -47,7 +47,7 @@ const memoire = (): Memoire => {
 const journal = (event: string, extra: Record<string, unknown> = {}) => console.log(JSON.stringify({ tag: "getgents:activite", event, ...extra }));
 
 /** Courriel de l'auteur, pour la notification de première lecture partagée. */
-async function courrielAuteur(ownerId: string): Promise<string | null> {
+export async function courrielAuteur(ownerId: string): Promise<string | null> {
   const sb = getSupabaseAdmin();
   if (!sb) return null;
   const { data } = await sb.auth.admin.getUserById(ownerId);
