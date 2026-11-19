@@ -805,6 +805,27 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (mémoire locale), ordinateur et téléphone. **Déployé, essai réel CONCLUANT
   (19/11).** Manque connu : l'accueil n'existe que SANS page — après un
   premier exemple, plus aucun chemin vers les autres.
+- **Plus de fenêtre « Partager vos données ? » : la lecture se JOINT à une
+  réponse** (19/11 ; `useLecture` de `VuePartage`, `lectureValide`,
+  `pastillesLecture`, migration 032 à passer AVANT — sans elle, une réponse
+  part SANS sa lecture, journal `lecture_sans_colonne`). L'éditeur voulait
+  « partagé par défaut » + une phrase sous le bouton : REFUSÉ sur conseil
+  (suivi nominatif sans accord préalable, consentement lié à un autre geste —
+  RGPD art. 7 —, mention « Rien d'autre n'est envoyé » devenue fausse ; NON
+  validé par un juriste). Retenu : ouverture ANONYME envoyée à l'arrivée (une
+  ligne, sans lien) ; la visite EN COURS (début, durée onglet visible, partie
+  lue) est mesurée DANS la page, rien n'est envoyé ni gardé dans le
+  navigateur, et ne part qu'avec la réponse si le lecteur coche « Joindre ma
+  lecture de la page » (NON cochée par défaut ; l'appareil est déduit par le
+  serveur). PAS de compte des visites précédentes : il faudrait une trace
+  avant l'accord. Fiche : pastilles sur la réponse (« N'a pas joint sa
+  lecture » sinon), tuile « N / M destinataires ont répondu » ; « Lectures
+  partagées » ne s'affiche plus que pour les lectures de l'ANCIENNE fenêtre,
+  jusqu'à leur effacement (120 j). L'e-mail « première lecture partagée » ne
+  part plus. La route `/lecture` accepte encore `consentement: true` (vieux
+  onglets ouverts). Vérifié au navigateur (mémoire locale) : aucune fenêtre
+  à 11 s, un seul battement anonyme, case décochée, mention qui s'allonge,
+  réponse avec et sans lecture.
 - **Rubrique « Modèles »** (19/11, maquette validée ; « Exemples » renommé
   par l'éditeur — le mot dit qu'on part de la page pour en faire la sienne ;
   `GalerieModeles`, `/pages/modeles`, `modelesEssayes`, `modelesASuggerer`).

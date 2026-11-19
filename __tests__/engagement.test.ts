@@ -52,3 +52,29 @@ describe("bouton d'engagement", () => {
     expect(AMORCE_ARTEFACT).not.toMatch(/textarea|"text"|"email"|"tel"|"password"/);
   });
 });
+
+describe("lecture jointe à une réponse", () => {
+  const { lectureValide, pastillesLecture, mentionReponse } = jest.requireActual("@/lib/engagement") as typeof import("@/lib/engagement");
+  const maintenant = Date.parse("2026-11-19T18:00:00Z");
+  it("n'accepte que la visite EN COURS, bornée", () => {
+    expect(lectureValide({ debut: "2026-11-19T17:50:00Z", duree: 240.4, profondeur: 130 }, maintenant)).toEqual({
+      debut: "2026-11-19T17:50:00.000Z",
+      duree: 240,
+      profondeur: 100,
+      appareil: null,
+    });
+    expect(lectureValide({ debut: "2026-11-10T10:00:00Z", duree: 10 }, maintenant)).toBeNull();
+    expect(lectureValide({ debut: "2026-11-20T10:00:00Z", duree: 10 }, maintenant)).toBeNull();
+    expect(lectureValide("oui", maintenant)).toBeNull();
+  });
+  it("se lit en pastilles pour l'auteur", () => {
+    expect(pastillesLecture({ debut: "x", duree: 240, profondeur: 97, appareil: "telephone" })).toEqual(["4 min", "Lue jusqu'en bas", "Téléphone"]);
+    expect(pastillesLecture({ debut: "x", duree: 20, profondeur: null })).toEqual(["20 s"]);
+  });
+  it("la mention nomme la lecture seulement quand elle part", () => {
+    expect(mentionReponse("Marie", true, true)).toBe(
+      "Votre réponse sera transmise à l'auteur, avec votre nom (Marie), les choix cochés ci-dessus et votre lecture de la page. Rien d'autre n'est envoyé."
+    );
+    expect(mentionReponse("Marie", false, false)).not.toMatch(/lecture/);
+  });
+});

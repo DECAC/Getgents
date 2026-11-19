@@ -5,23 +5,14 @@ import { adresseDirecte, useCadreAvecRepli } from "@/components/shared/useCadreA
 import AssistantDocument from "./AssistantDocument";
 import Confidentialite from "./Confidentialite";
 import EngagementLecteur from "./EngagementLecteur";
-import { BATTEMENT_MS, cleConsentement, DELAI_WIDGET_MS, type Consentement } from "@/lib/activitePage";
+import type { LectureJointe } from "@/lib/engagement";
 import styles from "./partage.module.css";
 
 /** La bulle « Une question sur ce document ? » ne s'affiche qu'une fois par navigateur. */
 const CLE_BULLE = "getgents:partage:bulleVue";
 const DELAI_BULLE_MS = 3000;
 
-function lireChoix(jeton: string): Consentement | null {
-  try {
-    const v = localStorage.getItem(cleConsentement(jeton));
-    return v === "partage" || v === "anonyme" ? v : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Identifiant d'une visite : tiré à l'ouverture, et à nouveau à chaque changement de choix. */
+/** Identifiant d'une visite : tiré à chaque ouverture. */
 function nouvelleVisite(): string {
   const o = new Uint8Array(16);
   crypto.getRandomValues(o);
@@ -29,79 +20,50 @@ function nouvelleVisite(): string {
 }
 
 /**
- * Mesure de lecture. Anonyme (par défaut, et tant que le visiteur n'a rien
- * choisi) : UN battement par ouverture, rien d'autre. Partagée : la durée
- * (onglet visible seulement) et la profondeur lue, renvoyées toutes les
- * 15 s et quand l'onglet se cache. Changer d'avis ouvre une NOUVELLE
- * visite : une visite anonyme ne devient jamais nominative.
+ * Mesure de lecture (19/11 : plus de fenêtre de consentement). UNE ouverture
+ * ANONYME par visite, envoyée tout de suite : ni lien, ni durée, ni appareil.
+ * Le détail de la visite EN COURS (début, durée onglet visible, partie lue)
+ * est mesuré ICI, dans la page, sans rien envoyer ni garder dans le
+ * navigateur : il ne part qu'avec une réponse au bouton d'engagement, si le
+ * lecteur coche « Joindre ma lecture ». `mesure()` le rend à cet instant.
  */
-function useLecture(jeton: string, choix: Consentement | null, cadre: React.RefObject<HTMLIFrameElement | null>) {
+function useLecture(jeton: string, cadre: React.RefObject<HTMLIFrameElement | null>): () => LectureJointe {
+  const etat = useRef({ debut: new Date().toISOString(), duree: 0, depuis: 0, profondeur: null as number | null });
+
   useEffect(() => {
-    const partage = choix === "partage";
-    const visite = nouvelleVisite();
-    let duree = 0;
-    let profondeur: number | null = null;
-    let depuis = document.visibilityState === "visible" ? Date.now() : 0;
-    const envoyer = (fin = false) => {
-      if (depuis) {
-        duree += (Date.now() - depuis) / 1000;
-        depuis = document.visibilityState === "visible" ? Date.now() : 0;
-      }
-      const corps = JSON.stringify({ visite, consentement: partage, duree: Math.round(duree), profondeur });
-      const url = `/api/partage/${encodeURIComponent(jeton)}/lecture`;
-      if (fin && navigator.sendBeacon) navigator.sendBeacon(url, new Blob([corps], { type: "application/json" }));
-      else fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: corps, keepalive: true }).catch(() => {});
-    };
-    if (!partage) {
-      // Anonyme : UNE ouverture. Sans choix fait, on attend (30 s, ou le départ
-      // du visiteur) : celui qui accepte entre-temps ne compte qu'une fois,
-      // en lecture partagée.
-      let parti = false;
-      const une = () => {
-        if (parti) return;
-        parti = true;
-        envoyer(true);
-      };
-      if (choix === "anonyme") {
-        une();
-        return;
-      }
-      const t = window.setTimeout(une, 30_000);
-      const surCache = () => document.visibilityState === "hidden" && une();
-      document.addEventListener("visibilitychange", surCache);
-      window.addEventListener("pagehide", une);
-      return () => {
-        window.clearTimeout(t);
-        document.removeEventListener("visibilitychange", surCache);
-        window.removeEventListener("pagehide", une);
-      };
-    }
-    envoyer();
-    // Le document a pu donner sa profondeur avant qu'on l'écoute : on la lui redemande.
-    cadre.current?.contentWindow?.postMessage({ getgents: "profondeur?" }, "*");
-    const surMessage = (e: MessageEvent) => {
+    const e = etat.current;
+    e.debut = new Date().toISOString();
+    e.depuis = document.visibilityState === "visible" ? Date.now() : 0;
+    const corps = JSON.stringify({ visite: nouvelleVisite(), consentement: false, duree: 0, profondeur: null });
+    fetch(`/api/partage/${encodeURIComponent(jeton)}/lecture`, { method: "POST", headers: { "Content-Type": "application/json" }, body: corps, keepalive: true }).catch(() => {});
+
+    const surMessage = (ev: MessageEvent) => {
       // Seul NOTRE cadre parle : un autre onglet ou une publicité n'écrit pas la mesure.
-      if (e.source !== cadre.current?.contentWindow) return;
-      const d = e.data as { getgents?: string; v?: unknown };
-      if (d?.getgents === "profondeur" && typeof d.v === "number") profondeur = Math.max(profondeur ?? 0, Math.min(100, Math.round(d.v)));
+      if (ev.source !== cadre.current?.contentWindow) return;
+      const d = ev.data as { getgents?: string; v?: unknown };
+      if (d?.getgents === "profondeur" && typeof d.v === "number") e.profondeur = Math.max(e.profondeur ?? 0, Math.min(100, Math.round(d.v)));
     };
     const surVisibilite = () => {
-      if (document.visibilityState === "hidden") envoyer(true);
-      else depuis = Date.now();
+      if (document.visibilityState === "hidden") {
+        if (e.depuis) e.duree += (Date.now() - e.depuis) / 1000;
+        e.depuis = 0;
+      } else e.depuis = Date.now();
     };
-    const surDepart = () => envoyer(true);
     window.addEventListener("message", surMessage);
-    window.addEventListener("pagehide", surDepart);
     document.addEventListener("visibilitychange", surVisibilite);
-    const t = window.setInterval(() => document.visibilityState === "visible" && envoyer(), BATTEMENT_MS);
+    // Le document a pu donner sa profondeur avant qu'on l'écoute : on la lui redemande.
+    cadre.current?.contentWindow?.postMessage({ getgents: "profondeur?" }, "*");
     return () => {
-      envoyer(true);
-      window.clearInterval(t);
       window.removeEventListener("message", surMessage);
-      window.removeEventListener("pagehide", surDepart);
       document.removeEventListener("visibilitychange", surVisibilite);
     };
-  }, [jeton, choix, cadre]);
+  }, [jeton, cadre]);
+
+  return useCallback(() => {
+    const e = etat.current;
+    const duree = e.duree + (e.depuis ? (Date.now() - e.depuis) / 1000 : 0);
+    return { debut: e.debut, duree: Math.round(duree), profondeur: e.profondeur };
+  }, []);
 }
 
 /**
@@ -147,38 +109,9 @@ export default function VuePartage({
   const srcDocument = `/api/partage/${encodeURIComponent(jeton)}/contenu`;
   // Domaine de contenu bloqué (filtre d'entreprise) : rechargement depuis getgents.ai.
   const repli = useCadreAvecRepli(srcDocument, cadre);
-  const [choix, setChoix] = useState<Consentement | null>(null);
-  const [choixLu, setChoixLu] = useState(false);
-  const [widget, setWidget] = useState(false);
   const [conf, setConf] = useState(false);
 
-  useEffect(() => {
-    setChoix(lireChoix(jeton));
-    setChoixLu(true);
-  }, [jeton]);
-
-  // Le widget : après 10 s de lecture, jamais à l'arrivée, et seulement sans choix fait.
-  useEffect(() => {
-    if (!choixLu || choix) return;
-    const t = window.setTimeout(() => setWidget(true), DELAI_WIDGET_MS);
-    return () => window.clearTimeout(t);
-  }, [choixLu, choix]);
-
-  const choisir = useCallback(
-    (c: Consentement) => {
-      setChoix(c);
-      setWidget(false);
-      try {
-        localStorage.setItem(cleConsentement(jeton), c);
-      } catch {
-        /* stockage fermé : le choix vaut pour cette visite */
-      }
-    },
-    [jeton]
-  );
-
-  // Rien n'est envoyé avant d'avoir relu le choix : une visite partagée ne doit pas commencer anonyme, ni l'inverse.
-  useLecture(jeton, choixLu ? choix : null, cadre);
+  const mesure = useLecture(jeton, cadre);
 
   const [ouvert, setOuvert] = useState(false);
   const [agrandi, setAgrandi] = useState(false);
@@ -226,11 +159,6 @@ export default function VuePartage({
     <div className={styles.page}>
       <header className={styles.bandeau}>
         {bandeau}
-        {choix && (
-          <button type="button" className={styles.etatDonnees} data-choix={choix} onClick={() => setConf(true)} title="Modifier">
-            {choix === "partage" ? "✓ Données partagées avec l'auteur" : "Navigation anonyme"}
-          </button>
-        )}
         <button type="button" className={styles.lienConf} onClick={() => setConf(true)}>
           Confidentialité
         </button>
@@ -261,28 +189,7 @@ export default function VuePartage({
         )}
       </div>
 
-      {widget && !conf && (
-        <div className={styles.widget} role="dialog" aria-label="Partager vos données avec l'auteur">
-          <button type="button" className={styles.widgetFermer} aria-label="Non merci" onClick={() => choisir("anonyme")}>
-            ✕
-          </button>
-          <b>Partager vos données avec l&apos;auteur ?</b>
-          <p>Vos données de navigation sur cette page seront partagées avec l&apos;auteur, pour un meilleur suivi.</p>
-          <div className={styles.widgetActions}>
-            <button type="button" className={styles.widgetOui} onClick={() => choisir("partage")}>
-              Partager
-            </button>
-            <button type="button" className={styles.widgetNon} onClick={() => choisir("anonyme")}>
-              Non merci
-            </button>
-            <button type="button" className={styles.widgetPlus} onClick={() => setConf(true)}>
-              En savoir plus
-            </button>
-          </div>
-        </div>
-      )}
-
-      {conf && <Confidentialite titre={titre} auteur={auteur} choix={choix} protegee={protegee} onChoix={choisir} onFermer={() => setConf(false)} />}
+      {conf && <Confidentialite titre={titre} auteur={auteur} protegee={protegee} onFermer={() => setConf(false)} />}
 
       {(engagement || assistant) && !(assistant && ouvert) && (
         <div className={styles.flottants}>
@@ -294,6 +201,7 @@ export default function VuePartage({
               destinataire={destinataire}
               dejaRepondu={dejaRepondu}
               cadre={cadre}
+              mesure={mesure}
             />
           )}
           {assistant && (

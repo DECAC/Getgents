@@ -41,6 +41,7 @@ export function ActivitePage({
   onSansReponse,
   onVoirAssistant,
   actualiser = 0,
+  repondus,
   onEtat,
 }: {
   id: string;
@@ -55,6 +56,8 @@ export function ActivitePage({
   onVoirAssistant?: () => void;
   /** Change quand la fiche revient au premier plan : l'activité est relue (guide de découverte). */
   actualiser?: number;
+  /** Destinataires qui ont répondu au bouton d'engagement (ReponsesPage). */
+  repondus?: number;
   /** Chiffres lus par le guide de découverte de la fiche. */
   onEtat?: (e: { ouvertures: number; questions: number; precisions: number }) => void;
 }) {
@@ -281,9 +284,9 @@ export function ActivitePage({
         </div>
         <div className={styles.tuile}>
           <b>
-            {a.partages} / {a.destinataires}
+            {repondus ?? 0} / {a.destinataires}
           </b>
-          <span>destinataires ont partagé leurs données</span>
+          <span>destinataires ont répondu</span>
         </div>
         <button type="button" className={`${styles.tuile} ${styles.tuileLien}`} onClick={onVoirAssistant} title="Voir les questions dans l'onglet Assistant">
           <b>{a.totalQuestions}</b>
@@ -307,14 +310,15 @@ export function ActivitePage({
       )}
 
       <div className={styles.activiteCols}>
-        {vue === "activite" && (
+        {/* Depuis le 19/11, le détail d'une lecture arrive AVEC une réponse (onglet Activité, « Réponses »).
+            Restent ici les lectures partagées par l'ancienne fenêtre, jusqu'à leur effacement (120 jours). */}
+        {vue === "activite" && a.lecteurs.some((l) => l.partage) && (
         <section className={`${styles.bloc} ${styles.pleineLargeur}`} aria-label="Lectures partagées">
           <h2 className={styles.blocTitre}>
-            Lectures partagées <small>avec l&apos;accord du destinataire</small>
+            Lectures partagées <small>par l&apos;ancienne fenêtre de partage · effacées au bout de 120 jours</small>
           </h2>
-          {a.lecteurs.length === 0 && <p className={styles.aide}>Aucun destinataire actif.</p>}
           <ul className={styles.lecteurs}>
-            {a.lecteurs.map((l) => (
+            {a.lecteurs.filter((l) => l.partage).map((l) => (
               <li key={l.jeton} className={styles.lecteur}>
                 <div className={styles.lecteurLigne}>
                   <span className={styles.avatar} aria-hidden="true">
@@ -352,7 +356,6 @@ export function ActivitePage({
               </li>
             ))}
           </ul>
-          <p className={styles.aide}>« N&apos;a pas partagé » ne dit pas si la page a été ouverte : un destinataire qui refuse ne laisse rien deviner.</p>
         </section>
 
         )}

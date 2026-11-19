@@ -586,6 +586,34 @@
   color: #a2958f;
   font-weight: 400;
 }
+.engagementLecture {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid #dbe7fb;
+  border-radius: 12px;
+  background: #f4f8fb;
+  cursor: pointer;
+}
+.engagementLecture input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex: none;
+  accent-color: var(--sage);
+}
+.engagementLecture span {
+  color: #73665f;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.engagementLecture b {
+  display: block;
+  color: #2a1f19;
+  font-size: 14px;
+}
 .engagementMention {
   margin: 0 0 12px;
   color: #73665f;

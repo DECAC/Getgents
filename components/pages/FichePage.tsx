@@ -65,6 +65,7 @@ export function FichePage({ id }: { id: string }) {
   const [onglet, setOnglet] = useState<"page" | "destinataires" | "activite" | "assistant">("page");
   const [sansReponse, setSansReponse] = useState(0);
   const [reponsesNouvelles, setReponsesNouvelles] = useState(0);
+  const [repondus, setRepondus] = useState(0);
   // Guide de découverte : chiffres de l'activité, et relecture quand on revient sur l'onglet
   // (après avoir ouvert le lien en navigation privée, la fiche doit le savoir).
   const [etatActivite, setEtatActivite] = useState<{ ouvertures: number; questions: number; precisions: number } | null>(null);
@@ -247,7 +248,7 @@ export function FichePage({ id }: { id: string }) {
           doit être juste avant même qu'on l'ouvre, et changer d'onglet ne recharge rien. */}
       <div hidden={onglet === "page" || onglet === "destinataires"} className={styles.ongletCorps}>
         <div hidden={onglet !== "activite"}>
-          <ReponsesPage pageId={page.id} visible={onglet === "activite"} actualiser={tic} onNouvelles={setReponsesNouvelles} />
+          <ReponsesPage pageId={page.id} visible={onglet === "activite"} actualiser={tic} onNouvelles={setReponsesNouvelles} onTotal={setRepondus} />
         </div>
         <ActivitePage
           id={page.id}
@@ -257,6 +258,7 @@ export function FichePage({ id }: { id: string }) {
           onSansReponse={setSansReponse}
           onEtat={setEtatActivite}
           actualiser={tic}
+          repondus={repondus}
           onVoirAssistant={() => setOnglet("assistant")}
           interrupteur={
           <section className={styles.bloc}>

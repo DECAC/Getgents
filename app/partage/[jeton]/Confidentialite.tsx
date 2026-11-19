@@ -1,27 +1,24 @@
 "use client";
 
 import { useEffect } from "react";
-import type { Consentement } from "@/lib/activitePage";
 import styles from "./partage.module.css";
 
 /**
  * « Vos données sur cette page ». Fenêtre par-dessus le document, qui reste
  * chargé (il garde son état). C'est le SEUL endroit où figure le nom de
- * l'auteur ; partout ailleurs, « l'auteur ». L'interrupteur EST le choix.
+ * l'auteur ; partout ailleurs, « l'auteur ». Plus d'interrupteur (19/11) :
+ * la lecture est anonyme, son détail ne part qu'avec une réponse, si le
+ * lecteur coche « Joindre ma lecture ».
  */
 export default function Confidentialite({
   titre,
   auteur,
-  choix,
   protegee,
-  onChoix,
   onFermer,
 }: {
   titre: string;
   auteur: string | null;
-  choix: Consentement | null;
   protegee: boolean;
-  onChoix: (c: Consentement) => void;
   onFermer: () => void;
 }) {
   useEffect(() => {
@@ -32,7 +29,6 @@ export default function Confidentialite({
     return () => window.removeEventListener("keydown", surTouche);
   }, [onFermer]);
 
-  const partage = choix === "partage";
   return (
     <div className={styles.confVoile} onClick={onFermer}>
       <div className={styles.confBoite} role="dialog" aria-modal="true" aria-labelledby="conf-titre" onClick={(e) => e.stopPropagation()}>
@@ -46,23 +42,6 @@ export default function Confidentialite({
           « {titre} »{auteur ? <> · auteur : <b>{auteur}</b>, qui vous l&apos;a envoyée via Getgents.</> : <>, envoyée via Getgents.</>}
         </p>
 
-        <label className={styles.confChoix}>
-          <span className={styles.confChoixTexte}>
-            <b>Partager mes données avec l&apos;auteur</b>
-            <span>
-              Actuellement : <b>{partage ? "oui" : "non"}</b> — {partage ? "l'auteur voit votre lecture de cette page." : "votre navigation est anonyme."} Vous
-              pouvez changer d&apos;avis à tout moment.
-            </span>
-          </span>
-          <input
-            type="checkbox"
-            role="switch"
-            className={styles.confBascule}
-            checked={partage}
-            onChange={(e) => onChoix(e.target.checked ? "partage" : "anonyme")}
-          />
-        </label>
-
         <div className={styles.confCols}>
           <div className={styles.confCol} data-ton="bleu">
             <h3>Toujours, sans votre nom</h3>
@@ -72,14 +51,15 @@ export default function Confidentialite({
             </ul>
           </div>
           <div className={styles.confCol} data-ton="vert">
-            <h3>Seulement si vous acceptez</h3>
+            <h3>Seulement si vous répondez</h3>
             <ul>
-              <li>Quand vous avez ouvert la page, combien de temps, jusqu&apos;où vous l&apos;avez lue.</li>
-              <li>Ordinateur ou téléphone.</li>
-              <li>Un e-mail à l&apos;auteur à votre première ouverture.</li>
               <li>
-                Si vous cliquez le bouton de réponse proposé par l&apos;auteur : votre nom, les choix que vous laissez cochés et votre mot, montrés
-                avant l&apos;envoi.
+                Si l&apos;auteur propose un bouton de réponse et que vous le cliquez : votre nom, les choix que vous laissez cochés et votre mot,
+                montrés avant l&apos;envoi.
+              </li>
+              <li>
+                Votre lecture de cette visite (quand, combien de temps, jusqu&apos;où, ordinateur ou téléphone), seulement si vous cochez « Joindre ma
+                lecture de la page ». Elle est mesurée dans la page et n&apos;en sort pas autrement.
               </li>
             </ul>
           </div>

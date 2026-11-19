@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ligneChoix, type ReponseEngagement } from "@/lib/engagement";
+import { ligneChoix, pastillesLecture, type ReponseEngagement } from "@/lib/engagement";
 import styles from "./pages.module.css";
 
 const dateHeure = (iso: string) =>
@@ -18,11 +18,14 @@ export function ReponsesPage({
   visible,
   actualiser,
   onNouvelles,
+  onTotal,
 }: {
   pageId: string;
   visible: boolean;
   actualiser: number;
   onNouvelles: (n: number) => void;
+  /** Nombre de liens qui ont répondu (tuile de l'onglet Activité). */
+  onTotal?: (n: number) => void;
 }) {
   const [reponses, setReponses] = useState<ReponseEngagement[] | null>(null);
   const nouvellesVues = useRef<Set<string>>(new Set());
@@ -39,6 +42,10 @@ export function ReponsesPage({
   }, [charger, actualiser]);
 
   const nouvelles = (reponses ?? []).filter((x) => !x.vueAt);
+  const total = reponses ? new Set(reponses.map((x) => x.jeton)).size : 0;
+  useEffect(() => {
+    onTotal?.(total);
+  }, [total, onTotal]);
   useEffect(() => {
     onNouvelles(visible ? 0 : nouvelles.length);
   }, [nouvelles.length, visible, onNouvelles]);
@@ -85,6 +92,15 @@ export function ReponsesPage({
                 </ul>
               )}
               {r.mot && <blockquote className={styles.reponseMot}>{r.mot}</blockquote>}
+              {r.lecture ? (
+                <div className={styles.reponseLecture} aria-label="Sa lecture de la page">
+                  {pastillesLecture(r.lecture).map((p) => (
+                    <span key={p}>{p}</span>
+                  ))}
+                </div>
+              ) : (
+                <div className={styles.reponseSansLecture}>N&apos;a pas joint sa lecture.</div>
+              )}
             </li>
           );
         })}

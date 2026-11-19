@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { choixValides, ligneChoix, mentionReponse, MOT_MAX, type ChoixLecteur } from "@/lib/engagement";
+import { useEffect, useState } from "react";
+import { choixValides, ligneChoix, mentionReponse, MOT_MAX, type ChoixLecteur, type LectureJointe } from "@/lib/engagement";
 import styles from "./partage.module.css";
 
 /** Délai laissé au document pour rendre ses choix : au-delà, on ouvre sans (un artefact peut ne rien répondre). */
@@ -40,6 +40,7 @@ export default function EngagementLecteur({
   destinataire,
   dejaRepondu,
   cadre,
+  mesure,
 }: {
   jeton: string;
   intitule: string;
@@ -47,6 +48,8 @@ export default function EngagementLecteur({
   destinataire: string;
   dejaRepondu: boolean;
   cadre: React.RefObject<HTMLIFrameElement | null>;
+  /** La visite en cours, mesurée dans la page (VuePartage). */
+  mesure: () => LectureJointe;
 }) {
   const [envoye, setEnvoye] = useState(dejaRepondu);
   const [ouvert, setOuvert] = useState(false);
@@ -54,10 +57,11 @@ export default function EngagementLecteur({
   const [choix, setChoix] = useState<ChoixLecteur[]>([]);
   const [garde, setGarde] = useState<boolean[]>([]);
   const [texte, setTexte] = useState("");
+  // NON cochée par défaut : joindre sa lecture est un geste, distinct de la réponse.
+  const [joindre, setJoindre] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [toast, setToast] = useState(false);
-  const zone = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!ouvert) return;
@@ -79,6 +83,7 @@ export default function EngagementLecteur({
     setChoix(c);
     setGarde(c.map(() => true));
     setReleve(false);
+    setJoindre(false);
     setOuvert(true);
   };
 
@@ -89,7 +94,7 @@ export default function EngagementLecteur({
       const r = await fetch(`/api/partage/${encodeURIComponent(jeton)}/reponse`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mot: mot ? texte : undefined, choix: choix.filter((_, i) => garde[i]) }),
+        body: JSON.stringify({ mot: mot ? texte : undefined, choix: choix.filter((_, i) => garde[i]), lecture: joindre ? mesure() : undefined }),
       });
       const d = (await r.json().catch(() => ({}))) as { error?: string; deja?: boolean };
       if (r.ok || d.deja) {
@@ -156,14 +161,22 @@ export default function EngagementLecteur({
             {mot && (
               <label className={styles.engagementMot}>
                 <span>Un mot pour l&apos;auteur (facultatif)</span>
-                <textarea ref={zone} value={texte} maxLength={MOT_MAX} rows={4} onChange={(e) => setTexte(e.target.value)} />
+                <textarea value={texte} maxLength={MOT_MAX} rows={4} onChange={(e) => setTexte(e.target.value)} />
                 <small>
                   {texte.length} / {MOT_MAX}
                 </small>
               </label>
             )}
 
-            <p className={styles.engagementMention}>{mentionReponse(destinataire, nbGardes > 0)}</p>
+            <label className={styles.engagementLecture}>
+              <input type="checkbox" checked={joindre} onChange={(e) => setJoindre(e.target.checked)} />
+              <span>
+                <b>Joindre ma lecture de la page</b>
+                Quand je l&apos;ai ouverte, combien de temps, jusqu&apos;où, sur quel appareil. Pour ce lien seulement.
+              </span>
+            </label>
+
+            <p className={styles.engagementMention}>{mentionReponse(destinataire, nbGardes > 0, joindre)}</p>
             {erreur && (
               <p className={styles.engagementErreur} role="alert">
                 {erreur}

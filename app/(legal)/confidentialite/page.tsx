@@ -45,17 +45,18 @@ export default function ConfidentialitePage() {
             précisions que vous donnez à leur assistant.
           </li>
           <li>
-            <b>La lecture d&apos;une page partagée</b> : par défaut, une ouverture anonyme datée
-            du jour. Le détail (dates, durée, partie lue, appareil) seulement si le lecteur
-            accepte de le partager avec l&apos;auteur. Les questions posées à l&apos;assistant
-            de la page sont gardées sans nom ni lien. Tout est effacé 120 jours après sa
-            création.
+            <b>La lecture d&apos;une page partagée</b> : une ouverture anonyme, datée du
+            jour, sans nom ni lien. Le détail de la visite (quand, combien de temps,
+            partie lue, appareil) n&apos;est transmis que si le lecteur le joint à une
+            réponse, en cochant « Joindre ma lecture de la page ». Les questions posées à
+            l&apos;assistant de la page sont gardées sans nom ni lien. Les ouvertures et
+            les questions sont effacées 120 jours après leur création.
           </li>
           <li>
             <b>La réponse d&apos;un lecteur</b>, s&apos;il clique le bouton que l&apos;auteur lui
             propose : le nom de son lien, l&apos;intitulé du bouton, les choix faits dans la page
-            qu&apos;il a laissés cochés et son mot éventuel — montrés avant l&apos;envoi, une seule
-            réponse par lien. Transmise à l&apos;auteur par e-mail, gardée avec la page et
+            qu&apos;il a laissés cochés, son mot éventuel et, s&apos;il l&apos;a coché, le
+            détail de sa lecture — montrés avant l&apos;envoi, une seule réponse par lien. Transmise à l&apos;auteur par e-mail, gardée avec la page et
             effacée avec elle.
           </li>
           <li>

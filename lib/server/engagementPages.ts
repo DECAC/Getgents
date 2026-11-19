@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { choixValides, ENGAGEMENT_PAR_DEFAUT, type ChoixLecteur, type ReglageEngagement, type ReponseEngagement } from "@/lib/engagement";
+import { choixValides, ENGAGEMENT_PAR_DEFAUT, lectureValide, type ChoixLecteur, type LectureJointe, type ReglageEngagement, type ReponseEngagement } from "@/lib/engagement";
 import type { ArtefactPartage } from "@/lib/server/artefactsPartages";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import { lirePage } from "@/lib/server/pages";
@@ -72,7 +72,13 @@ export async function reponseDuLien(jeton: string): Promise<{ createdAt: string 
 }
 
 /** Enregistre LA réponse d'un lien. « deja » : une réponse existe (contrainte unique). */
-export async function enregistrerReponse(a: ArtefactPartage, intitule: string, mot: string | null, choix: ChoixLecteur[]): Promise<"ok" | "deja" | "migration_manquante"> {
+export async function enregistrerReponse(
+  a: ArtefactPartage,
+  intitule: string,
+  mot: string | null,
+  choix: ChoixLecteur[],
+  lecture: LectureJointe | null
+): Promise<"ok" | "deja" | "migration_manquante"> {
   if (!a.pageId) return "migration_manquante";
   const maintenant = new Date().toISOString();
   const sb = getSupabaseAdmin();
@@ -80,12 +86,16 @@ export async function enregistrerReponse(a: ArtefactPartage, intitule: string, m
     const m = memoire();
     if (Array.from(m.reponses.values()).some((x) => x.jeton === a.jeton)) return "deja";
     const id = randomUUID();
-    m.reponses.set(id, { id, pageId: a.pageId, jeton: a.jeton, destinataire: a.destinataire, intitule, mot, choix, version: a.version, createdAt: maintenant, vueAt: null });
+    m.reponses.set(id, { id, pageId: a.pageId, jeton: a.jeton, destinataire: a.destinataire, intitule, mot, choix, lecture, version: a.version, createdAt: maintenant, vueAt: null });
     return "ok";
   }
-  const { error } = await sb
-    .from("pages_reponses")
-    .insert({ page_id: a.pageId, jeton: a.jeton, destinataire: a.destinataire, intitule, mot, choix, version: a.version });
+  const ligne: Record<string, unknown> = { page_id: a.pageId, jeton: a.jeton, destinataire: a.destinataire, intitule, mot, choix, version: a.version };
+  let { error } = await sb.from("pages_reponses").insert(lecture ? { ...ligne, lecture } : ligne);
+  // Migration 032 pas encore passée : la réponse part SANS la lecture plutôt que d'être perdue.
+  if (lecture && error && (error.code === "PGRST204" || error.code === "42703" || /lecture/i.test(error.message))) {
+    console.error(JSON.stringify({ tag: "getgents:engagement", event: "lecture_sans_colonne", code: error.code }));
+    ({ error } = await sb.from("pages_reponses").insert(ligne));
+  }
   if (tableAbsente(error)) return "migration_manquante";
   if (error && (error.code === "23505" || /duplicate key/i.test(error.message))) return "deja";
   if (error) throw new Error(error.message);
@@ -104,7 +114,7 @@ export async function reponsesDeLaPage(ownerId: string, pageId: string): Promise
   }
   const { data, error } = await sb
     .from("pages_reponses")
-    .select("id, jeton, destinataire, intitule, mot, choix, version, created_at, vue_at")
+    .select("*")
     .eq("page_id", pageId)
     .order("created_at", { ascending: false })
     .limit(500);
@@ -119,6 +129,8 @@ export async function reponsesDeLaPage(ownerId: string, pageId: string): Promise
       intitule: String(r.intitule),
       mot: r.mot == null ? null : String(r.mot),
       choix: choixValides(r.choix),
+      // Sans la migration 032, la colonne manque : « * » la rend absente, pas une erreur.
+      lecture: r.lecture ? lectureValide(r.lecture, Date.parse(String(r.created_at)) || Date.now()) : null,
       version: Number(r.version) || 1,
       createdAt: String(r.created_at),
       vueAt: r.vue_at == null ? null : String(r.vue_at),

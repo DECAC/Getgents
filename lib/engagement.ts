@@ -26,12 +26,53 @@ export interface ReglageEngagement {
 
 export const ENGAGEMENT_PAR_DEFAUT: ReglageEngagement = { actif: false, intitule: "Je suis intéressé", mot: false };
 
-/** Mention FIXE sous le bouton : l'auteur ne peut pas la modifier. */
-export function mentionReponse(destinataire: string | null, avecChoix = false): string {
-  const nom = destinataire ? `avec votre nom (${destinataire})` : "avec votre nom";
-  return avecChoix
-    ? `Votre réponse sera transmise à l'auteur, ${nom} et les choix cochés ci-dessus. Rien d'autre n'est envoyé.`
-    : `Votre réponse sera transmise à l'auteur, ${nom}. Rien d'autre n'est envoyé.`;
+/** Mention FIXE sous le bouton : l'auteur ne peut pas la modifier. Elle dit EXACTEMENT ce qui part. */
+export function mentionReponse(destinataire: string | null, avecChoix = false, avecLecture = false): string {
+  const parts = [destinataire ? `votre nom (${destinataire})` : "votre nom"];
+  if (avecChoix) parts.push("les choix cochés ci-dessus");
+  if (avecLecture) parts.push("votre lecture de la page");
+  const liste = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} et ${parts[parts.length - 1]}`;
+  return `Votre réponse sera transmise à l'auteur, avec ${liste}. Rien d'autre n'est envoyé.`;
+}
+
+/**
+ * LECTURE JOINTE (19/11, décision de l'éditeur, maquette validée) : plus de
+ * fenêtre de consentement. La visite EN COURS est mesurée DANS la page
+ * (rien n'est envoyé ni gardé dans le navigateur) et ne part que si le
+ * lecteur coche « Joindre ma lecture » au bouton — case NON cochée par
+ * défaut : le consentement doit être un geste, distinct de la réponse.
+ * Pas de compte des visites précédentes : il faudrait une trace dans le
+ * navigateur AVANT l'accord. L'appareil est déduit par le serveur.
+ */
+export interface LectureJointe {
+  debut: string;
+  /** Secondes, onglet visible. */
+  duree: number;
+  /** Partie lue, en %, ou null si le document ne l'a pas dit. */
+  profondeur: number | null;
+  appareil?: "ordinateur" | "telephone" | null;
+}
+
+export function lectureValide(brut: unknown, maintenant = Date.now()): LectureJointe | null {
+  if (!brut || typeof brut !== "object") return null;
+  const l = brut as Record<string, unknown>;
+  const debut = typeof l.debut === "string" ? Date.parse(l.debut) : NaN;
+  // Une visite commencée dans l'avenir ou il y a plus de 2 jours n'est pas une visite en cours.
+  if (!Number.isFinite(debut) || debut > maintenant + 60_000 || debut < maintenant - 2 * 86_400_000) return null;
+  const duree = typeof l.duree === "number" && Number.isFinite(l.duree) ? Math.max(0, Math.min(Math.round(l.duree), 86_400)) : 0;
+  const profondeur =
+    typeof l.profondeur === "number" && Number.isFinite(l.profondeur) ? Math.max(0, Math.min(100, Math.round(l.profondeur))) : null;
+  const appareil = l.appareil === "telephone" || l.appareil === "ordinateur" ? l.appareil : null;
+  return { debut: new Date(debut).toISOString(), duree, profondeur, appareil };
+}
+
+/** Pastilles de l'auteur : « 4 min », « lue jusqu'en bas », « téléphone ». */
+export function pastillesLecture(l: LectureJointe): string[] {
+  const p: string[] = [];
+  p.push(l.duree < 60 ? `${Math.max(1, l.duree)} s` : `${Math.round(l.duree / 60)} min`);
+  if (l.profondeur !== null) p.push(l.profondeur >= 95 ? "Lue jusqu'en bas" : `Lue à ${l.profondeur} %`);
+  if (l.appareil) p.push(l.appareil === "telephone" ? "Téléphone" : "Ordinateur");
+  return p;
 }
 
 /**
@@ -124,6 +165,8 @@ export interface ReponseEngagement {
   intitule: string;
   mot: string | null;
   choix: ChoixLecteur[];
+  /** Lecture jointe par le lecteur, ou null. */
+  lecture: LectureJointe | null;
   version: number;
   createdAt: string;
   vueAt: string | null;

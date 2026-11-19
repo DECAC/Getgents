@@ -2327,3 +2327,22 @@
     align-items: flex-start;
   }
 }
+.reponseLecture {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.reponseLecture span {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #e8f0fd;
+  color: #2e4f86;
+  font-size: 12px;
+  font-weight: 600;
+}
+.reponseSansLecture {
+  margin-top: 8px;
+  color: var(--faint);
+  font-size: 12px;
+}

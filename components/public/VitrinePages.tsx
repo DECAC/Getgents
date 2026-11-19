@@ -173,7 +173,7 @@ export function VitrinePages({ inscriptions = { genre: "fermees" } }: { inscript
                 <h3>Savoir si la page a été ouverte</h3>
                 <p>
                   Ouvertures du jour, questions posées. Le détail de lecture (durée, partie lue)
-                  seulement si votre lecteur accepte de le partager.
+                  seulement si votre lecteur accepte de le partager, en vous répondant.
                 </p>
               </div>
             </div>
