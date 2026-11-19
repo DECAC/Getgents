@@ -784,7 +784,8 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   peut exclure un champ par `data-getgents-ignorer`. Pas de capture des
   boutons d'artefact React (`aria-pressed`). Réponses effacées AVEC la page
   (pas à 120 jours comme la lecture). Vérifié au navigateur (mémoire locale,
-  devis d'exemple), PAS avec Supabase ni Brevo.
+  devis d'exemple). **Déployé, essai réel CONCLUANT (19/11)**, migration 031
+  passée, e-mail à l'auteur compris.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
