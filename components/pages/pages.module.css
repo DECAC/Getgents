@@ -608,6 +608,7 @@
 
 .destActions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -2364,10 +2365,31 @@
   background: #178a45;
 }
 .lienWhatsApp {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 4px 2px;
   color: #178a45;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   text-decoration: none;
+}
+.lienWhatsApp svg,
+.boutonWhatsApp svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+.boutonWhatsApp {
+  gap: 6px;
+}
+.blocTitreActions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
 }
 .lienWhatsApp:hover {
   text-decoration: underline;

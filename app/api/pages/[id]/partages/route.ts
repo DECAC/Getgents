@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { PlafondAtteint } from "@/lib/offre";
 import { requireUser } from "@/lib/server/session";
-import { enregistrerArtefact } from "@/lib/server/artefactsPartages";
+import { enregistrerArtefact, revoquerPartage } from "@/lib/server/artefactsPartages";
 import { modeleMail, validerDemande } from "@/lib/mcpPartage";
 import { origineDeRequete } from "@/lib/oauthMcp";
 import { invitesValides } from "@/lib/groupesPages";
@@ -29,7 +29,15 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
   try {
     const a = await enregistrerArtefact(v.demande, null, "getgents", { userId: auth.user.id, clientId: "" });
     if (!a) return NextResponse.json({ error: "Page introuvable." }, { status: 404 });
-    if (groupe && (await definirGroupe(auth.user.id, a.jeton, groupe)) !== "ok") throw new Error("groupe non enregistré");
+    if (groupe) {
+      const g = await definirGroupe(auth.user.id, a.jeton, groupe).catch((e) => `erreur: ${(e as Error).message}`);
+      if (g !== "ok") {
+        // Sans sa liste, le lien serait un lien ORDINAIRE au nom du groupe : on le coupe aussitôt.
+        await revoquerPartage(auth.user.id, a.jeton).catch(() => false);
+        console.error(JSON.stringify({ tag: "getgents:pages", event: "groupe_non_enregistre", cause: g }));
+        return NextResponse.json({ error: "Le lien de groupe n'a pas pu être créé. Réessayez." }, { status: 500 });
+      }
+    }
     const lien = `${origineDeRequete(req.url, req.headers)}/partage/${a.jeton}`;
     const mail = modeleMail({ ...v.demande, titre: a.titre }, lien);
     console.log(JSON.stringify({ tag: "getgents:pages", event: "partage_depuis_getgents", ownerId: auth.user.id, groupe: groupe ? groupe.length : 0 }));
