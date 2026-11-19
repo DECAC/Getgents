@@ -41,6 +41,8 @@ export default function EngagementLecteur({
   dejaRepondu,
   cadre,
   mesure,
+  invite = null,
+  onRepondu,
 }: {
   jeton: string;
   intitule: string;
@@ -50,6 +52,9 @@ export default function EngagementLecteur({
   cadre: React.RefObject<HTMLIFrameElement | null>;
   /** La visite en cours, mesurée dans la page (VuePartage). */
   mesure: () => LectureJointe;
+  /** Lien de groupe : le prénom choisi, transmis avec la réponse. */
+  invite?: string | null;
+  onRepondu?: () => void;
 }) {
   const [envoye, setEnvoye] = useState(dejaRepondu);
   const [ouvert, setOuvert] = useState(false);
@@ -94,11 +99,12 @@ export default function EngagementLecteur({
       const r = await fetch(`/api/partage/${encodeURIComponent(jeton)}/reponse`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mot: mot ? texte : undefined, choix: choix.filter((_, i) => garde[i]), lecture: joindre ? mesure() : undefined }),
+        body: JSON.stringify({ mot: mot ? texte : undefined, choix: choix.filter((_, i) => garde[i]), lecture: joindre ? mesure() : undefined, invite: invite ?? undefined }),
       });
       const d = (await r.json().catch(() => ({}))) as { error?: string; deja?: boolean };
       if (r.ok || d.deja) {
         setEnvoye(true);
+        onRepondu?.();
         setOuvert(false);
         setToast(true);
         return;

@@ -5,6 +5,8 @@ import { adresseDirecte, useCadreAvecRepli } from "@/components/shared/useCadreA
 import AssistantDocument from "./AssistantDocument";
 import Confidentialite from "./Confidentialite";
 import EngagementLecteur from "./EngagementLecteur";
+import { ChoixPrenom } from "./ChoixPrenom";
+import { cleInvite, clePrenom, inviteDeLaListe } from "@/lib/groupesPages";
 import type { LectureJointe } from "@/lib/engagement";
 import styles from "./partage.module.css";
 
@@ -91,6 +93,7 @@ export default function VuePartage({
   engagement,
   destinataire,
   dejaRepondu,
+  groupe,
 }: {
   jeton: string;
   titre: string;
@@ -104,12 +107,41 @@ export default function VuePartage({
   engagement: { intitule: string; mot: boolean } | null;
   destinataire: string;
   dejaRepondu: boolean;
+  /** Lien de groupe : ses invités et ceux qui ont déjà répondu. */
+  groupe: { nom: string; invites: string[]; repondus: string[] } | null;
 }) {
   const cadre = useRef<HTMLIFrameElement>(null);
   const srcDocument = `/api/partage/${encodeURIComponent(jeton)}/contenu`;
   // Domaine de contenu bloqué (filtre d'entreprise) : rechargement depuis getgents.ai.
   const repli = useCadreAvecRepli(srcDocument, cadre);
   const [conf, setConf] = useState(false);
+
+  // Lien de groupe : le prénom choisi sur CET appareil (fonctionnel, rien n'est envoyé avant une réponse).
+  const [prenom, setPrenom] = useState<string | null>(null);
+  const [prenomLu, setPrenomLu] = useState(!groupe);
+  const [changer, setChanger] = useState(false);
+  const [repondus, setRepondus] = useState<string[]>(groupe?.repondus ?? []);
+  useEffect(() => {
+    if (!groupe) return;
+    let p: string | null = null;
+    try {
+      p = inviteDeLaListe(groupe.invites, localStorage.getItem(clePrenom(jeton)));
+    } catch {
+      /* stockage fermé : on redemandera */
+    }
+    setPrenom(p);
+    setPrenomLu(true);
+  }, [groupe, jeton]);
+  const choisirPrenom = (p: string) => {
+    setPrenom(p);
+    setChanger(false);
+    try {
+      localStorage.setItem(clePrenom(jeton), p);
+    } catch {
+      /* le choix vaut pour cette visite */
+    }
+  };
+  const aRepondu = groupe ? !!prenom && repondus.some((r) => cleInvite(r) === cleInvite(prenom)) : dejaRepondu;
 
   const mesure = useLecture(jeton, cadre);
 
@@ -159,6 +191,14 @@ export default function VuePartage({
     <div className={styles.page}>
       <header className={styles.bandeau}>
         {bandeau}
+        {groupe && engagement && prenom && (
+          <span className={styles.quiBandeau}>
+            Vous : <b>{prenom}</b>
+            <button type="button" className={styles.lienConf} onClick={() => setChanger(true)}>
+              Changer
+            </button>
+          </span>
+        )}
         <button type="button" className={styles.lienConf} onClick={() => setConf(true)}>
           Confidentialité
         </button>
@@ -189,17 +229,24 @@ export default function VuePartage({
         )}
       </div>
 
+      {groupe && engagement && prenomLu && (!prenom || changer) && (
+        <ChoixPrenom invites={groupe.invites} repondus={repondus} onChoisir={choisirPrenom} onFermer={prenom ? () => setChanger(false) : undefined} />
+      )}
+
       {conf && <Confidentialite titre={titre} auteur={auteur} protegee={protegee} onFermer={() => setConf(false)} />}
 
       {(engagement || assistant) && !(assistant && ouvert) && (
         <div className={styles.flottants}>
           {engagement && (
             <EngagementLecteur
+              key={prenom ?? ""}
               jeton={jeton}
               intitule={engagement.intitule}
               mot={engagement.mot}
-              destinataire={destinataire}
-              dejaRepondu={dejaRepondu}
+              destinataire={prenom ?? destinataire}
+              dejaRepondu={aRepondu}
+              invite={groupe ? prenom : null}
+              onRepondu={() => prenom && setRepondus((r) => [...r, prenom])}
               cadre={cadre}
               mesure={mesure}
             />

@@ -68,6 +68,7 @@ export default function Confidentialite({
             <ul>
               <li>Aucune localisation.</li>
               <li>Rien de ce que vous faites hors de cette page.</li>
+              <li>Sur un lien de groupe, le prénom que vous choisissez reste sur cet appareil ; il ne part qu&apos;avec votre réponse.</li>
               <li>Aucune publicité, aucune revente.</li>
             </ul>
           </div>

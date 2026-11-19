@@ -826,6 +826,30 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   onglets ouverts). Vérifié au navigateur (mémoire locale) : aucune fenêtre
   à 11 s, un seul battement anonyme, case décochée, mention qui s'allonge,
   réponse avec et sans lecture.
+- **Envoi par WhatsApp et LIENS DE GROUPE** (19/11, maquettes validées ;
+  `lib/groupesPages.ts`, `lib/server/groupesPages.ts`, `ChoixPrenom`,
+  migration 033 à passer AVANT — sans elle, créer un groupe répond 503 et
+  les liens ordinaires ne changent pas). WhatsApp : AUCUNE API, `wa.me/?text=`
+  avec le message prérempli (« Bonjour Marie, voici « … » : lien ») ;
+  l'auteur choisit le contact ou le groupe et envoie depuis SON numéro.
+  Écartés : automatiser un numéro personnel (interdit par WhatsApp, risque de
+  bannissement) et l'API Business de Meta (compte vérifié — donc société —,
+  numéro dédié, modèles approuvés, coût, et messages partis du numéro de
+  Getgents ; groupes NON vérifiés d'ici). Lien de groupe = UN lien
+  (`artefacts_partages`, destinataire = nom du groupe) + liste d'invités
+  (`partages_groupes`, 50 au plus, sans doublon à la casse et aux accents
+  près) ; le lecteur choisit son prénom (« Qui êtes-vous ? », retenu sur
+  l'appareil, « Changer » dans le bandeau), une réponse par (lien, invité) —
+  contrainte unique remplacée par un index `(jeton, coalesce(invite,''))`.
+  Le prénom n'est PAS vérifié : avertissement à la création, et la
+  protection par code bloque déjà un lien adressé à un nom. Les prénoms qui
+  ont répondu sont grisés pour tous (choix de l'éditeur : ça pousse les
+  retardataires). Activité : grille « a répondu / en attente » et
+  « Relancer » (WhatsApp avec les prénoms manquants). « Invités » sur la
+  ligne du groupe modifie la liste ; retirer un invité ne supprime pas sa
+  réponse. Sans bouton d'engagement, un lien de groupe ne demande pas de
+  prénom. Vérifié au navigateur (mémoire locale) : deux réponses, prénom
+  hors liste refusé (400), double réponse refusée (409), relance, mobile.
 - **Rubrique « Modèles »** (19/11, maquette validée ; « Exemples » renommé
   par l'éditeur — le mot dit qu'on part de la page pour en faire la sienne ;
   `GalerieModeles`, `/pages/modeles`, `modelesEssayes`, `modelesASuggerer`).

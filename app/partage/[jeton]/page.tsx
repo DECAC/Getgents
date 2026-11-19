@@ -8,7 +8,8 @@ import EcranCode from "./EcranCode";
 import { decisionAcces, protectionActive } from "@/lib/server/accesPartage";
 import { nomAuteur } from "@/lib/server/activitePages";
 import { suggestionsDeLaPage } from "@/lib/server/suggestionsPages";
-import { engagementDeLaPage, reponseDuLien } from "@/lib/server/engagementPages";
+import { engagementDeLaPage, invitesAyantRepondu, reponseDuLien } from "@/lib/server/engagementPages";
+import { groupeDuLien } from "@/lib/server/groupesPages";
 import { masquerEmail, nomCookie } from "@/lib/accesCode";
 import styles from "./partage.module.css";
 
@@ -65,7 +66,9 @@ export default async function PagePartage(props: { params: Promise<{ jeton: stri
   // Bouton d'engagement : sans migration 031 (ou en erreur), aucun bouton.
   const reglage = await engagementDeLaPage(a.pageId).catch(() => null);
   const engagement = reglage?.actif ? { intitule: reglage.intitule, mot: reglage.mot } : null;
-  const dejaRepondu = engagement ? !!(await reponseDuLien(a.jeton).catch(() => null)) : false;
+  const invites = await groupeDuLien(a.jeton).catch(() => null);
+  const groupe = invites ? { nom: a.destinataire, invites, repondus: engagement ? await invitesAyantRepondu(a.jeton).catch(() => []) : [] } : null;
+  const dejaRepondu = engagement && !groupe ? !!(await reponseDuLien(a.jeton).catch(() => null)) : false;
   return (
     <VuePartage
       jeton={a.jeton}
@@ -86,6 +89,7 @@ export default async function PagePartage(props: { params: Promise<{ jeton: stri
       engagement={engagement}
       destinataire={a.destinataire}
       dejaRepondu={dejaRepondu}
+      groupe={groupe}
     />
   );
 }

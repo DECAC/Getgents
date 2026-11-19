@@ -2346,3 +2346,118 @@
   color: var(--faint);
   font-size: 12px;
 }
+
+/* ——— WhatsApp et liens de groupe (19/11) ——— */
+.boutonWhatsApp {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #1fa855;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.boutonWhatsApp:hover {
+  background: #178a45;
+}
+.lienWhatsApp {
+  color: #178a45;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.lienWhatsApp:hover {
+  text-decoration: underline;
+}
+.badgeGroupe {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #dcf5e5;
+  color: #17763d;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+.champInvites {
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+.editeurInvites {
+  flex-basis: 100%;
+  padding: 10px 0 4px 46px;
+}
+.groupeSuivi {
+  margin-bottom: 14px;
+}
+.invitesGrille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+.inviteCase {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  min-width: 0;
+}
+.inviteCase b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inviteCase span {
+  margin-left: auto;
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.inviteCase[data-repondu="oui"] span {
+  background: #dcf5e5;
+  color: #17763d;
+}
+.inviteCase[data-repondu="non"] span {
+  background: var(--line-soft);
+  color: var(--muted);
+}
+.relance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #cdeedb;
+  border-radius: 12px;
+  background: #f4fbf6;
+  font-size: 13.5px;
+}
+.relance div {
+  flex: 1;
+  min-width: 200px;
+}
+.relance small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.destinataire {
+  flex-wrap: wrap;
+}

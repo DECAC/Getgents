@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ligneChoix, pastillesLecture, type ReponseEngagement } from "@/lib/engagement";
+import { cleInvite, lienWhatsApp, messageRelance } from "@/lib/groupesPages";
 import styles from "./pages.module.css";
 
 const dateHeure = (iso: string) =>
@@ -19,6 +20,8 @@ export function ReponsesPage({
   actualiser,
   onNouvelles,
   onTotal,
+  groupes = [],
+  titre = "",
 }: {
   pageId: string;
   visible: boolean;
@@ -26,6 +29,9 @@ export function ReponsesPage({
   onNouvelles: (n: number) => void;
   /** Nombre de liens qui ont répondu (tuile de l'onglet Activité). */
   onTotal?: (n: number) => void;
+  /** Liens de groupe actifs de la page : suivi « a répondu / en attente » et relance. */
+  groupes?: { jeton: string; nom: string; invites: string[]; lien: string }[];
+  titre?: string;
 }) {
   const [reponses, setReponses] = useState<ReponseEngagement[] | null>(null);
   const nouvellesVues = useRef<Set<string>>(new Set());
@@ -61,9 +67,53 @@ export function ReponsesPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, nbNouvelles, pageId]);
 
-  if (!reponses || reponses.length === 0) return null;
+  if (!reponses) return null;
+
+  const suivis = groupes.map((g) => {
+    const faits = new Set(reponses.filter((r) => r.jeton === g.jeton && r.invite).map((r) => cleInvite(r.invite!)));
+    return { ...g, faits, attente: g.invites.filter((i) => !faits.has(cleInvite(i))) };
+  });
+  if (reponses.length === 0 && suivis.length === 0) return null;
 
   return (
+    <>
+      {suivis.map((g) => (
+        <section key={g.jeton} className={`${styles.bloc} ${styles.groupeSuivi}`}>
+          <h2 className={styles.blocTitre}>
+            {g.nom} · {g.invites.length - g.attente.length} / {g.invites.length} ont répondu
+          </h2>
+          <div className={styles.invitesGrille}>
+            {g.invites.map((i) => {
+              const fait = g.faits.has(cleInvite(i));
+              return (
+                <div key={i} className={styles.inviteCase} data-repondu={fait ? "oui" : "non"}>
+                  <b>{i}</b>
+                  <span>{fait ? "a répondu" : "en attente"}</span>
+                </div>
+              );
+            })}
+          </div>
+          {g.attente.length > 0 && (
+            <div className={styles.relance}>
+              <div>
+                <b>
+                  Relancer {g.attente.length === 1 ? g.attente[0] : `les ${g.attente.length} en attente`}
+                </b>
+                <small>WhatsApp s&apos;ouvre avec un rappel qui les nomme, et le lien du groupe. Rien ne part sans vous.</small>
+              </div>
+              <a
+                className={styles.boutonWhatsApp}
+                href={lienWhatsApp(messageRelance({ titre, lien: g.lien, attente: g.attente }))}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Relancer
+              </a>
+            </div>
+          )}
+        </section>
+      ))}
+      {reponses.length > 0 && (
     <section className={styles.bloc}>
       <h2 className={styles.blocTitre}>
         Réponses · {reponses.length}
@@ -76,6 +126,7 @@ export function ReponsesPage({
               <div className={styles.reponseTete}>
                 <b>{r.destinataire}</b>
                 <span>« {r.intitule} »</span>
+                {r.invite && <span className={styles.badgeGroupe}>via le lien de groupe</span>}
                 <span className={nouvelle ? styles.badgeNouvelle : styles.badgeVue}>{nouvelle ? "Nouvelle" : "Vue"}</span>
               </div>
               <div className={styles.reponseMeta}>
@@ -106,5 +157,7 @@ export function ReponsesPage({
         })}
       </ul>
     </section>
+      )}
+    </>
   );
 }

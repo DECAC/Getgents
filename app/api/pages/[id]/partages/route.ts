@@ -4,6 +4,8 @@ import { requireUser } from "@/lib/server/session";
 import { enregistrerArtefact } from "@/lib/server/artefactsPartages";
 import { modeleMail, validerDemande } from "@/lib/mcpPartage";
 import { origineDeRequete } from "@/lib/oauthMcp";
+import { invitesValides } from "@/lib/groupesPages";
+import { definirGroupe, groupesDisponibles } from "@/lib/server/groupesPages";
 
 /**
  * « + Partager à… » depuis la fiche : un nouveau lien pour une page EXISTANTE,
@@ -16,15 +18,21 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
   const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
-  const corps = (await req.json().catch(() => ({}))) as { destinataire?: unknown; message?: unknown };
+  const corps = (await req.json().catch(() => ({}))) as { destinataire?: unknown; message?: unknown; invites?: unknown };
   const v = validerDemande({ page: params.id, destinataire: corps.destinataire, message: corps.message });
   if (!v.ok) return NextResponse.json({ error: v.erreur }, { status: 400 });
+  // Lien de GROUPE : `invites` présent. Vérifié AVANT de créer le lien, sinon un refus laisserait un lien ordinaire au nom du groupe.
+  const groupe = corps.invites === undefined ? null : invitesValides(corps.invites);
+  if (groupe && groupe.length === 0) return NextResponse.json({ error: "Ajoutez au moins un invité, un prénom par ligne." }, { status: 400 });
+  if (groupe && !(await groupesDisponibles().catch(() => false)))
+    return NextResponse.json({ error: "Les liens de groupe ne sont pas encore installés (migration 033 à passer dans Supabase)." }, { status: 503 });
   try {
     const a = await enregistrerArtefact(v.demande, null, "getgents", { userId: auth.user.id, clientId: "" });
     if (!a) return NextResponse.json({ error: "Page introuvable." }, { status: 404 });
+    if (groupe && (await definirGroupe(auth.user.id, a.jeton, groupe)) !== "ok") throw new Error("groupe non enregistré");
     const lien = `${origineDeRequete(req.url, req.headers)}/partage/${a.jeton}`;
     const mail = modeleMail({ ...v.demande, titre: a.titre }, lien);
-    console.log(JSON.stringify({ tag: "getgents:pages", event: "partage_depuis_getgents", ownerId: auth.user.id }));
+    console.log(JSON.stringify({ tag: "getgents:pages", event: "partage_depuis_getgents", ownerId: auth.user.id, groupe: groupe ? groupe.length : 0 }));
     return NextResponse.json({ lien, jeton: a.jeton, objet: mail.objet, corps: mail.corps });
   } catch (e) {
     if (e instanceof PlafondAtteint) {

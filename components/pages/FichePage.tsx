@@ -13,6 +13,7 @@ import { exempleDeOrigine } from "@/lib/exemplesPages";
 import { GuideDecouverte } from "./GuideDecouverte";
 import { BlocEngagement } from "./BlocEngagement";
 import { AdapterExemple } from "./AdapterExemple";
+import { INVITES_MAX, lienWhatsApp, messageWhatsApp } from "@/lib/groupesPages";
 import { ReponsesPage } from "./ReponsesPage";
 import styles from "./pages.module.css";
 
@@ -44,6 +45,8 @@ interface Detail {
   premiere?: boolean;
   /** Adresse confirmée de l'auteur, pour s'envoyer le lien (guide). */
   moi?: string | null;
+  /** Liens de groupe : jeton → invités. */
+  groupes?: Record<string, string[]>;
 }
 
 const jour = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
@@ -70,11 +73,19 @@ export function FichePage({ id }: { id: string }) {
   // (après avoir ouvert le lien en navigation privée, la fiche doit le savoir).
   const [etatActivite, setEtatActivite] = useState<{ ouvertures: number; questions: number; precisions: number } | null>(null);
   const [tic, setTic] = useState(0);
-  const [partage, setPartage] = useState<{ ouvert: boolean; destinataire: string; resultat: { lien: string; objet: string; corps: string } | null }>({
+  const [partage, setPartage] = useState<{
+    ouvert: boolean;
+    destinataire: string;
+    /** Lien de groupe : la liste des invités, un par ligne. Null pour un lien ordinaire. */
+    invites: string | null;
+    resultat: { lien: string; objet: string; corps: string } | null;
+  }>({
     ouvert: false,
     destinataire: "",
+    invites: null,
     resultat: null,
   });
+  const [editeurInvites, setEditeurInvites] = useState<{ jeton: string; texte: string } | null>(null);
 
   const charger = useCallback(async () => {
     const r = await fetch(`/api/pages/${encodeURIComponent(id)}`, { credentials: "include" });
@@ -160,6 +171,20 @@ export function FichePage({ id }: { id: string }) {
   const actifs = page.destinataires.filter(actif);
   const dernierActif = [...actifs].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   const base = typeof window === "undefined" ? "" : window.location.origin;
+  const boutonsPartage = (
+    <>
+      <button
+        type="submit"
+        className={styles.principal}
+        disabled={!partage.destinataire.trim() || (partage.invites !== null && !partage.invites.trim()) || enCours === "partager"}
+      >
+        Créer le lien
+      </button>
+      <button type="button" className={styles.lienTexte} onClick={() => setPartage({ ouvert: false, destinataire: "", invites: null, resultat: null })}>
+        Annuler
+      </button>
+    </>
+  );
   const exemple = exempleDeOrigine(page.origine);
 
   return (
@@ -248,7 +273,13 @@ export function FichePage({ id }: { id: string }) {
           doit être juste avant même qu'on l'ouvre, et changer d'onglet ne recharge rien. */}
       <div hidden={onglet === "page" || onglet === "destinataires"} className={styles.ongletCorps}>
         <div hidden={onglet !== "activite"}>
-          <ReponsesPage pageId={page.id} visible={onglet === "activite"} actualiser={tic} onNouvelles={setReponsesNouvelles} onTotal={setRepondus} />
+          <ReponsesPage pageId={page.id} visible={onglet === "activite"} actualiser={tic} onNouvelles={setReponsesNouvelles}
+            onTotal={setRepondus}
+            titre={page.titre}
+            groupes={actifs
+              .filter((d) => page.groupes?.[d.jeton])
+              .map((d) => ({ jeton: d.jeton, nom: d.destinataire, invites: page.groupes![d.jeton], lien: `${base}/partage/${d.jeton}` }))}
+          />
         </div>
         <ActivitePage
           id={page.id}
@@ -392,8 +423,18 @@ export function FichePage({ id }: { id: string }) {
             <h2 className={styles.blocTitre}>
               Destinataires · {actifs.length} actif{actifs.length > 1 ? "s" : ""}
               {!partage.ouvert && (
-                <button type="button" className={styles.secondairePetit} onClick={() => setPartage({ ouvert: true, destinataire: "", resultat: null })}>
+                <button type="button" className={styles.secondairePetit} onClick={() => setPartage({ ouvert: true, destinataire: "", invites: null, resultat: null })}>
                   + Partager à…
+                </button>
+              )}
+              {!partage.ouvert && (
+                <button
+                  type="button"
+                  className={styles.secondairePetit}
+                  onClick={() => setPartage({ ouvert: true, destinataire: "", invites: "", resultat: null })}
+                  title="Un seul lien à poster dans un groupe WhatsApp"
+                >
+                  + Lien de groupe
                 </button>
               )}
             </h2>
@@ -407,38 +448,76 @@ export function FichePage({ id }: { id: string }) {
                       const r = (await appel(
                         "partager",
                         `/api/pages/${encodeURIComponent(page.id)}/partages`,
-                        { method: "POST", body: JSON.stringify({ destinataire: partage.destinataire }) },
-                        "Lien créé."
+                        {
+                          method: "POST",
+                          body: JSON.stringify(
+                            partage.invites === null ? { destinataire: partage.destinataire } : { destinataire: partage.destinataire, invites: partage.invites }
+                          ),
+                        },
+                        partage.invites === null ? "Lien créé." : "Lien de groupe créé."
                       )) as { lien: string; objet: string; corps: string } | null;
                       if (r) setPartage((p) => ({ ...p, resultat: r }));
                     }}
                   >
                     <label className={styles.champLibelle} htmlFor="destinataire">
-                      Adresse e-mail ou nom du destinataire
+                      {partage.invites === null ? "Adresse e-mail ou nom du destinataire" : "Nom du groupe"}
                     </label>
+                    {partage.invites !== null && (
+                      <p className={styles.aide}>Un seul lien à poster dans un groupe WhatsApp : chaque invité choisit son prénom en ouvrant la page, et répond une fois.</p>
+                    )}
                     <div className={styles.ligne}>
                       <input
                         id="destinataire"
                         className={styles.champ}
                         value={partage.destinataire}
                         onChange={(e) => setPartage((p) => ({ ...p, destinataire: e.target.value }))}
-                        placeholder="marie@exemple.fr"
+                        placeholder={partage.invites === null ? "marie@exemple.fr" : "Les copains de Bercheres"}
                         maxLength={200}
                         autoFocus
                       />
-                      <button type="submit" className={styles.principal} disabled={!partage.destinataire.trim() || enCours === "partager"}>
-                        Créer le lien
-                      </button>
-                      <button type="button" className={styles.lienTexte} onClick={() => setPartage({ ouvert: false, destinataire: "", resultat: null })}>
-                        Annuler
-                      </button>
+                      {partage.invites === null && boutonsPartage}
                     </div>
+                    {partage.invites !== null && (
+                      <>
+                        <label className={styles.champLibelle} htmlFor="invites">
+                          Invités, un prénom par ligne
+                        </label>
+                        <textarea
+                          id="invites"
+                          className={styles.champInvites}
+                          aria-label="Invités, un prénom par ligne"
+                          placeholder={"Marie\nPaul\nSophie"}
+                          value={partage.invites}
+                          onChange={(e) => setPartage((p) => ({ ...p, invites: e.target.value }))}
+                          rows={6}
+                        />
+                        <p className={styles.aide}>Un prénom par ligne, {INVITES_MAX} au plus. Vous pourrez modifier la liste ensuite.</p>
+                        <p className={styles.alerteBloc}>
+                          <b>Le prénom est choisi par le lecteur, pas vérifié.</b> Dans un groupe d&apos;amis, c&apos;est suffisant ; pour un client, préférez un
+                          lien par personne. L&apos;accès protégé par code ne s&apos;applique pas à un lien de groupe.
+                        </p>
+                      </>
+                    )}
+                    {partage.invites !== null && <div className={styles.ligne}>{boutonsPartage}</div>}
                   </form>
                 ) : (
                   <div>
-                    <p className={styles.aide}>Lien privé créé pour {partage.destinataire}. Getgents n&apos;envoie rien : envoyez-le vous-même.</p>
+                    <p className={styles.aide}>
+                      {partage.invites === null ? "Lien privé" : "Lien de groupe"} créé pour {partage.destinataire}. Getgents n&apos;envoie rien : envoyez-le
+                      vous-même — WhatsApp s&apos;ouvre avec le message déjà écrit, vous choisissez le contact ou le groupe.
+                    </p>
                     <div className={styles.ligne}>
                       <code className={styles.lienCode}>{partage.resultat.lien}</code>
+                      <a
+                        className={styles.boutonWhatsApp}
+                        href={lienWhatsApp(
+                          messageWhatsApp({ prenom: partage.invites === null ? partage.destinataire : null, titre: page.titre, lien: partage.resultat.lien })
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Envoyer par WhatsApp
+                      </a>
                       <button type="button" className={styles.secondairePetit} onClick={() => copier(partage.resultat!.lien, "Lien")}>
                         Copier le lien
                       </button>
@@ -450,7 +529,7 @@ export function FichePage({ id }: { id: string }) {
                         Copier le mail
                       </button>
                     </div>
-                    <button type="button" className={styles.lienTexte} onClick={() => setPartage({ ouvert: false, destinataire: "", resultat: null })}>
+                    <button type="button" className={styles.lienTexte} onClick={() => setPartage({ ouvert: false, destinataire: "", invites: null, resultat: null })}>
                       Fermer
                     </button>
                   </div>
@@ -466,19 +545,25 @@ export function FichePage({ id }: { id: string }) {
                   const ok = actif(d);
                   const bloque = ok && page.protection && !peutRecevoirCode(d.destinataire);
                   const valide = page.valides[d.jeton];
+                  const invites = page.groupes?.[d.jeton] ?? null;
+                  const lienD = `${base}/partage/${d.jeton}`;
                   return (
                     <li key={d.jeton} className={ok ? styles.destinataire : `${styles.destinataire} ${styles.eteint}`}>
                       <span className={styles.avatar} aria-hidden="true">
                         {initiales(d.destinataire)}
                       </span>
                       <span className={styles.destTexte}>
-                        <b>{d.destinataire}</b>
+                        <b>
+                          {d.destinataire}
+                          {invites && <span className={styles.badgeGroupe}>Lien de groupe</span>}
+                        </b>
                         <span>
                           {d.revokedAt
                             ? `Révoqué le ${jour(d.revokedAt)}`
                             : !ok
                               ? `Expiré le ${jour(d.expiresAt!)}`
                               : `Envoyé le ${jour(d.createdAt)}${d.expiresAt ? ` · expire le ${jour(d.expiresAt)}` : ""}`}
+                          {invites ? ` · ${invites.length} invité${invites.length > 1 ? "s" : ""}` : ""}
                           {d.questions > 0 ? ` · ${d.questions} question${d.questions > 1 ? "s" : ""}` : ""}
                           {bloque && <span className={styles.alerte}> · Sans adresse e-mail : bloqué par la protection</span>}
                           {ok && page.protection && !bloque && (
@@ -488,7 +573,20 @@ export function FichePage({ id }: { id: string }) {
                       </span>
                       {ok && (
                         <span className={styles.destActions}>
-                          <button type="button" className={styles.lienTexte} onClick={() => copier(`${base}/partage/${d.jeton}`, "Lien")}>
+                          <a
+                            className={styles.lienWhatsApp}
+                            href={lienWhatsApp(messageWhatsApp({ prenom: invites ? null : d.destinataire, titre: page.titre, lien: lienD }))}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            WhatsApp
+                          </a>
+                          {invites && (
+                            <button type="button" className={styles.lienTexte} onClick={() => setEditeurInvites({ jeton: d.jeton, texte: invites.join("\n") })}>
+                              Invités
+                            </button>
+                          )}
+                          <button type="button" className={styles.lienTexte} onClick={() => copier(lienD, "Lien")}>
                             Copier le lien
                           </button>
                           <button
@@ -503,6 +601,39 @@ export function FichePage({ id }: { id: string }) {
                             Révoquer
                           </button>
                         </span>
+                      )}
+                      {editeurInvites?.jeton === d.jeton && (
+                        <div className={styles.editeurInvites}>
+                          <textarea
+                            className={styles.champInvites}
+                            aria-label="Invités, un prénom par ligne"
+                            value={editeurInvites.texte}
+                            onChange={(e) => setEditeurInvites({ jeton: d.jeton, texte: e.target.value })}
+                            rows={6}
+                          />
+                          <p className={styles.aide}>Retirer un invité ne supprime pas sa réponse.</p>
+                          <div className={styles.ligne}>
+                            <button
+                              type="button"
+                              className={styles.principal}
+                              disabled={enCours === `inv-${d.jeton}` || !editeurInvites.texte.trim()}
+                              onClick={async () => {
+                                const r = await appel(
+                                  `inv-${d.jeton}`,
+                                  `/api/partages/${encodeURIComponent(d.jeton)}/invites`,
+                                  { method: "PUT", body: JSON.stringify({ invites: editeurInvites.texte }) },
+                                  "Invités enregistrés."
+                                );
+                                if (r) setEditeurInvites(null);
+                              }}
+                            >
+                              Enregistrer
+                            </button>
+                            <button type="button" className={styles.lienTexte} onClick={() => setEditeurInvites(null)}>
+                              Annuler
+                            </button>
+                          </div>
+                        </div>
                       )}
                     </li>
                   );

@@ -165,6 +165,8 @@ export interface ReponseEngagement {
   intitule: string;
   mot: string | null;
   choix: ChoixLecteur[];
+  /** Lien de groupe : le prénom choisi par le lecteur (non vérifié). Null pour un lien ordinaire. */
+  invite?: string | null;
   /** Lecture jointe par le lecteur, ou null. */
   lecture: LectureJointe | null;
   version: number;

@@ -63,12 +63,22 @@ export async function definirEngagement(ownerId: string, pageId: string, r: Regl
 export async function reponseDuLien(jeton: string): Promise<{ createdAt: string } | null> {
   const sb = getSupabaseAdmin();
   if (!sb) {
-    const r = Array.from(memoire().reponses.values()).find((x) => x.jeton === jeton);
+    const r = Array.from(memoire().reponses.values()).find((x) => x.jeton === jeton && !x.invite);
     return r ? { createdAt: r.createdAt } : null;
   }
-  const { data, error } = await sb.from("pages_reponses").select("created_at").eq("jeton", jeton).maybeSingle();
+  const { data, error } = await sb.from("pages_reponses").select("*").eq("jeton", jeton).limit(5);
   if (error || !data) return null;
-  return { createdAt: String(data.created_at) };
+  const r = data.find((x) => !x.invite);
+  return r ? { createdAt: String(r.created_at) } : null;
+}
+
+/** Lien de groupe : les invités qui ont déjà répondu (montrés grisés à tous les membres). */
+export async function invitesAyantRepondu(jeton: string): Promise<string[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return Array.from(memoire().reponses.values()).filter((x) => x.jeton === jeton && x.invite).map((x) => x.invite!);
+  const { data, error } = await sb.from("pages_reponses").select("*").eq("jeton", jeton).limit(500);
+  if (error || !data) return [];
+  return data.filter((x) => x.invite).map((x) => String(x.invite));
 }
 
 /** Enregistre LA réponse d'un lien. « deja » : une réponse existe (contrainte unique). */
@@ -77,19 +87,22 @@ export async function enregistrerReponse(
   intitule: string,
   mot: string | null,
   choix: ChoixLecteur[],
-  lecture: LectureJointe | null
+  lecture: LectureJointe | null,
+  /** Lien de groupe : le prénom choisi (déjà vérifié dans la liste). Null pour un lien ordinaire. */
+  invite: string | null = null
 ): Promise<"ok" | "deja" | "migration_manquante"> {
   if (!a.pageId) return "migration_manquante";
   const maintenant = new Date().toISOString();
   const sb = getSupabaseAdmin();
   if (!sb) {
     const m = memoire();
-    if (Array.from(m.reponses.values()).some((x) => x.jeton === a.jeton)) return "deja";
+    if (Array.from(m.reponses.values()).some((x) => x.jeton === a.jeton && (x.invite ?? null) === invite)) return "deja";
     const id = randomUUID();
-    m.reponses.set(id, { id, pageId: a.pageId, jeton: a.jeton, destinataire: a.destinataire, intitule, mot, choix, lecture, version: a.version, createdAt: maintenant, vueAt: null });
+    m.reponses.set(id, { id, pageId: a.pageId, jeton: a.jeton, destinataire: invite ?? a.destinataire, invite, intitule, mot, choix, lecture, version: a.version, createdAt: maintenant, vueAt: null });
     return "ok";
   }
-  const ligne: Record<string, unknown> = { page_id: a.pageId, jeton: a.jeton, destinataire: a.destinataire, intitule, mot, choix, version: a.version };
+  const ligne: Record<string, unknown> = { page_id: a.pageId, jeton: a.jeton, destinataire: invite ?? a.destinataire, intitule, mot, choix, version: a.version };
+  if (invite) ligne.invite = invite;
   let { error } = await sb.from("pages_reponses").insert(lecture ? { ...ligne, lecture } : ligne);
   // Migration 032 pas encore passée : la réponse part SANS la lecture plutôt que d'être perdue.
   if (lecture && error && (error.code === "PGRST204" || error.code === "42703" || /lecture/i.test(error.message))) {
@@ -128,6 +141,7 @@ export async function reponsesDeLaPage(ownerId: string, pageId: string): Promise
       destinataire: String(r.destinataire),
       intitule: String(r.intitule),
       mot: r.mot == null ? null : String(r.mot),
+      invite: r.invite == null ? null : String(r.invite),
       choix: choixValides(r.choix),
       // Sans la migration 032, la colonne manque : « * » la rend absente, pas une erreur.
       lecture: r.lecture ? lectureValide(r.lecture, Date.parse(String(r.created_at)) || Date.now()) : null,
