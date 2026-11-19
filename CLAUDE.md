@@ -805,6 +805,23 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (mémoire locale), ordinateur et téléphone. **Déployé, essai réel CONCLUANT
   (19/11).** Manque connu : l'accueil n'existe que SANS page — après un
   premier exemple, plus aucun chemin vers les autres.
+- **Rubrique « Modèles »** (19/11, maquette validée ; « Exemples » renommé
+  par l'éditeur — le mot dit qu'on part de la page pour en faire la sienne ;
+  `GalerieModeles`, `/pages/modeles`, `modelesEssayes`, `modelesASuggerer`).
+  Comble le trou ci-dessus : entrée du rail entre « Mes pages » et
+  « Connecter un assistant IA », filtres par public, un modèle déjà essayé
+  (page du compte dont l'origine le nomme) affiche « Ouvrir » et « Adapter
+  avec mon IA » au lieu d'être recréé. « Mes pages » propose « N autres
+  modèles à essayer » TANT QUE le compte n'a QUE des modèles — la carte part
+  dès une vraie page. L'accueil d'un compte vide ne change pas. Renommé à
+  l'écran seulement (accueil, badge de la fiche, « Modèle Getgents »,
+  fenêtre d'adaptation) : le bandeau DANS les pages reste « PAGE D'EXEMPLE »
+  (il prévient le LECTEUR que le contenu est fictif), et le code comme
+  l'origine `exemple:` en base gardent leur nom — aucune migration. Galerie
+  de la COMMUNAUTÉ : conseillée plus tard, ÉDITÉE par l'éditeur (proposer →
+  rendre fictif → relecture), jamais en libre-service : les vraies pages
+  portent clients et prix, et une page publique de code arbitraire fait de
+  l'éditeur un hébergeur à modérer (avis d'un juriste avant).
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

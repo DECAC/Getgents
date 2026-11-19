@@ -37,7 +37,7 @@ export function AdapterExemple({ exemple, onFermer, onMessage }: { exemple: Exem
         </div>
         <ol className={styles.adapterEtapes}>
           <li data-fait={copie ? "oui" : "non"}>
-            <b>Copiez la consigne et le code de l&apos;exemple</b>
+            <b>Copiez la consigne et le code du modèle</b>
             <span>La consigne demande de garder la mise en page et l&apos;interactivité, et de tout remplacer par vos informations.</span>
             <button type="button" className={copie ? styles.secondaire : styles.principal} onClick={copier}>
               {copie ? "✓ Copié — recopier" : "Copier la consigne et le code"}
@@ -51,7 +51,7 @@ export function AdapterExemple({ exemple, onFermer, onMessage }: { exemple: Exem
           </li>
           <li>
             <b>Collez ici la page qu&apos;il vous rend</b>
-            <span>Elle devient une nouvelle page, avec ses propres liens. L&apos;exemple reste tel quel.</span>
+            <span>Elle devient une nouvelle page, avec ses propres liens. Le modèle reste tel quel.</span>
             <button type="button" className={styles.secondaire} onClick={() => setColler(true)}>
               Coller la page adaptée
             </button>

@@ -36,6 +36,10 @@ export interface ExemplePage {
   public: Public;
   /** Bouton d'engagement posé à la création (fait découvrir la réponse du lecteur). */
   engagement?: string;
+  /** Ce que le modèle fait découvrir, en pastilles (rubrique « Modèles »). */
+  atouts: string[];
+  /** Nom court, en minuscules (« 4 autres modèles : devis, … »). */
+  court: string;
 }
 
 /** Préfixe de `pages.origine` d'une page d'exemple (colonne libre, aucune migration). */
@@ -57,6 +61,8 @@ export const EXEMPLES: readonly ExemplePage[] = [
     suggestions: ["Combien coûte le lot 2 ?", "Quand le projet peut-il démarrer ?", "Peut-on payer en trois fois ?"],
     questionPiege: "Peut-on payer en trois fois ?",
     public: "clients",
+    atouts: ["Assistant", "Total qui se recalcule"],
+    court: "proposition commerciale",
   },
   {
     id: "devis",
@@ -66,6 +72,8 @@ export const EXEMPLES: readonly ExemplePage[] = [
     suggestions: ["Qu'est-ce qui est compris dans le prix ?", "Quelle garantie sur la douche ?", "Pouvez-vous commencer avant Noël ?"],
     questionPiege: "Pouvez-vous commencer avant Noël ?",
     public: "clients",
+    atouts: ["Assistant", "Bouton « Je souhaite donner suite »"],
+    court: "devis",
     engagement: "Je souhaite donner suite",
   },
   {
@@ -76,6 +84,8 @@ export const EXEMPLES: readonly ExemplePage[] = [
     suggestions: ["Quelles décisions ont été prises ?", "Qu'est-ce qui est en retard ?", "Quel est le budget de Vernay ?"],
     questionPiege: "Quel est le budget de Vernay ?",
     public: "equipe",
+    atouts: ["Assistant", "Plan d'action filtrable"],
+    court: "compte rendu d'équipe",
   },
   {
     id: "weekend",
@@ -85,6 +95,8 @@ export const EXEMPLES: readonly ExemplePage[] = [
     suggestions: ["Qu'est-ce qu'on fait samedi ?", "Combien chacun paie ?", "Peut-on venir avec son chien ?"],
     questionPiege: "Peut-on venir avec son chien ?",
     public: "proches",
+    atouts: ["Assistant", "Bouton « Je viens »"],
+    court: "week-end entre amis",
     engagement: "Je viens",
   },
   {
@@ -95,6 +107,8 @@ export const EXEMPLES: readonly ExemplePage[] = [
     suggestions: ["Où a-t-elle travaillé avant d'être indépendante ?", "Quelles sont ses compétences en recherche utilisateur ?", "Est-elle disponible à temps partiel ?"],
     questionPiege: "Est-elle disponible à temps partiel ?",
     public: "recruteur",
+    atouts: ["Assistant", "Ludique"],
+    court: "CV ludique",
   },
 ];
 
@@ -127,4 +141,26 @@ export function consigneAdaptation(ex: ExemplePage): string {
     "",
     ex.contenu,
   ].join("\n");
+}
+
+/**
+ * Rubrique « Modèles » (19/11 ; « Exemples » renommé à la demande de
+ * l'éditeur — le mot dit qu'on part de la page pour en faire la sienne).
+ * Les noms du code et l'origine `exemple:` en base ne changent pas.
+ * Un modèle déjà ESSAYÉ est une page du compte dont l'origine le nomme.
+ */
+export function modelesEssayes(pages: readonly { id: string; origine: string | null }[]): Map<IdExemple, string> {
+  const m = new Map<IdExemple, string>();
+  for (const p of pages) {
+    const ex = exempleDeOrigine(p.origine);
+    if (ex && !m.has(ex.id)) m.set(ex.id, p.id);
+  }
+  return m;
+}
+
+/** « N autres modèles à essayer » : seulement tant que le compte n'a QUE des modèles. */
+export function modelesASuggerer(pages: readonly { id: string; origine: string | null }[]): ExemplePage[] {
+  if (pages.length === 0 || pages.some((p) => !exempleDeOrigine(p.origine))) return [];
+  const essayes = modelesEssayes(pages);
+  return EXEMPLES.filter((e) => !essayes.has(e.id));
 }

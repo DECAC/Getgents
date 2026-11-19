@@ -21,7 +21,7 @@ export const ORIGINE_COLLAGE = "collage";
 
 export function libelleOrigine(origine: string | null): string | null {
   if (!origine) return null;
-  if (origine.startsWith("exemple:")) return "Page d'exemple";
+  if (origine.startsWith("exemple:")) return "Modèle Getgents";
   return origine === ORIGINE_COLLAGE ? "Collée à la main" : `Créée dans ${origine}`;
 }
 

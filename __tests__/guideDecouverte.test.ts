@@ -68,3 +68,18 @@ describe("pages d'exemple", () => {
     expect(exempleDeOrigine("Claude")).toBeNull();
   });
 });
+
+describe("rubrique Modèles", () => {
+  const { modelesEssayes, modelesASuggerer } = jest.requireActual("@/lib/exemplesPages") as typeof import("@/lib/exemplesPages");
+  it("un modèle essayé se retrouve par l'origine de sa page", () => {
+    const m = modelesEssayes([{ id: "p1", origine: "exemple:devis" }, { id: "p2", origine: "collage" }]);
+    expect(m.get("devis")).toBe("p1");
+    expect(m.size).toBe(1);
+  });
+  it("la suggestion ne vaut que pour un compte qui n'a QUE des modèles", () => {
+    expect(modelesASuggerer([])).toEqual([]);
+    expect(modelesASuggerer([{ id: "p1", origine: "exemple:cv" }]).map((e) => e.id)).not.toContain("cv");
+    expect(modelesASuggerer([{ id: "p1", origine: "exemple:cv" }])).toHaveLength(4);
+    expect(modelesASuggerer([{ id: "p1", origine: "exemple:cv" }, { id: "p2", origine: "Claude" }])).toEqual([]);
+  });
+});

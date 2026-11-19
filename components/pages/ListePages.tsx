@@ -9,6 +9,8 @@ import type { Offre } from "@/lib/offre";
 import { ImportPage } from "./ImportPage";
 import { libelleOrigine } from "@/lib/importPage";
 import { Vignette } from "./Vignette";
+import { PictoPublic } from "./PictoPublic";
+import { modelesASuggerer, PUBLICS } from "@/lib/exemplesPages";
 import { filtrerParTitre, filtrePage, libelleFormat, type FiltrePages, type LignePage } from "@/lib/pagesGetsite";
 import styles from "./pages.module.css";
 
@@ -34,6 +36,7 @@ export function ListePages({ offre = "complete" }: { offre?: Offre }) {
     };
   }, []);
 
+  const aSuggerer = useMemo(() => modelesASuggerer(pages ?? []), [pages]);
   const visibles = useMemo(() => filtrerParTitre((pages ?? []).filter((p) => filtrePage(p, filtre)), recherche), [pages, filtre, recherche]);
 
   if (guide)
@@ -116,6 +119,23 @@ export function ListePages({ offre = "complete" }: { offre?: Offre }) {
               </a>
             ))}
           </div>
+          {/* Un compte qui n'a encore que des modèles : les autres à portée de clic. Disparaît dès une vraie page. */}
+          {aSuggerer.length > 0 && (
+            <a href="/pages/modeles" className={styles.suggestionModeles}>
+              <span className={styles.suggestionPictos} aria-hidden="true">
+                {PUBLICS.map((p) => (
+                  <PictoPublic key={p.id} public={p.id} />
+                ))}
+              </span>
+              <span className={styles.suggestionTexte}>
+                <b>
+                  {aSuggerer.length} autre{aSuggerer.length > 1 ? "s" : ""} modèle{aSuggerer.length > 1 ? "s" : ""} à essayer
+                </b>
+                <span>{((t) => t.charAt(0).toUpperCase() + t.slice(1))(aSuggerer.map((m) => m.court).join(", "))}.</span>
+              </span>
+              <span className={styles.secondaire}>Voir les modèles</span>
+            </a>
+          )}
         </>
       )}
     </div>

@@ -2103,3 +2103,227 @@
 .adapterEtapes button {
   margin-top: 6px;
 }
+
+/* ——— Rubrique « Modèles » (19/11) ——— */
+.modelesFiltres {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 18px 0 20px;
+}
+.modeleFiltre {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 5px 14px 5px 6px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.modeleFiltre:first-child {
+  padding: 5px 16px;
+}
+.modeleFiltre[aria-pressed="true"] {
+  border-color: #e7c88c;
+  box-shadow: 0 0 0 3px #fdf0d8;
+  background: linear-gradient(135deg, var(--card), #fff4e6);
+}
+.modeleFiltrePicto {
+  width: 30px;
+  height: 30px;
+}
+.modeles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.modele {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+  overflow: hidden;
+}
+/* La vignette reprend le dessin des cartes de l'accueil (même data-exemple). */
+.modeleVignette {
+  position: relative;
+  display: block;
+  height: 150px;
+  border-bottom: 1px solid var(--line);
+}
+.modele[data-exemple="proposition"] .modeleVignette {
+  background:
+    linear-gradient(#13214a, #13214a) 24px 26px / 55% 12px no-repeat,
+    linear-gradient(#13214a, #13214a) 24px 46px / 38% 12px no-repeat,
+    radial-gradient(circle at 100% 100%, #e5542b 0 60px, transparent 61px),
+    linear-gradient(#fff, #fff) 0 86px / 100% 100% no-repeat,
+    #ffc935;
+}
+.modele[data-exemple="devis"] .modeleVignette {
+  background:
+    linear-gradient(#ffd447, #ffd447) 24px 22px / 30px 30px no-repeat,
+    linear-gradient(#fff, #fff) 66px 30px / 45% 9px no-repeat,
+    linear-gradient(#fff, #fff) 24px 74px / 80% 50px no-repeat,
+    linear-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px) 0 0 / 16px 16px,
+    #1d4e96;
+}
+.modele[data-exemple="comite"] .modeleVignette {
+  background:
+    linear-gradient(#111316, #111316) 24px 22px / 60% 12px no-repeat,
+    linear-gradient(#111316, #111316) 24px 44px / 88% 3px no-repeat,
+    linear-gradient(#fff, #fff) 24px 60px / 26% 40px no-repeat,
+    linear-gradient(#fff, #fff) 39% 60px / 26% 40px no-repeat,
+    linear-gradient(#fff, #fff) 76% 60px / 26% 40px no-repeat,
+    linear-gradient(#2f5bff, #2f5bff) 24px 112px / 40% 5px no-repeat,
+    #e9ebef;
+}
+.modele[data-exemple="weekend"] .modeleVignette {
+  background:
+    radial-gradient(circle at 50% 36%, #ffd27a 0 26px, #ff7f6b 27px 29px, transparent 30px),
+    linear-gradient(#fff, #fff) 24px 96px / 40% 34px no-repeat,
+    linear-gradient(#ff7f6b, #ff7f6b) 56% 96px / 32% 34px no-repeat,
+    linear-gradient(180deg, #bfe3f2, #e9f6fb);
+}
+.modele[data-exemple="cv"] .modeleVignette {
+  background:
+    linear-gradient(#c6f432, #c6f432) 24px 22px / 34px 34px no-repeat,
+    linear-gradient(#f1eeff, #f1eeff) 70px 30px / 45% 10px no-repeat,
+    linear-gradient(90deg, #3fd6ff, #c6f432) 24px 76px / 78% 8px no-repeat,
+    linear-gradient(#2c2366, #2c2366) 24px 96px / 38% 34px no-repeat,
+    linear-gradient(#2c2366, #2c2366) 58% 96px / 34% 34px no-repeat,
+    #120d2b;
+}
+.modelePicto {
+  position: absolute;
+  left: 12px;
+  bottom: -20px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 6px 18px -10px rgba(40, 20, 10, 0.5);
+}
+.modelePicto svg {
+  width: 34px;
+  height: 34px;
+}
+.modeleCorps {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 28px 18px 18px;
+}
+.modeleCorps h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.modeleCorps p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.modeleAtouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 4px;
+}
+.modeleAtouts span {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--line-soft);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.modeleActions {
+  margin-top: auto;
+  padding-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.modeleDeja {
+  color: var(--success, #2f8a4c);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.modelesBandeau {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 28px;
+  padding: 16px 18px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.modelesBandeau b {
+  color: var(--ink);
+}
+.suggestionModeles {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px solid #f1d9b4;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--card), #fff4e6);
+  color: var(--ink);
+  text-decoration: none;
+}
+.suggestionPictos {
+  display: flex;
+  flex: none;
+}
+.suggestionPictos svg {
+  width: 34px;
+  height: 34px;
+  margin-right: -6px;
+}
+.suggestionTexte {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.suggestionTexte span {
+  color: var(--muted);
+  font-size: 13.5px;
+}
+@media (max-width: 760px) {
+  .modelesFiltres {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-left: -16px;
+    margin-right: -16px;
+    padding: 0 16px 4px;
+  }
+  .modeleFiltre {
+    flex: none;
+  }
+  .modeles {
+    grid-template-columns: 1fr;
+  }
+  .suggestionModeles {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

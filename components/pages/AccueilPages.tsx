@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { EXEMPLES, exemplesDuPublic, PUBLICS, type IdExemple, type Public } from "@/lib/exemplesPages";
+import { useCreerModele } from "./useCreerModele";
+import { EXEMPLES, exemplesDuPublic, PUBLICS, type Public } from "@/lib/exemplesPages";
 import { PictoPublic } from "./PictoPublic";
 import type { Offre } from "@/lib/offre";
 import styles from "./pages.module.css";
@@ -17,32 +18,13 @@ import styles from "./pages.module.css";
  * viennent ensuite.
  *
  * Question d'accueil (19/11) : « Avec qui voulez-vous partager ? » — quatre
- * publics, chacun ouvre SES exemples ; « Voir les cinq exemples » les montre
+ * publics, chacun ouvre SES exemples ; « Voir les modèles » les montre
  * tous. Rien n'est gardé : la question oriente, elle ne règle rien.
  */
 export function AccueilPages({ offre, onNouvelle }: { offre: Offre; onNouvelle: () => void }) {
-  const [enCours, setEnCours] = useState<IdExemple | null>(null);
-  const [erreur, setErreur] = useState<string | null>(null);
+  const { enCours, erreur, creer: creerExemple } = useCreerModele();
   const [choix, setChoix] = useState<Public | "tous" | null>(null);
   const montres = choix === "tous" ? EXEMPLES : choix ? exemplesDuPublic(choix) : [];
-
-  async function creerExemple(id: IdExemple) {
-    setEnCours(id);
-    setErreur(null);
-    const r = await fetch("/api/pages/exemple", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ exemple: id }),
-    }).catch(() => null);
-    const j = (await r?.json().catch(() => ({}))) as { id?: string; error?: string } | undefined;
-    if (r?.ok && j?.id) {
-      window.location.assign(`/pages/${j.id}`);
-      return;
-    }
-    setErreur(j?.error ?? "La page d'exemple n'a pas pu être créée. Réessayez.");
-    setEnCours(null);
-  }
 
   return (
     <section className={styles.accueil}>
@@ -62,7 +44,7 @@ export function AccueilPages({ offre, onNouvelle }: { offre: Offre; onNouvelle: 
       <div className={styles.accueilContenu}>
         <h1 className={styles.accueilTitre}>{offre === "pages" ? "Bienvenue sur Getgents Pages" : "Créez votre première page"}</h1>
         <p className={styles.accueilLede}>
-          Voyez d&apos;abord ce que reçoit votre lecteur : créez une page d&apos;exemple, envoyez-la-vous, ouvrez-la et posez une question à son assistant. Comptez
+          Voyez d&apos;abord ce que reçoit votre lecteur : essayez un modèle, envoyez-le-vous, ouvrez-la et posez une question à son assistant. Comptez
           trois minutes.
         </p>
 
@@ -83,11 +65,11 @@ export function AccueilPages({ offre, onNouvelle }: { offre: Offre; onNouvelle: 
               <div key={ex.id} className={styles.exempleCarte} data-exemple={ex.id}>
                 <span className={styles.exempleApercu} aria-hidden="true" />
                 <div>
-                  <span className={styles.cheminTag}>Page d&apos;exemple</span>
+                  <span className={styles.cheminTag}>Modèle</span>
                   <h2>{ex.titre}</h2>
                   <p>{ex.resume}</p>
                   <button type="button" className={styles.principal} disabled={enCours !== null} onClick={() => void creerExemple(ex.id)}>
-                    {enCours === ex.id ? "Création…" : "Essayer cet exemple"}
+                    {enCours === ex.id ? "Création…" : "Essayer ce modèle"}
                   </button>
                 </div>
               </div>
@@ -98,7 +80,7 @@ export function AccueilPages({ offre, onNouvelle }: { offre: Offre; onNouvelle: 
           <p className={styles.aide}>
             {choix ? "Ou " : "Vous préférez choisir vous-même ? "}
             <button type="button" className={styles.lienTexteFort} onClick={() => setChoix("tous")}>
-              {choix ? "voir" : "Voir"} les {EXEMPLES.length} exemples
+              {choix ? "voir" : "Voir"} les {EXEMPLES.length} modèles
             </button>
             .
           </p>
@@ -108,7 +90,7 @@ export function AccueilPages({ offre, onNouvelle }: { offre: Offre; onNouvelle: 
             {erreur}
           </p>
         )}
-        <p className={styles.aide}>Les exemples sont fictifs et n&apos;envoient rien à personne : vous les supprimez quand vous voulez.</p>
+        <p className={styles.aide}>Les modèles sont fictifs et n&apos;envoient rien à personne : vous les supprimez quand vous voulez.</p>
 
         <div className={styles.chemins}>
           <div className={styles.chemin}>

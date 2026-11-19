@@ -170,7 +170,7 @@ export function FichePage({ id }: { id: string }) {
         <div className={styles.enteteTexte}>
           <h1 className={styles.titreFiche}>
             {page.titre}
-            {exemple && <span className={styles.badgeExemple}>Exemple</span>}
+            {exemple && <span className={styles.badgeExemple}>Modèle</span>}
           </h1>
           <div className={styles.meta}>
             {[libelleOrigine(page.origine), libelleFormat(page.format), `version ${page.version}, mise à jour le ${jourHeure(page.updatedAt)}`]
