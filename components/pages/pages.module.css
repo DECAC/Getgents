@@ -2493,3 +2493,294 @@
   font-size: 13px;
   line-height: 1.45;
 }
+
+/* ——— Onglet Activité réorganisé (19/11) ——— */
+.tableauActivite {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.resumeActivite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 22px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+}
+.anneau {
+  --part: 0%;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(#1fa855 0 var(--part), var(--line-soft) var(--part) 100%);
+}
+.anneau b {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--card);
+  font-size: 14px;
+}
+.resumeTexte {
+  flex: 1;
+  min-width: 220px;
+  display: grid;
+  gap: 2px;
+}
+.resumeTexte b {
+  font-size: 17px;
+}
+.resumeTexte span {
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.resumeChiffres {
+  display: flex;
+  gap: 22px;
+}
+.resumeChiffres b {
+  display: block;
+  font-size: 20px;
+}
+.resumeChiffres span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.activiteGrille {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.activiteColonne {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.activiteColonne > .bloc {
+  margin: 0;
+}
+.choixGroupe {
+  margin-bottom: 12px;
+}
+.choixGroupe h3 {
+  margin: 0 0 6px;
+  font-size: 13.5px;
+}
+.choixBarre {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(60px, 140px) 52px;
+  gap: 2px 10px;
+  align-items: center;
+  padding: 5px 0;
+  font-size: 13.5px;
+}
+.choixValeur {
+  overflow-wrap: anywhere;
+}
+.choixJauge {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--line-soft);
+  overflow: hidden;
+}
+.choixJauge i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--gold, #dca331);
+}
+.choixBarre b {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.choixQui {
+  grid-column: 1 / -1;
+  color: var(--faint);
+  font-size: 12px;
+}
+.reponsesFiltres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.reponsesFiltres button {
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.reponsesFiltres button[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+.reponseQuand {
+  margin-left: auto;
+  color: var(--faint);
+  font-size: 12px;
+}
+.reponseChoixPuces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.reponseChoixPuces span {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--gold-tint, #fde4bb);
+  color: #7a5408;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.quiListe {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.quiListe > li {
+  padding: 8px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.quiListe > li:first-child {
+  border-top: 0;
+}
+.quiLigne {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.quiNom {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+.quiNom b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+}
+.quiNom span {
+  color: var(--faint);
+  font-size: 12px;
+}
+.etatRepondu {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #dcf5e5;
+  color: #17763d;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.quiInvites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0 46px;
+}
+.quiInvites span {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+}
+.quiInvites span[data-repondu="oui"] {
+  border-color: #cdeedb;
+  background: #f4fbf6;
+  color: #17763d;
+}
+.courbe {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 70px;
+  margin: 4px 0 6px;
+}
+.courbe i {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  background: var(--gold-tint, #fde4bb);
+}
+.courbe i[data-aujourdhui="oui"] {
+  background: var(--gold, #dca331);
+}
+.courbeAxe {
+  display: flex;
+  justify-content: space-between;
+  color: var(--faint);
+  font-size: 11px;
+}
+.questionsCourtes {
+  display: grid;
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+}
+.questionsCourtes li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line-soft);
+  font-size: 13px;
+}
+.questionsCourtes li:first-child {
+  border-top: 0;
+}
+.questionsCourtes span {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.anciennesLectures {
+  padding: 10px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.anciennesLectures summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.anciennesLectures ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+.anciennesLectures p {
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+@media (max-width: 900px) {
+  .activiteGrille {
+    grid-template-columns: 1fr;
+  }
+  .resumeChiffres {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .choixBarre {
+    grid-template-columns: minmax(0, 1fr) 70px 40px;
+  }
+}
+.reponseTete .badgeNouvelle {
+  margin-left: 0;
+}

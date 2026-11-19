@@ -850,6 +850,23 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   réponse. Sans bouton d'engagement, un lien de groupe ne demande pas de
   prénom. Vérifié au navigateur (mémoire locale) : deux réponses, prénom
   hors liste refusé (400), double réponse refusée (409), relance, mobile.
+- **Onglet ACTIVITÉ réorganisé** (19/11, maquette validée ; `ReponsesPage`
+  devenu le tableau de l'onglet, `lib/syntheseReponses.ts`). Ordre : bandeau
+  « N réponses sur M attendues » (un lien personnel compte un, un lien de
+  groupe compte chacun de ses invités ; « Il manque… » ; relance directe s'il
+  n'y a qu'une cible, sinon ancre vers « Qui a répondu ») → « Ce qu'ils ont
+  choisi » (total des choix par section, options les plus choisies d'abord,
+  noms sous les minoritaires ; une valeur seulement chiffrée s'affiche avec
+  son titre) → réponses filtrables (toutes / nouvelles / avec un mot) → à
+  droite : qui a répondu (relance WhatsApp par lien), courbe des ouvertures
+  sur 14 jours (`parJour` ajouté à `Activite`, SANS nom), dernières
+  questions, anciennes lectures repliées. Export CSV dans le navigateur
+  (point-virgule + BOM pour Excel, formules neutralisées, nom de fichier en
+  ASCII — sinon « download »). `ActivitePage` ne rend plus rien en vue
+  « activite » : il fournit ses chiffres par `onActivite`. Volontairement
+  ABSENT : « a ouvert sans répondre » par destinataire (lecture anonyme sans
+  accord). Vérifié au navigateur (mémoire locale) : 3 réponses dont 2 de
+  groupe, filtres, CSV téléchargé, téléphone sans débordement.
 - **Rubrique « Modèles »** (19/11, maquette validée ; « Exemples » renommé
   par l'éditeur — le mot dit qu'on part de la page pour en faire la sienne ;
   `GalerieModeles`, `/pages/modeles`, `modelesEssayes`, `modelesASuggerer`).

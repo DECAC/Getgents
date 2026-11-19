@@ -43,6 +43,7 @@ export function ActivitePage({
   actualiser = 0,
   repondus,
   onEtat,
+  onActivite,
 }: {
   id: string;
   /** « activite » : chiffres et lectures. « assistant » : réglage, questions, suggestions, précisions. */
@@ -60,6 +61,8 @@ export function ActivitePage({
   repondus?: number;
   /** Chiffres lus par le guide de découverte de la fiche. */
   onEtat?: (e: { ouvertures: number; questions: number; precisions: number }) => void;
+  /** Les chiffres de lecture et les questions, pour le tableau de l'onglet Activité (ReponsesPage). */
+  onActivite?: (a: Activite) => void;
 }) {
   const [a, setA] = useState<Activite | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -215,6 +218,9 @@ export function ActivitePage({
     if (!a) return;
     onEtat?.({ ouvertures: a.ouvertures, questions: a.totalQuestions, precisions: precisions?.length ?? 0 });
   }, [a, precisions, onEtat]);
+  useEffect(() => {
+    if (a) onActivite?.(a);
+  }, [a, onActivite]);
 
   useEffect(() => {
     if (!a) return;
@@ -274,33 +280,6 @@ export function ActivitePage({
   return (
     <div className={styles.activite}>
       {vue === "assistant" && interrupteur}
-      {vue === "activite" && (
-      <div className={styles.tuiles}>
-        <div className={styles.tuile}>
-          <b>{a.ouvertures}</b>
-          <span>
-            ouverture{a.ouvertures > 1 ? "s" : ""} de la page{a.anonymes ? `, dont ${a.anonymes} anonyme${a.anonymes > 1 ? "s" : ""}` : ""}
-          </span>
-        </div>
-        <div className={styles.tuile}>
-          <b>
-            {repondus ?? 0} / {a.destinataires}
-          </b>
-          <span>destinataires ont répondu</span>
-        </div>
-        <button type="button" className={`${styles.tuile} ${styles.tuileLien}`} onClick={onVoirAssistant} title="Voir les questions dans l'onglet Assistant">
-          <b>{a.totalQuestions}</b>
-          <span>
-            question{a.totalQuestions > 1 ? "s" : ""} posée{a.totalQuestions > 1 ? "s" : ""}
-            {sansReponse ? ` · ${sansReponse} sans réponse` : ""}
-          </span>
-        </button>
-        <div className={styles.tuile}>
-          <b>{ilYA(a.derniere)}</b>
-          <span>dernière ouverture{precisions?.length ? ` · ${precisions.length} précision${precisions.length > 1 ? "s" : ""} de l'auteur` : ""}</span>
-        </div>
-      </div>
-      )}
 
       {vue === "assistant" && !assistantActif && (
         <p className={styles.aide}>
@@ -310,55 +289,7 @@ export function ActivitePage({
       )}
 
       <div className={styles.activiteCols}>
-        {/* Depuis le 19/11, le détail d'une lecture arrive AVEC une réponse (onglet Activité, « Réponses »).
-            Restent ici les lectures partagées par l'ancienne fenêtre, jusqu'à leur effacement (120 jours). */}
-        {vue === "activite" && a.lecteurs.some((l) => l.partage) && (
-        <section className={`${styles.bloc} ${styles.pleineLargeur}`} aria-label="Lectures partagées">
-          <h2 className={styles.blocTitre}>
-            Lectures partagées <small>par l&apos;ancienne fenêtre de partage · effacées au bout de 120 jours</small>
-          </h2>
-          <ul className={styles.lecteurs}>
-            {a.lecteurs.filter((l) => l.partage).map((l) => (
-              <li key={l.jeton} className={styles.lecteur}>
-                <div className={styles.lecteurLigne}>
-                  <span className={styles.avatar} aria-hidden="true">
-                    {initiales(l.destinataire)}
-                  </span>
-                  <div className={styles.lecteurTexte}>
-                    <b>{l.destinataire}</b>
-                    <span>
-                      {l.partage
-                        ? [
-                            `${l.ouvertures} ouverture${l.ouvertures > 1 ? "s" : ""}`,
-                            dureeLisible(l.duree),
-                            l.profondeur === null ? null : l.profondeur >= 95 ? "a lu jusqu'en bas" : `a lu ${l.profondeur} %`,
-                            l.version ? `version ${l.version}` : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")
-                        : "N'a pas partagé ses données"}
-                    </span>
-                  </div>
-                  <span className={styles.lecteurEtat} data-partage={l.partage ? "oui" : "non"}>
-                    {l.partage ? ilYA(l.derniere) : "—"}
-                  </span>
-                </div>
-                {l.partage && (
-                  <ol className={styles.frise}>
-                    {l.visites.slice(0, 8).map((v, i) => (
-                      <li key={i}>
-                        <b>{quand(v.debut)}</b> · {dureeLisible(v.duree)}
-                        {v.appareil ? ` · ${v.appareil === "telephone" ? "téléphone" : "ordinateur"}` : ""}
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
 
-        )}
 
         {vue === "assistant" && assistantActif && (
         <>

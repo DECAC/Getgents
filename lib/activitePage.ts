@@ -141,6 +141,8 @@ export interface Activite {
   questions: { jour: string; items: { id?: string; question: string; horsPage: boolean | null }[] }[];
   totalQuestions: number;
   horsPage: number;
+  /** Ouvertures par jour (AAAA-MM-JJ, heure de Paris) : la courbe de l'onglet. */
+  parJour: Record<string, number>;
 }
 
 /**
@@ -196,6 +198,7 @@ export function syntheseActivite(
     questions: jours.map((jour) => ({ jour, items: parJour.get(jour)! })),
     totalQuestions: questions.length,
     horsPage: questions.filter((q) => q.horsPage === true).length,
+    parJour: lectures.reduce<Record<string, number>>((m, l) => ((m[l.jour] = (m[l.jour] ?? 0) + 1), m), {}),
   };
 }
 

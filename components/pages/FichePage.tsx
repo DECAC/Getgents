@@ -69,6 +69,7 @@ export function FichePage({ id }: { id: string }) {
   const [sansReponse, setSansReponse] = useState(0);
   const [reponsesNouvelles, setReponsesNouvelles] = useState(0);
   const [repondus, setRepondus] = useState(0);
+  const [activite, setActivite] = useState<import("@/lib/activitePage").Activite | null>(null);
   // Guide de découverte : chiffres de l'activité, et relecture quand on revient sur l'onglet
   // (après avoir ouvert le lien en navigation privée, la fiche doit le savoir).
   const [etatActivite, setEtatActivite] = useState<{ ouvertures: number; questions: number; precisions: number } | null>(null);
@@ -273,12 +274,18 @@ export function FichePage({ id }: { id: string }) {
           doit être juste avant même qu'on l'ouvre, et changer d'onglet ne recharge rien. */}
       <div hidden={onglet === "page" || onglet === "destinataires"} className={styles.ongletCorps}>
         <div hidden={onglet !== "activite"}>
-          <ReponsesPage pageId={page.id} visible={onglet === "activite"} actualiser={tic} onNouvelles={setReponsesNouvelles}
+          <ReponsesPage
+            pageId={page.id}
+            visible={onglet === "activite"}
+            actualiser={tic}
+            onNouvelles={setReponsesNouvelles}
             onTotal={setRepondus}
             titre={page.titre}
-            groupes={actifs
-              .filter((d) => page.groupes?.[d.jeton])
-              .map((d) => ({ jeton: d.jeton, nom: d.destinataire, invites: page.groupes![d.jeton], lien: `${base}/partage/${d.jeton}` }))}
+            base={base}
+            liens={actifs.map((d) => ({ jeton: d.jeton, destinataire: d.destinataire }))}
+            groupes={page.groupes ?? {}}
+            activite={activite}
+            onVoirAssistant={() => setOnglet("assistant")}
           />
         </div>
         <ActivitePage
@@ -290,6 +297,7 @@ export function FichePage({ id }: { id: string }) {
           onEtat={setEtatActivite}
           actualiser={tic}
           repondus={repondus}
+          onActivite={setActivite}
           onVoirAssistant={() => setOnglet("assistant")}
           interrupteur={
           <section className={styles.bloc}>
