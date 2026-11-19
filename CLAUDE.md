@@ -760,6 +760,31 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   activité), la fiche se relit au retour sur l'onglet (`focus`) ; « Masquer »
   par page dans le navigateur. Vérifié au navigateur (mémoire locale, faux
   modèle) de bout en bout, PAS en production.
+- **Bouton d'ENGAGEMENT d'une page + fiche en QUATRE onglets** (19/11,
+  maquettes validées ; `lib/engagement.ts`, `lib/server/engagementPages.ts`,
+  `EngagementLecteur`, `BlocEngagement`, `ReponsesPage`, migration 031 à
+  passer AVANT le déploiement — sans elle aucun bouton, le bloc le dit).
+  Fiche : **Page** (aperçu, Engagement, versions, suppression) ·
+  **Destinataires** (liens, accès par code) · **Activité** (Réponses en tête,
+  pastille des nouvelles) · **Assistant** — Activité reste un onglet À PART
+  (correction de l'éditeur). L'auteur active UN bouton par page, intitulé libre
+  (30 car., suggestions en INTENTION, jamais « Bon pour accord »), option
+  « laisser un mot » (500). Le bouton vit HORS du document isolé, à côté de
+  « Poser une question » ; caché quand l'assistant est ouvert. UNE réponse par
+  lien (contrainte unique), nom = celui du LIEN, jamais tapé ; l'auteur
+  connecté est refusé (409, « navigation privée »). E-mail à l'auteur à chaque
+  réponse (un échec ne perd pas la réponse). Mention FIXE, non réglable.
+  **Choix du lecteur** (demande de l'éditeur) : au clic, `AMORCE_ARTEFACT`
+  répond à `choix?` en relevant cases, radios, listes, curseurs, nombres et
+  `<output>` — JAMAIS un champ de saisie libre (un test le garde) — avec le
+  texte SOURCE (pas `innerText` : `text-transform` rendait les titres en
+  majuscules) ; libellé = légende, groupe ARIA ou titre précédent. Le lecteur
+  VOIT la liste et décoche ; tout est revalidé au serveur (`choixValides`, 20
+  au plus). Limite : un total calculé (texte simple) ne remonte pas ; une page
+  peut exclure un champ par `data-getgents-ignorer`. Pas de capture des
+  boutons d'artefact React (`aria-pressed`). Réponses effacées AVEC la page
+  (pas à 120 jours comme la lecture). Vérifié au navigateur (mémoire locale,
+  devis d'exemple), PAS avec Supabase ni Brevo.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

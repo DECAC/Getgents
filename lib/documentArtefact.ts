@@ -68,6 +68,12 @@ const TETE = '<meta charset="utf-8"><meta name="viewport" content="width=device-
  * il a défilé (en %, par paliers de 5), y compris dans une zone intérieure
  * qui défile. Un nombre, rien d'autre ; la page ne l'écoute que de SON cadre
  * et ne le garde que si le visiteur a accepté de partager ses données.
+ *
+ * Choix du lecteur (19/11) : à la demande de la page (`choix?`), le document
+ * relève les cases cochées, radios choisis, listes, curseurs, nombres et
+ * `<output>`, avec un libellé lisible — JAMAIS un champ de saisie libre. Rien
+ * ne part sans le clic du lecteur sur le bouton d'engagement, qui VOIT la liste
+ * et peut en retirer chaque ligne ; le serveur revalide tout (`choixValides`).
  */
 export const AMORCE_ARTEFACT = `<script>(function(){
 try{parent.postMessage({getgents:"pret"},"*")}catch(e){}
@@ -82,6 +88,17 @@ var vues=0;function signaler(m){if(vues++>2)return;function poser(){var b=docume
 var pmax=-1;function mesurer(e,force){try{var t=e&&e.target&&e.target!==document&&e.target.scrollHeight?e.target:document.scrollingElement||document.documentElement;var h=t.scrollHeight,v=t===document.scrollingElement||t===document.documentElement?window.innerHeight:t.clientHeight;if(!h)return;var p=Math.min(100,Math.round((t.scrollTop+v)/h*100));if(p>pmax+4||(p===100&&pmax<100)||force){pmax=Math.max(pmax,p);parent.postMessage({getgents:"profondeur",v:pmax},"*")}}catch(x){}}
 window.addEventListener("message",function(e){if(e.source===parent&&e.data&&e.data.getgents==="profondeur?")mesurer(null,true)});
 var minuteur=0;document.addEventListener("scroll",function(e){if(minuteur)return;minuteur=setTimeout(function(){minuteur=0;mesurer(e)},400)},true);window.addEventListener("load",function(){mesurer(null)});
+function propre(t){return String(t||"").replace(/\\s+/g," ").trim()}
+function ligne1(n){if(!n)return"";var acc="";function marcher(x){for(var c=x.firstChild;c;c=c.nextSibling){if(c.nodeType===3){acc+=c.nodeValue}else if(c.nodeType===1){if(/^(SCRIPT|STYLE|INPUT|SELECT|TEXTAREA|BUTTON)$/.test(c.tagName))continue;var d="";try{d=getComputedStyle(c).display}catch(x){}if(d==="none")continue;var bloc=d.indexOf("inline")!==0&&d!=="contents";if(bloc&&propre(acc))return true;if(marcher(c))return true;if(bloc&&propre(acc))return true}}return false}marcher(n);return propre(acc)}
+function titreAvant(el){var hs=document.querySelectorAll("h1,h2,h3,h4,h5,h6"),r="";for(var i=0;i<hs.length;i++){if(hs[i].compareDocumentPosition(el)&4)r=ligne1(hs[i]);else break}return r}
+function nomDe(el){var l=el.labels&&el.labels[0];return ligne1(l)||propre(el.getAttribute("aria-label")||el.getAttribute("title"))}
+function groupeDe(el,coche){if(coche){var f=el.closest("fieldset");var lg=f&&f.querySelector("legend");if(lg)return ligne1(lg);var g=el.closest("[role=radiogroup],[role=group]");if(g&&g.getAttribute("aria-label"))return propre(g.getAttribute("aria-label"));var lb=g&&g.getAttribute("aria-labelledby");if(lb){var n=document.getElementById(lb);if(n)return ligne1(n)}return titreAvant(el)}return nomDe(el)||titreAvant(el)}
+function releverChoix(){var r=[];try{var els=document.querySelectorAll("input,select,output");for(var i=0;i<els.length&&r.length<20;i++){var el=els[i];if(el.disabled||el.closest("[hidden],[data-getgents-ignorer]"))continue;var t=(el.type||"").toLowerCase(),tag=el.tagName;
+if(tag==="INPUT"&&(t==="radio"||t==="checkbox")){if(!el.checked)continue;r.push({groupe:groupeDe(el,true),valeur:nomDe(el)||propre(el.value),modifie:el.checked!==el.defaultChecked})}
+else if(tag==="INPUT"&&(t==="range"||t==="number")){r.push({groupe:groupeDe(el,false),valeur:propre(el.value),modifie:el.value!==el.defaultValue})}
+else if(tag==="SELECT"){var o=el.options[el.selectedIndex];if(!o)continue;r.push({groupe:groupeDe(el,false),valeur:propre(o.text),modifie:!o.defaultSelected})}
+else if(tag==="OUTPUT"){r.push({groupe:groupeDe(el,false),valeur:propre(el.value||el.textContent),modifie:el.value!==el.defaultValue})}}}catch(x){}return r}
+window.addEventListener("message",function(e){if(e.source===parent&&e.data&&e.data.getgents==="choix?")try{parent.postMessage({getgents:"choix",v:releverChoix()},"*")}catch(x){}});
 window.addEventListener("error",function(e){signaler(e.message||"ressource introuvable")});
 window.addEventListener("unhandledrejection",function(e){var r=e.reason;signaler(r&&r.message?r.message:String(r))});
 })();</script>`;

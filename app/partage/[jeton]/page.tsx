@@ -8,6 +8,7 @@ import EcranCode from "./EcranCode";
 import { decisionAcces, protectionActive } from "@/lib/server/accesPartage";
 import { nomAuteur } from "@/lib/server/activitePages";
 import { suggestionsDeLaPage } from "@/lib/server/suggestionsPages";
+import { engagementDeLaPage, reponseDuLien } from "@/lib/server/engagementPages";
 import { masquerEmail, nomCookie } from "@/lib/accesCode";
 import styles from "./partage.module.css";
 
@@ -61,6 +62,10 @@ export default async function PagePartage(props: { params: Promise<{ jeton: stri
   // Questions suggérées choisies par l'auteur ; sans choix (ou sans migration 026), celles par défaut.
   const choisies = assistant ? await suggestionsDeLaPage(a.pageId).catch(() => null) : null;
   const amorces = choisies ? choisies.map((s) => s.texte) : amorcesAssistant(a.format);
+  // Bouton d'engagement : sans migration 031 (ou en erreur), aucun bouton.
+  const reglage = await engagementDeLaPage(a.pageId).catch(() => null);
+  const engagement = reglage?.actif ? { intitule: reglage.intitule, mot: reglage.mot } : null;
+  const dejaRepondu = engagement ? !!(await reponseDuLien(a.jeton).catch(() => null)) : false;
   return (
     <VuePartage
       jeton={a.jeton}
@@ -78,6 +83,9 @@ export default async function PagePartage(props: { params: Promise<{ jeton: stri
       }
       auteur={a.ownerId ? await nomAuteur(a.ownerId) : null}
       protegee={protegee}
+      engagement={engagement}
+      destinataire={a.destinataire}
+      dejaRepondu={dejaRepondu}
     />
   );
 }

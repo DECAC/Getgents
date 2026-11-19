@@ -77,6 +77,10 @@ export default function Confidentialite({
               <li>Quand vous avez ouvert la page, combien de temps, jusqu&apos;où vous l&apos;avez lue.</li>
               <li>Ordinateur ou téléphone.</li>
               <li>Un e-mail à l&apos;auteur à votre première ouverture.</li>
+              <li>
+                Si vous cliquez le bouton de réponse proposé par l&apos;auteur : votre nom, les choix que vous laissez cochés et votre mot, montrés
+                avant l&apos;envoi.
+              </li>
             </ul>
           </div>
           <div className={styles.confCol} data-ton="rouge">

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { adresseDirecte, useCadreAvecRepli } from "@/components/shared/useCadreAvecRepli";
 import AssistantDocument from "./AssistantDocument";
 import Confidentialite from "./Confidentialite";
+import EngagementLecteur from "./EngagementLecteur";
 import { BATTEMENT_MS, cleConsentement, DELAI_WIDGET_MS, type Consentement } from "@/lib/activitePage";
 import styles from "./partage.module.css";
 
@@ -125,6 +126,9 @@ export default function VuePartage({
   bandeau,
   auteur,
   protegee,
+  engagement,
+  destinataire,
+  dejaRepondu,
 }: {
   jeton: string;
   titre: string;
@@ -134,6 +138,10 @@ export default function VuePartage({
   /** Nom de l'auteur : montré dans « Vos données sur cette page » seulement. */
   auteur: string | null;
   protegee: boolean;
+  /** Bouton d'engagement réglé par l'auteur, ou null. */
+  engagement: { intitule: string; mot: boolean } | null;
+  destinataire: string;
+  dejaRepondu: boolean;
 }) {
   const cadre = useRef<HTMLIFrameElement>(null);
   const srcDocument = `/api/partage/${encodeURIComponent(jeton)}/contenu`;
@@ -276,6 +284,28 @@ export default function VuePartage({
 
       {conf && <Confidentialite titre={titre} auteur={auteur} choix={choix} protegee={protegee} onChoix={choisir} onFermer={() => setConf(false)} />}
 
+      {(engagement || assistant) && !(assistant && ouvert) && (
+        <div className={styles.flottants}>
+          {engagement && (
+            <EngagementLecteur
+              jeton={jeton}
+              intitule={engagement.intitule}
+              mot={engagement.mot}
+              destinataire={destinataire}
+              dejaRepondu={dejaRepondu}
+              cadre={cadre}
+            />
+          )}
+          {assistant && (
+            <button type="button" className={styles.lanceur} onClick={ouvrir} aria-label="Ouvrir l'assistant du document">
+              <span className={styles.lanceurEtoile} aria-hidden="true">
+                ✦
+              </span>
+              Poser une question
+            </button>
+          )}
+        </div>
+      )}
       {assistant && !ouvert && (
         <>
           {bulle && (
@@ -284,15 +314,9 @@ export default function VuePartage({
                 ✕
               </button>
               <b>Une question sur ce document ?</b>
-              L&apos;assistant y répond, à partir du document seulement.
+              L&apos;assistant y répond à partir du document.
             </div>
           )}
-          <button type="button" className={styles.lanceur} onClick={ouvrir} aria-label="Ouvrir l'assistant du document">
-            <span className={styles.lanceurEtoile} aria-hidden="true">
-              ✦
-            </span>
-            Poser une question
-          </button>
         </>
       )}
     </div>

@@ -471,6 +471,146 @@
   }
 }
 
+/* ——— Boutons flottants : engagement + assistant ——— */
+.flottants {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.flottants .lanceur {
+  position: static;
+}
+.engagement {
+  min-height: 48px;
+  padding: 10px 20px;
+  border: 2px solid var(--sage);
+  border-radius: var(--r-pill);
+  background: #fffdf9;
+  color: #2a1f19;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.14);
+  animation: apparition 0.25s ease;
+}
+.engagement:hover:not(:disabled) {
+  background: #fff4ef;
+}
+.engagement[data-envoye="oui"] {
+  border-color: #2f8a4c;
+  color: #1f6b38;
+  cursor: default;
+}
+.engagement:disabled:not([data-envoye="oui"]) {
+  opacity: 0.7;
+  cursor: progress;
+}
+.engagementToast {
+  position: fixed;
+  left: 50%;
+  bottom: 88px;
+  z-index: 30;
+  transform: translateX(-50%);
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: #1f6b38;
+  color: #fff;
+  font-size: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+.engagementBoite {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin-top: 8vh;
+  padding: 24px 24px 18px;
+  border-radius: 18px;
+  background: #fffdf9;
+  color: #2a1f19;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+}
+.engagementTitre {
+  margin: 0 36px 14px 0;
+  font-size: 19px;
+}
+.engagementChoix {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid #eadbd3;
+  border-radius: 12px;
+}
+.engagementChoix legend {
+  padding: 0 4px;
+  font-weight: 700;
+}
+.engagementAide {
+  margin: 0 0 8px;
+  color: #73665f;
+  font-size: 12.5px;
+}
+.engagementLigne {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 5px 0;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.engagementLigne input {
+  margin-top: 3px;
+  accent-color: var(--sage);
+}
+.engagementMot {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.engagementMot textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #eadbd3;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 400;
+  resize: vertical;
+}
+.engagementMot small {
+  justify-self: end;
+  color: #a2958f;
+  font-weight: 400;
+}
+.engagementMention {
+  margin: 0 0 12px;
+  color: #73665f;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.engagementErreur {
+  margin: 0 0 12px;
+  color: #a3261b;
+}
+.engagementActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+@media (max-width: 760px) {
+  .flottants {
+    right: 16px;
+    left: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}
+
 /* ——— Page protégée par code ——— */
 .porte {
   position: relative;

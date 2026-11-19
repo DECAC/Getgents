@@ -1,6 +1,8 @@
 -- Bouton d'ENGAGEMENT d'une page (19/11) : l'auteur propose à ses lecteurs
 -- un bouton (« Je souhaite donner suite »…) ; le clic lui est transmis, avec
--- le nom du LIEN et, si l'auteur l'a permis, un mot du lecteur.
+-- le nom du LIEN, les CHOIX faits dans la page (cases, options : le lecteur
+-- les voit et peut les retirer avant d'envoyer) et, si l'auteur l'a permis,
+-- un mot du lecteur.
 --
 -- À passer AVANT le déploiement pour que le bloc s'enregistre. Sans elle :
 -- le bloc dit « pas encore installé », aucun bouton ne s'affiche, rien ne
@@ -22,6 +24,7 @@ create table if not exists public.pages_reponses (
   destinataire text not null,
   intitule     text not null,
   mot          text,
+  choix        jsonb not null default '[]'::jsonb,
   version      integer not null default 1,
   created_at   timestamptz not null default now(),
   vue_at       timestamptz

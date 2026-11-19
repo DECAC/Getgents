@@ -52,6 +52,13 @@ export default function ConfidentialitePage() {
             création.
           </li>
           <li>
+            <b>La réponse d&apos;un lecteur</b>, s&apos;il clique le bouton que l&apos;auteur lui
+            propose : le nom de son lien, l&apos;intitulé du bouton, les choix faits dans la page
+            qu&apos;il a laissés cochés et son mot éventuel — montrés avant l&apos;envoi, une seule
+            réponse par lien. Transmise à l&apos;auteur par e-mail, gardée avec la page et
+            effacée avec elle.
+          </li>
+          <li>
             <b>Vos partages</b> : les adresses que vous invitez, et les liens que vous créez.
           </li>
           <li>

@@ -11,6 +11,8 @@ import { ImportPage } from "./ImportPage";
 import { libelleOrigine } from "@/lib/importPage";
 import { exempleDeOrigine } from "@/lib/exemplesPages";
 import { GuideDecouverte } from "./GuideDecouverte";
+import { BlocEngagement } from "./BlocEngagement";
+import { ReponsesPage } from "./ReponsesPage";
 import styles from "./pages.module.css";
 
 interface Destinataire {
@@ -49,16 +51,19 @@ const jourHeure = (iso: string) =>
 const actif = (d: Destinataire) => !d.revokedAt && !(d.expiresAt && Date.parse(d.expiresAt) < Date.now());
 
 /**
- * La fiche d'une page : l'aperçu RÉEL à gauche (même cadre isolé que chez le
- * client), et à droite ses destinataires, son assistant, ses versions.
+ * La fiche d'une page, en quatre onglets (19/11, choix de l'éditeur) :
+ * Page (aperçu RÉEL — même cadre isolé que chez le client —, bouton
+ * d'engagement, versions), Destinataires (liens, accès protégé par code),
+ * Activité (réponses au bouton, lectures) et Assistant.
  */
 export function FichePage({ id }: { id: string }) {
   const [page, setPage] = useState<Detail | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [enCours, setEnCours] = useState<string | null>(null);
-  const [onglet, setOnglet] = useState<"page" | "activite" | "assistant">("page");
+  const [onglet, setOnglet] = useState<"page" | "destinataires" | "activite" | "assistant">("page");
   const [sansReponse, setSansReponse] = useState(0);
+  const [reponsesNouvelles, setReponsesNouvelles] = useState(0);
   // Guide de découverte : chiffres de l'activité, et relecture quand on revient sur l'onglet
   // (après avoir ouvert le lien en navigation privée, la fiche doit le savoir).
   const [etatActivite, setEtatActivite] = useState<{ ouvertures: number; questions: number; precisions: number } | null>(null);
@@ -199,10 +204,25 @@ export function FichePage({ id }: { id: string }) {
 
       <div className={styles.onglets} role="tablist">
         <button type="button" role="tab" aria-selected={onglet === "page"} className={styles.onglet} onClick={() => setOnglet("page")}>
-          Page &amp; destinataires
+          Page
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={onglet === "destinataires"}
+          className={styles.onglet}
+          onClick={() => setOnglet("destinataires")}
+        >
+          Destinataires
+          {actifs.length > 0 && <span className={styles.ongletCompte}>{actifs.length}</span>}
         </button>
         <button type="button" role="tab" aria-selected={onglet === "activite"} className={styles.onglet} onClick={() => setOnglet("activite")}>
           Activité
+          {reponsesNouvelles > 0 && (
+            <span className={styles.ongletPastille} title={`${reponsesNouvelles} réponse${reponsesNouvelles > 1 ? "s" : ""} nouvelle${reponsesNouvelles > 1 ? "s" : ""}`}>
+              {reponsesNouvelles}
+            </span>
+          )}
         </button>
         <button type="button" role="tab" aria-selected={onglet === "assistant"} className={styles.onglet} onClick={() => setOnglet("assistant")}>
           Assistant
@@ -216,7 +236,10 @@ export function FichePage({ id }: { id: string }) {
 
       {/* Monté dès l'ouverture de la fiche (masqué sur « Page ») : la pastille de l'onglet Assistant
           doit être juste avant même qu'on l'ouvre, et changer d'onglet ne recharge rien. */}
-      <div hidden={onglet === "page"} className={styles.ongletCorps}>
+      <div hidden={onglet === "page" || onglet === "destinataires"} className={styles.ongletCorps}>
+        <div hidden={onglet !== "activite"}>
+          <ReponsesPage pageId={page.id} visible={onglet === "activite"} actualiser={tic} onNouvelles={setReponsesNouvelles} />
+        </div>
         <ActivitePage
           id={page.id}
           vue={onglet === "assistant" ? "assistant" : "activite"}
@@ -300,6 +323,60 @@ export function FichePage({ id }: { id: string }) {
         </section>
 
         <div className={styles.cote}>
+          <BlocEngagement pageId={page.id} onMessage={signaler} />
+
+          <section className={styles.bloc}>
+            <h2 className={styles.blocTitre}>Versions</h2>
+            <div className={styles.version}>
+              <span>
+                <b>Version {page.version}</b> · {jourHeure(page.updatedAt)} · actuelle
+              </span>
+            </div>
+            {page.versions.map((v) => (
+              <div key={v.version} className={styles.version}>
+                <span>
+                  Version {v.version} · {jourHeure(v.createdAt)}
+                </span>
+                <button
+                  type="button"
+                  className={styles.lienTexte}
+                  disabled={enCours === `v${v.version}`}
+                  onClick={() => {
+                    if (window.confirm(`Restaurer la version ${v.version} ? Tous les liens l'afficheront ; la version actuelle reste restaurable.`))
+                      void appel(
+                        `v${v.version}`,
+                        `/api/pages/${encodeURIComponent(page.id)}/restaurer`,
+                        { method: "POST", body: JSON.stringify({ version: v.version }) },
+                        `Version ${v.version} restaurée.`
+                      );
+                  }}
+                >
+                  Restaurer
+                </button>
+              </div>
+            ))}
+            {page.versions.length === 0 && <p className={styles.aide}>Une seule version. Une correction faite depuis Claude en créera une nouvelle.</p>}
+          </section>
+
+          <section className={styles.bloc}>
+            <button
+              type="button"
+              className={styles.lienDanger}
+              onClick={async () => {
+                if (!window.confirm(`Supprimer « ${page.titre} » ? Ses ${actifs.length} lien(s) actif(s) cesseront de s'ouvrir. C'est irréversible.`)) return;
+                const r = await fetch(`/api/pages/${encodeURIComponent(page.id)}`, { method: "DELETE", credentials: "include" });
+                if (r.ok) window.location.assign("/pages");
+                else signaler("La suppression a échoué. Réessayez.");
+              }}
+            >
+              Supprimer la page et couper tous ses liens
+            </button>
+          </section>
+        </div>
+      </div>
+      )}
+      {onglet === "destinataires" && (
+        <div className={styles.colonneOnglet}>
           <section className={styles.bloc}>
             <h2 className={styles.blocTitre}>
               Destinataires · {actifs.length} actif{actifs.length > 1 ? "s" : ""}
@@ -455,57 +532,7 @@ export function FichePage({ id }: { id: string }) {
                   </p>
                 ))}
           </section>
-
-
-          <section className={styles.bloc}>
-            <h2 className={styles.blocTitre}>Versions</h2>
-            <div className={styles.version}>
-              <span>
-                <b>Version {page.version}</b> · {jourHeure(page.updatedAt)} · actuelle
-              </span>
-            </div>
-            {page.versions.map((v) => (
-              <div key={v.version} className={styles.version}>
-                <span>
-                  Version {v.version} · {jourHeure(v.createdAt)}
-                </span>
-                <button
-                  type="button"
-                  className={styles.lienTexte}
-                  disabled={enCours === `v${v.version}`}
-                  onClick={() => {
-                    if (window.confirm(`Restaurer la version ${v.version} ? Tous les liens l'afficheront ; la version actuelle reste restaurable.`))
-                      void appel(
-                        `v${v.version}`,
-                        `/api/pages/${encodeURIComponent(page.id)}/restaurer`,
-                        { method: "POST", body: JSON.stringify({ version: v.version }) },
-                        `Version ${v.version} restaurée.`
-                      );
-                  }}
-                >
-                  Restaurer
-                </button>
-              </div>
-            ))}
-            {page.versions.length === 0 && <p className={styles.aide}>Une seule version. Une correction faite depuis Claude en créera une nouvelle.</p>}
-          </section>
-
-          <section className={styles.bloc}>
-            <button
-              type="button"
-              className={styles.lienDanger}
-              onClick={async () => {
-                if (!window.confirm(`Supprimer « ${page.titre} » ? Ses ${actifs.length} lien(s) actif(s) cesseront de s'ouvrir. C'est irréversible.`)) return;
-                const r = await fetch(`/api/pages/${encodeURIComponent(page.id)}`, { method: "DELETE", credentials: "include" });
-                if (r.ok) window.location.assign("/pages");
-                else signaler("La suppression a échoué. Réessayez.");
-              }}
-            >
-              Supprimer la page et couper tous ses liens
-            </button>
-          </section>
         </div>
-      </div>
       )}
     </div>
   );

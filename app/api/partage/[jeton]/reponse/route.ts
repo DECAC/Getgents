@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { nomCookie } from "@/lib/accesCode";
-import { motValide } from "@/lib/engagement";
+import { choixValides, ligneChoix, motValide, type ChoixLecteur } from "@/lib/engagement";
 import { courrielAuteur } from "@/lib/server/activitePages";
 import { decisionAcces } from "@/lib/server/accesPartage";
 import { lireArtefact } from "@/lib/server/artefactsPartages";
@@ -19,11 +19,14 @@ export const maxDuration = 30;
 
 const echapper = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function courriel(titre: string, destinataire: string, intitule: string, mot: string | null, lienFiche: string): { objet: string; html: string } {
+function courriel(titre: string, destinataire: string, intitule: string, mot: string | null, choix: ChoixLecteur[], lienFiche: string): { objet: string; html: string } {
   return {
     objet: `${destinataire} : « ${intitule} »`,
     html:
       `<p><b>${echapper(destinataire)}</b> a répondu « ${echapper(intitule)} » sur votre page <b>${echapper(titre)}</b>.</p>` +
+      (choix.length
+        ? `<p style="margin:12px 0 4px"><b>Ses choix dans la page :</b></p><ul style="margin:0 0 12px">${choix.map((c) => `<li>${echapper(ligneChoix(c))}</li>`).join("")}</ul>`
+        : "") +
       (mot ? `<blockquote style="margin:0 0 0 8px;padding-left:12px;border-left:3px solid #ccc">${echapper(mot).replace(/\n/g, "<br>")}</blockquote>` : "") +
       `<p><a href="${echapper(lienFiche)}">Voir la page dans Getgents</a></p>`,
   };
@@ -41,11 +44,12 @@ export async function POST(req: Request, props: { params: Promise<{ jeton: strin
   if (moi && moi.id === a.ownerId)
     return NextResponse.json({ error: "Vous êtes l'auteur de cette page : votre réponse n'est pas enregistrée. Ouvrez le lien en navigation privée pour essayer." }, { status: 409 });
 
-  const corps = (await req.json().catch(() => ({}))) as { mot?: unknown };
+  const corps = (await req.json().catch(() => ({}))) as { mot?: unknown; choix?: unknown };
+  const choix = choixValides(corps.choix);
   const m = reglage.mot ? motValide(corps.mot) : { ok: true as const, mot: null };
   if (!m.ok) return NextResponse.json({ error: "Votre mot est trop long (500 caractères au plus)." }, { status: 400 });
 
-  const r = await enregistrerReponse(a, reglage.intitule, m.mot).catch(() => "erreur" as const);
+  const r = await enregistrerReponse(a, reglage.intitule, m.mot, choix).catch(() => "erreur" as const);
   if (r === "deja") return NextResponse.json({ error: "Vous avez déjà répondu sur ce lien.", deja: true }, { status: 409 });
   if (r !== "ok") return NextResponse.json({ error: "Votre réponse n'a pas pu être envoyée. Réessayez." }, { status: 503 });
 
@@ -53,9 +57,9 @@ export async function POST(req: Request, props: { params: Promise<{ jeton: strin
   const adresse = await courrielAuteur(a.ownerId).catch(() => null);
   let notifie = false;
   if (adresse) {
-    const c = courriel(a.titre, a.destinataire, reglage.intitule, m.mot, `${new URL(req.url).origin}/pages/${a.pageId}`);
+    const c = courriel(a.titre, a.destinataire, reglage.intitule, m.mot, choix, `${new URL(req.url).origin}/pages/${a.pageId}`);
     notifie = (await sendBrevoEmail(adresse, c.objet, c.html).catch(() => ({ ok: false }))).ok;
   }
-  console.log(JSON.stringify({ tag: "getgents:engagement", event: "reponse", avecMot: !!m.mot, notifie }));
+  console.log(JSON.stringify({ tag: "getgents:engagement", event: "reponse", avecMot: !!m.mot, choix: choix.length, notifie }));
   return NextResponse.json({ ok: true });
 }
