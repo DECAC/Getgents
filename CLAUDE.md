@@ -1261,7 +1261,8 @@ jamais ouvrir un document du domaine de contenu hors d'un cadre avec repli. Caus
 CONFIRMÉE (19/11) : le réseau d'ENTREPRISE de l'éditeur (connexion
 réinitialisée, pas de page « bloqué ») ; tout passe en 4G. Un filtre qui
 COUPE la connexion au lieu d'afficher une page n'envoie pas de `load` à
-temps : c'est le cas que couvre le filet de 8 s.
+temps : c'est le cas que couvre le filet de 8 s. **Déployé, essai réel CONCLUANT depuis ce
+réseau (19/11)** : aperçu, plein écran et lien du destinataire.
 
 **BREVO EST CONFIGURÉ** en production (12/11, e-mail d'invitation reçu par
 l'utilisateur). Il ne l'était pas jusque-là : invitation par e-mail,
