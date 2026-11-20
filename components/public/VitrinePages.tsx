@@ -44,7 +44,7 @@ export function VitrinePages({ inscriptions = { genre: "fermees" } }: { inscript
         <section className={styles.hero}>
           <div>
             <span className={styles.etiquette}>
-              {ouvertes ? "Essai gratuit · places limitées" : "Accès sur invitation · gratuit pendant l'essai"}
+              {ouvertes ? "Essai gratuit" : "Accès sur invitation · gratuit pendant l'essai"}
             </span>
             <h1 className={styles.titre}>
               Ce que vous créez avec l&apos;IA, envoyé à la bonne personne, par un lien privé.
@@ -52,7 +52,7 @@ export function VitrinePages({ inscriptions = { genre: "fermees" } }: { inscript
             <p className={styles.lede}>
               Une proposition pour un client, un compte rendu pour votre équipe, un programme pour
               vos proches : elle le consulte sans compte, pose ses questions à un assistant qui
-              répond à partir de la page, et vous voyez quand elle l&apos;a ouvert.
+              répond à partir de la page, puis vous donne sa réponse d&apos;un clic.
             </p>
             <div className={styles.actions}>
               <Link className={`${styles.btn} ${styles.primaire}`} href="/inscription">
@@ -104,7 +104,7 @@ export function VitrinePages({ inscriptions = { genre: "fermees" } }: { inscript
             </div>
             <div className={styles.vu}>
               <b>Ouverte aujourd&apos;hui · 3 questions</b>
-              <span>Marie a partagé sa lecture : lue jusqu&apos;au bout</span>
+              <span>Marie a répondu « Je souhaite donner suite », lecture jointe</span>
             </div>
           </div>
         </section>
@@ -230,9 +230,9 @@ export function VitrinePages({ inscriptions = { genre: "fermees" } }: { inscript
               <h2 className={styles.h2}>Un accès d&apos;essai, gratuit</h2>
               <p className={styles.intro}>
                 {inscriptions.genre === "ouvertes"
-                  ? `Créez votre compte en une minute : l'essai est gratuit, dans la limite de ${inscriptions.plafond} places — il en reste ${inscriptions.restantes}.`
+                  ? "Créez votre compte en une minute : l'essai est gratuit."
                   : inscriptions.genre === "completes"
-                    ? "Les places de l'essai sont toutes prises. Laissez votre adresse : nous vous écrirons dès qu'une place se libère."
+                    ? "Les inscriptions sont momentanément fermées. Laissez votre adresse : nous vous écrirons dès qu'elles rouvrent."
                     : "Getgents Pages ouvre sur invitation. Dites-nous en deux lignes avec qui vous voulez partager, et quoi : nous vous envoyons votre accès par e-mail."}
               </p>
               <Link className={`${styles.btn} ${styles.primaire}`} href="/inscription">

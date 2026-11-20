@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — retours : e-mail J+3 et entrée du rail</title>
+<style>
+  :root{
+    --ink:#2a1f19;--muted:#73665f;--faint:#a2958f;--bg:#fbf3ed;--card:#fffdf9;
+    --line:#eadbd3;--line-soft:#f3e9e3;--sage:#e65d76;--sage-700:#c73758;--sage-tint:#ffdee2;
+    --gold-tint:#fde4bb;--success:#57a45b;--success-tint:#d4f1d4;--brun:#8a6420;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#efe4dc;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
+  .planche{max-width:1500px;margin:0 auto;padding:32px 24px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sous{color:var(--muted);margin:0 0 26px;font-size:14px;max-width:900px;line-height:1.45}
+  .partie{font-size:15px;font-weight:800;margin:30px 0 14px;display:flex;align-items:center;gap:10px}
+  .partie span{background:var(--ink);color:#fff;border-radius:999px;padding:3px 11px;font-size:13px}
+  .grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}
+  .etat{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .etiquette{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brun)}
+  .note{font-size:13px;color:var(--muted);line-height:1.45;margin:0}
+
+  /* Écran d'application */
+  .ecran{position:relative;height:470px;border-radius:14px;overflow:hidden;background:var(--bg);
+    border:1px solid var(--line);box-shadow:0 10px 30px rgba(42,31,25,.08);display:flex}
+  .rail{width:220px;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;flex:none}
+  .modes{margin:12px 10px 6px;border:1px solid var(--line);border-radius:12px;display:flex;padding:3px;background:var(--bg)}
+  .modes i{flex:1;text-align:center;font-style:normal;font-size:11px;color:var(--muted);padding:8px 0;border-radius:9px}
+  .modes i.on{background:#fff;color:var(--ink);font-weight:700}
+  .nav{padding:4px 8px;flex:1}
+  .item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;font-size:13.5px;color:var(--ink)}
+  .item.on{background:var(--sage-tint);color:var(--sage-700);font-weight:600}
+  .item svg{width:16px;height:16px;flex:none}
+  .idee{margin:0 8px 8px;display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;
+    font-size:13.5px;color:var(--muted);border:1px dashed var(--line)}
+  .idee svg{width:16px;height:16px;flex:none;color:var(--sage)}
+  .idee.survol{background:var(--bg);color:var(--ink);border-style:solid}
+  .compte{border-top:1px solid var(--line);padding:12px 14px;font-size:13px}
+  .compte b{display:block}
+  .compte small{color:var(--muted)}
+  .contenu{flex:1;padding:22px 26px;min-width:0}
+  .contenu b{display:block;font-size:17px;margin-bottom:14px}
+  .cartes{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .cartes span{height:120px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+  .voile{position:absolute;inset:0;background:rgba(42,31,25,.28)}
+  .bulle{position:absolute;left:228px;bottom:84px;background:var(--ink);color:#fff;font-size:12px;padding:6px 10px;border-radius:8px;white-space:nowrap}
+
+  /* Fenêtre */
+  .fenetre{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:360px;
+    background:var(--card);border-radius:16px;border:1px solid var(--line);
+    box-shadow:0 18px 50px rgba(42,31,25,.22);padding:18px 18px 16px}
+  .fenetre header{display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;gap:10px}
+  .fenetre h2{font-size:16px;margin:0}
+  .fenetre header small{display:block;color:var(--muted);font-size:12.5px;margin-top:3px;line-height:1.35}
+  .x{border:0;background:var(--line-soft);width:28px;height:28px;border-radius:50%;font-size:14px;color:var(--muted);flex:none}
+  .choix{display:flex;gap:6px;margin-bottom:10px}
+  .choix span{flex:1;white-space:nowrap;text-align:center;border:1px solid var(--line);border-radius:999px;padding:7px 6px;font-size:13px;font-weight:600;color:var(--muted);background:#fff}
+  .choix span.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  textarea{width:100%;height:96px;border:1px solid var(--line);border-radius:10px;padding:10px;
+    font:14px/1.4 system-ui,sans-serif;color:var(--ink);resize:none;background:#fff}
+  .pied{display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:10px}
+  .pied small{color:var(--faint);font-size:11.5px;line-height:1.3}
+  .envoyer{background:var(--sage);color:#fff;border:0;border-radius:999px;padding:9px 18px;font-weight:700;font-size:14px;flex:none}
+
+  /* Téléphone */
+  .tel{width:250px;height:480px;border-radius:30px;border:8px solid #2a1f19;background:var(--bg);position:relative;overflow:hidden}
+  .tel .haut{height:46px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:center;padding:0 14px;font-size:20px}
+  .tel .bloc{margin:14px;height:90px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+  .tiroir{position:absolute;top:0;bottom:0;left:0;width:200px;background:var(--card);display:flex;flex-direction:column;box-shadow:8px 0 30px rgba(42,31,25,.2)}
+  .tiroir .nav{padding-top:10px}
+  .tiroir .item,.tiroir .idee{font-size:13px}
+
+  /* E-mail */
+  .boite{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(42,31,25,.06)}
+  .boite .entete{font-size:12.5px;color:var(--muted);padding:14px 20px;border-bottom:1px solid var(--line-soft);line-height:1.6}
+  .boite .entete b{color:var(--ink)}
+  .corps{padding:22px 26px 24px;font-size:15px;line-height:1.6;max-width:560px}
+  .corps p{margin:0 0 12px}
+  .corps .sig{color:var(--muted);margin-top:18px}
+  .corps .bas{font-size:12px;color:var(--faint);border-top:1px solid var(--line-soft);padding-top:10px;margin-top:18px}
+  .repondre{display:inline-flex;gap:8px;margin:0 20px 18px}
+  .repondre span{border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--muted)}
+
+  .regles{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 22px}
+  .regles h3{margin:0 0 8px;font-size:15px}
+  .regles li{margin:5px 0;font-size:13.5px;line-height:1.45}
+  .questions{background:var(--card);border:2px solid var(--sage-tint);border-radius:14px;padding:18px 22px;margin-top:34px}
+  .questions h2{font-size:16px;margin:0 0 10px}
+  .questions li{margin:8px 0;font-size:14px;line-height:1.45}
+  code{font-size:12.5px;background:var(--line-soft);padding:1px 5px;border-radius:4px}
+  @media (max-width:900px){.grille{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="planche">
+  <h1>Retours des utilisateurs — e-mail à J+3 et entrée du rail</h1>
+  <p class="sous">C : un seul e-mail par compte, trois jours après l'inscription, qui pose une question et attend une réponse libre. A : une entrée permanente en bas du rail, pour écrire quand on veut. Les deux arrivent dans ta boîte de notifications.</p>
+
+  <!-- ===================== C ===================== -->
+  <div class="partie"><span>C</span>L'e-mail à J+3</div>
+  <div class="grille">
+    <div class="etat">
+      <span class="etiquette">C1 · Le compte a créé au moins une page</span>
+      <div class="boite">
+        <div class="entete">
+          De : <b>Getgents Pages</b> · Répondre à : <b>retours@getgents.ai</b><br>
+          Objet : <b>Qu'est-ce qui vous manque ?</b>
+        </div>
+        <div class="corps">
+          <p>Bonjour Sophie,</p>
+          <p>Vous avez créé « Proposition — Atelier Morel » il y a trois jours. Merci d'essayer Getgents Pages.</p>
+          <p>Une seule question : <b>qu'est-ce qui vous a manqué, ou agacé ?</b> Une phrase suffit : répondez simplement à cet e-mail.</p>
+          <p>C'est l'éditeur qui lit chaque réponse, pas un robot.</p>
+          <p class="sig">L'éditeur de Getgents Pages</p>
+          <p class="bas">Vous ne recevrez pas d'autre e-mail de ce genre.</p>
+        </div>
+        <div class="repondre"><span>↩ Répondre</span><span>Transférer</span></div>
+      </div>
+      <p class="note">Le titre de SA page rend l'e-mail personnel sans rien inventer. Texte court, aucun lien, aucun bouton : on répond comme à une personne.</p>
+    </div>
+
+    <div class="etat">
+      <span class="etiquette">C2 · Le compte n'a encore rien créé</span>
+      <div class="boite">
+        <div class="entete">
+          De : <b>Getgents Pages</b> · Répondre à : <b>retours@getgents.ai</b><br>
+          Objet : <b>Qu'est-ce qui vous a arrêté ?</b>
+        </div>
+        <div class="corps">
+          <p>Bonjour,</p>
+          <p>Vous avez ouvert un compte Getgents Pages il y a trois jours, sans créer de page pour l'instant.</p>
+          <p><b>Qu'est-ce qui vous a arrêté ?</b> Pas le temps, pas compris à quoi ça sert, pas d'artefact sous la main… Répondez simplement à cet e-mail, même en trois mots.</p>
+          <p class="sig">L'éditeur de Getgents Pages</p>
+          <p class="bas">Vous ne recevrez pas d'autre e-mail de ce genre.</p>
+        </div>
+        <div class="repondre"><span>↩ Répondre</span><span>Transférer</span></div>
+      </div>
+      <p class="note">Le message le plus précieux : celui des comptes qui ne sont pas allés au bout. Sans nom affiché, « Bonjour, » tout court — jamais l'adresse e-mail en guise de prénom.</p>
+    </div>
+
+    <div class="etat">
+      <span class="etiquette">C3 · La réponse, dans ta boîte</span>
+      <div class="boite">
+        <div class="entete">
+          De : <b>sophie@exemple.fr</b> · À : <b>retours@getgents.ai</b> → redirigé vers ta boîte<br>
+          Objet : <b>Re: Qu'est-ce qui vous manque ?</b>
+        </div>
+        <div class="corps">
+          <p>Pouvoir dupliquer une page pour un autre client, avec un prix différent. Je l'ai recollée trois fois.</p>
+          <p class="sig">Sophie</p>
+        </div>
+        <div class="repondre"><span>↩ Répondre</span></div>
+      </div>
+      <p class="note">Une réponse ordinaire : tu réponds depuis ta messagerie. Aucun code de plus côté Getgents (la réception d'e-mails a été abandonnée le 10/11).</p>
+    </div>
+
+    <div class="etat">
+      <span class="etiquette">C4 · Règles d'envoi</span>
+      <div class="regles">
+        <h3>Qui reçoit, quand</h3>
+        <ul>
+          <li>Comptes confirmés, <b>72 h</b> après l'inscription, par la tâche horaire (<code>/api/routines/run</code>, déjà en place).</li>
+          <li><b>Une seule fois</b> par compte : la date d'envoi est gardée (une colonne, donc une migration).</li>
+          <li>Pas envoyé si le compte a déjà écrit par l'entrée du rail (A) : il a déjà donné son avis.</li>
+          <li>Jamais aux comptes complets (<code>COMPTES_COMPLETS</code> : toi).</li>
+          <li>Comptes déjà inscrits au déploiement : <b>non</b> rattrapés d'office, à toi de décider (question 3).</li>
+          <li>Par Brevo, comme les autres e-mails ; un échec est journalisé et retenté à l'heure suivante, 3 fois au plus.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== A ===================== -->
+  <div class="partie"><span>A</span>L'entrée du rail</div>
+  <div class="grille">
+    <div class="etat">
+      <span class="etiquette">A1 · En bas du rail, au-dessus de « Mon compte »</span>
+      <div class="ecran">
+        <div class="rail">
+          <div class="modes"><i>Utiliser</i><i>Construire</i><i class="on">Pages</i></div>
+          <div class="nav">
+            <div class="item on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Mes pages</div>
+            <div class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><path d="M17 13v8M13 17h8"/></svg>Modèles</div>
+            <div class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 7V3M15 7V3M6 7h12v4a6 6 0 0 1-12 0zM12 17v4"/></svg>Connecter un assistant IA</div>
+          </div>
+          <div class="idee survol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Une idée ? Une question ?</div>
+          <div class="compte"><b>Mon compte</b><small>Voir mon compte</small></div>
+        </div>
+        <div class="contenu"><b>Mes pages</b><div class="cartes"><span></span><span></span><span></span><span></span></div></div>
+      </div>
+      <p class="note">Séparée des destinations par sa place (en bas) et son trait pointillé : c'est une action, pas une rubrique. Rail réduit : l'icône seule, libellé en info-bulle.</p>
+    </div>
+
+    <div class="etat">
+      <span class="etiquette">A2 · La fenêtre</span>
+      <div class="ecran">
+        <div class="rail">
+          <div class="modes"><i>Utiliser</i><i>Construire</i><i class="on">Pages</i></div>
+          <div class="nav"><div class="item on">Mes pages</div><div class="item">Modèles</div><div class="item">Connecter un assistant IA</div></div>
+          <div class="idee">Une idée ? Une question ?</div>
+          <div class="compte"><b>Mon compte</b><small>Voir mon compte</small></div>
+        </div>
+        <div class="contenu"><b>Mes pages</b><div class="cartes"><span></span><span></span><span></span><span></span></div></div>
+        <div class="voile"></div>
+        <div class="fenetre">
+          <header>
+            <div><h2>Écrire à Getgents</h2><small>Une question, une idée d'amélioration : l'éditeur lit tout, et vous répond par e-mail.</small></div>
+            <button class="x">✕</button>
+          </header>
+          <div class="choix"><span class="on">Une idée</span><span>Une question</span></div>
+          <textarea>Pouvoir dupliquer une page pour un autre client avec un prix différent.</textarea>
+          <div class="pied">
+            <small>Réponse à l'adresse de votre compte.</small>
+            <button class="envoyer">Envoyer</button>
+          </div>
+        </div>
+      </div>
+      <p class="note">La même fenêtre que la maquette de la tirette, au centre. Arrive dans ta boîte avec l'objet <code>[Getgents · Idée]</code>, la page d'où l'on écrit et « Répondre » vers l'utilisateur.</p>
+    </div>
+
+    <div class="etat">
+      <span class="etiquette">A3 · Téléphone : dans le tiroir de navigation</span>
+      <div style="display:flex;gap:18px;flex-wrap:wrap">
+        <div class="tel">
+          <div class="haut">☰</div><div class="bloc"></div><div class="bloc"></div><div class="bloc"></div>
+          <div class="voile"></div>
+          <div class="tiroir">
+            <div class="modes"><i>Utiliser</i><i>Construire</i><i class="on">Pages</i></div>
+            <div class="nav"><div class="item on">Mes pages</div><div class="item">Modèles</div><div class="item">Connecter un assistant IA</div></div>
+            <div class="idee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Une idée ?</div>
+            <div class="compte"><b>Mon compte</b></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Rien n'est ajouté à l'écran du téléphone : l'entrée vit dans le tiroir existant. La fenêtre s'ouvre en feuille en bas d'écran (comme dans la maquette précédente).</p>
+    </div>
+
+    <div class="etat">
+      <span class="etiquette">A4 · Vitrine (sans compte)</span>
+      <div class="regles">
+        <h3>Pas de rail : un lien dans le menu</h3>
+        <ul>
+          <li>« Une question ? » à côté de « Se connecter », qui ouvre la même fenêtre avec un champ e-mail facultatif.</li>
+          <li>Route ouverte : mêmes défenses que la demande d'accès (champ piège, 3 par adresse sur 24 h, 30 par heure au total).</li>
+          <li>Alternative sans code : renvoyer vers la page Contact existante. Moins bien : on quitte la vitrine.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="questions">
+    <h2>À trancher avant de coder</h2>
+    <ol>
+      <li><b>L'adresse de réponse de l'e-mail J+3.</b> On ne peut pas y mettre ta boîte de notifications : c'est ton adresse personnelle, elle serait visible de chaque utilisateur (et le dépôt est public). Proposé : <code>retours@getgents.ai</code>, une redirection vers ta boîte à créer chez ton fournisseur de domaine — je ne peux pas vérifier d'ici que Squarespace ou ton hébergeur de messagerie le permet. Sinon : CEO@getgents.ai, à condition de la lire.</li>
+      <li><b>La signature.</b> « L'éditeur de Getgents Pages » respecte l'anonymat voulu (ton nom n'apparaît nulle part). Un prénom seul rendrait l'e-mail plus humain, et donc plus de réponses ; c'est toi qui choisis ce que tu dévoiles.</li>
+      <li><b>Les comptes déjà inscrits</b> (jusqu'à 50) : leur envoyer l'e-mail une fois au déploiement, ou seulement aux nouveaux ? Recommandé : les rattraper — ce sont tes premiers utilisateurs, les plus utiles à entendre.</li>
+      <li><b>Garder en base les messages de l'entrée du rail ?</b> Recommandé oui (petite table, comme <code>demandes_acces</code>) : un e-mail en échec ne perd pas l'idée. Les réponses à l'e-mail J+3, elles, ne passent pas par Getgents.</li>
+    </ol>
+  </div>
+</div>
+</body>
+</html>

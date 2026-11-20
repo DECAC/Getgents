@@ -23,6 +23,13 @@ describe("vitrine Getgents Pages", () => {
     expect(source).toMatch(/seulement si votre lecteur accepte/);
   });
 
+  // 19/11 : une ouverture est anonyme, et la fenêtre « Partager vos données ? »
+  // a disparu (la lecture se joint à une réponse). La vitrine les promettait encore.
+  it("ne promet ni de savoir QUI a ouvert, ni un partage de lecture hors réponse", () => {
+    expect(source).not.toMatch(/vous voyez quand elle/i);
+    expect(source).not.toMatch(/a partagé sa lecture/i);
+  });
+
   it("affiche les plafonds réels de l'offre, pas des chiffres recopiés", () => {
     expect(source).toContain("PLAFONDS_PAGES.pages");
     expect(source).toContain("PLAFONDS_PAGES.liensActifs");

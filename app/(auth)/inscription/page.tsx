@@ -10,6 +10,6 @@ export const dynamic = "force-dynamic";
 
 export default async function InscriptionPage() {
   const etat = await etatInscriptions();
-  if (etat.genre === "ouvertes") return <FormulaireInscription restantes={etat.restantes} />;
+  if (etat.genre === "ouvertes") return <FormulaireInscription />;
   return <AccesRestreint complet={etat.genre === "completes"} />;
 }
