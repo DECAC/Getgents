@@ -8,6 +8,7 @@ import Consommation from "@/components/compte/Consommation";
 import Identifiants from "@/components/compte/Identifiants";
 import ZoneSensible from "@/components/compte/ZoneSensible";
 import VotreAcces from "@/components/compte/VotreAcces";
+import NousContacter from "@/components/compte/NousContacter";
 import { offreDe, usageDuCompte } from "@/lib/server/offre";
 import { plafondsDe } from "@/lib/offre";
 import styles from "./compte.module.css";
@@ -140,6 +141,7 @@ export default async function ComptePage() {
           <h1 className={styles.titre}>Mon compte</h1>
           <Identifiants email={user.confirmedEmail} nomAffiche={user.nomAffiche} />
           <VotreAcces plafonds={plafonds} usage={usage} />
+          <NousContacter email={user.confirmedEmail} />
           <ZoneSensible email={user.confirmedEmail} />
           <p className={styles.retour}>
             <Link href="/pages">← Revenir à mes pages</Link>
@@ -184,6 +186,8 @@ export default async function ComptePage() {
             <Link href="/pages">la rubrique Pages</Link>.
           </p>
         </section>
+
+        <NousContacter email={user.confirmedEmail} />
 
         <ZoneSensible email={user.confirmedEmail} />
 

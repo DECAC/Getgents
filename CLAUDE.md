@@ -54,7 +54,11 @@ un test (`__tests__/legal.test.ts`) l'interdit.
 
 Le proxy sortant bloque `*.supabase.co`, `getgents.ai`, `challenges.cloudflare.com`
 et les sites des catégoriseurs. `openrouter.ai` et `api.github.com` passent.
-Pas de démon Docker. **Conséquence : aucun salon collaboratif ni aucune page
+Pas de démon Docker. **Le conteneur fournit `NEXT_PUBLIC_SUPABASE_URL` et
+`SUPABASE_SERVICE_ROLE_KEY`** (20/11) : une ANCIENNE clé, refusée
+(« Legacy API keys are disabled ») — `/api/pages` répond 500 au lieu de
+passer en mémoire locale. Lancer le serveur local sans elles :
+`env -u NEXT_PUBLIC_SUPABASE_URL -u SUPABASE_SERVICE_ROLE_KEY npx next dev`. **Conséquence : aucun salon collaboratif ni aucune page
 en production ne peut être exercé depuis ici.** Des identifiants n'y
 changeraient rien — c'est le réseau, pas l'accès. La boucle qui fonctionne est
 l'utilisateur qui joue le scénario et colle les journaux Vercel.
@@ -884,6 +888,17 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   rendre fictif → relecture), jamais en libre-service : les vraies pages
   portent clients et prix, et une page publique de code arbitraire fait de
   l'éditeur un hébergeur à modérer (avis d'un juriste avant).
+- **« Nous contacter » dans Mon compte** (20/11 ; `NousContacter`,
+  `lib/contact.ts`, `POST /api/contact`) : une phrase, un champ, « Envoyer »
+  — PAS de choix « idée / question » (retiré à la demande de l'éditeur).
+  Préféré à une tirette sur le bord de l'écran ; l'e-mail à J+3 et l'entrée du
+  rail restent en MAQUETTE (`mockups/feedback/`). E-mail vers
+  `ADRESSE_NOTIFICATIONS_EDITEUR`, « Répondre » = l'adresse du compte. RIEN
+  en base (aucune migration) : un échec Brevo est dit et le texte reste dans
+  le champ. Plafond de 5 par heure EN MÉMOIRE de l'instance (approximatif,
+  voulu). Vérifié au navigateur sur une page d'essai (Mon compte exige
+  Supabase) : échec réel sans Brevo, succès simulé, téléphone. PAS en
+  production.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
