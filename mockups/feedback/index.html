@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — tirette « Une idée ? »</title>
+<style>
+  :root{
+    --ink:#2a1f19;--muted:#73665f;--faint:#a2958f;--bg:#fbf3ed;--card:#fffdf9;
+    --line:#eadbd3;--line-soft:#f3e9e3;--sage:#e65d76;--sage-700:#c73758;--sage-tint:#ffdee2;
+    --gold:#dca331;--gold-tint:#fde4bb;--success:#57a45b;--success-tint:#d4f1d4;--brun:#8a6420;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#efe4dc;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
+  .planche{max-width:1500px;margin:0 auto;padding:32px 24px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sous{color:var(--muted);margin:0 0 28px;font-size:14px}
+  .grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}
+  .etat{display:flex;flex-direction:column;gap:10px}
+  .etiquette{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brun)}
+  .note{font-size:13px;color:var(--muted);line-height:1.45;margin:0}
+
+  /* Écran d'application simulé */
+  .ecran{position:relative;height:440px;border-radius:14px;overflow:hidden;background:var(--bg);
+    border:1px solid var(--line);box-shadow:0 10px 30px rgba(42,31,25,.08);display:flex}
+  .rail{width:150px;background:#fffdf9;border-right:1px solid var(--line);padding:14px 10px;flex:none}
+  .rail i{display:block;height:10px;border-radius:5px;background:var(--line-soft);margin:10px 4px}
+  .rail i.actif{background:var(--sage-tint)}
+  .contenu{flex:1;padding:22px 26px}
+  .contenu b{display:block;font-size:17px;margin-bottom:14px}
+  .cartes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .cartes span{height:110px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+  .voile{position:absolute;inset:0;background:rgba(42,31,25,.28)}
+
+  /* La tirette */
+  .tirette{position:absolute;right:0;top:50%;transform:translateY(-50%) rotate(180deg);white-space:nowrap;
+    writing-mode:vertical-rl;
+    background:var(--ink);color:#fff;border:0;border-radius:0 10px 10px 0;
+    padding:14px 8px;font:600 13px/1 system-ui,sans-serif;letter-spacing:.02em;
+    display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:-2px 4px 14px rgba(42,31,25,.18)}
+  .tirette .pt{rotate:90deg;font-size:14px}
+  .tirette.survol{padding-bottom:14px;padding-top:14px;padding-left:12px;background:var(--sage-700)}
+
+  /* La fenêtre */
+  .fenetre{position:absolute;right:18px;top:50%;transform:translateY(-50%);width:340px;
+    background:var(--card);border-radius:16px;border:1px solid var(--line);
+    box-shadow:0 18px 50px rgba(42,31,25,.22);padding:18px 18px 16px}
+  .fenetre header{display:flex;justify-content:space-between;align-items:start;margin-bottom:12px}
+  .fenetre h2{font-size:16px;margin:0}
+  .fenetre header small{display:block;color:var(--muted);font-size:12.5px;margin-top:3px;line-height:1.35}
+  .x{border:0;background:var(--line-soft);width:28px;height:28px;border-radius:50%;font-size:14px;color:var(--muted);flex:none}
+  .choix{display:flex;gap:6px;margin-bottom:10px}
+  .choix span{flex:1;white-space:nowrap;text-align:center;border:1px solid var(--line);border-radius:999px;padding:7px 6px;font-size:13px;font-weight:600;color:var(--muted);background:#fff}
+  .choix span.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  textarea{width:100%;height:96px;border:1px solid var(--line);border-radius:10px;padding:10px;
+    font:14px/1.4 system-ui,sans-serif;color:var(--ink);resize:none;background:#fff}
+  .champ{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:13.5px;color:var(--faint);background:#fff;margin-top:8px}
+  .pied{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+  .pied small{color:var(--faint);font-size:11.5px;max-width:170px;line-height:1.3}
+  .envoyer{background:var(--sage);color:#fff;border:0;border-radius:999px;padding:9px 18px;font-weight:700;font-size:14px}
+  .compteur{text-align:right;font-size:11px;color:var(--faint);margin-top:3px}
+
+  .merci{text-align:center;padding:14px 6px 6px}
+  .merci .ok{width:44px;height:44px;border-radius:50%;background:var(--success-tint);color:var(--success);
+    display:grid;place-items:center;font-size:22px;margin:0 auto 10px}
+  .merci h2{margin:0 0 6px;font-size:16px}
+  .merci p{margin:0 0 14px;color:var(--muted);font-size:13.5px;line-height:1.45}
+  .lien{background:none;border:0;color:var(--sage-700);font-weight:600;font-size:13.5px;text-decoration:underline}
+
+  /* Téléphone */
+  .tel{width:300px;height:560px;border-radius:30px;border:8px solid #2a1f19;background:var(--bg);position:relative;overflow:hidden;margin:0 auto}
+  .tel .haut{height:46px;border-bottom:1px solid var(--line);background:var(--card)}
+  .tel .bloc{margin:14px;height:90px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+  .tel .tirette{padding:10px 6px;font-size:12px}
+  .feuille{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:18px 18px 0 0;padding:16px 14px 18px;box-shadow:0 -10px 30px rgba(42,31,25,.18)}
+  .feuille .poignee{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
+
+  /* E-mail reçu */
+  .mail{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;font-size:14px;line-height:1.5;box-shadow:0 10px 30px rgba(42,31,25,.06)}
+  .mail .entete{font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line-soft);padding-bottom:10px;margin-bottom:12px}
+  .mail .entete b{color:var(--ink)}
+  .mail blockquote{margin:10px 0;padding:10px 14px;background:var(--bg);border-left:3px solid var(--sage);border-radius:6px}
+  .mail table{font-size:12.5px;color:var(--muted);border-collapse:collapse}
+  .mail td{padding:2px 12px 2px 0}
+
+  .questions{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin-top:30px}
+  .questions h2{font-size:16px;margin:0 0 10px}
+  .questions li{margin:6px 0;font-size:14px;line-height:1.45}
+  @media (max-width:900px){.grille{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="planche">
+  <h1>Tirette « Une idée ? » — maquette</h1>
+  <p class="sous">Une languette fixée au bord droit, sur l'application et la vitrine. Elle ouvre une fenêtre courte ; le message part par e-mail vers l'adresse de notifications de l'éditeur.</p>
+
+  <div class="grille">
+    <!-- 1. Repos -->
+    <div class="etat">
+      <span class="etiquette">1 · Au repos</span>
+      <div class="ecran">
+        <div class="rail"><i class="actif"></i><i></i><i></i></div>
+        <div class="contenu"><b>Mes pages</b><div class="cartes"><span></span><span></span><span></span></div></div>
+        <div class="tirette" role="button"><span class="pt">✦</span>Une idée ? Une question ?</div>
+      </div>
+      <p class="note">Sombre pour se détacher du fond crème sans concurrencer le bouton corail de la page. Mi-hauteur : le bas à droite est déjà pris par « Poser une question » sur les pages partagées.</p>
+    </div>
+
+    <!-- 2. Ouverte -->
+    <div class="etat">
+      <span class="etiquette">2 · Ouverte</span>
+      <div class="ecran">
+        <div class="rail"><i class="actif"></i><i></i><i></i></div>
+        <div class="contenu"><b>Mes pages</b><div class="cartes"><span></span><span></span><span></span></div></div>
+        <div class="voile"></div>
+        <div class="fenetre">
+          <header>
+            <div><h2>Écrire à Getgents</h2><small>Une question, une idée d'amélioration : vous écrivez à l'éditeur, qui lit tout.</small></div>
+            <button class="x">✕</button>
+          </header>
+          <div class="choix"><span class="on">Une idée</span><span>Une question</span></div>
+          <textarea>Pouvoir dupliquer une page pour l'envoyer à un autre client avec un prix différent.</textarea>
+          <div class="compteur">86 / 2 000</div>
+          <div class="pied">
+            <small>Réponse à l'adresse de votre compte.</small>
+            <button class="envoyer">Envoyer</button>
+          </div>
+        </div>
+      </div>
+      <p class="note">Deux choix seulement, comme demandé. Connecté : aucune adresse à taper, la réponse part à celle du compte. La page courante est jointe sans le dire à l'écran (voir l'e-mail).</p>
+    </div>
+
+    <!-- 3. Envoyée -->
+    <div class="etat">
+      <span class="etiquette">3 · Envoyée</span>
+      <div class="ecran">
+        <div class="rail"><i class="actif"></i><i></i><i></i></div>
+        <div class="contenu"><b>Mes pages</b><div class="cartes"><span></span><span></span><span></span></div></div>
+        <div class="voile"></div>
+        <div class="fenetre">
+          <div class="merci">
+            <div class="ok">✓</div>
+            <h2>Merci, c'est envoyé</h2>
+            <p>L'éditeur vous répond par e-mail s'il a une question.</p>
+            <button class="lien">Écrire autre chose</button>
+          </div>
+        </div>
+      </div>
+      <p class="note">Pas de promesse de délai : il n'y a qu'une personne derrière. La fenêtre se ferme seule au bout de 4 s.</p>
+    </div>
+
+    <!-- 4. Vitrine, visiteur non connecté -->
+    <div class="etat">
+      <span class="etiquette">4 · Vitrine (visiteur sans compte)</span>
+      <div class="ecran">
+        <div class="contenu" style="padding:26px 34px"><b style="font-size:26px;max-width:340px;line-height:1.15">Ce que vous créez avec l'IA, envoyé à la bonne personne…</b></div>
+        <div class="voile"></div>
+        <div class="fenetre">
+          <header>
+            <div><h2>Écrire à Getgents</h2><small>Une question, une idée d'amélioration : vous écrivez à l'éditeur, qui lit tout.</small></div>
+            <button class="x">✕</button>
+          </header>
+          <div class="choix"><span>Une idée</span><span class="on">Une question</span></div>
+          <textarea>Est-ce que mon client doit créer un compte pour lire la page ?</textarea>
+          <div class="champ">Votre e-mail, pour recevoir la réponse</div>
+          <div class="pied">
+            <small>Sans e-mail, pas de réponse possible.</small>
+            <button class="envoyer">Envoyer</button>
+          </div>
+        </div>
+      </div>
+      <p class="note">Seule différence : un champ e-mail, facultatif. Route ouverte → mêmes défenses que la demande d'accès (champ piège, plafonds).</p>
+    </div>
+
+    <!-- 5. Téléphone -->
+    <div class="etat">
+      <span class="etiquette">5 · Téléphone</span>
+      <div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap">
+        <div class="tel" style="width:240px;height:460px">
+          <div class="haut"></div><div class="bloc"></div><div class="bloc"></div><div class="bloc"></div>
+          <div class="tirette" role="button"><span class="pt">✦</span>Une idée ?</div>
+        </div>
+        <div class="tel" style="width:240px;height:460px">
+          <div class="haut"></div><div class="bloc"></div><div class="bloc"></div>
+          <div class="voile"></div>
+          <div class="feuille">
+            <div class="poignee"></div>
+            <div class="choix"><span class="on">Une idée</span><span>Une question</span></div>
+            <textarea style="height:80px">Le partage WhatsApp est top.</textarea>
+            <div class="pied" style="justify-content:flex-end"><button class="envoyer">Envoyer</button></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Libellé raccourci (« Une idée ? »). La fenêtre devient une feuille en bas d'écran : le clavier ne cache pas « Envoyer ».</p>
+    </div>
+
+    <!-- 6. E-mail reçu -->
+    <div class="etat">
+      <span class="etiquette">6 · Dans votre boîte de notifications</span>
+      <div class="mail">
+        <div class="entete">
+          De : <b>Getgents</b> · Répondre à : <b>sophie@exemple.fr</b><br>
+          Objet : <b>[Getgents · Idée] Pouvoir dupliquer une page pour l'envoyer…</b>
+        </div>
+        <blockquote>Pouvoir dupliquer une page pour l'envoyer à un autre client avec un prix différent.</blockquote>
+        <table>
+          <tr><td>Type</td><td>Idée d'amélioration</td></tr>
+          <tr><td>Compte</td><td>sophie@exemple.fr · offre Pages · 4 pages</td></tr>
+          <tr><td>Écrit depuis</td><td>/pages</td></tr>
+          <tr><td>Appareil</td><td>ordinateur · Chrome</td></tr>
+        </table>
+      </div>
+      <p class="note">Envoyé à <code>ADRESSE_NOTIFICATIONS_EDITEUR</code>, comme les demandes d'accès. « Répondre » écrit directement à l'utilisateur. Objet préfixé pour filtrer dans la boîte.</p>
+    </div>
+  </div>
+
+  <div class="questions">
+    <h2>À trancher avant de coder</h2>
+    <ol>
+      <li><b>Où l'afficher ?</b> Recommandé : l'application (connecté) et la vitrine. <b>Jamais sur la page qu'un destinataire lit</b> : c'est le document de l'auteur, pas Getgents, et le lecteur n'est pas votre utilisateur.</li>
+      <li><b>Garder les messages en base ?</b> Recommandé oui (petite table, comme <code>demandes_acces</code>) : un e-mail perdu ne perd pas l'idée, et on pourra les relire en liste. Coût : une migration à passer avant le déploiement.</li>
+      <li><b>Libellé :</b> « Une idée ? Une question ? » (proposé) ou « Feedback » (plus court, mais anglais — l'interface est en français partout).</li>
+    </ol>
+  </div>
+</div>
+</body>
+</html>

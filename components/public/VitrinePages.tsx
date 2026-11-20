@@ -52,7 +52,7 @@ export function VitrinePages({ inscriptions = { genre: "fermees" } }: { inscript
             <p className={styles.lede}>
               Une proposition pour un client, un compte rendu pour votre équipe, un programme pour
               vos proches : elle le consulte sans compte, pose ses questions à un assistant qui
-              répond à partir de la page, et vous voyez quand elle l&apos;a ouvert.
+              répond à partir de la page, puis vous donne sa réponse d&apos;un clic.
             </p>
             <div className={styles.actions}>
               <Link className={`${styles.btn} ${styles.primaire}`} href="/inscription">
@@ -104,7 +104,7 @@ export function VitrinePages({ inscriptions = { genre: "fermees" } }: { inscript
             </div>
             <div className={styles.vu}>
               <b>Ouverte aujourd&apos;hui · 3 questions</b>
-              <span>Marie a partagé sa lecture : lue jusqu&apos;au bout</span>
+              <span>Marie a répondu « Je souhaite donner suite », lecture jointe</span>
             </div>
           </div>
         </section>
