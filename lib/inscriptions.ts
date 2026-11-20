@@ -104,4 +104,4 @@ export function validerInscription(d: DemandeInscription, emailValide: RegExp, v
 }
 
 export const MESSAGE_INSCRIPTIONS_COMPLETES =
-  "Les places de l'essai sont toutes prises pour le moment. Laissez votre adresse : nous vous écrirons dès qu'une place se libère.";
+  "Les inscriptions sont momentanément fermées. Laissez votre adresse : nous vous écrirons dès qu'elles rouvrent.";

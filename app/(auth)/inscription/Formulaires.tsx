@@ -23,7 +23,7 @@ export function AccesRestreint({ complet = false }: { complet?: boolean }) {
 
   return (
     <AuthForm
-      titre={complet ? "Les places de l'essai sont prises" : TITRE_ACCES_RESTREINT}
+      titre={complet ? "Inscriptions momentanément fermées" : TITRE_ACCES_RESTREINT}
       lede={complet ? MESSAGE_INSCRIPTIONS_COMPLETES : <>{MESSAGE_ACCES_RESTREINT} {INVITATION_DEMANDE_ACCES}</>}
       bouton="Envoyer ma demande"
       succes={(m) => m}
@@ -73,7 +73,7 @@ export function AccesRestreint({ complet = false }: { complet?: boolean }) {
  * (`/api/inscription`), jamais par `supabase.auth.signUp` depuis le
  * navigateur — Supabase garde ses inscriptions publiques fermées.
  */
-export function FormulaireInscription({ restantes }: { restantes: number }) {
+export function FormulaireInscription() {
   const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -83,7 +83,7 @@ export function FormulaireInscription({ restantes }: { restantes: number }) {
   return (
     <AuthForm
       titre="Créer votre compte"
-      lede={`Getgents Pages est gratuit pendant l'essai. ${restantes > 1 ? `Il reste ${restantes} places.` : "Il reste une place."}`}
+      lede="Getgents Pages est gratuit pendant l'essai."
       bouton="Créer mon compte"
       succes={(m) => m}
       onSubmit={async () => {
