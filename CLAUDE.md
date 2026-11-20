@@ -869,6 +869,20 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   accord). Vérifié au navigateur (mémoire locale) : 3 réponses dont 2 de
   groupe, filtres, CSV téléchargé, téléphone sans débordement. **Déployé,
   essai réel CONCLUANT (19/11).**
+- **Aperçu du lien (WhatsApp, LinkedIn, Slack…)** (20/11 ; `lib/apercuLien.ts`,
+  `lib/server/apercuLien.ts`, `app/partage/[jeton]/opengraph-image.tsx`) :
+  `/partage/<jeton>` n'avait AUCUNE balise Open Graph — l'aperçu reprenait la
+  description générique du site. Désormais : titre de la page (« · pour
+  Marie »), description = `<meta name="description">` de la page, sinon son
+  CHAPEAU (paragraphe avant le premier `<h2>` : plus loin, c'est une note),
+  sinon une phrase générique ; vignette 1200×630 avec le bouton de réponse.
+  Ce que montre l'aperçu, tout le groupe le voit et le service le met en
+  cache : destinataire en adresse e-mail JAMAIS affiché, extrait refusé s'il
+  contient une coordonnée, page PROTÉGÉE = titre seul (déjà visible sur
+  l'écran du code), protection illisible = supposée active. Lien expiré :
+  carte générique. WhatsApp garde l'aperçu en cache PAR ADRESSE : essayer
+  avec un lien neuf. Payé en passant : le ✦ des vignettes s'affichait en
+  carré vide (absent de la police de `next/og`), remplacé par un SVG.
 - **Rubrique « Modèles »** (19/11, maquette validée ; « Exemples » renommé
   par l'éditeur — le mot dit qu'on part de la page pour en faire la sienne ;
   `GalerieModeles`, `/pages/modeles`, `modelesEssayes`, `modelesASuggerer`).

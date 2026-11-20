@@ -11,6 +11,7 @@ import { suggestionsDeLaPage } from "@/lib/server/suggestionsPages";
 import { engagementDeLaPage, invitesAyantRepondu, reponseDuLien } from "@/lib/server/engagementPages";
 import { groupeDuLien } from "@/lib/server/groupesPages";
 import { masquerEmail, nomCookie } from "@/lib/accesCode";
+import { apercuPourJeton, baseUrl } from "@/lib/server/apercuLien";
 import styles from "./partage.module.css";
 
 /**
@@ -24,10 +25,36 @@ import styles from "./partage.module.css";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-  referrer: "no-referrer",
-};
+/**
+ * Aperçu du lien (WhatsApp, LinkedIn, Slack…) : titre et description de LA
+ * page, vignette `opengraph-image.tsx`. Sans ces balises, l'aperçu reprenait
+ * la description générique du site. Page protégée : titre seul ; lien
+ * expiré ou révoqué : rien de la page (`lib/apercuLien.ts`).
+ */
+export async function generateMetadata(props: { params: Promise<{ jeton: string }> }): Promise<Metadata> {
+  const { jeton } = await props.params;
+  const base: Metadata = {
+    metadataBase: new URL(baseUrl()),
+    robots: { index: false, follow: false },
+    referrer: "no-referrer",
+  };
+  const apercu = await apercuPourJeton(jeton);
+  if (!apercu)
+    return {
+      ...base,
+      title: "Lien privé · Getgents Pages",
+      description: "Ce lien n'est plus valable : demandez-en un nouveau à la personne qui vous l'a envoyé.",
+      openGraph: { title: "Lien privé · Getgents Pages", description: "Ce lien n'est plus valable.", siteName: "Getgents Pages", type: "website", locale: "fr_FR" },
+    };
+  const titre = apercu.pour ? `${apercu.titre} · pour ${apercu.pour}` : apercu.titre;
+  return {
+    ...base,
+    title: `${apercu.titre} · Getgents Pages`,
+    description: apercu.description,
+    openGraph: { title: titre, description: apercu.description, siteName: "Getgents Pages", type: "website", locale: "fr_FR" },
+    twitter: { card: "summary_large_image", title: titre, description: apercu.description },
+  };
+}
 
 export default async function PagePartage(props: { params: Promise<{ jeton: string }> }) {
   const params = await props.params;

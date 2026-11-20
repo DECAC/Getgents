@@ -83,7 +83,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
               color: CARTE,
             }}
           >
-            ✦
+            <svg width="30" height="30" viewBox="0 0 24 24"><path d="M12 1.5 L14.6 9.4 L22.5 12 L14.6 14.6 L12 22.5 L9.4 14.6 L1.5 12 L9.4 9.4 Z" fill={CARTE} /></svg>
           </div>
           <div style={{ fontSize: 26, color: ESTOMPE, letterSpacing: 1 }}>GETGENTS</div>
         </div>
