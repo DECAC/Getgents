@@ -1414,7 +1414,7 @@ compteur en échec = FERMÉ. 10 par heure au plus, champ piège. E-mail de
 confirmation par BREVO (pas Supabase) vers `/auth/confirm?type=signup` →
 `/accueil` → `/pages` ; e-mail non parti = compte retiré. Adresse déjà
 inscrite : même écran, e-mail « vous avez déjà un compte » à elle seule
-(pas d'énumération). L'éditeur reçoit un e-mail par compte. **Essai réel CONCLUANT (18/11)** : `generateLink` passe bien avec les
+(pas d'énumération). L'éditeur reçoit un e-mail par compte. **Aucun décompte de places à l'écran (20/11, demande de l'éditeur)** : ni « places limitées » sur la vitrine, ni « il en reste N » (vitrine, /inscription) ; plafond atteint = « inscriptions momentanément fermées ». Le plafond reste appliqué côté serveur ; le nombre restant ne figure plus que dans l'e-mail à l'éditeur. **Essai réel CONCLUANT (18/11)** : `generateLink` passe bien avec les
 inscriptions Supabase fermées ; lien de l'e-mail → Mes pages. NON vérifié :
 une adresse inscrite NON confirmée (reçoit « déjà un compte » sans pouvoir se
 connecter). Deux inscriptions simultanées à la 50ᵉ place peuvent faire 51.
