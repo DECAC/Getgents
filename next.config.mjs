@@ -43,6 +43,9 @@ const nextConfig = {
   // `/_next/image`, visé par un avis de sécurité (déni de service) qui ne
   // touche QUE l'auto-hébergement — préalable à la sortie de Vercel.
   images: { unoptimized: true },
+  // Polices de la vignette d'aperçu des liens, lues par `readFile` : à
+  // embarquer explicitement dans la fonction, le traçage ne les voit pas.
+  outputFileTracingIncludes: { "/partage/[jeton]/opengraph-image": ["./lib/og/polices/*.ttf"] },
   async rewrites() {
     if (!DOMAINE_CONTENU) return [];
     return {

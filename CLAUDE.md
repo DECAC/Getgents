@@ -887,6 +887,16 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   carte générique. WhatsApp garde l'aperçu en cache PAR ADRESSE : essayer
   avec un lien neuf. Payé en passant : le ✦ des vignettes s'affichait en
   carré vide (absent de la police de `next/og`), remplacé par un SVG.
+  **Vignette « pages empilées »** (20/11, style B choisi par l'éditeur parmi
+  trois ; `lib/vignetteLien.ts`) : couleur tirée du TITRE (4 palettes),
+  feuilles inclinées, confettis, étiquette « psst, c'est privé ! » (« protégé
+  par code », « lien expiré »). Police Bricolage Grotesque (OFL) dans
+  `lib/og/polices`, lue par `readFile` et embarquée par
+  `outputFileTracingIncludes` (vérifié dans le `.nft.json` du build) ; sans
+  elle, police par défaut et journal `vignette_sans_polices`. Une police
+  manuscrite écartée : pas de « é ». L'aperçu par CAPTURE réelle de la page
+  a été discuté et NON retenu (Chromium dans une fonction, contenu réel
+  montré à tout le fil et caché par Meta).
 - **Rubrique « Modèles »** (19/11, maquette validée ; « Exemples » renommé
   par l'éditeur — le mot dit qu'on part de la page pour en faire la sienne ;
   `GalerieModeles`, `/pages/modeles`, `modelesEssayes`, `modelesASuggerer`).

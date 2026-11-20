@@ -41,3 +41,20 @@ describe("aperçu d'un lien de page", () => {
     expect(apercuDuLien({ ...base, contenu: "", assistant: true }).description).toContain("assistant");
   });
 });
+
+import { enteteVignette, paletteDuTitre, tailleTitre } from "@/lib/vignetteLien";
+
+describe("vignette du lien", () => {
+  it("couleur stable pour un même titre", () => {
+    expect(paletteDuTitre("Devis")).toBe(paletteDuTitre("Devis"));
+  });
+  it("titre long plus petit", () => {
+    expect(tailleTitre("x".repeat(80))).toBeLessThan(tailleTitre("Court"));
+  });
+  it("en-tête raccourci, sans destinataire ou lien expiré", () => {
+    expect(enteteVignette("Famille Martin", false)).toBe("UNE PAGE POUR FAMILLE MARTIN");
+    expect(enteteVignette(null, false)).toBe("UNE PAGE RIEN QUE POUR VOUS");
+    expect(enteteVignette("Marie", true)).toBe("UNE PAGE GETGENTS");
+    expect(enteteVignette("Les quatre familles du week-end", false).length).toBeLessThan(45);
+  });
+});
