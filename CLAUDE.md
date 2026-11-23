@@ -1257,6 +1257,9 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (Settings → Functions, défaut `iad1` Washington) contre celle de Supabase
   (Settings → General) — un océan entre les deux coûte ~80-100 ms par
   requête, et une fiche en enchaîne une dizaine.
+  **Réglé (23/11)** : Supabase est à FRANCFORT ; `vercel.json` fixe
+  `"regions": ["fra1"]` (Francfort), qui l'emporte sur le réglage du tableau
+  de bord. Ne pas le retirer, et le changer si Supabase déménage.
 
 ## Pièges déjà payés
 
