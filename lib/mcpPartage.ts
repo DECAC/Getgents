@@ -15,6 +15,7 @@
 import { PlafondAtteint } from "./offre";
 import { donneesPersonnelles, type DonneesPersonnelles } from "./donneesPersonnelles";
 import { modeleMailTextes, type Langue } from "./langueLecteur";
+import { fichiersReferences } from "./fichiersPage";
 
 export const FORMATS_ARTEFACT = ["html", "markdown", "svg", "react", "texte"] as const;
 export type FormatArtefact = (typeof FORMATS_ARTEFACT)[number];
@@ -57,6 +58,8 @@ export interface Fidelite {
   dependClaude: boolean;
   /** Adresses e-mail et téléphones écrits dans la page (repérage simple). */
   donnees: DonneesPersonnelles;
+  /** Fichiers locaux (musique, photo…) que la page appelle par leur nom : à joindre depuis la fiche. */
+  fichiers: string[];
   debut: string;
   fin: string;
 }
@@ -87,6 +90,7 @@ export function controleFidelite(contenu: string, format: FormatArtefact): Fidel
     abreviationSuspecte: ABREVIATIONS.some((re) => re.test(contenu)),
     dependClaude: APPELS_CLAUDE.some((re) => re.test(contenu)),
     donnees: donneesPersonnelles(contenu),
+    fichiers: fichiersReferences(contenu),
     debut: net.slice(0, 80),
     fin: net.slice(-80),
   };
@@ -241,6 +245,9 @@ export const DESCRIPTION_OUTIL =
   "ce que la page contient, données personnelles comprises (agenda, e-mails, contacts) ; la réponse signale " +
   "les coordonnées repérées. Le stockage des artefacts (window.storage) fonctionne chez Getgents : les " +
   "données partagées (`shared`, des votes par exemple) sont communes à tous les lecteurs de la page. " +
+  "Les fichiers (musique, photo, vidéo, PDF) ne passent pas par `contenu` : la page les appelle par leur nom " +
+  "de fichier (src=\"musique.mp3\"), l'utilisateur les ajoute ensuite dans la fiche de la page, et l'outil " +
+  "liste les noms repérés. " +
   "In English: shares an artifact or canvas privately with one recipient (client, team, group), who can reply " +
   "and ask an assistant about the page.";
 
@@ -387,6 +394,12 @@ const ligneDonnees = (f: Fidelite) => {
     : "";
 };
 
+/** Médias appelés par leur nom : ils ne passent pas par `contenu`, l'utilisateur les joint dans Getgents. */
+const ligneFichiers = (f: Fidelite) =>
+  f.fichiers.length
+    ? `Fichiers appelés par la page : ${f.fichiers.slice(0, 8).join(", ")}${f.fichiers.length > 8 ? "…" : ""}. Ils ne voyagent pas avec le contenu : l'utilisateur les ajoute dans la fiche de la page (Getgents, Mes pages, bloc « Fichiers de la page »), sous ces noms ; d'ici là, ces emplacements restent vides chez le destinataire.`
+    : "";
+
 const ligneFidelite = (f: Fidelite) => {
   const alertes = alertesFidelite(f);
   return alertes.length
@@ -420,6 +433,7 @@ function texteResultat(
       : "Assistant du document non activé (l'utilisateur peut l'activer sur la page, dans Getgents).",
     f ? ligneFidelite(f) : "",
     f ? ligneDonnees(f) : "",
+    f ? ligneFichiers(f) : "",
     "",
     "Donne à l'utilisateur le lien et le modèle de mail ci-dessus, et rappelle-lui que c'est à lui d'envoyer le mail.",
   ]
@@ -438,6 +452,7 @@ function texteSansDestinataire(f: Fidelite, fiche: string, p: { pageId: string; 
     `Reçu : ${f.caracteres} caractères, ${f.lignes} lignes.`,
     ligneFidelite(f),
     ligneDonnees(f),
+    ligneFichiers(f),
     "",
     "Donne à l'utilisateur l'adresse de la fiche. Aucun e-mail n'est parti.",
   ]
@@ -596,6 +611,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
                     `Page mise à jour : version ${maj.version}. Ses ${maj.liens} lien(s) actif(s) affichent désormais cette version ; la précédente est gardée et restaurable.`,
                     `Reçu : ${f.caracteres} caractères, ${f.lignes} lignes.`,
                     ligneFidelite(f),
+                    ligneFichiers(f),
                     "Aucun e-mail n'est parti : si l'utilisateur veut prévenir ses destinataires, c'est à lui de le faire.",
                   ]
                     .filter(Boolean)

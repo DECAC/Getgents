@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/server/session";
 import { contenuPourProprietaire } from "@/lib/server/pages";
 import { CSP_ARTEFACT, documentArtefact } from "@/lib/documentArtefact";
 import { versDomaineContenu } from "@/lib/server/domaineContenu";
+import { contenuAvecFichiers } from "@/lib/server/fichiersPages";
 
 /**
  * Aperçu d'une page pour son PROPRIÉTAIRE (fiche, vignettes de la liste).
@@ -27,7 +28,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
   if (ailleurs) return ailleurs;
   const page = await contenuPourProprietaire(auth.user.id, params.id).catch(() => null);
   if (!page) return new Response("Page introuvable.", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });
-  const html = documentArtefact(page.contenu, page.format, page.titre, (md) => marked.parse(md, { async: false }) as string);
+  const html = documentArtefact(await contenuAvecFichiers(page.id, page.contenu), page.format, page.titre, (md) => marked.parse(md, { async: false }) as string);
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
