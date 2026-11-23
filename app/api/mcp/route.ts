@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { enteteAuthentification, origineDeRequete, SCOPE_PARTAGE } from "@/lib/oauthMcp";
 import { verifierAcces } from "@/lib/server/oauthMcp";
-import { ENTETES_CORS, repondreMcp } from "@/lib/server/mcpTransport";
+import { corpsPublic } from "@/lib/mcpPartage";
+import { ENTETES_CORS, lireCorpsMcp, repondreMcp, repondreSansJeton } from "@/lib/server/mcpTransport";
 
 /**
  * Connecteur MCP de partage d'artefacts — PHASE 1 (OAuth).
  *
  * Adresse à déclarer dans Claude : `https://getgents.ai/api/mcp`, sans clé.
- * Sans jeton, la réponse 401 et son en-tête `WWW-Authenticate` envoient le
- * client vers les métadonnées (/.well-known/oauth-protected-resource), d'où
+ * Sans jeton, `initialize`, `tools/list` et `ping` répondent (découverte, 23/11 :
+ * annuaires) ; tout le reste — `tools/call` en tête — reçoit 401 et son en-tête
+ * `WWW-Authenticate`, qui envoient le client vers les métadonnées (/.well-known/oauth-protected-resource), d'où
  * il s'inscrit et fait consentir le commercial. Chaque partage est alors
  * rattaché à SON compte.
  */
@@ -33,8 +35,15 @@ function refus(origine: string, jetonPresent: boolean) {
 export async function POST(req: Request) {
   const origine = origineDeRequete(req.url, req.headers);
   const p = await porteur(req);
-  if (!p || !p.scope.split(" ").includes(SCOPE_PARTAGE)) return refus(origine, req.headers.has("authorization"));
-  return repondreMcp(req, origine, { userId: p.userId, clientId: p.clientId });
+  const lu = await lireCorpsMcp(req);
+  if ("reponse" in lu) return lu.reponse;
+  if (!p || !p.scope.split(" ").includes(SCOPE_PARTAGE)) {
+    // Découvrir sans se connecter (initialize, tools/list, ping) ; tout le reste exige le jeton.
+    // Un jeton PRÉSENT mais invalide reste refusé : le client doit le renouveler.
+    if (!req.headers.has("authorization") && corpsPublic(lu.corps)) return repondreSansJeton(lu.corps, origine, req.headers.get("user-agent"));
+    return refus(origine, req.headers.has("authorization"));
+  }
+  return repondreMcp(req, origine, { userId: p.userId, clientId: p.clientId }, lu.corps);
 }
 
 export async function GET(req: Request) {

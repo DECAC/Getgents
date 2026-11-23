@@ -1083,6 +1083,26 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   signé, relecture, adresses signées) n'a tourné NULLE PART — premier essai
   réel à surveiller (`getgents:fichiers`). Limite : un nom avec espace écrit
   tel quel dans la page n'est pas reconnu (`%20` l'est).
+- **mcptry et découverte SANS jeton** (23/11 ; l'annuaire mcptry, qui
+  recense le registre MCP officiel, a écrit à l'éditeur : Getgents Pages
+  792ᵉ/1837 « Communication », 58/100). Deux leviers pris : (1)
+  `initialize`, `tools/list` et `ping` (et les notifications) répondent SANS
+  jeton (`corpsPublic`, `lib/mcpPartage.ts`, LISTE BLANCHE ; `repondreSansJeton`,
+  contexte sans propriétaire dont chaque outil lève — rien ne peut s'écrire) ;
+  `tools/call`, un lot mixte, un jeton présent mais invalide, et `GET` restent
+  en 401 + `WWW-Authenticate`. Journal `getgents:mcp decouverte_sans_jeton`.
+  Vérifié (client OAuth rejoué en local : inscription, code, jeton, partage,
+  liste ; sans jeton 200 sur la découverte, 401 sur l'appel). **RISQUE NON
+  VÉRIFIÉ d'ici : Claude pourrait afficher « connecté » sans lancer OAuth avant
+  le premier `tools/call`** — après déploiement, déconnecter/reconnecter le
+  connecteur et partager une page ; si la connexion ne se déclenche plus,
+  RÉTABLIR le 401 partout (reprendre l'ancien `POST` de `app/api/mcp/route.ts`).
+  (2) icône dans `server.json` (`getgents-icone.png`, 1.0.1) ; PAS de lien
+  `repository` (le dépôt porte le nom de l'éditeur — un test le garde). La
+  republication au registre exige une NOUVELLE clé de preuve
+  (`MCP_REGISTRE_PREUVE`, voir `docs/annuaires.md`) : à faire sur demande.
+  Non fait : revendiquer la fiche (DNS ou fichier sur getgents.ai, +5 points
+  et alertes de panne) — attend les instructions de mcptry.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

@@ -460,6 +460,30 @@ function texteSansDestinataire(f: Fidelite, fiche: string, p: { pageId: string; 
     .join("\n");
 }
 
+/**
+ * Méthodes qu'un client peut appeler SANS jeton (23/11, demande de l'annuaire
+ * mcptry : voir ce que fait un serveur avant de s'y connecter ; la
+ * spécification MCP l'autorise). LISTE BLANCHE : une méthode inconnue reste
+ * derrière la connexion. `tools/call` n'y est jamais.
+ */
+const METHODES_PUBLIQUES = new Set(["initialize", "ping", "tools/list"]);
+
+/**
+ * Le corps (une requête ou un lot) ne contient-il que des méthodes publiques
+ * ou des notifications ? Un lot mixte, vide, ou illisible : non.
+ */
+export function corpsPublic(corps: unknown): boolean {
+  const messages = Array.isArray(corps) ? corps : [corps];
+  if (messages.length === 0) return false;
+  return messages.every((m) => {
+    if (!m || typeof m !== "object") return false;
+    const r = m as { method?: unknown; id?: unknown };
+    if (typeof r.method !== "string") return false;
+    if (r.id === undefined) return r.method.startsWith("notifications/");
+    return METHODES_PUBLIQUES.has(r.method);
+  });
+}
+
 /** Traite UN message JSON-RPC. Renvoie null pour une notification (pas de réponse due). */
 export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<ReponseRpc | null> {
   const r = (msg && typeof msg === "object" ? msg : {}) as Requete;
