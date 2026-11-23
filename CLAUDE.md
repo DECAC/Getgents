@@ -941,8 +941,15 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   complétées en anglais ; titre du serveur « Getgents Pages » (GetSite
   retiré). ChatGPT ÉCARTÉ : vérification d'identité au nom de publication.
   Ne JAMAIS citer le dépôt GitHub dans une fiche (il porte le nom de
-  l'éditeur). Vérifié au navigateur (ordinateur, téléphone) ; NON fait :
-  publication au registre et soumission à l'annuaire (côté éditeur).
+  l'éditeur). Vérifié au navigateur (ordinateur, téléphone). **PUBLIÉ au
+  registre MCP officiel (23/11) : `ai.getgents/pages` 1.0.0, statut
+  « active »**, depuis l'environnement de l'agent (`mcp-publisher` installé
+  par `go install github.com/modelcontextprotocol/registry/cmd/publisher@latest`
+  — les téléchargements de github.com sont bloqués, le proxy Go passe ; le
+  Mac de l'éditeur n'avait ni OpenSSL 3 ni Homebrew). Clé générée par Node,
+  clé privée DÉTRUITE après publication : pour publier une nouvelle version,
+  régénérer une paire et remplacer `MCP_REGISTRE_PREUVE`. NON fait :
+  soumission à l'annuaire de Claude (côté éditeur, compte payant).
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
@@ -1395,8 +1402,9 @@ production (13/11) avec le compte de l'éditeur.
 
 `MCP_REGISTRE_PREUVE` : la ligne PUBLIQUE `v=MCPv1; k=ed25519; p=…` qui
 prouve au registre MCP officiel la propriété de getgents.ai (procédure dans
-`docs/annuaires.md`). Pas un secret ; la clé PRIVÉE (`key.pem`) reste sur
-l'ordinateur de l'éditeur, jamais dans le dépôt ni le chat.
+`docs/annuaires.md`). Pas un secret. RÉGLÉE en production (23/11) ; la clé
+privée correspondante a été détruite après la publication — en changer
+la ligne ne casse rien, elle ne sert qu'à publier.
 
 `DOMAINE_CONTENU` = `www.getgents-pages.com` (domaine acheté chez
 Squarespace le 13/11). Le `www` est VOULU : Vercel a fait de `www` le
