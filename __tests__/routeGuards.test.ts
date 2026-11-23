@@ -77,6 +77,7 @@ const OUVERTES: Record<string, string> = {
   // Accès protégé par code : le destinataire n'a pas de compte. Le jeton du
   // lien fait l'accès ; le code part à l'adresse ENREGISTRÉE (jamais fournie
   // par l'appelant), renvoi limité à 60 s, envois et essais plafonnés.
+  "app/api/rappel/route.ts": "jeton signé (HMAC) d'un e-mail de rappel : compte et action dans le jeton, 14 jours, POST seulement",
   "app/api/partage/[jeton]/code/route.ts": "jeton du partage, code envoyé à l'adresse enregistrée, débit plafonné",
   "app/api/partage/[jeton]/code/verifier/route.ts": "jeton du partage + code à usage unique, 5 essais",
   // Mesure de lecture : le destinataire n'a pas de compte. Jeton du lien +

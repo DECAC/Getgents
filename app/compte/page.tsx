@@ -9,6 +9,7 @@ import Identifiants from "@/components/compte/Identifiants";
 import ZoneSensible from "@/components/compte/ZoneSensible";
 import VotreAcces from "@/components/compte/VotreAcces";
 import NousContacter from "@/components/compte/NousContacter";
+import RappelsExpiration from "@/components/compte/RappelsExpiration";
 import { offreDe, usageDuCompte } from "@/lib/server/offre";
 import { plafondsDe } from "@/lib/offre";
 import styles from "./compte.module.css";
@@ -141,6 +142,7 @@ export default async function ComptePage() {
           <h1 className={styles.titre}>Mon compte</h1>
           <Identifiants email={user.confirmedEmail} nomAffiche={user.nomAffiche} />
           <VotreAcces plafonds={plafonds} usage={usage} />
+          <RappelsExpiration initial={user.rappelsExpiration} />
           <NousContacter email={user.confirmedEmail} />
           <ZoneSensible email={user.confirmedEmail} />
           <p className={styles.retour}>
@@ -168,6 +170,7 @@ export default async function ComptePage() {
         <CleOpenRouter initial={etatCle} />
         <Consommation />
         <Identifiants email={user.confirmedEmail} nomAffiche={user.nomAffiche} />
+        <RappelsExpiration initial={user.rappelsExpiration} />
 
         <section className={styles.bloc}>
           <h2 className={styles.sousTitre}>Mes gents</h2>

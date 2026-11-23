@@ -39,7 +39,7 @@ export interface ArtefactPartage {
 /** Durée de vie d'un lien : 30 jours (et d'une prolongation) — voir lib/dureeLien.ts. */
 export { DUREE_LIEN_MS };
 
-type Memoire = Map<string, ArtefactPartage & { revokedAt: string | null }>;
+type Memoire = Map<string, ArtefactPartage & { revokedAt: string | null; /** Rappel d'expiration envoyé le… (étape 2 « Partager »). */ rappelLe?: string | null }>;
 const memoire = (): Memoire => {
   const g = globalThis as unknown as { __artefactsPartages?: Memoire };
   return (g.__artefactsPartages ??= new Map());
@@ -299,6 +299,10 @@ export async function revoquerPartage(ownerId: string, jeton: string): Promise<b
   return coupe;
 }
 
+/** Colonne ou table absente (migration pas encore passée) : PostgREST 42703 / PGRST204 / PGRST205. */
+export const colonneAbsente = (e: { code?: string; message?: string } | null) =>
+  !!e && (e.code === "42703" || e.code === "PGRST204" || e.code === "PGRST205" || /does not exist|could not find the .* column|schema cache/i.test(e.message ?? ""));
+
 export interface ResultatProlongation {
   prolonges: { jeton: string; expiresAt: string }[];
   ignores: { jeton: string; cause: "introuvable" | "revoque" | "plafond" }[];
@@ -359,8 +363,13 @@ export async function prolongerPartages(ownerId: string, jetons: string[]): Prom
     if (!sb) {
       const m = memoire().get(j)!;
       m.expiresAt = echeance;
+      m.rappelLe = null;
     } else {
-      const { data, error } = await sb.from("artefacts_partages").update({ expires_at: echeance }).eq("jeton", j).eq("owner_id", ownerId).is("revoked_at", null).select("jeton");
+      const miseAJour = (champs: Record<string, unknown>) =>
+        sb.from("artefacts_partages").update(champs).eq("jeton", j).eq("owner_id", ownerId).is("revoked_at", null).select("jeton");
+      // Nouvelle échéance = nouveau rappel possible. Sans la migration 037, on prolonge quand même.
+      let { data, error } = await miseAJour({ expires_at: echeance, rappel_expiration_le: null });
+      if (error && colonneAbsente(error)) ({ data, error } = await miseAJour({ expires_at: echeance }));
       if (error) throw new Error(error.message);
       if (!(data ?? []).length) {
         resultat.ignores.push({ jeton: j, cause: "revoque" });
@@ -372,6 +381,107 @@ export async function prolongerPartages(ownerId: string, jetons: string[]): Prom
   if (resultat.prolonges.length)
     console.log(JSON.stringify({ tag: "getgents:partage", event: "partage_prolonge", ownerId, nombre: resultat.prolonges.length }));
   return resultat;
+}
+
+export interface LienDuCompte {
+  jeton: string;
+  destinataire: string;
+  titrePage: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+}
+
+/** Un lien précis DE CE COMPTE, quel que soit son état (la page de confirmation d'un rappel l'affiche). */
+export async function lienDuCompte(ownerId: string, jeton: string): Promise<LienDuCompte | null> {
+  if (!/^[A-Za-z0-9_-]{20,64}$/.test(jeton)) return null;
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    const m = memoire().get(jeton);
+    return m && m.ownerId === ownerId ? { jeton, destinataire: m.destinataire, titrePage: m.titre, expiresAt: m.expiresAt, revokedAt: m.revokedAt } : null;
+  }
+  const { data, error } = await sb
+    .from("artefacts_partages")
+    .select("jeton, titre, destinataire, expires_at, revoked_at, pages(titre)")
+    .eq("jeton", jeton)
+    .eq("owner_id", ownerId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const page = (Array.isArray(data.pages) ? data.pages[0] : data.pages) as { titre: string } | null;
+  return { jeton, destinataire: data.destinataire, titrePage: page?.titre ?? data.titre, expiresAt: data.expires_at, revokedAt: data.revoked_at };
+}
+
+/** Les liens non révoqués d'un compte dont l'échéance tombe dans [de, a[ — la fenêtre d'un « Tout prolonger ». */
+export async function liensExpirantEntre(ownerId: string, de: number, a: number): Promise<LienDuCompte[]> {
+  const deIso = new Date(de).toISOString();
+  const aIso = new Date(a).toISOString();
+  const sb = getSupabaseAdmin();
+  if (!sb)
+    return Array.from(memoire().values())
+      .filter((m) => m.ownerId === ownerId && !m.revokedAt && m.expiresAt && m.expiresAt >= deIso && m.expiresAt < aIso)
+      .map((m) => ({ jeton: m.jeton, destinataire: m.destinataire, titrePage: m.titre, expiresAt: m.expiresAt, revokedAt: m.revokedAt }));
+  const { data, error } = await sb
+    .from("artefacts_partages")
+    .select("jeton, titre, destinataire, expires_at, revoked_at, pages(titre)")
+    .eq("owner_id", ownerId)
+    .is("revoked_at", null)
+    .gte("expires_at", deIso)
+    .lt("expires_at", aIso)
+    .order("expires_at", { ascending: true })
+    .limit(PROLONGATION_MAX);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((d) => {
+    const page = (Array.isArray(d.pages) ? d.pages[0] : d.pages) as { titre: string } | null;
+    return { jeton: d.jeton, destinataire: d.destinataire, titrePage: page?.titre ?? d.titre, expiresAt: d.expires_at, revokedAt: d.revoked_at };
+  });
+}
+
+/** Liens actifs d'un compte à rappeler : échéance dans [maintenant, limite], aucun rappel déjà envoyé. */
+export async function liensARappeler(maintenant: number, limite: number): Promise<{ jeton: string; ownerId: string; destinataire: string; titrePage: string; expiresAt: string }[]> {
+  const deIso = new Date(maintenant).toISOString();
+  const aIso = new Date(limite).toISOString();
+  const sb = getSupabaseAdmin();
+  if (!sb)
+    return Array.from(memoire().values())
+      .filter((m) => !!m.ownerId && !m.revokedAt && !m.rappelLe && m.expiresAt && m.expiresAt > deIso && m.expiresAt <= aIso)
+      .map((m) => ({ jeton: m.jeton, ownerId: m.ownerId!, destinataire: m.destinataire, titrePage: m.titre, expiresAt: m.expiresAt! }));
+  const { data, error } = await sb
+    .from("artefacts_partages")
+    .select("jeton, owner_id, titre, destinataire, expires_at, pages(titre)")
+    .not("owner_id", "is", null)
+    .is("revoked_at", null)
+    .is("rappel_expiration_le", null)
+    .gt("expires_at", deIso)
+    .lte("expires_at", aIso)
+    .order("expires_at", { ascending: true })
+    .limit(500);
+  if (error) {
+    // Migration 037 pas encore passée : rien à rappeler, et on le dit une fois par passage.
+    if (colonneAbsente(error)) {
+      console.warn(JSON.stringify({ tag: "getgents:rappels", event: "migration_037_absente" }));
+      return [];
+    }
+    throw new Error(error.message);
+  }
+  return (data ?? []).map((d) => {
+    const page = (Array.isArray(d.pages) ? d.pages[0] : d.pages) as { titre: string } | null;
+    return { jeton: d.jeton, ownerId: d.owner_id as string, destinataire: d.destinataire, titrePage: page?.titre ?? d.titre, expiresAt: d.expires_at };
+  });
+}
+
+/** Note qu'un rappel a été traité pour ces liens. */
+export async function marquerRappels(jetons: string[], quand: string): Promise<void> {
+  if (!jetons.length) return;
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    for (const j of jetons) {
+      const m = memoire().get(j);
+      if (m) m.rappelLe = quand;
+    }
+    return;
+  }
+  const { error } = await sb.from("artefacts_partages").update({ rappel_expiration_le: quand }).in("jeton", jetons);
+  if (error && !colonneAbsente(error)) throw new Error(error.message);
 }
 
 /**

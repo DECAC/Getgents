@@ -27,6 +27,8 @@ export interface SessionUser {
    * divulguée sur une page indexée.
    */
   nomAffiche: string;
+  /** Rappels d'expiration des liens par e-mail (activés tant qu'on ne les a pas coupés). */
+  rappelsExpiration: boolean;
 }
 
 export async function getUser(): Promise<SessionUser | null> {
@@ -42,6 +44,7 @@ export async function getUser(): Promise<SessionUser | null> {
       id: data.user.id,
       confirmedEmail: data.user.email_confirmed_at ? (data.user.email ?? "").toLowerCase() || null : null,
       nomAffiche: normaliserNomAffiche(data.user.user_metadata?.nom_affiche),
+      rappelsExpiration: data.user.user_metadata?.rappels_expiration !== false,
     };
   } catch (e) {
     // Service d'authentification injoignable. Sans ce filet, l'exception
@@ -91,7 +94,7 @@ export async function requireUser(): Promise<AuthOutcome> {
       `[getgents] Authentification non configurée (${missingAuthEnvVars().join(", ")}) — ` +
         `accès laissé ouvert en développement. En production, ces routes seraient refusées.`
     );
-    return { user: { id: "dev-local", confirmedEmail: null, nomAffiche: "" } };
+    return { user: { id: "dev-local", confirmedEmail: null, nomAffiche: "", rappelsExpiration: true } };
   }
 
   const user = await getUser();

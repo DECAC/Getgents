@@ -7,6 +7,7 @@ import type { Espace } from "@/lib/types";
 import { consommerPourVisiteur, requireGentOrDraftAccess } from "@/lib/server/gentGuard";
 import { contexteForUser } from "@/lib/server/openRouterKey";
 import { purgerActivite } from "@/lib/server/activitePages";
+import { rappelerExpirations } from "@/lib/server/rappelsExpiration";
 
 export const dynamic = "force-dynamic";
 // Un run de veille (recherche web + synthèse) peut être long.
@@ -132,6 +133,9 @@ export async function GET(req: Request) {
   await purgerDemandesAcces().catch((e) =>
     console.error(JSON.stringify({ tag: "getgents:acces", event: "purge_echouee", detail: (e as Error).message }))
   );
+  // Rappel d'expiration des liens : un e-mail par auteur et par jour, à 8 h
+  // (Paris). Ne lève jamais ; indépendant des routines des gents.
+  await rappelerExpirations();
   try {
     return NextResponse.json(await runBatch(null));
   } catch (e) {

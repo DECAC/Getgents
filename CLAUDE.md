@@ -1018,6 +1018,28 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   l'éditeur). Vérifié au navigateur (mémoire locale) : liens actif / bientôt /
   groupe / expiré / révoqué, prolongation depuis la fenêtre, la ligne et le
   bandeau, téléphone sans débordement.
+- **Rappel d'expiration par e-mail, 48 h avant** (23/11, étape 2 du lot « Partager » ;
+  `lib/jetonRappel.ts`, `lib/emailRappelExpiration.ts`, `lib/rappelsExpiration.ts`,
+  `lib/server/rappelsExpiration.ts`, `app/partage/rappel/[token]`, `POST /api/rappel`,
+  migration 037 à passer AVANT — sans elle, aucun rappel ne part et la
+  prolongation marche quand même, journal `migration_037_absente`). Tâche
+  horaire (`/api/routines/run`), UNE fenêtre par jour à 8 h Paris : un lien
+  expirant dans 48 h est rappelé au premier passage, donc **le mail arrive
+  entre 24 h et 48 h avant l'échéance**, pas à 48 h pile. Un e-mail PAR AUTEUR
+  (20 liens listés au plus, « Tout prolonger » pour le reste), marquage
+  (`rappel_expiration_le`) APRÈS envoi réussi seulement ; auteur désabonné ou
+  sans adresse confirmée : marqué sans envoi ; lecture du compte en échec :
+  réessayé le lendemain. Prolonger remet le marquage à zéro. Boutons du mail =
+  jetons SIGNÉS (HMAC dérivé de `SECRET_BOX_KEY`, 14 jours, compte + action
+  dans le jeton, pas de connexion) vers une page de CONFIRMATION : le GET ne
+  change rien (les messageries d'entreprise ouvrent les liens), seul le
+  bouton (POST) agit. Désabonnement : « Ne plus recevoir ces rappels » ou
+  Mon compte (`rappels_expiration` dans `user_metadata`, activé par défaut).
+  Bandeau de la fiche : toujours 7 jours, seuil distinct de l'e-mail. Piège
+  payé : `Intl` en `fr-FR` rend l'heure « 08 h » (Number → NaN, aucun rappel
+  ne serait parti) — locale `en-GB` + `formatToParts`. Vérifié : tests
+  (orchestration avec fausses dépendances, jetons) et page de confirmation au
+  navigateur ; l'ENVOI réel (Brevo) et la lecture Supabase n'ont tourné nulle part.
 - **Pages de GROUPE depuis Claude : sans destinataire, votes partagés** (23/11 ;
   vécu : Claude refusait de partager une page de vote pour 9 personnes).
   `partager_page` accepte l'absence de `destinataire` (contenu neuf
