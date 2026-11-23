@@ -3,7 +3,7 @@ import { marked } from "marked";
 import { requireUser } from "@/lib/server/session";
 import { contenuPourProprietaire } from "@/lib/server/pages";
 import { CSP_ARTEFACT, documentArtefact } from "@/lib/documentArtefact";
-import { versDomaineContenu } from "@/lib/server/domaineContenu";
+import { cacheDocument, versDomaineContenu } from "@/lib/server/domaineContenu";
 import { contenuAvecFichiers } from "@/lib/server/fichiersPages";
 
 /**
@@ -34,7 +34,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
       "Content-Type": "text/html; charset=utf-8",
       "Content-Security-Policy": CSP_ARTEFACT,
       "Referrer-Policy": "no-referrer",
-      "Cache-Control": "private, no-store",
+      "Cache-Control": cacheDocument("page"),
       "X-Robots-Tag": "noindex, nofollow",
     },
   });

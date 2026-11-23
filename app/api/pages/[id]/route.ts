@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/server/session";
-import { definirAssistantPage, detailPage, listerPages, supprimerPage } from "@/lib/server/pages";
+import { definirAssistantPage, detailEtContenu, nombreDePages, supprimerPage } from "@/lib/server/pages";
 import { definirProtection, protectionActive, validations } from "@/lib/server/accesPartage";
 import { groupesDesLiens } from "@/lib/server/groupesPages";
-import { lirePage } from "@/lib/server/pages";
 import { definirLangue, reglageLangue } from "@/lib/server/langueLecteur";
 import { langueDeclaree, langueDeLaPage, reglageValide } from "@/lib/langueLecteur";
 import { supprimerFichiersPage } from "@/lib/server/fichiersPages";
@@ -20,19 +19,24 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
   const params = await props.params;
   const auth = await requireUser();
   if ("response" in auth) return auth.response;
-  const page = await detailPage(auth.user.id, params.id).catch(() => null);
-  if (!page) return introuvable();
-  // Protection par code (migration 023) : illisible = présentée comme coupée,
-  // avec l'information pour que la fiche le dise.
-  const protection = await protectionActive(page.id).catch(() => null);
-  const valides = await validations(page.destinataires.map((d) => d.jeton)).catch(() => ({}));
-  // Guide « Découvrez ce que vivra votre lecteur » : sur la PREMIÈRE page du compte, et l'adresse de l'auteur pour s'envoyer le lien.
-  const groupes = await groupesDesLiens(page.destinataires.map((d) => d.jeton)).catch(() => ({}));
-  const premiere = await listerPages(auth.user.id).then((l) => l.length <= 1).catch(() => false);
+  const lu = await detailEtContenu(auth.user.id, params.id).catch(() => null);
+  if (!lu) return introuvable();
+  const { detail: page, contenu } = lu;
+  const jetons = page.destinataires.map((d) => d.jeton);
+  // Tout le reste EN PARALLÈLE : ces lectures se faisaient une à une, et la
+  // fiche attendait leur somme avant de lancer ses autres blocs.
+  const [protection, valides, groupes, premiere, reglage] = await Promise.all([
+    // Protection par code (migration 023) : illisible = présentée comme coupée, avec l'information pour que la fiche le dise.
+    protectionActive(page.id).catch(() => null),
+    validations(jetons).catch(() => ({})),
+    groupesDesLiens(jetons).catch(() => ({})),
+    // Guide « Découvrez ce que vivra votre lecteur » : sur la PREMIÈRE page du compte.
+    nombreDePages(auth.user.id).then((n) => n <= 1).catch(() => false),
+    reglageLangue(page.id),
+  ]);
   // Langue des lecteurs (lot anglais 1) : le réglage, et ce que la page dit d'elle-même.
-  const contenu = (await lirePage(auth.user.id, page.id).catch(() => null))?.contenu ?? "";
   const langueLecteurs = {
-    reglage: await reglageLangue(page.id),
+    reglage,
     detectee: langueDeLaPage(contenu),
     declaree: langueDeclaree(contenu) !== null,
   };

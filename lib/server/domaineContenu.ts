@@ -21,6 +21,15 @@ export function origineApp(req: Request): string | null {
 }
 
 /**
+ * L'aperçu d'une page pour son PROPRIÉTAIRE (fiche, vignettes de « Mes pages »)
+ * se garde 5 minutes dans SON navigateur : l'adresse porte la version (`?v=`),
+ * une nouvelle version change d'adresse. Rouvrir « Mes pages » ne relance plus
+ * chaque vignette. Un lien de destinataire n'est JAMAIS gardé : une révocation
+ * doit valoir tout de suite.
+ */
+export const cacheDocument = (t: string) => (t === "page" ? "private, max-age=300" : "private, no-store");
+
+/**
  * Redirige le cadre vers le domaine de contenu, ou null s'il n'est pas
  * configuré (la route sert alors le document elle-même, comme avant).
  * 307 pour un brouillon : le navigateur y reposte le même corps.
@@ -39,7 +48,7 @@ export function versDomaineContenu(req: Request, objet: ObjetContenu, statut: 30
     status: statut,
     headers: {
       Location: `${d.origine}${CHEMIN_CONTENU}${jeton}${suffixe}`,
-      "Cache-Control": "private, no-store",
+      "Cache-Control": cacheDocument(objet.t),
       "Referrer-Policy": "no-referrer",
     },
   });

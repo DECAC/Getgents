@@ -309,10 +309,9 @@ async function liensDuCompte(ownerId: string): Promise<(DestinatairePage & { pag
 /** Les pages du compte, de la plus récemment modifiée à la plus ancienne, avec leurs compteurs de liens. */
 export async function listerPages(ownerId: string): Promise<ResumePage[]> {
   const sb = getSupabaseAdmin();
-  let pages: Page[];
-  if (!sb) {
-    pages = Array.from(memoire().pages.values()).filter((p) => p.ownerId === ownerId && !p.supprimeeAt);
-  } else {
+  // Pages et liens lus EN PARALLÈLE : chaque aller-retour vers la base compte.
+  const lirePages = async (): Promise<Page[]> => {
+    if (!sb) return Array.from(memoire().pages.values()).filter((p) => p.ownerId === ownerId && !p.supprimeeAt);
     const { data, error } = await sb
       .from("pages")
       .select("id, owner_id, titre, format, origine, assistant, version, created_at, updated_at")
@@ -321,9 +320,9 @@ export async function listerPages(ownerId: string): Promise<ResumePage[]> {
       .order("updated_at", { ascending: false })
       .limit(500);
     if (error) throw new Error(error.message);
-    pages = (data ?? []).map((d) => depuisLigne({ ...(d as Omit<Ligne, "contenu">), contenu: "" }));
-  }
-  const liens = await liensDuCompte(ownerId);
+    return (data ?? []).map((d) => depuisLigne({ ...(d as Omit<Ligne, "contenu">), contenu: "" }));
+  };
+  const [pages, liens] = await Promise.all([lirePages(), liensDuCompte(ownerId)]);
   const maintenant = Date.now();
   return pages
     .map((p) => {
@@ -356,23 +355,39 @@ export interface DetailPage extends Omit<Page, "contenu"> {
 
 /** La fiche d'une page : ses destinataires et ses versions. Null si elle n'est pas à ce compte. */
 export async function detailPage(ownerId: string, id: string): Promise<DetailPage | null> {
-  const page = await lirePage(ownerId, id);
-  if (!page) return null;
-  const destinataires = (await liensDuCompte(ownerId))
-    .filter((l) => l.pageId === id)
-    .map(({ pageId: _p, ...l }) => l);
-  let versions: VersionPage[];
+  return (await detailEtContenu(ownerId, id))?.detail ?? null;
+}
+
+/**
+ * La fiche ET le contenu (que la fiche lit pour la langue), en une passe : les
+ * trois lectures partent EN PARALLÈLE. Les liens et versions lus pour une page
+ * qui n'est pas à ce compte sont jetés — les liens sont de toute façon filtrés
+ * par propriétaire.
+ */
+export async function detailEtContenu(ownerId: string, id: string): Promise<{ detail: DetailPage; contenu: string } | null> {
+  if (!estIdPage(id)) return null;
   const sb = getSupabaseAdmin();
-  if (!sb) {
-    versions = (memoire().versions.get(id) ?? []).map((v) => ({ version: v.version, titre: v.titre, createdAt: v.createdAt }));
-  } else {
+  const lireVersions = async (): Promise<VersionPage[]> => {
+    if (!sb) return (memoire().versions.get(id) ?? []).map((v) => ({ version: v.version, titre: v.titre, createdAt: v.createdAt }));
     const { data, error } = await sb.from("pages_versions").select("version, titre, created_at").eq("page_id", id).order("version", { ascending: false });
     if (error) throw new Error(error.message);
-    versions = (data ?? []).map((v) => ({ version: v.version, titre: v.titre, createdAt: v.created_at }));
-  }
+    return (data ?? []).map((v) => ({ version: v.version, titre: v.titre, createdAt: v.created_at }));
+  };
+  const [page, liens, versions] = await Promise.all([lirePage(ownerId, id), liensDuCompte(ownerId), lireVersions()]);
+  if (!page) return null;
+  const destinataires = liens.filter((l) => l.pageId === id).map(({ pageId: _p, ...l }) => l);
   versions.sort((a, b) => b.version - a.version);
-  const { contenu: _c, ...meta } = page;
-  return { ...meta, destinataires, versions, questions: destinataires.reduce((n, d) => n + d.questions, 0) };
+  const { contenu, ...meta } = page;
+  return { detail: { ...meta, destinataires, versions, questions: destinataires.reduce((n, d) => n + d.questions, 0) }, contenu };
+}
+
+/** Nombre de pages du compte (sans lire leurs liens). */
+export async function nombreDePages(ownerId: string): Promise<number> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return Array.from(memoire().pages.values()).filter((p) => p.ownerId === ownerId && !p.supprimeeAt).length;
+  const { count, error } = await sb.from("pages").select("id", { count: "exact", head: true }).eq("owner_id", ownerId).is("supprimee_at", null);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }
 
 /**

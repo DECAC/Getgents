@@ -212,9 +212,12 @@ export type ResultatActivite = { ok: true; activite: Activite } | { ok: false; r
 
 /** L'onglet Activité d'une page DE CE COMPTE. */
 export async function activitePage(ownerId: string, pageId: string): Promise<ResultatActivite> {
-  const detail = await detailPage(ownerId, pageId);
+  // La purge (promesse d'effacement à 120 jours) part EN MÊME TEMPS que la lecture de la fiche, pas avant.
+  const [detail] = await Promise.all([
+    detailPage(ownerId, pageId),
+    purgerActivite().catch((e) => journal("purge_echouee", { detail: (e as Error).message })),
+  ]);
   if (!detail) return { ok: false, raison: "introuvable" };
-  await purgerActivite().catch((e) => journal("purge_echouee", { detail: (e as Error).message }));
   const destinataires = detail.destinataires.filter((d) => !d.revokedAt).map((d) => ({ jeton: d.jeton, destinataire: d.destinataire }));
 
   const sb = getSupabaseAdmin();

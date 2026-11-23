@@ -17,15 +17,16 @@ import styles from "./pages.module.css";
 const date = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 
 /** « Mes pages » : une carte par PAGE, quel que soit le nombre de destinataires. */
-export function ListePages({ offre = "complete" }: { offre?: Offre }) {
+export function ListePages({ offre = "complete", initiales = null }: { offre?: Offre; initiales?: LignePage[] | null }) {
   const guide = useSearchParams().get("guide");
-  const [pages, setPages] = useState<LignePage[] | null>(null);
+  const [pages, setPages] = useState<LignePage[] | null>(initiales);
   const [erreur, setErreur] = useState<string | null>(null);
   const [recherche, setRecherche] = useState("");
   const [filtre, setFiltre] = useState<FiltrePages>("actives");
   const [importOuvert, setImport] = useState(false);
 
   useEffect(() => {
+    if (initiales) return; // déjà lue par le serveur
     let vivant = true;
     fetch("/api/pages", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
@@ -34,7 +35,7 @@ export function ListePages({ offre = "complete" }: { offre?: Offre }) {
     return () => {
       vivant = false;
     };
-  }, []);
+  }, [initiales]);
 
   const aSuggerer = useMemo(() => modelesASuggerer(pages ?? []), [pages]);
   const visibles = useMemo(() => filtrerParTitre((pages ?? []).filter((p) => filtrePage(p, filtre)), recherche), [pages, filtre, recherche]);

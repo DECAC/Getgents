@@ -6,8 +6,8 @@
 // comme ceux des artefacts Claude). Au moment de servir le document, chaque
 // référence est réécrite vers une adresse signée (`avecFichiers`).
 
-export const FICHIER_MAX = 10 * 1024 * 1024;
-export const FICHIERS_TOTAL_MAX = 30 * 1024 * 1024;
+export const FICHIER_MAX = 50 * 1024 * 1024;
+export const FICHIERS_TOTAL_MAX = 100 * 1024 * 1024;
 export const FICHIERS_MAX = 20;
 export const NOM_FICHIER_MAX = 120;
 

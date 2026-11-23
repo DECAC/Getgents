@@ -5,7 +5,7 @@ import { cspArtefact, documentArtefact } from "@/lib/documentArtefact";
 import { nettoyerCollage } from "@/lib/importPage";
 import { CONTENU_MAX, FORMATS_ARTEFACT, type FormatArtefact } from "@/lib/mcpPartage";
 import { lireArtefact } from "@/lib/server/artefactsPartages";
-import { cleContenu, domaineContenu } from "@/lib/server/domaineContenu";
+import { cacheDocument, cleContenu, domaineContenu } from "@/lib/server/domaineContenu";
 import { contenuPourProprietaire } from "@/lib/server/pages";
 import { contenuAvecFichiers } from "@/lib/server/fichiersPages";
 
@@ -32,7 +32,7 @@ function document(html: string, a: AdresseLue): Response {
       "Content-Type": "text/html; charset=utf-8",
       "Content-Security-Policy": cspArtefact(a.o),
       "Referrer-Policy": "no-referrer",
-      "Cache-Control": "private, no-store",
+      "Cache-Control": cacheDocument(a.t),
       "X-Robots-Tag": "noindex, nofollow",
     },
   });
