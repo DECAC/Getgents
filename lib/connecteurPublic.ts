@@ -44,8 +44,8 @@ export const OUTILS_PUBLICS: readonly OutilPublic[] = [
   {
     nom: "mettre_a_jour_page",
     titre: "Mettre à jour une page partagée",
-    role: "Remplace le contenu d'une page : tous ses liens montrent la nouvelle version, l'ancienne reste restaurable.",
-    nature: "écrit",
+    role: "Remplace le contenu d'une page : tous ses liens montrent la nouvelle version, l'ancienne reste restaurable. Claude demande confirmation.",
+    nature: "destructeur",
   },
   {
     nom: "lister_partages",

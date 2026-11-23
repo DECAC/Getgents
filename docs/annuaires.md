@@ -34,6 +34,13 @@ chaque annuaire affiche.
   - "Which links did I send this week?"
   - "Revoke the link sent to Paul"
 - **Category** : Productivity / Sales (selon les catégories proposées)
+- **Prerequisites** (texte libre) :
+  A Getgents account (free) — sign up at https://getgents.ai/inscription.
+  Sign-ups may be capped; when they are full, the same page lets you request
+  access. No API key and no extra setup: add the connector, sign in to
+  Getgents and click « Autoriser » (Authorize). The Getgents interface and
+  the pages your recipients see are in French.
+- **Authentification / en-têtes** : OAuth, AUCUN en-tête personnalisé.
 
 ## Fiche (français)
 

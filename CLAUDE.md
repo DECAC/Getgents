@@ -950,6 +950,18 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   clé privée DÉTRUITE après publication : pour publier une nouvelle version,
   régénérer une paire et remplacer `MCP_REGISTRE_PREUVE`. NON fait :
   soumission à l'annuaire de Claude (côté éditeur, compte payant).
+  **Mise aux critères de l'annuaire de Claude (23/11)** : descriptions des
+  outils et consigne du serveur réécrites en DESCRIPTIF (« ce que fait
+  l'outil, ce qu'il attend ») — l'annuaire rejette les descriptions qui
+  « disent à Claude comment se comporter » ; plus de « IMPORTANT »,
+  « AVANT de », « Ne dis jamais » (un test le garde). Gardée, en phrase
+  factuelle : « le destinataire voit tout, données personnelles
+  comprises », pour que Claude vérifie AVANT l'appel — les alertes de la
+  réponse arrivent après la création du lien (elles proposent
+  `revoquer_partage`). Titre aussi dans `annotations`. `mettre_a_jour_page`
+  passe en `destructiveHint: true` (remplace ce que voient tous les liens) :
+  Claude demande confirmation à chaque mise à jour. Effet dans Claude après
+  DÉCONNEXION/RECONNEXION du connecteur seulement.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

@@ -31,3 +31,30 @@ describe("ce que Getgents dit publiquement de son connecteur", () => {
     expect(tout).toMatch(/n'envoie aucun e-mail/);
   });
 });
+
+import { traiterMessage } from "@/lib/mcpPartage";
+
+describe("annotations exigées par l'annuaire de Claude", () => {
+  it("chaque outil a un titre (aussi dans les annotations) et une indication lecture seule ou destructeur", async () => {
+    const ctx = {
+      enregistrer: async () => null,
+      mettreAJour: async () => null,
+      lister: async () => [],
+      revoquer: async () => false,
+    } as unknown as Parameters<typeof traiterMessage>[1];
+    const r = (await traiterMessage({ jsonrpc: "2.0", id: 1, method: "tools/list" }, ctx)) as {
+      result: { tools: { name: string; title: string; description: string; annotations: Record<string, unknown> }[] };
+    };
+    expect(r.result.tools).toHaveLength(4);
+    for (const o of r.result.tools) {
+      expect(o.title).toBeTruthy();
+      expect(o.annotations.title).toBe(o.title);
+      expect(o.annotations.readOnlyHint === true || typeof o.annotations.destructiveHint === "boolean").toBe(true);
+      expect(o.name.length).toBeLessThanOrEqual(64);
+      // Pas de consigne de comportement en capitales (« IMPORTANT », « AVANT », « Ne dis jamais »).
+      expect(o.description).not.toMatch(/IMPORTANT|AVANT|ne dis jamais|ne choisis jamais/i);
+    }
+    const maj = r.result.tools.find((o) => o.name === "mettre_a_jour_page");
+    expect(maj?.annotations.destructiveHint).toBe(true);
+  });
+});

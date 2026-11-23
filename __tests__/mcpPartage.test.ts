@@ -65,7 +65,7 @@ describe("protocole MCP", () => {
     // Le schéma n'exige que le destinataire : c'est la VALIDATION qui exige le
     // contenu quand aucune page n'est donnée (repartage sans recopie).
     expect(r.result.tools[0].inputSchema.required).toEqual(["destinataire"]);
-    expect(r.result.tools[0].description).toMatch(/COMPLET/);
+    expect(r.result.tools[0].description).toMatch(/complet de la page, à l'identique/);
   });
 
   it("partage : enregistre, rend le lien et le mail, sans prétendre l'envoyer", async () => {
@@ -135,12 +135,12 @@ describe("contrôle de fidélité", () => {
     expect(r.result.content[0].text).toMatch(/version FIGÉE/);
   });
 
-  it("demande une version figée, et une vérification des données personnelles", async () => {
+  it("décrit la version figée et l'exposition des données personnelles, sans consigne impérative", async () => {
     const r = (await traiterMessage({ jsonrpc: "2.0", id: 2, method: "tools/list" }, contexte())) as {
       result: { tools: { description: string }[] };
     };
-    expect(r.result.tools[0].description).toMatch(/version FIGÉE/);
-    expect(r.result.tools[0].description).toMatch(/donnée personnelle/);
+    expect(r.result.tools[0].description).toMatch(/version figée/);
+    expect(r.result.tools[0].description).toMatch(/données personnelles comprises/);
   });
 
   it("compte caractères et lignes, et n'invente pas de fin pour un texte", () => {

@@ -218,22 +218,22 @@ export const NOM_OUTIL = "partager_page";
 export const NOM_OUTIL_ANCIEN = "partager_artefact";
 
 export const DESCRIPTION_OUTIL =
-  "Partage une page avec un client — ce que Claude appelle un artefact, ChatGPT et Mistral un canvas : page HTML, " +
-  "document, schéma, application. Crée un lien privé Getgents qui l'affiche en plein écran, et rédige le mail à " +
-  "lui envoyer. Pour envoyer une page DÉJÀ partagée à quelqu'un d'autre, passe seulement `page` " +
-  "(son identifiant, rendu par le partage précédent ou par lister_partages) et `destinataire` : ne recopie pas le " +
-  "contenu. Pour la modifier, utilise mettre_a_jour_page. " +
-  "IMPORTANT : `contenu` doit être le code ou le texte COMPLET de la page, recopié À L'IDENTIQUE, " +
-  "du premier au dernier caractère. Ne résume pas, ne tronque pas, n'abrège pas (aucun « ... » ni " +
-  "« reste du code inchangé »), ne reformate pas : le client verra exactement ce que tu envoies. " +
-  "SEULE exception : si la page lit des données EN DIRECT depuis Claude ou le compte de l'utilisateur " +
-  "(window.claude, window.storage, agenda, e-mails, tâches planifiées), elles ne s'afficheront pas chez le " +
-  "client — et ne le doivent pas. Envoie alors une version FIGÉE : les données actuelles écrites dans la " +
-  "page, datées, sans ces appels. Avant d'envoyer, signale à l'utilisateur toute donnée personnelle " +
-  "(agenda, e-mails, contacts) que la page contient, et demande-lui s'il veut vraiment la partager. " +
-  // Les annuaires de connecteurs sont en anglais, et l'utilisateur peut l'être aussi.
-  "In English: share or send an artifact (or canvas) privately with a client, a team or a group — one private " +
-  "link per recipient, who can reply and ask an assistant about the page.";
+  // Décrit ce que fait l'outil et ce qu'il attend (critères de l'annuaire de
+  // Claude, 23/11) : pas de consignes de comportement. Les vraies gardes
+  // sont côté serveur (contrôle de fidélité, repérage des coordonnées et des
+  // données branchées sur Claude), renvoyées dans la réponse de l'outil.
+  "Partage une page avec un destinataire — ce que Claude appelle un artefact, ChatGPT et Mistral un canvas : " +
+  "page HTML, document, schéma, application. Enregistre la page dans Getgents, crée un lien privé pour ce " +
+  "destinataire et rend le lien avec un modèle de mail ; Getgents n'envoie aucun e-mail. " +
+  "Pour une page déjà partagée, `page` (son identifiant) remplace titre, contenu et format. " +
+  "`contenu` attend le code ou le texte complet de la page, à l'identique : le destinataire voit exactement ce " +
+  "qui est envoyé, et un contenu abrégé (« ... », « reste du code inchangé ») s'affiche tel quel. Une page qui " +
+  "lit des données en direct depuis Claude (window.claude, window.storage) ne les affiche pas chez le " +
+  "destinataire : il faut une version figée, données actuelles écrites dans la page. Le destinataire voit tout " +
+  "ce que la page contient, données personnelles comprises (agenda, e-mails, contacts) ; la réponse signale " +
+  "les coordonnées repérées. " +
+  "In English: shares an artifact or canvas privately with one recipient (client, team, group), who can reply " +
+  "and ask an assistant about the page.";
 
 export const SCHEMA_OUTIL = {
   type: "object",
@@ -274,9 +274,9 @@ const DESCRIPTION_LISTER =
   "destinataire (« Marie », « offre Acme »).";
 
 const DESCRIPTION_REVOQUER =
-  "Révoque un lien de partage : le destinataire ne pourra plus ouvrir la page. IRRÉVERSIBLE. " +
-  "Prends l'identifiant dans lister_partages ; si plusieurs partages correspondent à la demande, " +
-  "montre-les à l'utilisateur et demande lequel AVANT de révoquer — ne choisis jamais à sa place.";
+  "Révoque un lien de partage : son destinataire ne peut plus ouvrir la page. Irréversible. " +
+  "`identifiant` est celui que rend lister_partages ; quand plusieurs partages correspondent à la demande, " +
+  "l'utilisateur est le seul à savoir lequel couper.";
 
 const SCHEMA_LISTER = {
   type: "object",
@@ -294,10 +294,10 @@ const SCHEMA_REVOQUER = {
 export const OUTIL_METTRE_A_JOUR = "mettre_a_jour_page";
 
 const DESCRIPTION_METTRE_A_JOUR =
-  "Remplace le contenu d'une page déjà partagée par une nouvelle version : TOUS ses liens affichent aussitôt " +
-  "la nouvelle version, l'ancienne est gardée et restaurable. `contenu` doit être le code ou le texte COMPLET de " +
-  "la nouvelle version, à l'identique — jamais un extrait ni une différence. À utiliser quand l'utilisateur veut " +
-  "corriger ou faire évoluer une page déjà envoyée ; pour un document différent, partage une nouvelle page.";
+  "Remplace le contenu d'une page déjà partagée par une nouvelle version : tous ses liens affichent aussitôt " +
+  "la nouvelle version, l'ancienne est gardée et restaurable depuis Getgents. `contenu` attend le code ou le " +
+  "texte complet de la nouvelle version, à l'identique — pas un extrait ni une différence. Pour un document " +
+  "différent, partager_page crée une nouvelle page.";
 
 const SCHEMA_METTRE_A_JOUR = {
   type: "object",
@@ -312,15 +312,14 @@ const SCHEMA_METTRE_A_JOUR = {
 };
 
 export const INSTRUCTIONS_SERVEUR =
-  "Getgents publie les pages que l'utilisateur veut partager avec un client — un artefact dans Claude, un " +
-  "canvas dans ChatGPT ou Mistral. Quand il demande de partager, d'envoyer ou de transmettre l'un d'eux, " +
-  "appelle partager_page avec son contenu COMPLET, " +
-  "puis donne-lui le lien et le modèle de mail. Getgents n'envoie aucun e-mail : c'est l'utilisateur qui " +
-  "l'envoie. Ne dis jamais que le mail est parti. Pour retrouver ou couper un lien déjà envoyé, " +
-  "utilise lister_partages puis revoquer_partage. Pour envoyer une page déjà partagée à quelqu'un d'autre, passe " +
-  "son identifiant (`page`) au lieu de recopier le contenu ; pour la corriger, mettre_a_jour_page. " +
-  "In English: when the user asks to share, send or forward an artifact or canvas to someone, call partager_page " +
-  "with its COMPLETE content, then give the private link and the e-mail draft; Getgents sends no e-mail.";
+  "Getgents partage par un lien privé les pages qu'un utilisateur destine à quelqu'un — un artefact dans " +
+  "Claude, un canvas dans ChatGPT ou Mistral. partager_page crée la page et un lien par destinataire, et rend " +
+  "le lien et un modèle de mail : Getgents n'envoie aucun e-mail, c'est l'utilisateur qui l'envoie. " +
+  "lister_partages retrouve les liens envoyés, revoquer_partage en coupe un, mettre_a_jour_page remplace le " +
+  "contenu d'une page partagée. Une page déjà partagée se renvoie à quelqu'un d'autre par son identifiant " +
+  "(`page`), sans recopier son contenu. " +
+  "In English: Getgents shares an artifact or canvas privately — one link per recipient, who can reply and ask " +
+  "an assistant about the page; it sends no e-mail itself.";
 
 export interface ContexteMcp {
   /** Enregistre l'artefact et rend son lien public. */
@@ -369,7 +368,7 @@ function alertesFidelite(f: Fidelite): string[] {
 const ligneDonnees = (f: Fidelite) => {
   const t = [...f.donnees.emails, ...f.donnees.telephones];
   return t.length
-    ? `Données personnelles repérées dans la page (${t.slice(0, 3).join(", ")}${t.length > 3 ? "…" : ""}) : demande à l'utilisateur de confirmer qu'elles peuvent être vues par le destinataire.`
+    ? `Données personnelles repérées dans la page (${t.slice(0, 3).join(", ")}${t.length > 3 ? "…" : ""}) : demande à l'utilisateur de confirmer qu'elles peuvent être vues par le destinataire ; sinon, revoquer_partage coupe le lien.`
     : "";
 };
 
@@ -450,7 +449,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
               title: "Partager une page avec un client",
               description: DESCRIPTION_OUTIL,
               inputSchema: SCHEMA_OUTIL,
-              annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+              annotations: { title: "Partager une page avec un client", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
             },
             ...(ctx.lister
               ? [
@@ -459,7 +458,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
                     title: "Lister mes partages",
                     description: DESCRIPTION_LISTER,
                     inputSchema: SCHEMA_LISTER,
-                    annotations: { readOnlyHint: true, openWorldHint: false },
+                    annotations: { title: "Lister mes partages", readOnlyHint: true, openWorldHint: false },
                   },
                 ]
               : []),
@@ -470,7 +469,14 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
                     title: "Mettre à jour une page partagée",
                     description: DESCRIPTION_METTRE_A_JOUR,
                     inputSchema: SCHEMA_METTRE_A_JOUR,
-                    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+                    annotations: {
+                      title: "Mettre à jour une page partagée",
+                      readOnlyHint: false,
+                      // Remplace le contenu visible par tous les liens : Claude demande confirmation.
+                      destructiveHint: true,
+                      idempotentHint: false,
+                      openWorldHint: true,
+                    },
                   },
                 ]
               : []),
@@ -481,7 +487,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
                     title: "Révoquer un partage",
                     description: DESCRIPTION_REVOQUER,
                     inputSchema: SCHEMA_REVOQUER,
-                    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+                    annotations: { title: "Révoquer un partage", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
                   },
                 ]
               : []),
