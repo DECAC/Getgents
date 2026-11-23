@@ -5,6 +5,17 @@ import { NOM_OUTIL, OUTIL_LISTER, OUTIL_METTRE_A_JOUR, OUTIL_REVOQUER } from "@/
 
 const serveur = JSON.parse(readFileSync(join(process.cwd(), "server.json"), "utf8"));
 
+describe("fiche du registre : icône, et jamais le dépôt (23/11)", () => {
+  it("l'icône est servie par getgents.ai depuis public/, et la fiche ne cite ni dépôt ni éditeur", () => {
+    const icone = serveur.icons?.[0];
+    expect(icone.src).toMatch(/^https:\/\/getgents\.ai\/brand\/[\w.-]+\.png$/);
+    expect(icone.src.length).toBeLessThanOrEqual(255);
+    expect(readFileSync(join(process.cwd(), "public", new URL(icone.src).pathname)).length).toBeGreaterThan(0);
+    expect(serveur.repository).toBeUndefined();
+    expect(JSON.stringify(serveur)).not.toMatch(/github|decassan|charles/i);
+  });
+});
+
 describe("ce que Getgents dit publiquement de son connecteur", () => {
   it("server.json suit la source unique et les limites du registre", () => {
     expect(serveur.name).toBe(NOM_REGISTRE);

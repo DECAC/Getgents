@@ -21,12 +21,46 @@ export const ENTETES_CORS = {
   "Access-Control-Expose-Headers": "WWW-Authenticate, Mcp-Session-Id",
 };
 
-export async function repondreMcp(req: Request, base: string, proprietaire: Proprietaire): Promise<NextResponse> {
-  let corps: unknown;
+/** Lit le corps JSON-RPC ; la réponse d'erreur si illisible. */
+export async function lireCorpsMcp(req: Request): Promise<{ corps: unknown } | { reponse: NextResponse }> {
   try {
-    corps = await req.json();
+    return { corps: await req.json() };
   } catch {
-    return NextResponse.json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "JSON illisible" } }, { status: 400, headers: ENTETES_CORS });
+    return { reponse: NextResponse.json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "JSON illisible" } }, { status: 400, headers: ENTETES_CORS }) };
+  }
+}
+
+/** Contexte sans propriétaire : tout appel d'outil qui y parviendrait échoue, rien n'est écrit. */
+const sansProprietaire = (base: string): ContexteMcp => {
+  const refuse = async (): Promise<never> => {
+    throw new Error("connexion requise");
+  };
+  // Les quatre outils sont déclarés pour que `tools/list` les annonce TOUS (la liste dépend du contexte).
+  return { base, enregistrer: refuse, lister: refuse, mettreAJour: refuse, revoquer: refuse };
+};
+
+/**
+ * Réponse SANS jeton (initialize, tools/list, ping — `corpsPublic` l'a
+ * vérifié). Aucun propriétaire : le contexte est vide, donc aucun outil ne
+ * peut agir même si un `tools/call` arrivait jusqu'ici (il répond « outil
+ * indisponible », jamais une écriture).
+ */
+export async function repondreSansJeton(corps: unknown, base: string, userAgent: string | null): Promise<NextResponse> {
+  const lot = Array.isArray(corps);
+  const messages = lot ? (corps as unknown[]) : [corps];
+  const methodes = messages.map((m) => (m as { method?: string }).method).filter(Boolean);
+  console.log(JSON.stringify({ tag: "getgents:mcp", event: "decouverte_sans_jeton", methodes, client: userAgent }));
+  const reponses = (await Promise.all(messages.map((m) => traiterMessage(m, sansProprietaire(base))))).filter((r): r is ReponseRpc => r !== null);
+  if (!reponses.length) return new NextResponse(null, { status: 202, headers: ENTETES_CORS });
+  return NextResponse.json(lot ? reponses : reponses[0], { headers: { "Cache-Control": "no-store", ...ENTETES_CORS } });
+}
+
+export async function repondreMcp(req: Request, base: string, proprietaire: Proprietaire, corpsLu?: unknown): Promise<NextResponse> {
+  let corps: unknown = corpsLu;
+  if (corpsLu === undefined) {
+    const lu = await lireCorpsMcp(req);
+    if ("reponse" in lu) return lu.reponse;
+    corps = lu.corps;
   }
 
   const client = req.headers.get("user-agent");

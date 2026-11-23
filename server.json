@@ -3,8 +3,15 @@
   "name": "ai.getgents/pages",
   "title": "Getgents Pages",
   "description": "Send an AI artifact privately: one link per recipient, their reply and choices, a Q&A assistant.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "websiteUrl": "https://getgents.ai/aide/connecteur",
+  "icons": [
+    {
+      "src": "https://getgents.ai/brand/getgents-icone.png",
+      "mimeType": "image/png",
+      "sizes": ["1024x1024"]
+    }
+  ],
   "remotes": [
     {
       "type": "streamable-http",
