@@ -1,5 +1,6 @@
 import {
   controleFidelite,
+  corpsPublic,
   modeleMail,
   traiterMessage,
   validerDemande,
@@ -431,5 +432,37 @@ describe("partage sans destinataire (23/11)", () => {
 
   it("un repartage exige toujours un destinataire", () => {
     expect(validerDemande({ page: PAGE_ID }).ok).toBe(false);
+  });
+});
+
+describe("découverte sans jeton (23/11)", () => {
+  const refuse = async (): Promise<never> => { throw new Error("jeton requis"); };
+  const sansProprietaire: ContexteMcp = { base: "https://x", enregistrer: refuse, lister: refuse, mettreAJour: refuse, revoquer: refuse };
+  const req = (method: string, id: number | null = 1) => ({ jsonrpc: "2.0", method, ...(id === null ? {} : { id }) });
+  it("n'ouvre que initialize, tools/list, ping et les notifications", () => {
+    expect(corpsPublic(req("initialize"))).toBe(true);
+    expect(corpsPublic(req("tools/list"))).toBe(true);
+    expect(corpsPublic(req("ping"))).toBe(true);
+    expect(corpsPublic(req("notifications/initialized", null))).toBe(true);
+    expect(corpsPublic([req("initialize"), req("tools/list", 2)])).toBe(true);
+  });
+  it("garde tout le reste derrière la connexion", () => {
+    expect(corpsPublic(req("tools/call"))).toBe(false);
+    expect(corpsPublic(req("resources/list"))).toBe(false);
+    expect(corpsPublic(req("tools/list", null))).toBe(false); // sans id, ce n'est pas une notification MCP
+    expect(corpsPublic([req("tools/list"), req("tools/call", 2)])).toBe(false); // lot mixte
+    expect(corpsPublic([])).toBe(false);
+    expect(corpsPublic(null)).toBe(false);
+    expect(corpsPublic("tools/list")).toBe(false);
+    expect(corpsPublic({ jsonrpc: "2.0", id: 1 })).toBe(false);
+  });
+  it("sans propriétaire, la liste d'outils est lisible et un appel n'écrit rien", async () => {
+    const liste = (await traiterMessage(req("tools/list"), sansProprietaire)) as { result: { tools: { name: string }[] } };
+    expect(liste.result.tools.map((t) => t.name).sort()).toEqual([NOM_OUTIL, OUTIL_LISTER, OUTIL_METTRE_A_JOUR, OUTIL_REVOQUER].sort());
+    const appel = (await traiterMessage(
+      { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: NOM_OUTIL, arguments: { titre: "x", contenu: "<p>x</p>", format: "html", destinataire: "a" } } },
+      sansProprietaire
+    )) as { result?: { isError?: boolean }; error?: unknown };
+    expect(appel.result?.isError === true || appel.error !== undefined).toBe(true);
   });
 });
