@@ -1076,7 +1076,7 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   Confirmation : l'objet est RELU (taille, type) avant la ligne. Au service
   du document (lien, domaine de contenu, aperçu), chaque référence est
   réécrite vers une adresse signée d'1 h (`contenuAvecFichiers`) — une
-  adresse web externe n'est jamais touchée. 10 Mo par fichier, 30 Mo et 20
+  adresse web externe n'est jamais touchée. 50 Mo par fichier, 100 Mo et 20 (relevé le 23/11 pour une bande audio, migration 038 : le seau a son propre plafond, et l'offre gratuite de Supabase borne un fichier à 50 Mo)
   fichiers par page ; images, sons, vidéos, PDF. Le connecteur liste les
   fichiers appelés (`fidelite.fichiers`). Vérifié au navigateur en MÉMOIRE
   LOCALE seulement (fichier servi en `data:`) : le chemin Supabase (envoi
