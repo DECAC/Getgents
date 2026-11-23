@@ -15,6 +15,8 @@ import { BlocEngagement } from "./BlocEngagement";
 import { BlocLangue, langueDesLecteurs, type LangueLecteurs } from "./BlocLangue";
 import { FenetreQr } from "./FenetreQr";
 import { etatEcheance, liensQuiExpirent, peutProlonger, texteExpireDans } from "@/lib/dureeLien";
+import { BlocDonneesPartagees } from "./BlocDonneesPartagees";
+import { BlocFichiers } from "./BlocFichiers";
 import { AdapterExemple } from "./AdapterExemple";
 import { INVITES_MAX, lienWhatsApp, messageWhatsApp } from "@/lib/groupesPages";
 import { ReponsesPage } from "./ReponsesPage";
@@ -94,6 +96,8 @@ export function FichePage({ id }: { id: string }) {
   const [editeurInvites, setEditeurInvites] = useState<{ jeton: string; texte: string } | null>(null);
   // Fenêtre « QR code » : un lien précis (jeton null juste après sa création : il dure 30 jours).
   const [qr, setQr] = useState<{ lien: string; destinataire: string; jeton: string | null; expiresAt: string | null; protegee: boolean } | null>(null);
+  // Fichiers joints ajoutés ou retirés : l'aperçu se recharge (ses adresses de fichiers changent).
+  const [rafraichi, setRafraichi] = useState(0);
 
   const charger = useCallback(async () => {
     const r = await fetch(`/api/pages/${encodeURIComponent(id)}`, { credentials: "include" });
@@ -385,10 +389,11 @@ export function FichePage({ id }: { id: string }) {
             </a>
           </div>
           <CadreApercu
-            key={page.version}
+            key={`${page.version}-${rafraichi}`}
             className={styles.apercuCadre}
-            src={`/api/pages/${encodeURIComponent(page.id)}/apercu?v=${page.version}`}
+            src={`/api/pages/${encodeURIComponent(page.id)}/apercu?v=${page.version}&f=${rafraichi}`}
             titre={`Aperçu — ${page.titre}`}
+            stockage={{ url: `/api/pages/${encodeURIComponent(page.id)}/stockage`, portee: `auteur:${page.id}` }}
           />
         </section>
 
@@ -402,6 +407,8 @@ export function FichePage({ id }: { id: string }) {
             />
           )}
           <BlocEngagement pageId={page.id} onMessage={signaler} langue={langueDesLecteurs(page.langueLecteurs)} />
+          <BlocFichiers pageId={page.id} onMessage={signaler} onChange={() => setRafraichi((n) => n + 1)} />
+          <BlocDonneesPartagees pageId={page.id} onMessage={signaler} />
 
           <section className={styles.bloc}>
             <h2 className={styles.blocTitre}>Versions</h2>

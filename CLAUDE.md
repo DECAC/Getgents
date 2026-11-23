@@ -1018,6 +1018,43 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   l'éditeur). Vérifié au navigateur (mémoire locale) : liens actif / bientôt /
   groupe / expiré / révoqué, prolongation depuis la fenêtre, la ligne et le
   bandeau, téléphone sans débordement.
+- **Pages de GROUPE depuis Claude : sans destinataire, votes partagés** (23/11 ;
+  vécu : Claude refusait de partager une page de vote pour 9 personnes).
+  `partager_page` accepte l'absence de `destinataire` (contenu neuf
+  seulement) : page créée SANS lien, l'outil rend l'adresse de sa fiche, où
+  l'auteur crée un lien de groupe. **`window.storage` est SERVI** (lot 2,
+  `lib/stockagePage.ts`, `lib/server/stockagePages.ts`, migration 035 à
+  passer AVANT — sans elle, le stockage partagé répond « indisponible ») :
+  l'amorce relaie au PARENT (`stockage?`/`stockage!`, puis une requête par
+  opération ; sans réponse en 1,5 s, mémoire de la page comme avant), qui
+  appelle `/api/partage/<jeton>/stockage` (lien + code d'accès) ou, dans la
+  fiche, `/api/pages/<id>/stockage` (`useStockagePartage`). `shared` vrai =
+  commun à TOUS les liens de la page ; faux = localStorage du PARENT, par
+  lien et par appareil. Bornes : clé 200, valeur 100 Ko, 500 clés, 2 Mo par
+  page, 60 écritures/min par lien (mémoire de l'instance). Bloc « Données
+  partagées » (onglet Page) : résumé et « Effacer » ; effacé avec la page.
+  `window.storage` n'est plus signalé comme « branché sur Claude » ;
+  `window.claude` l'est toujours. Vérifié au navigateur (mémoire locale) :
+  deux lecteurs, votes communs, vote personnel retrouvé au rechargement,
+  aperçu de l'auteur, effacement. **Fichiers joints** (lot 3,
+  `lib/fichiersPage.ts`, `lib/server/fichiersPages.ts`, `BlocFichiers`,
+  migration 036 à passer AVANT — seau PRIVÉ `pages-fichiers` + table
+  `pages_fichiers` ; sans elle, la fiche le dit et les pages s'affichent sans
+  médias) : la page appelle un média par son NOM (`src="musique.mp3"`, ou un
+  chemin Claude qui finit par ce nom) ; la fiche liste les fichiers ATTENDUS
+  (`fichiersReferences`) et « Ajouter » envoie le fichier choisi SOUS le nom
+  attendu. Envoi DIRECT navigateur → Supabase Storage (adresse signée,
+  `createSignedUploadUrl`) : une fonction Vercel plafonne le corps à 4,5 Mo.
+  Confirmation : l'objet est RELU (taille, type) avant la ligne. Au service
+  du document (lien, domaine de contenu, aperçu), chaque référence est
+  réécrite vers une adresse signée d'1 h (`contenuAvecFichiers`) — une
+  adresse web externe n'est jamais touchée. 10 Mo par fichier, 30 Mo et 20
+  fichiers par page ; images, sons, vidéos, PDF. Le connecteur liste les
+  fichiers appelés (`fidelite.fichiers`). Vérifié au navigateur en MÉMOIRE
+  LOCALE seulement (fichier servi en `data:`) : le chemin Supabase (envoi
+  signé, relecture, adresses signées) n'a tourné NULLE PART — premier essai
+  réel à surveiller (`getgents:fichiers`). Limite : un nom avec espace écrit
+  tel quel dans la page n'est pas reconnu (`%20` l'est).
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
@@ -1574,8 +1611,10 @@ la tâche horaire (`purgerDemandesAcces`) — c'est ce qu'annonce la page
 Confidentialité. Journal `getgents:acces` (`demande_recue`,
 `notification_echouee`, `plafond`, `piege_rempli`) — sans l'adresse.
 Vérifié en local (sans Supabase ni Brevo), PAS en production. **Essai réel (13/11)** : demande
-gardée, e-mail ACCEPTÉ par Brevo (`notifie` vrai), mais jamais reçu —
-CEO@getgents.ai n'est pas une boîte que l'éditeur lit. Depuis, les
+gardée, e-mail ACCEPTÉ par Brevo (`notifie` vrai), et reçu sur
+CEO@getgents.ai — mais AVEC RETARD (redirection) : sur le moment, on l'a cru
+perdu. Leçon : `notifie` vrai = accepté par Brevo ; attendre avant de
+conclure à une perte, et lire le statut dans les journaux Brevo. Depuis, les
 notifications de l'éditeur (demandes d'accès, signalements, usage d'un lien)
 partent vers `ADRESSE_NOTIFICATIONS_EDITEUR`, réglée sur Vercel SEULEMENT
 (« Sensitive ») : c'est une adresse PERSONNELLE et le dépôt est public — ne
@@ -1583,7 +1622,8 @@ l'écrire NULLE PART (code, mémoire, commits, journaux, réponses au
 navigateur). Absente ou mal formée : repli sur CEO@getgents.ai
 (`lib/server/adresseEditeur.ts`). Le journal dit `destinataire: "reglee" |
 "defaut" | "invalide"`, jamais l'adresse. CEO@getgents.ai reste l'adresse de
-CONTACT affichée.
+CONTACT affichée. **VALIDÉ en production (13/11)** : e-mail reçu à
+l'adresse réglée, « Répondre » vers le demandeur.
 
 **Supabase envoie ses e-mails d'authentification PAR BREVO** (SMTP
 personnalisé, 13/11) : invitations, réinitialisations. Avant, l'envoi

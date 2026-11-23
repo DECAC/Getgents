@@ -6,6 +6,7 @@ import { nomCookie } from "@/lib/accesCode";
 import { lireArtefact } from "@/lib/server/artefactsPartages";
 import { CSP_ARTEFACT, documentArtefact } from "@/lib/documentArtefact";
 import { versDomaineContenu } from "@/lib/server/domaineContenu";
+import { contenuAvecFichiers } from "@/lib/server/fichiersPages";
 
 /**
  * Le document de l'artefact, chargé dans le cadre de /partage/<jeton>.
@@ -37,7 +38,7 @@ export async function GET(req: Request, props: { params: Promise<{ jeton: string
   // (useCadreAvecRepli) — le document est servi ici, isolé comme avant.
   const ailleurs = repliDirect(req, "partage") ? null : versDomaineContenu(req, { t: "partage", j: a.jeton });
   if (ailleurs) return ailleurs;
-  const html = documentArtefact(a.contenu, a.format, a.titre, (md) => marked.parse(md, { async: false }) as string);
+  const html = documentArtefact(await contenuAvecFichiers(a.pageId, a.contenu), a.format, a.titre, (md) => marked.parse(md, { async: false }) as string);
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",

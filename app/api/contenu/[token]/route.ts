@@ -7,6 +7,7 @@ import { CONTENU_MAX, FORMATS_ARTEFACT, type FormatArtefact } from "@/lib/mcpPar
 import { lireArtefact } from "@/lib/server/artefactsPartages";
 import { cleContenu, domaineContenu } from "@/lib/server/domaineContenu";
 import { contenuPourProprietaire } from "@/lib/server/pages";
+import { contenuAvecFichiers } from "@/lib/server/fichiersPages";
 
 /**
  * Le DOMAINE DE CONTENU (`lib/domaineContenu.ts`) : sert un document sur
@@ -55,12 +56,12 @@ export async function GET(req: Request, props: { params: Promise<{ token: string
   if (a.t === "partage") {
     const p = await lireArtefact(a.j).catch(() => null);
     if (!p) return texte("Ce lien n'existe pas ou a expiré.", 404);
-    return document(documentArtefact(p.contenu, p.format, p.titre, rendre), a);
+    return document(documentArtefact(await contenuAvecFichiers(p.pageId, p.contenu), p.format, p.titre, rendre), a);
   }
   if (a.t === "page") {
     const page = await contenuPourProprietaire(a.u, a.id).catch(() => null);
     if (!page) return texte("Page introuvable.", 404);
-    return document(documentArtefact(page.contenu, page.format, page.titre, rendre), a);
+    return document(documentArtefact(await contenuAvecFichiers(page.id, page.contenu), page.format, page.titre, rendre), a);
   }
   // Un brouillon n'existe que dans le corps POSTé.
   return texte("Introuvable.", 404);
