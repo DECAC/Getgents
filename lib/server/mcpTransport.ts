@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { statutPartage, traiterMessage, type ContexteMcp, type DemandePartage, type Fidelite, type ReponseRpc } from "@/lib/mcpPartage";
 import { enregistrerArtefact, lireArtefact, listerPartages, revoquerPartage, type Proprietaire } from "@/lib/server/artefactsPartages";
 import { langueDuLecteur } from "@/lib/server/langueLecteur";
-import { mettreAJourPage } from "@/lib/server/pages";
+import { mettreAJourPage, trouverOuCreerPage } from "@/lib/server/pages";
 import { lireClient } from "@/lib/server/oauthMcp";
 
 /**
@@ -31,6 +31,20 @@ export async function repondreMcp(req: Request, base: string, proprietaire: Prop
 
   const client = req.headers.get("user-agent");
   const ctx: ContexteMcp = {
+    creerPage: async (demande: DemandePartage) => {
+      const plateforme = (await lireClient(proprietaire.clientId))?.nom ?? null;
+      const { page, nouvelle } = await trouverOuCreerPage(proprietaire.userId, {
+        titre: demande.titre,
+        format: demande.format,
+        contenu: demande.contenu,
+        origine: plateforme,
+        assistant: demande.assistant === true,
+      });
+      console.log(
+        JSON.stringify({ tag: "getgents:partage", event: "page_sans_destinataire", nouvellePage: nouvelle, format: page.format, ownerId: proprietaire.userId, client })
+      );
+      return { pageId: page.id, nouvellePage: nouvelle, titre: page.titre };
+    },
     enregistrer: async (demande: DemandePartage, fidelite: Fidelite | null) => {
       // La plateforme d'origine d'une NOUVELLE page : le nom déclaré par le client MCP (« Claude »…).
       const plateforme = demande.pageId ? null : ((await lireClient(proprietaire.clientId))?.nom ?? null);

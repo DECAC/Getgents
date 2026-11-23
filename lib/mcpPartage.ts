@@ -121,7 +121,9 @@ export function validerDemande(args: unknown): ResultatValidation {
   if (!contenu.trim()) return { ok: false, erreur: "Le contenu est vide : recopie le code COMPLET de la page (l'artefact ou le canvas)." };
   if (contenu.length > CONTENU_MAX) return { ok: false, erreur: `Contenu trop long (${CONTENU_MAX} caractères au plus).` };
   if (!format) return { ok: false, erreur: `Format inconnu : choisis parmi ${FORMATS_ARTEFACT.join(", ")}.` };
-  if (!destinataire) return { ok: false, erreur: "Destinataire vide : une adresse e-mail ou le nom du client." };
+  // Sans destinataire : la page est créée SANS lien (vécu 23/11 : une page de
+  // vote pour neuf personnes, que Claude refusait de partager faute d'un nom).
+  // L'auteur crée ensuite, depuis sa fiche, un lien de groupe ou des liens.
   if (destinataire.length > DESTINATAIRE_MAX) return { ok: false, erreur: "Destinataire trop long." };
   if (message.length > MESSAGE_MAX) return { ok: false, erreur: `Message trop long (${MESSAGE_MAX} caractères au plus).` };
   return {
@@ -229,6 +231,8 @@ export const DESCRIPTION_OUTIL =
   "page HTML, document, schéma, application. Enregistre la page dans Getgents, crée un lien privé pour ce " +
   "destinataire et rend le lien avec un modèle de mail ; Getgents n'envoie aucun e-mail. " +
   "Pour une page déjà partagée, `page` (son identifiant) remplace titre, contenu et format. " +
+  "Sans `destinataire` (page pour un groupe, destinataire pas encore connu), la page est enregistrée sans lien " +
+  "et l'outil rend l'adresse de sa fiche, où l'utilisateur crée un lien de groupe ou des liens personnels. " +
   "`contenu` attend le code ou le texte complet de la page, à l'identique : le destinataire voit exactement ce " +
   "qui est envoyé, et un contenu abrégé (« ... », « reste du code inchangé ») s'affiche tel quel. Une page qui " +
   "lit des données en direct depuis Claude (window.claude, window.storage) ne les affiche pas chez le " +
@@ -256,7 +260,11 @@ export const SCHEMA_OUTIL = {
       enum: [...FORMATS_ARTEFACT],
       description: "html (page ou document HTML), markdown, svg, react (composant JSX/TSX), texte.",
     },
-    destinataire: { type: "string", description: "Adresse e-mail ou nom du client destinataire." },
+    destinataire: {
+      type: "string",
+      description:
+        "Facultatif : adresse e-mail, nom du client, ou nom d'un groupe. Sans destinataire, la page est enregistrée sans lien et l'utilisateur choisit dans Getgents à qui l'envoyer (lien de groupe, liens personnels).",
+    },
     message: { type: "string", description: "Facultatif : mot d'accompagnement pour le mail." },
     assistant: {
       type: "boolean",
@@ -264,7 +272,7 @@ export const SCHEMA_OUTIL = {
         "Facultatif, faux par défaut. Vrai si l'utilisateur veut que son client puisse poser des questions sur le document à un assistant IA, à côté de l'artefact (« avec l'assistant »). Les réponses sont facturées à l'utilisateur.",
     },
   },
-  required: ["destinataire"],
+  required: [],
   additionalProperties: false,
 };
 
@@ -325,6 +333,8 @@ export const INSTRUCTIONS_SERVEUR =
   "an assistant about the page; it sends no e-mail itself.";
 
 export interface ContexteMcp {
+  /** Crée (ou retrouve) la page SANS lien : partage sans destinataire. */
+  creerPage?: (d: DemandePartage) => Promise<{ pageId: string; nouvellePage: boolean; titre: string }>;
   /** Enregistre l'artefact et rend son lien public. */
   enregistrer: (
     d: DemandePartage,
@@ -410,6 +420,24 @@ function texteResultat(
     f ? ligneDonnees(f) : "",
     "",
     "Donne à l'utilisateur le lien et le modèle de mail ci-dessus, et rappelle-lui que c'est à lui d'envoyer le mail.",
+  ]
+    .filter((l, i, t) => l !== "" || (t[i - 1] ?? "") !== "")
+    .join("\n");
+}
+
+/** Réponse d'un partage SANS destinataire : la page existe, aucun lien n'est encore créé. */
+function texteSansDestinataire(f: Fidelite, fiche: string, p: { pageId: string; nouvellePage: boolean }): string {
+  return [
+    p.nouvellePage
+      ? `Page enregistrée dans Getgents (identifiant ${p.pageId}), SANS lien pour l'instant.`
+      : `Ce contenu existait déjà : même page (identifiant ${p.pageId}), aucun lien créé.`,
+    `Fiche de la page : ${fiche}`,
+    "Depuis la fiche, l'utilisateur choisit à qui l'envoyer : un LIEN DE GROUPE (un seul lien à poster dans un groupe WhatsApp, chacun choisit son prénom) ou un lien par personne. Pour un destinataire précis, rappelle partager_page avec `page` et `destinataire`.",
+    `Reçu : ${f.caracteres} caractères, ${f.lignes} lignes.`,
+    ligneFidelite(f),
+    ligneDonnees(f),
+    "",
+    "Donne à l'utilisateur l'adresse de la fiche. Aucun e-mail n'est parti.",
   ]
     .filter((l, i, t) => l !== "" || (t[i - 1] ?? "") !== "")
     .join("\n");
@@ -585,6 +613,25 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
       if (!v.ok) return echec(v.erreur);
       // Repartage d'une page : rien n'a été recopié, il n'y a rien à contrôler.
       const fidelite = v.demande.pageId ? null : controleFidelite(v.demande.contenu, v.demande.format);
+      // Sans destinataire : la page seule, puis la fiche pour choisir à qui l'envoyer.
+      if (!v.demande.destinataire && fidelite) {
+        if (!ctx.creerPage) return echec("Destinataire vide : une adresse e-mail, le nom du client ou le nom d'un groupe.");
+        try {
+          const p = await ctx.creerPage(v.demande);
+          const fiche = `${ctx.base ?? ""}/pages/${p.pageId}`;
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              content: [{ type: "text", text: texteSansDestinataire(fidelite, fiche, p) }],
+              structuredContent: { lien: null, page: p.pageId, fiche, fidelite },
+            },
+          };
+        } catch (e) {
+          if (e instanceof PlafondAtteint) return echec(`${e.message} Dis-le à l'utilisateur ; ne réessaie pas.`);
+          return echec("La page n'a pas pu être enregistrée. Réessaie dans un instant.");
+        }
+      }
       try {
         const res = await ctx.enregistrer(v.demande, fidelite);
         if (!res) return echec("Aucune page de ce compte ne porte cet identifiant. Vérifie avec lister_partages, ou partage le contenu complet.");

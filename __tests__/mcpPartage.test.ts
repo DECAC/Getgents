@@ -62,9 +62,9 @@ describe("protocole MCP", () => {
     };
     expect(r.result.tools).toHaveLength(1);
     expect(r.result.tools[0].name).toBe(NOM_OUTIL);
-    // Le schéma n'exige que le destinataire : c'est la VALIDATION qui exige le
-    // contenu quand aucune page n'est donnée (repartage sans recopie).
-    expect(r.result.tools[0].inputSchema.required).toEqual(["destinataire"]);
+    // Le schéma n'exige rien : c'est la VALIDATION qui exige le contenu quand
+    // aucune page n'est donnée, et le destinataire pour un repartage.
+    expect(r.result.tools[0].inputSchema.required).toEqual([]);
     expect(r.result.tools[0].description).toMatch(/complet de la page, à l'identique/);
   });
 
@@ -163,7 +163,9 @@ describe("validation", () => {
   it("refuse un format inconnu, un contenu trop long, un destinataire vide", () => {
     expect(validerDemande({ ...base, format: "pdf" }).ok).toBe(false);
     expect(validerDemande({ ...base, contenu: "x".repeat(CONTENU_MAX + 1) }).ok).toBe(false);
-    expect(validerDemande({ ...base, destinataire: "  " }).ok).toBe(false);
+    // Sans destinataire : recevable, la page est créée sans lien.
+    expect(validerDemande({ ...base, destinataire: "  " }).ok).toBe(true);
+    expect(validerDemande({ ...base, destinataire: "x".repeat(201) }).ok).toBe(false);
     expect(validerDemande(null).ok).toBe(false);
   });
 });
@@ -396,5 +398,36 @@ describe("vocabulaire « page » (12/11)", () => {
       contexte()
     )) as { result: { isError?: boolean } };
     expect(ancien.result.isError).toBeUndefined();
+  });
+});
+
+describe("partage sans destinataire (23/11)", () => {
+  const PAGE_ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
+  const sansDest = { jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: NOM_OUTIL, arguments: { titre: "Vote", contenu: PAGE, format: "html" } } };
+
+  it("crée la page sans lien et rend l'adresse de sa fiche", async () => {
+    const lienCree: string[] = [];
+    const r = (await traiterMessage(sansDest, {
+      base: "https://getgents.ai",
+      enregistrer: async () => {
+        lienCree.push("oui");
+        return { lien: "x" };
+      },
+      creerPage: async (d) => ({ pageId: PAGE_ID, nouvellePage: true, titre: d.titre }),
+    })) as { result: { content: { text: string }[]; structuredContent: { lien: null; page: string; fiche: string } } };
+    expect(lienCree).toHaveLength(0);
+    expect(r.result.structuredContent).toMatchObject({ lien: null, page: PAGE_ID, fiche: `https://getgents.ai/pages/${PAGE_ID}` });
+    expect(r.result.content[0].text).toMatch(/SANS lien/);
+    expect(r.result.content[0].text).toMatch(/LIEN DE GROUPE/);
+  });
+
+  it("sans moyen de créer la page seule, redemande un destinataire", async () => {
+    const r = (await traiterMessage(sansDest, contexte())) as { result: { isError: boolean; content: { text: string }[] } };
+    expect(r.result.isError).toBe(true);
+    expect(r.result.content[0].text).toMatch(/Destinataire vide/);
+  });
+
+  it("un repartage exige toujours un destinataire", () => {
+    expect(validerDemande({ page: PAGE_ID }).ok).toBe(false);
   });
 });
