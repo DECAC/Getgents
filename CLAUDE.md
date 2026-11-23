@@ -1238,6 +1238,26 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   part hors écran à droite et la page paraît vide. La prop `embedded` annule ce
   comportement — la passer dès qu'un conteneur gère lui-même la taille.
 
+- **Temps de chargement de « Mes pages » et de la fiche** (23/11, ressenti
+  « encore un peu long » de l'éditeur, NON mesuré en production — le réseau de
+  l'agent ne joint pas getgents.ai). Corrigé dans le code : la liste est lue
+  par le SERVEUR avec la page (`app/pages/page.tsx` → `initiales`) au lieu
+  d'attendre HTML → JS → `/api/pages` ; `/api/pages/<id>` faisait ~11
+  lectures UNE À UNE (dont toute la liste des pages pour savoir si c'était la
+  première, et le contenu relu une seconde fois) — désormais `detailEtContenu`
+  et `nombreDePages`, en parallèle ; la purge de l'onglet Activité part en
+  même temps que la lecture. Aperçus du PROPRIÉTAIRE (vignettes, fiche)
+  gardés 5 min dans son navigateur (`cacheDocument`, redirection ET document :
+  l'adresse porte `?v=`) ; un lien de destinataire jamais (révocation
+  immédiate). Limite : un fichier joint ajouté sans nouvelle version peut
+  manquer à une VIGNETTE pendant 5 min (la fiche a `&f=`). Restent : chaque
+  route appelle `auth.getUser()` (aller-retour vers Supabase Auth, deux pour
+  un document : middleware + page) ; la fiche lance encore ses 8 blocs APRÈS
+  `/api/pages/<id>`. **À VÉRIFIER d'abord** : la RÉGION des fonctions Vercel
+  (Settings → Functions, défaut `iad1` Washington) contre celle de Supabase
+  (Settings → General) — un océan entre les deux coûte ~80-100 ms par
+  requête, et une fiche en enchaîne une dizaine.
+
 ## Pièges déjà payés
 
 - **Le plan Vercel n'est pas un détail de facturation, c'est une contrainte de
