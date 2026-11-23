@@ -2911,3 +2911,14 @@
   content: "◌ ";
   color: var(--muted, #6b6b6b);
 }
+
+.fichierAlerte {
+  flex: 1 0 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff3e0;
+  color: #8a4b00;
+  font-size: 0.85em;
+  line-height: 1.4;
+}

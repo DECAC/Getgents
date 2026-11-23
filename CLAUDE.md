@@ -1081,8 +1081,18 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   fichiers appelés (`fidelite.fichiers`). Vérifié au navigateur en MÉMOIRE
   LOCALE seulement (fichier servi en `data:`) : le chemin Supabase (envoi
   signé, relecture, adresses signées) n'a tourné NULLE PART — premier essai
-  réel à surveiller (`getgents:fichiers`). Limite : un nom avec espace écrit
-  tel quel dans la page n'est pas reconnu (`%20` l'est).
+  réel à surveiller (`getgents:fichiers`). **Noms LONGS (23/11, vécu sur
+  « footix »)** : un fichier nommé « Justice - Flower In A Hurricane (ft X, Y)
+  [from Z].mp3 » n'était JAMAIS réécrit — la regex coupait aux espaces,
+  parenthèses et virgules, « Remplacer » changeait un fichier que la page ne
+  lisait pas, et rien ne le disait. Désormais recherche LITTÉRALE du nom
+  (`avecFichiers`, `regexDesNoms` : tel quel, `%20`, `encodeURIComponent`,
+  `&amp;`, avec chemin éventuel ; adresse externe jamais touchée) et chaînes
+  entre guillemets lues en entier (`fichiersReferences`). **Témoin** dans la
+  fiche : « La page n'appelle pas ce fichier » (`fichiersUtilises`, champ
+  `utilise` de `GET /fichiers`) — cas d'un son INTÉGRÉ au code en `data:` :
+  il faut alors demander à Claude (`mettre_a_jour_page`) d'appeler le fichier
+  par son nom. Le connecteur ne peut PAS envoyer de fichier (texte seulement).
 - **mcptry et découverte SANS jeton** (23/11 ; l'annuaire mcptry, qui
   recense le registre MCP officiel, a écrit à l'éditeur : Getgents Pages
   792ᵉ/1837 « Communication », 58/100). Deux leviers pris : (1)

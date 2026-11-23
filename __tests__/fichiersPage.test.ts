@@ -1,4 +1,4 @@
-import { avecFichiers, FICHIER_MAX, FICHIERS_MAX, FICHIERS_TOTAL_MAX, fichiersReferences, nomFichierValide, typeDepuisNom, validerFichier } from "@/lib/fichiersPage";
+import { avecFichiers, fichiersUtilises, FICHIER_MAX, FICHIERS_MAX, FICHIERS_TOTAL_MAX, fichiersReferences, nomFichierValide, typeDepuisNom, validerFichier } from "@/lib/fichiersPage";
 import { controleFidelite } from "@/lib/mcpPartage";
 
 const PAGE_VOTE = `<!doctype html><html><body>
@@ -53,5 +53,47 @@ describe("fichiers joints d'une page (23/11)", () => {
 
   it("le connecteur signale les fichiers à joindre", () => {
     expect(controleFidelite(PAGE_VOTE, "html").fichiers).toContain("musique.mp3");
+  });
+
+  describe("noms longs : espaces, parenthèses, virgules, & (23/11, footix)", () => {
+    const nom = "Justice - Flower In A Hurricane (ft Tame Impala, SZA, King Gizzard & the Lizard Wizard) [from GTAVI].mp3";
+    const url = "https://s.example/sign/nouveau.mp3?token=T";
+    const formes = {
+      "tel quel": `<audio src="${nom}"></audio>`,
+      "%20 (encodeURI)": `<audio src="${encodeURI(nom)}"></audio>`,
+      "encodeURIComponent": `<audio src="${encodeURIComponent(nom)}"></audio>`,
+      "& écrit &amp;": `<audio src="${nom.replace(/&/g, "&amp;")}"></audio>`,
+      "chaîne JS": `const MUSIC = "${nom}"; new Audio(MUSIC);`,
+      "chemin Claude": `<audio src="/mnt/user-data/uploads/${nom}"></audio>`,
+      "apostrophes": `<audio src='${nom}'></audio>`,
+    };
+    for (const [forme, page] of Object.entries(formes)) {
+      it(`reconnu et réécrit : ${forme}`, () => {
+        expect(fichiersReferences(page)).toEqual([nom]);
+        const sortie = avecFichiers(page, [{ nom, url }]);
+        expect(sortie).toContain(url);
+        expect(sortie).not.toContain("GTAVI");
+        expect(fichiersUtilises(page, [nom])).toEqual([nom]);
+      });
+    }
+    it("une adresse externe qui finit par le même nom reste intacte", () => {
+      const page = `<audio src="https://cdn.exemple.com/musiques/${encodeURIComponent(nom)}"></audio>`;
+      expect(avecFichiers(page, [{ nom, url }])).toBe(page);
+      expect(fichiersUtilises(page, [nom])).toEqual([]);
+      expect(fichiersReferences(page)).toEqual([]);
+    });
+    it("un nom plus court inclus dans un plus long n'est pas confondu", () => {
+      const page = `<audio src="mon-son.mp3"></audio><audio src="son.mp3"></audio>`;
+      const sortie = avecFichiers(page, [{ nom: "son.mp3", url: "https://u/1" }]);
+      expect(sortie).toBe(`<audio src="mon-son.mp3"></audio><audio src="https://u/1"></audio>`);
+      expect(fichiersUtilises(page, ["son.mp3"])).toEqual(["son.mp3"]);
+    });
+    it("fichiersUtilises : un fichier que la page n'appelle pas n'est pas « utilisé »", () => {
+      const page = `<audio src="data:audio/mpeg;base64,AAAA"></audio>`;
+      expect(fichiersUtilises(page, [nom, "autre.mp3"])).toEqual([]);
+    });
+    it("une phrase qui ne finit pas par un média n'est pas un fichier attendu", () => {
+      expect(fichiersReferences(`<p class="x">Écoute la musique, puis vote.</p><img src="photo.png">`)).toEqual(["photo.png"]);
+    });
   });
 });

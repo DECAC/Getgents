@@ -72,6 +72,18 @@ function nomDe(ref: string): string {
   }
 }
 
+// Chaîne entre guillemets qui FINIT par un nom de média : espaces, parenthèses et
+// virgules permis (« Justice - Flower (ft X, Y) [from Z].mp3 »). La regex
+// `REFERENCE` coupait à chacun et ne voyait qu'un bout du nom.
+const CHAINE_MEDIA = new RegExp(`(["'\`])((?:(?!\\1)[^\\n<>]){1,200}?\\.(?:${EXTENSIONS}))\\1`, "gi");
+
+const ECHAPPE = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Les écritures possibles d'un nom dans une page : tel quel, encodé, `&amp;` (attribut HTML). */
+function variantes(nom: string): string[] {
+  return Array.from(new Set([nom, encodeURI(nom), encodeURIComponent(nom), nom.replace(/&/g, "&amp;")]));
+}
+
 /**
  * Noms des fichiers LOCAUX que la page référence (src, href, url(), chaînes
  * JS) — ni adresse web, ni `data:`, ni `blob:`. Sert à dire « fichiers
@@ -79,27 +91,61 @@ function nomDe(ref: string): string {
  */
 export function fichiersReferences(contenu: string): string[] {
   const vus = new Set<string>();
-  for (const m of Array.from(contenu.matchAll(REFERENCE))) {
-    const ref = m[0];
-    if (estExterne(ref)) continue;
-    const nom = nomDe(ref);
+  const ajouter = (ref: string) => {
+    if (estExterne(ref)) return;
+    const nom = nomDe(ref).replace(/&amp;/g, "&");
     if (nomFichierValide(nom)) vus.add(nom);
-  }
+  };
+  // 1. Chaînes entre guillemets (noms longs) ; leur place est ensuite effacée pour que la regex simple n'en ramasse pas un bout.
+  const reste = contenu.replace(CHAINE_MEDIA, (m, _q: string, ref: string) => {
+    ajouter(ref);
+    return " ".repeat(m.length);
+  });
+  // 2. Références simples : url(fond.png), src sans guillemets, noms sans espace.
+  for (const m of Array.from(reste.matchAll(REFERENCE))) ajouter(m[0]);
   return Array.from(vus);
+}
+
+/** Regex qui reconnaît, dans une page, UN des noms donnés (toutes variantes), avec son chemin éventuel. */
+function regexDesNoms(noms: readonly string[]): { re: RegExp; parVariante: Map<string, string> } {
+  const parVariante = new Map<string, string>();
+  for (const nom of noms) for (const v of variantes(nom)) if (!parVariante.has(v)) parVariante.set(v, nom);
+  const alternatives = Array.from(parVariante.keys())
+    .sort((a, b) => b.length - a.length)
+    .map(ECHAPPE)
+    .join("|");
+  // Préfixe de chemin facultatif (`/mnt/user-data/uploads/`) ; un début de mot devant le nom l'exclut.
+  const re = new RegExp(`(?<![\\w%.\\-])([^\\s"'\`<>()=,;]*/)?(${alternatives})(?![A-Za-z0-9_%])`, "g");
+  return { re, parVariante };
 }
 
 /**
  * Réécrit chaque référence à un fichier JOINT vers son adresse (signée).
- * Une référence externe n'est jamais touchée, même si elle finit par le même
- * nom ; un nom absent de `fichiers` reste tel quel.
+ * La recherche est LITTÉRALE sur le nom du fichier : espaces, parenthèses,
+ * virgules, accents, `%20` et `&amp;` sont reconnus. Une adresse externe
+ * (`https://…/nom.mp3`) n'est jamais touchée, même si elle finit par le même nom.
  */
 export function avecFichiers(contenu: string, fichiers: ReadonlyArray<{ nom: string; url: string }>): string {
   if (fichiers.length === 0) return contenu;
-  const parNom = new Map(fichiers.map((f) => [f.nom, f.url]));
-  return contenu.replace(REFERENCE, (ref) => {
-    if (estExterne(ref)) return ref;
-    return parNom.get(nomDe(ref)) ?? ref;
+  const urls = new Map(fichiers.map((f) => [f.nom, f.url]));
+  const { re, parVariante } = regexDesNoms(fichiers.map((f) => f.nom));
+  return contenu.replace(re, (tout, prefixe: string | undefined, variante: string) => {
+    if (prefixe && estExterne(prefixe)) return tout;
+    return urls.get(parVariante.get(variante) ?? "") ?? tout;
   });
+}
+
+/** Parmi `noms`, ceux que la page appelle réellement (même reconnaissance que la réécriture). */
+export function fichiersUtilises(contenu: string, noms: readonly string[]): string[] {
+  if (noms.length === 0) return [];
+  const { re, parVariante } = regexDesNoms(noms);
+  const trouves = new Set<string>();
+  for (const m of Array.from(contenu.matchAll(re))) {
+    if (m[1] && estExterne(m[1])) continue;
+    const nom = parVariante.get(m[2]);
+    if (nom) trouves.add(nom);
+  }
+  return Array.from(trouves);
 }
 
 export function tailleLisible(octets: number): string {

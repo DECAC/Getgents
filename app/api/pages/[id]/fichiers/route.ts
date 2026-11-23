@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/server/session";
 import { lirePage } from "@/lib/server/pages";
-import { fichiersReferences, MESSAGE_FICHIER } from "@/lib/fichiersPage";
+import { fichiersReferences, fichiersUtilises, MESSAGE_FICHIER } from "@/lib/fichiersPage";
 import { listerFichiers, MigrationFichiersManquante, preparerEnvoi, supprimerFichier } from "@/lib/server/fichiersPages";
 
 export const dynamic = "force-dynamic";
@@ -29,8 +29,10 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
     const fichiers = await listerFichiers(r.page.id);
     const joints = new Set(fichiers.map((f) => f.nom));
     const attendus = fichiersReferences(r.page.contenu).filter((n) => !joints.has(n));
+    // « utilise » : la page appelle-t-elle réellement ce fichier ? Sinon le remplacer ne change rien (son intégré au code, autre nom).
+    const utilises = new Set(fichiersUtilises(r.page.contenu, fichiers.map((f) => f.nom)));
     return NextResponse.json(
-      { fichiers: fichiers.map(({ chemin: _c, ...f }) => f), attendus },
+      { fichiers: fichiers.map(({ chemin: _c, ...f }) => ({ ...f, utilise: utilises.has(f.nom) })), attendus },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (e) {

@@ -8,6 +8,8 @@ interface Fichier {
   nom: string;
   type: string;
   taille: number;
+  /** La page appelle ce fichier par son nom ; faux = le remplacer ne change rien pour les lecteurs. */
+  utilise?: boolean;
 }
 
 /**
@@ -158,6 +160,12 @@ export function BlocFichiers({ pageId, onMessage, onChange }: { pageId: string; 
               <button type="button" className={styles.lienDanger} onClick={() => void retirer(f.nom)} disabled={!!envoi}>
                 Retirer
               </button>
+              {f.utilise === false && (
+                <p className={styles.fichierAlerte}>
+                  La page n'appelle pas ce fichier : le remplacer ne change rien pour vos lecteurs. Elle joue peut-être un son intégré à son
+                  code. Demandez à Claude de l'appeler par ce nom (« mettre à jour la page »).
+                </p>
+              )}
             </li>
           ))}
         </ul>
