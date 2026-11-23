@@ -1092,11 +1092,11 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   `tools/call`, un lot mixte, un jeton présent mais invalide, et `GET` restent
   en 401 + `WWW-Authenticate`. Journal `getgents:mcp decouverte_sans_jeton`.
   Vérifié (client OAuth rejoué en local : inscription, code, jeton, partage,
-  liste ; sans jeton 200 sur la découverte, 401 sur l'appel). **RISQUE NON
-  VÉRIFIÉ d'ici : Claude pourrait afficher « connecté » sans lancer OAuth avant
-  le premier `tools/call`** — après déploiement, déconnecter/reconnecter le
-  connecteur et partager une page ; si la connexion ne se déclenche plus,
-  RÉTABLIR le 401 partout (reprendre l'ancien `POST` de `app/api/mcp/route.ts`).
+  liste ; sans jeton 200 sur la découverte, 401 sur l'appel). **Essai réel
+  CONCLUANT (23/11, l'éditeur : « ça marche »)** : la connexion se déclenche
+  toujours dans Claude. Si un AUTRE client se comporte autrement (affiche
+  « connecté » sans lancer OAuth avant le premier `tools/call`), RÉTABLIR le
+  401 partout (reprendre l'ancien `POST` de `app/api/mcp/route.ts`).
   (2) icône dans `server.json` (`getgents-icone.png`, 1.0.1) ; PAS de lien
   `repository` (le dépôt porte le nom de l'éditeur — un test le garde). La
   republication au registre exige une NOUVELLE clé de preuve
