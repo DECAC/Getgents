@@ -1040,6 +1040,12 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   ne serait parti) — locale `en-GB` + `formatToParts`. Vérifié : tests
   (orchestration avec fausses dépendances, jetons) et page de confirmation au
   navigateur ; l'ENVOI réel (Brevo) et la lecture Supabase n'ont tourné nulle part.
+- **Onglet « Destinataires » renommé « Partager »** (23/11, lot suivant du QR) :
+  Page = ce qui vaut pour TOUS les liens (aperçu, langue, engagement, fichiers,
+  données partagées, versions) ; Partager = liens, groupes, WhatsApp, QR code,
+  échéances et accès par code. Le contenu de l'onglet était déjà celui-là
+  (étapes 1 et 2) : seuls le nom, l'identifiant interne (`partager`) et le
+  titre de bloc (« Liens · N actifs ») ont changé. Vérifié au navigateur.
 - **Pages de GROUPE depuis Claude : sans destinataire, votes partagés** (23/11 ;
   vécu : Claude refusait de partager une page de vote pour 9 personnes).
   `partager_page` accepte l'absence de `destinataire` (contenu neuf

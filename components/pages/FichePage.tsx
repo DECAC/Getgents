@@ -64,7 +64,7 @@ const actif = (d: Destinataire) => !d.revokedAt && !(d.expiresAt && Date.parse(d
 /**
  * La fiche d'une page, en quatre onglets (19/11, choix de l'éditeur) :
  * Page (aperçu RÉEL — même cadre isolé que chez le client —, bouton
- * d'engagement, versions), Destinataires (liens, accès protégé par code),
+ * d'engagement, versions), Partager (liens, groupes, QR code, échéances, accès protégé par code),
  * Activité (réponses au bouton, lectures) et Assistant.
  */
 export function FichePage({ id }: { id: string }) {
@@ -72,7 +72,7 @@ export function FichePage({ id }: { id: string }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [enCours, setEnCours] = useState<string | null>(null);
-  const [onglet, setOnglet] = useState<"page" | "destinataires" | "activite" | "assistant">("page");
+  const [onglet, setOnglet] = useState<"page" | "partager" | "activite" | "assistant">("page");
   const [sansReponse, setSansReponse] = useState(0);
   const [reponsesNouvelles, setReponsesNouvelles] = useState(0);
   const [repondus, setRepondus] = useState(0);
@@ -268,11 +268,11 @@ export function FichePage({ id }: { id: string }) {
         <button
           type="button"
           role="tab"
-          aria-selected={onglet === "destinataires"}
+          aria-selected={onglet === "partager"}
           className={styles.onglet}
-          onClick={() => setOnglet("destinataires")}
+          onClick={() => setOnglet("partager")}
         >
-          Destinataires
+          Partager
           {actifs.length > 0 && <span className={styles.ongletCompte}>{actifs.length}</span>}
         </button>
         <button type="button" role="tab" aria-selected={onglet === "activite"} className={styles.onglet} onClick={() => setOnglet("activite")}>
@@ -295,7 +295,7 @@ export function FichePage({ id }: { id: string }) {
 
       {/* Monté dès l'ouverture de la fiche (masqué sur « Page ») : la pastille de l'onglet Assistant
           doit être juste avant même qu'on l'ouvre, et changer d'onglet ne recharge rien. */}
-      <div hidden={onglet === "page" || onglet === "destinataires"} className={styles.ongletCorps}>
+      <div hidden={onglet === "page" || onglet === "partager"} className={styles.ongletCorps}>
         <div hidden={onglet !== "activite"}>
           <ReponsesPage
             pageId={page.id}
@@ -460,7 +460,7 @@ export function FichePage({ id }: { id: string }) {
         </div>
       </div>
       )}
-      {onglet === "destinataires" && (
+      {onglet === "partager" && (
         <div className={styles.colonneOnglet}>
           {expirent.length > 0 && (
             <div className={styles.bandeauExpire} role="status">
@@ -477,7 +477,7 @@ export function FichePage({ id }: { id: string }) {
           )}
           <section className={styles.bloc}>
             <h2 className={styles.blocTitre}>
-              Destinataires · {actifs.length} actif{actifs.length > 1 ? "s" : ""}
+              Liens · {actifs.length} actif{actifs.length > 1 ? "s" : ""}
               {!partage.ouvert && (
                 <span className={styles.blocTitreActions}>
                 <button type="button" className={styles.secondairePetit} onClick={() => setPartage({ ouvert: true, destinataire: "", invites: null, resultat: null })}>

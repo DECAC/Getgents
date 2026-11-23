@@ -177,7 +177,7 @@ export function ReponsesPage({
             <span>
               {attente.total
                 ? "Activez-le dans l'onglet Page pour que vos lecteurs vous répondent, choix compris."
-                : "Partagez la page depuis l'onglet Destinataires pour suivre ici les réponses."}
+                : "Partagez la page depuis l'onglet Partager pour suivre ici les réponses."}
             </span>
           </div>
         )}
