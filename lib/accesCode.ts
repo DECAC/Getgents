@@ -7,8 +7,8 @@
  * À LAQUELLE LE LIEN A ÉTÉ ADRESSÉ — il ne la tape pas : un lien transféré
  * envoie donc le code au vrai destinataire, pas à celui qui l'a reçu.
  */
-
 import { createHash, createHmac, randomInt, timingSafeEqual } from "crypto";
+import { mailCodeTextes, type Langue } from "./langueLecteur";
 import { estAdresseEmail } from "./mcpPartage";
 
 export const DUREE_CODE_MS = 10 * 60 * 1000;
@@ -60,15 +60,16 @@ export function accesValide(cle: string, jeton: string, valeur: string | undefin
 }
 
 /** Le mail du code : court, sans lien (un lien dans un mail de code apprend à cliquer sur n'importe quoi). */
-export function mailCode(titre: string, code: string): { objet: string; html: string } {
+export function mailCode(titre: string, code: string, langue: Langue = "fr"): { objet: string; html: string } {
   const t = titre.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]!);
+  const x = mailCodeTextes(langue);
   return {
-    objet: `Votre code pour ouvrir « ${titre.slice(0, 80)} »`,
+    objet: x.objet(titre.slice(0, 80)),
     html:
-      `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#2a1f19;line-height:1.5">` +
-      `<p>Voici votre code pour ouvrir <b>${t}</b> :</p>` +
+      `<div lang="${langue}" style="font-family:system-ui,sans-serif;font-size:15px;color:#2a1f19;line-height:1.5">` +
+      `<p>${x.intro} <b>${t}</b>${langue === "en" ? ":" : " :"}</p>` +
       `<p style="font-size:30px;font-weight:700;letter-spacing:6px;margin:18px 0">${code}</p>` +
-      `<p>Il est valable 10 minutes. Si vous n'avez rien demandé, ignorez simplement cet e-mail.</p>` +
+      `<p>${x.validite}</p>` +
       `<p style="color:#73665f;font-size:13px">Getgents</p></div>`,
   };
 }

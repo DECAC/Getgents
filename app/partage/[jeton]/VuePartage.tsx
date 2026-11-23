@@ -8,6 +8,8 @@ import EngagementLecteur from "./EngagementLecteur";
 import { ChoixPrenom } from "./ChoixPrenom";
 import { cleInvite, clePrenom, inviteDeLaListe } from "@/lib/groupesPages";
 import type { LectureJointe } from "@/lib/engagement";
+import { textes, type Langue } from "@/lib/langueLecteur";
+import { ChoixLangue } from "./ChoixLangue";
 import styles from "./partage.module.css";
 
 /** La bulle « Une question sur ce document ? » ne s'affiche qu'une fois par navigateur. */
@@ -94,6 +96,7 @@ export default function VuePartage({
   destinataire,
   dejaRepondu,
   groupe,
+  langue,
 }: {
   jeton: string;
   titre: string;
@@ -109,7 +112,10 @@ export default function VuePartage({
   dejaRepondu: boolean;
   /** Lien de groupe : ses invités et ceux qui ont déjà répondu. */
   groupe: { nom: string; invites: string[]; repondus: string[] } | null;
+  /** Langue de l'habillage (lot anglais 1). */
+  langue: Langue;
 }) {
+  const t = textes(langue);
   const cadre = useRef<HTMLIFrameElement>(null);
   const srcDocument = `/api/partage/${encodeURIComponent(jeton)}/contenu`;
   // Domaine de contenu bloqué (filtre d'entreprise) : rechargement depuis getgents.ai.
@@ -188,19 +194,20 @@ export default function VuePartage({
   };
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} lang={langue}>
       <header className={styles.bandeau}>
         {bandeau}
         {groupe && engagement && prenom && (
           <span className={styles.quiBandeau}>
-            Vous : <b>{prenom}</b>
+            {t.vous} <b>{prenom}</b>
             <button type="button" className={styles.lienConf} onClick={() => setChanger(true)}>
-              Changer
+              {t.changer}
             </button>
           </span>
         )}
+        <ChoixLangue langue={langue} libelle={t.choisirLangue} />
         <button type="button" className={styles.lienConf} onClick={() => setConf(true)}>
-          Confidentialité
+          {t.confidentialite}
         </button>
         <a className={styles.marque} href="/" target="_blank" rel="noopener noreferrer">
           Getgents
@@ -225,15 +232,16 @@ export default function VuePartage({
             onFermer={fermer}
             onAgrandir={() => setAgrandi((a) => !a)}
             onConfidentialite={() => setConf(true)}
+            langue={langue}
           />
         )}
       </div>
 
       {groupe && engagement && prenomLu && (!prenom || changer) && (
-        <ChoixPrenom invites={groupe.invites} repondus={repondus} onChoisir={choisirPrenom} onFermer={prenom ? () => setChanger(false) : undefined} />
+        <ChoixPrenom invites={groupe.invites} repondus={repondus} onChoisir={choisirPrenom} onFermer={prenom ? () => setChanger(false) : undefined} langue={langue} />
       )}
 
-      {conf && <Confidentialite titre={titre} auteur={auteur} protegee={protegee} onFermer={() => setConf(false)} />}
+      {conf && <Confidentialite titre={titre} auteur={auteur} protegee={protegee} onFermer={() => setConf(false)} langue={langue} />}
 
       {(engagement || assistant) && !(assistant && ouvert) && (
         <div className={styles.flottants}>
@@ -249,14 +257,15 @@ export default function VuePartage({
               onRepondu={() => prenom && setRepondus((r) => [...r, prenom])}
               cadre={cadre}
               mesure={mesure}
+              langue={langue}
             />
           )}
           {assistant && (
-            <button type="button" className={styles.lanceur} onClick={ouvrir} aria-label="Ouvrir l'assistant du document">
+            <button type="button" className={styles.lanceur} onClick={ouvrir} aria-label={t.ouvrirAssistant}>
               <span className={styles.lanceurEtoile} aria-hidden="true">
                 ✦
               </span>
-              Poser une question
+              {t.poserQuestion}
             </button>
           )}
         </div>
@@ -265,11 +274,11 @@ export default function VuePartage({
         <>
           {bulle && (
             <div className={styles.bulle} role="status">
-              <button type="button" className={styles.bulleFermer} aria-label="Masquer" onClick={() => setBulle(false)}>
+              <button type="button" className={styles.bulleFermer} aria-label={t.masquer} onClick={() => setBulle(false)}>
                 ✕
               </button>
-              <b>Une question sur ce document ?</b>
-              L&apos;assistant y répond à partir du document.
+              <b>{t.bulleTitre}</b>
+              {t.bulleTexte}
             </div>
           )}
         </>

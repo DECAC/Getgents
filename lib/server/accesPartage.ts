@@ -15,6 +15,7 @@ import {
   peutRecevoirCode,
 } from "@/lib/accesCode";
 import type { ArtefactPartage } from "@/lib/server/artefactsPartages";
+import type { Langue } from "@/lib/langueLecteur";
 
 /**
  * Accès protégé par code (migration 023). Deux tables NOUVELLES : déployé
@@ -150,7 +151,7 @@ export function causeBrevo(note: string): string {
 }
 
 /** Envoie un code au destinataire du lien. Renvoi limité (60 s), envois limités par lien. */
-export async function envoyerCode(a: Pick<ArtefactPartage, "jeton" | "destinataire" | "titre">): Promise<ResultatEnvoi> {
+export async function envoyerCode(a: Pick<ArtefactPartage, "jeton" | "destinataire" | "titre">, langue: Langue = "fr"): Promise<ResultatEnvoi> {
   if (!peutRecevoirCode(a.destinataire)) return { ok: false, status: 400, erreur: "Ce lien n'a pas d'adresse e-mail : demandez-en un nouveau." };
   const avant = await lireEtat(a.jeton);
   const maintenant = Date.now();
@@ -169,7 +170,7 @@ export async function envoyerCode(a: Pick<ArtefactPartage, "jeton" | "destinatai
     envois: (avant?.envois ?? 0) + 1,
     valideLe: avant?.valideLe ?? null,
   });
-  const mail = mailCode(a.titre, code);
+  const mail = mailCode(a.titre, code, langue);
   // Développement SANS Brevo : le code part dans le journal du serveur, pour
   // exercer le parcours. Jamais en production — là, l'e-mail est obligatoire.
   if (process.env.NODE_ENV !== "production" && !isBrevoConfigured()) {

@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { apercuPourJeton } from "@/lib/server/apercuLien";
-import { paletteDuTitre, tailleTitre, enteteVignette } from "@/lib/vignetteLien";
+import { paletteDuTitre, tailleTitre, enteteVignette, etiquetteVignette } from "@/lib/vignetteLien";
 
 /**
  * Vignette d'aperçu d'un lien de page partagée — `og:image`, ajoutée aux
@@ -51,7 +51,7 @@ const etoile = (taille: number, couleur: string) => (
 export default async function Image({ params }: { params: Promise<{ jeton: string }> }) {
   const { jeton } = await params;
   const [apercu, fonts] = await Promise.all([apercuPourJeton(jeton), polices()]);
-  const titre = apercu?.titre ?? "Lien privé";
+  const titre = apercu?.titre ?? "Lien privé · Private link";
   const p = paletteDuTitre(titre);
   const confettis = [
     [90, 80, 28, p.fond2],
@@ -61,7 +61,8 @@ export default async function Image({ params }: { params: Promise<{ jeton: strin
     [560, 40, 14, "#ffffff"],
     [980, 560, 16, p.encre],
   ] as const;
-  const etiquette = !apercu ? "lien expiré" : apercu.protegee ? "psst, protégé par code !" : "psst, c'est privé !";
+  const langue = apercu?.langue ?? "fr";
+  const etiquette = etiquetteVignette(!apercu ? "expire" : apercu.protegee ? "protege" : "prive", langue);
 
   return new ImageResponse(
     (
@@ -85,7 +86,7 @@ export default async function Image({ params }: { params: Promise<{ jeton: strin
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 24, color: "#8a7f78", letterSpacing: 1.5 }}>
-            {etoile(26, p.accent)} {enteteVignette(apercu?.pour ?? null, !apercu)}
+            {etoile(26, p.accent)} {enteteVignette(apercu?.pour ?? null, !apercu, langue)}
           </div>
           <div style={{ display: "flex", fontSize: tailleTitre(titre), fontWeight: 700, color: p.encre, lineHeight: 1.0, letterSpacing: -2 }}>{titre}</div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

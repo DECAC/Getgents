@@ -1,6 +1,7 @@
 "use client";
 
 import { cleInvite } from "@/lib/groupesPages";
+import { textes, type Langue } from "@/lib/langueLecteur";
 import styles from "./partage.module.css";
 
 /**
@@ -14,39 +15,42 @@ export function ChoixPrenom({
   repondus,
   onChoisir,
   onFermer,
+  langue,
 }: {
   invites: string[];
   repondus: string[];
   onChoisir: (prenom: string) => void;
   /** Absent à la première ouverture : il faut choisir. Présent quand on « change ». */
   onFermer?: () => void;
+  langue: Langue;
 }) {
+  const t = textes(langue);
   const fait = new Set(repondus.map(cleInvite));
   return (
     <div className={styles.confVoile} data-flou="oui">
       <div className={styles.quiBoite} role="dialog" aria-modal="true" aria-labelledby="qui-titre">
         {onFermer && (
-          <button type="button" className={styles.confFermer} aria-label="Fermer" onClick={onFermer}>
+          <button type="button" className={styles.confFermer} aria-label={t.fermer} onClick={onFermer}>
             ✕
           </button>
         )}
         <h2 id="qui-titre" className={styles.engagementTitre}>
-          Qui êtes-vous ?
+          {t.quiTitre}
         </h2>
-        <p className={styles.quiTexte}>Choisissez votre prénom : votre réponse sera transmise à l&apos;auteur sous ce nom.</p>
+        <p className={styles.quiTexte}>{t.quiTexte}</p>
         <div className={styles.quiPrenoms}>
           {invites.map((p) => {
             const deja = fait.has(cleInvite(p));
             return (
               <button key={p} type="button" className={styles.quiPrenom} data-fait={deja ? "oui" : "non"} disabled={deja} onClick={() => onChoisir(p)}>
                 {p}
-                {deja && <small>a déjà répondu</small>}
+                {deja && <small>{t.dejaRepondu}</small>}
               </button>
             );
           })}
         </div>
         <p className={styles.quiPied}>
-          Vous n&apos;êtes pas dans la liste ? Demandez à l&apos;auteur de vous ajouter. Votre choix est retenu sur cet appareil ; « Changer » dans le bandeau.
+          {t.quiPied}
         </p>
       </div>
     </div>

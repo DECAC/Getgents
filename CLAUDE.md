@@ -969,6 +969,29 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   anglais (`docs/annuaires.md`). Examen automatique, listage « Community »
   attendu ; un passage « Verified » demanderait un compte d'essai DÉDIÉ
   (jamais celui de l'éditeur).
+- **Lecteur en anglais, lot 1** (23/11, maquette validée ; `lib/langueLecteur.ts`,
+  `lib/server/langueLecteur.ts`, `lib/server/routeLecteur.ts`, `ChoixLangue`,
+  `BlocLangue`, migration 034 à passer AVANT — sans elle tout reste en
+  « automatique », seul le réglage manuel répond 503). La langue de tout ce
+  que voit le LECTEUR suit la PAGE, pas l'auteur : choix du lecteur (FR | EN
+  du bandeau, cookie fonctionnel `gg_langue`, un an, `router.refresh` — le
+  cadre n'est pas rechargé) > réglage de l'auteur (fiche, onglet Page, table
+  `pages_langue`) > `<html lang>` de la page > langue du texte (mots
+  courants, SANS modèle) > français. Deux langues seulement. Traduits :
+  bandeau, boutons, réponse, code, « Who are you? », assistant (questions
+  par défaut ; il répondait déjà dans la langue de la QUESTION),
+  confidentialité du lecteur (la page /confidentialite reste en français :
+  lien « (in French) »), messages d'erreur des routes du lecteur — traduits
+  AU PASSAGE par `avecMessagesTraduits` (table `MESSAGES_EN`, un message
+  absent reste en français), aperçu du lien et vignette, e-mail du code,
+  modèle de mail du connecteur ET de la fiche, messages WhatsApp et
+  relances. Ce que l'auteur écrit (intitulé, questions suggérées) n'est
+  JAMAIS traduit ; la fiche propose des intitulés anglais pour une page
+  anglaise. L'interface de l'AUTEUR reste en français (lots 2 et 3 non
+  faits : vitrine, inscription, aide, juridique ; application de l'auteur,
+  modèles). Un test garde que FR et EN ont les mêmes clés. Vérifié au
+  navigateur (mémoire locale) : page anglaise, réponse, assistant, bascule
+  FR, groupe, code, vignette, fiche, téléphone.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

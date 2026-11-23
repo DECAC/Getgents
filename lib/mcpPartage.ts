@@ -14,6 +14,7 @@
 
 import { PlafondAtteint } from "./offre";
 import { donneesPersonnelles, type DonneesPersonnelles } from "./donneesPersonnelles";
+import { modeleMailTextes, type Langue } from "./langueLecteur";
 
 export const FORMATS_ARTEFACT = ["html", "markdown", "svg", "react", "texte"] as const;
 export type FormatArtefact = (typeof FORMATS_ARTEFACT)[number];
@@ -134,11 +135,13 @@ export function estAdresseEmail(s: string): boolean {
 }
 
 /** Le mail que le commercial enverra lui-même : en phase 0, Getgents n'envoie rien. */
-export function modeleMail(d: DemandePartage, lien: string): { objet: string; corps: string } {
-  const appel = estAdresseEmail(d.destinataire) ? "Bonjour," : `Bonjour ${d.destinataire},`;
+export function modeleMail(d: DemandePartage, lien: string, langue: Langue = "fr"): { objet: string; corps: string } {
+  // Dans la langue des LECTEURS de la page (lot anglais 1) : c'est eux qui le lisent.
+  const x = modeleMailTextes(langue);
+  const appel = x.bonjour(estAdresseEmail(d.destinataire) ? null : d.destinataire);
   return {
     objet: d.titre,
-    corps: [appel, "", d.message ?? "Comme convenu, voici le document préparé pour vous :", lien, "", "Bonne lecture,"].join("\n"),
+    corps: [appel, "", d.message ?? x.phrase, lien, "", x.signature].join("\n"),
   };
 }
 
@@ -326,7 +329,7 @@ export interface ContexteMcp {
   enregistrer: (
     d: DemandePartage,
     fidelite: Fidelite | null
-  ) => Promise<{ lien: string; pageId?: string; nouvellePage?: boolean; titre?: string; assistant?: boolean } | null>;
+  ) => Promise<{ lien: string; pageId?: string; nouvellePage?: boolean; titre?: string; assistant?: boolean; langue?: Langue } | null>;
   /** Nouvelle version d'une page du compte ; null si elle n'existe pas. */
   mettreAJour?: (
     pageId: string,
@@ -585,7 +588,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
       try {
         const res = await ctx.enregistrer(v.demande, fidelite);
         if (!res) return echec("Aucune page de ce compte ne porte cet identifiant. Vérifie avec lister_partages, ou partage le contenu complet.");
-        const mail = modeleMail({ ...v.demande, titre: res.titre ?? v.demande.titre }, res.lien);
+        const mail = modeleMail({ ...v.demande, titre: res.titre ?? v.demande.titre }, res.lien, res.langue);
         const assistant = res.assistant ?? v.demande.assistant === true;
         return {
           jsonrpc: "2.0",

@@ -11,6 +11,7 @@
  */
 
 import { donneesPersonnelles } from "./donneesPersonnelles";
+import type { Langue } from "./langueLecteur";
 
 export interface ApercuLien {
   titre: string;
@@ -20,6 +21,8 @@ export interface ApercuLien {
   /** Intitulé du bouton de réponse, s'il est actif et la page non protégée. */
   action: string | null;
   protegee: boolean;
+  /** Langue de l'aperçu : celle des lecteurs de la page (lot anglais 1). */
+  langue: Langue;
 }
 
 const DESCRIPTION_MAX = 200;
@@ -95,8 +98,11 @@ export function apercuDuLien(p: {
   protegee: boolean;
   action: string | null;
   assistant: boolean;
+  langue?: Langue;
 }): ApercuLien {
-  const titre = couper(p.titre.trim() || "Page partagée", 90);
+  const en = p.langue === "en";
+  const langue: Langue = en ? "en" : "fr";
+  const titre = couper(p.titre.trim() || (en ? "Shared page" : "Page partagée"), 90);
   const pour = pourQui(p.destinataire);
   if (p.protegee)
     return {
@@ -104,11 +110,14 @@ export function apercuDuLien(p: {
       pour,
       action: null,
       protegee: true,
-      description: "Page privée, protégée par un code envoyé par e-mail à son destinataire.",
+      langue,
+      description: en
+        ? "Private page, protected by a code e-mailed to its recipient."
+        : "Page privée, protégée par un code envoyé par e-mail à son destinataire.",
     };
   const extrait = descriptionDeLaPage(p.contenu);
-  const phrases = ["Une page partagée avec vous par un lien privé."];
-  if (p.action) phrases.push("Vous pouvez répondre en un clic.");
-  if (p.assistant) phrases.push("Une question ? Un assistant y répond à partir de la page.");
-  return { titre, pour, action: p.action, protegee: false, description: extrait ?? phrases.join(" ") };
+  const phrases = en ? ["A page shared with you through a private link."] : ["Une page partagée avec vous par un lien privé."];
+  if (p.action) phrases.push(en ? "You can reply in one click." : "Vous pouvez répondre en un clic.");
+  if (p.assistant) phrases.push(en ? "A question? An assistant answers from the page." : "Une question ? Un assistant y répond à partir de la page.");
+  return { titre, pour, action: p.action, protegee: false, langue, description: extrait ?? phrases.join(" ") };
 }

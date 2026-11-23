@@ -35,9 +35,16 @@ export function tailleTitre(titre: string): number {
 }
 
 /** « UNE PAGE POUR MARIE » — en capitales, raccourcie pour tenir sur une ligne. */
-export function enteteVignette(pour: string | null, expire: boolean): string {
-  if (expire) return "UNE PAGE GETGENTS";
-  if (!pour) return "UNE PAGE RIEN QUE POUR VOUS";
+export function enteteVignette(pour: string | null, expire: boolean, langue: "fr" | "en" = "fr"): string {
+  const en = langue === "en";
+  if (expire) return en ? "A GETGENTS PAGE" : "UNE PAGE GETGENTS";
+  if (!pour) return en ? "A PAGE JUST FOR YOU" : "UNE PAGE RIEN QUE POUR VOUS";
   const p = pour.length > 26 ? `${pour.slice(0, 25).trimEnd()}…` : pour;
-  return `UNE PAGE POUR ${p.toLocaleUpperCase("fr-FR")}`;
+  return en ? `A PAGE FOR ${p.toLocaleUpperCase("en-GB")}` : `UNE PAGE POUR ${p.toLocaleUpperCase("fr-FR")}`;
+}
+
+/** L'étiquette inclinée de la vignette. */
+export function etiquetteVignette(etat: "prive" | "protege" | "expire", langue: "fr" | "en" = "fr"): string {
+  if (langue === "en") return etat === "expire" ? "link expired" : etat === "protege" ? "psst, code-protected!" : "psst, it's private!";
+  return etat === "expire" ? "lien expiré" : etat === "protege" ? "psst, protégé par code !" : "psst, c'est privé !";
 }

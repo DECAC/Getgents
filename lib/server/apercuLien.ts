@@ -3,6 +3,7 @@ import { apercuDuLien, type ApercuLien } from "@/lib/apercuLien";
 import { lireArtefact } from "@/lib/server/artefactsPartages";
 import { protectionActive } from "@/lib/server/accesPartage";
 import { engagementDeLaPage } from "@/lib/server/engagementPages";
+import { langueDuLecteur } from "@/lib/server/langueLecteur";
 
 /**
  * L'aperçu d'un lien, tel que le servent les métadonnées ET la vignette.
@@ -16,6 +17,8 @@ export const apercuPourJeton = cache(async (jeton: string): Promise<ApercuLien |
     // Protection illisible : on la suppose ACTIVE — l'aperçu ne doit rien laisser fuir.
     const protegee = await protectionActive(a.pageId).catch(() => true);
     const reglage = protegee ? null : await engagementDeLaPage(a.pageId).catch(() => null);
+    // Le robot n'a pas de choix de langue : réglage de l'auteur, puis la page.
+    const langue = await langueDuLecteur(a, undefined).catch(() => "fr" as const);
     return apercuDuLien({
       titre: a.titre,
       contenu: protegee ? "" : a.contenu,
@@ -23,6 +26,7 @@ export const apercuPourJeton = cache(async (jeton: string): Promise<ApercuLien |
       protegee,
       action: reglage?.actif ? reglage.intitule : null,
       assistant: a.assistant && !!a.ownerId,
+      langue,
     });
   } catch {
     return null;

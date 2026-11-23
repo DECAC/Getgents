@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { statutPartage, traiterMessage, type ContexteMcp, type DemandePartage, type Fidelite, type ReponseRpc } from "@/lib/mcpPartage";
-import { enregistrerArtefact, listerPartages, revoquerPartage, type Proprietaire } from "@/lib/server/artefactsPartages";
+import { enregistrerArtefact, lireArtefact, listerPartages, revoquerPartage, type Proprietaire } from "@/lib/server/artefactsPartages";
+import { langueDuLecteur } from "@/lib/server/langueLecteur";
 import { mettreAJourPage } from "@/lib/server/pages";
 import { lireClient } from "@/lib/server/oauthMcp";
 
@@ -54,7 +55,10 @@ export async function repondreMcp(req: Request, base: string, proprietaire: Prop
           client,
         })
       );
-      return { lien: `${base}/partage/${a.jeton}`, pageId: a.pageId ?? undefined, nouvellePage: a.nouvellePage, titre: a.titre, assistant: a.assistant };
+      // Modèle de mail dans la langue des lecteurs de la page (lot anglais 1).
+      const contenu = demande.contenu || ((await lireArtefact(a.jeton).catch(() => null))?.contenu ?? "");
+      const langue = await langueDuLecteur({ pageId: a.pageId, contenu }, undefined).catch(() => "fr" as const);
+      return { lien: `${base}/partage/${a.jeton}`, pageId: a.pageId ?? undefined, nouvellePage: a.nouvellePage, titre: a.titre, assistant: a.assistant, langue };
     },
     mettreAJour: async (pageId, d) => {
       const page = await mettreAJourPage(proprietaire.userId, pageId, d);

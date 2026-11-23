@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { textes, type Langue } from "@/lib/langueLecteur";
 import styles from "./partage.module.css";
 
 /**
@@ -15,11 +16,14 @@ export default function EcranCode({
   jeton,
   masque,
   etat,
+  langue,
 }: {
   jeton: string;
   masque: string;
   etat: "code" | "sans_adresse" | "indisponible";
+  langue: Langue;
 }) {
+  const t = textes(langue);
   const [etape, setEtape] = useState<"demande" | "saisie">("demande");
   const [code, setCode] = useState("");
   const [enCours, setEnCours] = useState(false);
@@ -41,7 +45,7 @@ export default function EcranCode({
       }
       if (!r.ok) {
         const hebergeur = r.headers.get("x-vercel-error") ?? (j.cause ? "" : brut.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 60));
-        throw new Error(`${j.error || "Le code n'a pas pu être envoyé."} (réf. ${j.cause ?? `http-${r.status}`}${hebergeur ? ` · ${hebergeur}` : ""})`);
+        throw new Error(`${j.error || t.codeNonEnvoye} (${t.reference} ${j.cause ?? `http-${r.status}`}${hebergeur ? ` · ${hebergeur}` : ""})`);
       }
       setEtape("saisie");
       setCode("");
@@ -64,7 +68,7 @@ export default function EcranCode({
         body: JSON.stringify({ code: valeur }),
       });
       const j = (await r.json().catch(() => ({}))) as { error?: string };
-      if (!r.ok) throw new Error(j.error || "Code refusé.");
+      if (!r.ok) throw new Error(j.error || t.codeRefuse);
       // Le cookie d'accès est posé : la page se recharge et sert le document.
       window.location.reload();
     } catch (e) {
@@ -92,50 +96,43 @@ export default function EcranCode({
         {etat === "sans_adresse" && (
           <>
             <h1 id="porte-titre" className={styles.porteTitre}>
-              Cette page est protégée
+              {t.porteSansAdresseTitre}
             </h1>
-            <p className={styles.porteTexte}>
-              Ce lien n&apos;est rattaché à aucune adresse e-mail : impossible de vous envoyer un code. Demandez un nouveau lien à la personne qui
-              vous l&apos;a envoyé.
-            </p>
+            <p className={styles.porteTexte}>{t.porteSansAdresseTexte}</p>
           </>
         )}
 
         {etat === "indisponible" && (
           <>
             <h1 id="porte-titre" className={styles.porteTitre}>
-              Page momentanément indisponible
+              {t.porteIndispoTitre}
             </h1>
-            <p className={styles.porteTexte}>Le contrôle d&apos;accès ne répond pas. Réessayez dans quelques minutes.</p>
+            <p className={styles.porteTexte}>{t.porteIndispoTexte}</p>
           </>
         )}
 
         {etat === "code" && etape === "demande" && (
           <>
             <h1 id="porte-titre" className={styles.porteTitre}>
-              Cette page vous est réservée
+              {t.porteTitre}
             </h1>
-            <p className={styles.porteTexte}>
-              Pour l&apos;ouvrir, confirmez que vous êtes bien son destinataire : nous envoyons un code à <b>{masque}</b>.
-            </p>
+            <p className={styles.porteTexte}>{t.porteTexte(masque)}</p>
             <button type="button" className={styles.porteBouton} onClick={envoyer} disabled={enCours}>
-              {enCours ? "Envoi…" : "Recevoir mon code"}
+              {enCours ? t.envoi : t.recevoirCode}
             </button>
             {message && <p className={styles.porteErreur}>{message}</p>}
-            <p className={styles.porteMention}>Ce n&apos;est pas votre adresse ? Demandez un nouveau lien à la personne qui vous l&apos;a envoyé.</p>
+            <p className={styles.porteMention}>{t.pasVotreAdresse}</p>
           </>
         )}
 
         {etat === "code" && etape === "saisie" && (
           <>
             <h1 id="porte-titre" className={styles.porteTitre}>
-              Saisissez votre code
+              {t.saisirTitre}
             </h1>
-            <p className={styles.porteTexte}>
-              Envoyé à <b>{masque}</b>. Il est valable 10 minutes.
-            </p>
+            <p className={styles.porteTexte}>{t.envoyeA(masque)}</p>
             <label className={styles.cases} onClick={() => champ.current?.focus()}>
-              <span className={styles.visuellementCache}>Code à 6 chiffres</span>
+              <span className={styles.visuellementCache}>{t.codeSixChiffres}</span>
               <input
                 ref={champ}
                 className={styles.casesChamp}
@@ -158,16 +155,16 @@ export default function EcranCode({
               ))}
             </label>
             <button type="button" className={styles.porteBouton} onClick={() => verifier(code)} disabled={code.length !== 6 || enCours}>
-              {enCours ? "Vérification…" : "Ouvrir la page"}
+              {enCours ? t.verification : t.ouvrirPage}
             </button>
             {message && <p className={styles.porteErreur}>{message}</p>}
             <p className={styles.porteLien}>
-              Rien reçu ? Regardez vos indésirables, ou{" "}
+              {t.rienRecu}{" "}
               <button type="button" onClick={envoyer} disabled={enCours}>
-                renvoyer le code
+                {t.renvoyer}
               </button>
             </p>
-            <p className={styles.porteMention}>Une fois validé, ce navigateur s&apos;en souvient 30 jours.</p>
+            <p className={styles.porteMention}>{t.souvenir}</p>
           </>
         )}
       </div>

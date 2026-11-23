@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { langueDuLecteur } from "@/lib/server/langueLecteur";
 import { PlafondAtteint } from "@/lib/offre";
 import { requireUser } from "@/lib/server/session";
-import { enregistrerArtefact, revoquerPartage } from "@/lib/server/artefactsPartages";
+import { enregistrerArtefact, lireArtefact, revoquerPartage } from "@/lib/server/artefactsPartages";
 import { modeleMail, validerDemande } from "@/lib/mcpPartage";
 import { origineDeRequete } from "@/lib/oauthMcp";
 import { invitesValides } from "@/lib/groupesPages";
@@ -39,9 +40,13 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
       }
     }
     const lien = `${origineDeRequete(req.url, req.headers)}/partage/${a.jeton}`;
-    const mail = modeleMail({ ...v.demande, titre: a.titre }, lien);
+    // Le mail est lu par le destinataire : dans la langue des lecteurs de la page.
+    const langue = await langueDuLecteur({ pageId: a.pageId, contenu: (await lireArtefact(a.jeton).catch(() => null))?.contenu ?? "" }, undefined).catch(
+      () => "fr" as const
+    );
+    const mail = modeleMail({ ...v.demande, titre: a.titre }, lien, langue);
     console.log(JSON.stringify({ tag: "getgents:pages", event: "partage_depuis_getgents", ownerId: auth.user.id, groupe: groupe ? groupe.length : 0 }));
-    return NextResponse.json({ lien, jeton: a.jeton, objet: mail.objet, corps: mail.corps });
+    return NextResponse.json({ lien, jeton: a.jeton, objet: mail.objet, corps: mail.corps, langue });
   } catch (e) {
     if (e instanceof PlafondAtteint) {
       console.info(JSON.stringify({ tag: "getgents:offre", event: "plafond", genre: e.genre }));

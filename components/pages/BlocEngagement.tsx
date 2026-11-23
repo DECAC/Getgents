@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ENGAGEMENT_PAR_DEFAUT, INTITULE_MAX, INTITULES_SUGGERES, intituleValide, mentionReponse, type ReglageEngagement } from "@/lib/engagement";
+import { ENGAGEMENT_PAR_DEFAUT, INTITULE_MAX, INTITULES_SUGGERES, intituleValide, type ReglageEngagement } from "@/lib/engagement";
+import { INTITULES_SUGGERES_EN, textes, type Langue } from "@/lib/langueLecteur";
 import styles from "./pages.module.css";
 
 /**
@@ -10,7 +11,9 @@ import styles from "./pages.module.css";
  * L'intitulé s'enregistre à la sortie du champ ou sur une suggestion —
  * pas à chaque frappe : chaque enregistrement change la page des lecteurs.
  */
-export function BlocEngagement({ pageId, onMessage }: { pageId: string; onMessage: (m: string) => void }) {
+export function BlocEngagement({ pageId, onMessage, langue = "fr" }: { pageId: string; onMessage: (m: string) => void; langue?: Langue }) {
+  // Suggestions dans la langue des lecteurs de la page (lot anglais 1).
+  const suggestions = langue === "en" ? INTITULES_SUGGERES_EN : INTITULES_SUGGERES;
   const [reglage, setReglage] = useState<ReglageEngagement | null>(null);
   const [brouillon, setBrouillon] = useState("");
   const [migration, setMigration] = useState(false);
@@ -108,7 +111,7 @@ export function BlocEngagement({ pageId, onMessage }: { pageId: string; onMessag
                 Intitulé du bouton
               </label>
               <div className={styles.chips}>
-                {INTITULES_SUGGERES.map((s) => (
+                {suggestions.map((s) => (
                   <button
                     key={s}
                     type="button"
@@ -153,7 +156,7 @@ export function BlocEngagement({ pageId, onMessage }: { pageId: string; onMessag
 
               <div className={styles.engagementApercu} aria-label="Aperçu chez le lecteur">
                 <span className={styles.engagementBouton}>{brouillon.trim() || reglage.intitule}</span>
-                <p>{mentionReponse(null, true)}</p>
+                <p>{textes(langue).mention(null, true, false)}</p>
               </div>
               <p className={styles.aide}>
                 Au clic, le lecteur voit la liste de ses choix et peut en retirer avant d&apos;envoyer. Cette mention est fixe.

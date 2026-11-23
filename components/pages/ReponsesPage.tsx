@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ligneChoix, pastillesLecture, type ReponseEngagement } from "@/lib/engagement";
-import { lienWhatsApp, messageRelance, messageWhatsApp } from "@/lib/groupesPages";
+import { lienWhatsApp, messageRappel, messageRelance } from "@/lib/groupesPages";
 import { initiales } from "@/lib/pagesGetsite";
 import { dureeLisible, ilYA, jourParis, type Activite } from "@/lib/activitePage";
 import { attendus, csvReponses, listeLisible, ouverturesSurQuatorzeJours, syntheseChoix } from "@/lib/syntheseReponses";
@@ -42,6 +42,7 @@ export function ReponsesPage({
   liens = [],
   groupes = {},
   titre = "",
+  langue = "fr",
   base = "",
   activite = null,
   onVoirAssistant,
@@ -57,6 +58,8 @@ export function ReponsesPage({
   /** Liens de groupe : jeton → invités. */
   groupes?: Record<string, string[]>;
   titre?: string;
+  /** Langue des lecteurs : celle des messages de relance. */
+  langue?: "fr" | "en";
   /** Origine du site, pour composer les liens à relancer. */
   base?: string;
   /** Chiffres de lecture et questions (ActivitePage). */
@@ -116,8 +119,8 @@ export function ReponsesPage({
   const relanceDe = (l: (typeof attente.lignes)[number]) =>
     lienWhatsApp(
       l.invites
-        ? messageRelance({ titre, lien: lienDe(l.jeton), attente: l.invites.filter((i) => !i.repondu).map((i) => i.prenom) })
-        : `Petit rappel : ${messageWhatsApp({ prenom: l.nom, titre, lien: lienDe(l.jeton) })}`
+        ? messageRelance({ titre, lien: lienDe(l.jeton), attente: l.invites.filter((i) => !i.repondu).map((i) => i.prenom), langue })
+        : messageRappel({ prenom: l.nom, titre, lien: lienDe(l.jeton), langue })
     );
   const aRelancer = attente.lignes.filter((l) => !l.repondu);
 

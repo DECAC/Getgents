@@ -12,6 +12,7 @@ import { libelleOrigine } from "@/lib/importPage";
 import { exempleDeOrigine } from "@/lib/exemplesPages";
 import { GuideDecouverte } from "./GuideDecouverte";
 import { BlocEngagement } from "./BlocEngagement";
+import { BlocLangue, langueDesLecteurs, type LangueLecteurs } from "./BlocLangue";
 import { AdapterExemple } from "./AdapterExemple";
 import { INVITES_MAX, lienWhatsApp, messageWhatsApp } from "@/lib/groupesPages";
 import { ReponsesPage } from "./ReponsesPage";
@@ -47,6 +48,8 @@ interface Detail {
   moi?: string | null;
   /** Liens de groupe : jeton → invités. */
   groupes?: Record<string, string[]>;
+  /** Langue des lecteurs (lot anglais 1). */
+  langueLecteurs?: LangueLecteurs;
 }
 
 const jour = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
@@ -281,6 +284,7 @@ export function FichePage({ id }: { id: string }) {
             onNouvelles={setReponsesNouvelles}
             onTotal={setRepondus}
             titre={page.titre}
+            langue={langueDesLecteurs(page.langueLecteurs)}
             base={base}
             liens={actifs.map((d) => ({ jeton: d.jeton, destinataire: d.destinataire }))}
             groupes={page.groupes ?? {}}
@@ -373,7 +377,15 @@ export function FichePage({ id }: { id: string }) {
         </section>
 
         <div className={styles.cote}>
-          <BlocEngagement pageId={page.id} onMessage={signaler} />
+          {page.langueLecteurs && (
+            <BlocLangue
+              pageId={page.id}
+              valeur={page.langueLecteurs}
+              onChange={(v) => setPage((p) => (p ? { ...p, langueLecteurs: v } : p))}
+              onMessage={signaler}
+            />
+          )}
+          <BlocEngagement pageId={page.id} onMessage={signaler} langue={langueDesLecteurs(page.langueLecteurs)} />
 
           <section className={styles.bloc}>
             <h2 className={styles.blocTitre}>Versions</h2>
@@ -519,7 +531,12 @@ export function FichePage({ id }: { id: string }) {
                       <a
                         className={styles.boutonWhatsApp}
                         href={lienWhatsApp(
-                          messageWhatsApp({ prenom: partage.invites === null ? partage.destinataire : null, titre: page.titre, lien: partage.resultat.lien })
+                          messageWhatsApp({
+                            prenom: partage.invites === null ? partage.destinataire : null,
+                            titre: page.titre,
+                            lien: partage.resultat.lien,
+                            langue: langueDesLecteurs(page.langueLecteurs),
+                          })
                         )}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -584,7 +601,7 @@ export function FichePage({ id }: { id: string }) {
                         <span className={styles.destActions}>
                           <a
                             className={styles.lienWhatsApp}
-                            href={lienWhatsApp(messageWhatsApp({ prenom: invites ? null : d.destinataire, titre: page.titre, lien: lienD }))}
+                            href={lienWhatsApp(messageWhatsApp({ prenom: invites ? null : d.destinataire, titre: page.titre, lien: lienD, langue: langueDesLecteurs(page.langueLecteurs) }))}
                             target="_blank"
                             rel="noopener noreferrer"
                           >

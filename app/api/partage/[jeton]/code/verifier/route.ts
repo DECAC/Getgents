@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { avecMessagesTraduits } from "@/lib/server/routeLecteur";
 import { lireArtefact } from "@/lib/server/artefactsPartages";
 import { cleAcces, verifierCode } from "@/lib/server/accesPartage";
 import { codeSaisi, DUREE_ACCES_MS, nomCookie, signerAcces } from "@/lib/accesCode";
@@ -10,7 +11,7 @@ import { codeSaisi, DUREE_ACCES_MS, nomCookie, signerAcces } from "@/lib/accesCo
  */
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request, props: { params: Promise<{ jeton: string }> }) {
+async function traiter(req: Request, props: { params: Promise<{ jeton: string }> }) {
   const params = await props.params;
   const a = await lireArtefact(params.jeton);
   if (!a) return NextResponse.json({ error: "Ce lien n'existe pas ou a expiré." }, { status: 404 });
@@ -37,3 +38,6 @@ export async function POST(req: Request, props: { params: Promise<{ jeton: strin
   });
   return rep;
 }
+
+/** Messages d'erreur dans la langue du lecteur (lot anglais 1). */
+export const POST = avecMessagesTraduits(traiter);

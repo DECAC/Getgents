@@ -6,6 +6,7 @@ import { streamChatCompletion } from "@/lib/streamChat";
 import { renderMarkdown } from "@/lib/markdown";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import type { MessageAssistant } from "@/lib/assistantDocument";
+import { textes, type Langue } from "@/lib/langueLecteur";
 import styles from "./partage.module.css";
 
 /**
@@ -20,6 +21,7 @@ export default function AssistantDocument({
   onFermer,
   onAgrandir,
   onConfidentialite,
+  langue,
 }: {
   jeton: string;
   amorces: string[];
@@ -28,7 +30,9 @@ export default function AssistantDocument({
   onFermer: () => void;
   onAgrandir: () => void;
   onConfidentialite: () => void;
+  langue: Langue;
 }) {
+  const t = textes(langue);
   const [fil, setFil] = useState<MessageAssistant[]>([]);
   const [saisie, setSaisie] = useState("");
   const [enCours, setEnCours] = useState(false);
@@ -66,30 +70,30 @@ export default function AssistantDocument({
         `/api/partage/${encodeURIComponent(jeton)}/assistant`
       );
       const reponse = sansMarqueur(r.text).texte;
-      if (!reponse.trim()) throw new Error("L'assistant n'a rien répondu. Reformulez votre question.");
+      if (!reponse.trim()) throw new Error(t.assistantVide);
       setFil([...historique, { role: "assistant", content: reponse }]);
     } catch (e) {
       setFil(historique.slice(0, -1));
       setSaisie(q);
-      setErreur((e as Error).message || "L'assistant n'a pas pu répondre.");
+      setErreur((e as Error).message || t.assistantEchec);
     } finally {
       setEnCours(false);
     }
   }
 
   return (
-    <aside className={styles.assistant} aria-label="Assistant du document" aria-hidden={!ouvert}>
+    <aside className={styles.assistant} aria-label={t.assistantNom} aria-hidden={!ouvert}>
       <div className={styles.assistantTete}>
         <span className={styles.avatar} aria-hidden="true">✦</span>
         <div>
-          <div className={styles.assistantNom}>Assistant du document</div>
-          <div className={styles.assistantSous}>Vos questions sur ce document</div>
+          <div className={styles.assistantNom}>{t.assistantNom}</div>
+          <div className={styles.assistantSous}>{t.assistantSous}</div>
         </div>
         <div className={styles.outils}>
-          <button type="button" className={`${styles.outil} ${styles.outilAgrandir}`} onClick={onAgrandir} aria-label={agrandi ? "Réduire" : "Agrandir"}>
+          <button type="button" className={`${styles.outil} ${styles.outilAgrandir}`} onClick={onAgrandir} aria-label={agrandi ? t.reduire : t.agrandir}>
             {agrandi ? "⤡" : "⤢"}
           </button>
-          <button type="button" className={styles.outil} onClick={onFermer} aria-label="Fermer l'assistant">
+          <button type="button" className={styles.outil} onClick={onFermer} aria-label={t.fermerAssistant}>
             ✕
           </button>
         </div>
@@ -97,7 +101,7 @@ export default function AssistantDocument({
 
       <div className={styles.fil}>
         <div className={styles.bulleAssistant}>
-          Bonjour, je peux vous aider à lire ce document&nbsp;: posez-moi une question.
+          {t.assistantBonjour}
           {fil.length === 0 && (
             <div className={styles.amorces}>
               {amorces.map((a) => (
@@ -136,7 +140,7 @@ export default function AssistantDocument({
           value={saisie}
           rows={1}
           maxLength={2000}
-          placeholder="Poser une question sur ce document…"
+          placeholder={t.assistantSaisie}
           onChange={(e) => setSaisie(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -145,14 +149,14 @@ export default function AssistantDocument({
             }
           }}
         />
-        <button type="submit" className={styles.envoyer} disabled={enCours || !saisie.trim()} aria-label="Envoyer">
+        <button type="submit" className={styles.envoyer} disabled={enCours || !saisie.trim()} aria-label={t.envoyer}>
           →
         </button>
       </form>
       <p className={styles.mention}>
-        Réponses d&apos;une IA : elles peuvent se tromper et n&apos;engagent pas l&apos;auteur. ·{" "}
+        {t.assistantMention} ·{" "}
         <button type="button" className={styles.mentionLien} onClick={onConfidentialite}>
-          Confidentialité
+          {t.confidentialite}
         </button>
       </p>
     </aside>

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { lireArtefact } from "@/lib/server/artefactsPartages";
-import { amorcesAssistant } from "@/lib/assistantDocument";
 import { cookies } from "next/headers";
 import VuePartage from "./VuePartage";
 import EcranCode from "./EcranCode";
+import { ChoixLangue } from "./ChoixLangue";
+import { amorcesParDefaut, dateLisible, heureLisible, textes } from "@/lib/langueLecteur";
+import { choixDuCookie, langueDuLecteur } from "@/lib/server/langueLecteur";
 import { decisionAcces, protectionActive } from "@/lib/server/accesPartage";
 import { nomAuteur } from "@/lib/server/activitePages";
 import { suggestionsDeLaPage } from "@/lib/server/suggestionsPages";
@@ -46,12 +48,13 @@ export async function generateMetadata(props: { params: Promise<{ jeton: string 
       description: "Ce lien n'est plus valable : demandez-en un nouveau à la personne qui vous l'a envoyé.",
       openGraph: { title: "Lien privé · Getgents Pages", description: "Ce lien n'est plus valable.", siteName: "Getgents Pages", type: "website", locale: "fr_FR" },
     };
-  const titre = apercu.pour ? `${apercu.titre} · pour ${apercu.pour}` : apercu.titre;
+  const en = apercu.langue === "en";
+  const titre = apercu.pour ? `${apercu.titre} · ${en ? "for" : "pour"} ${apercu.pour}` : apercu.titre;
   return {
     ...base,
     title: `${apercu.titre} · Getgents Pages`,
     description: apercu.description,
-    openGraph: { title: titre, description: apercu.description, siteName: "Getgents Pages", type: "website", locale: "fr_FR" },
+    openGraph: { title: titre, description: apercu.description, siteName: "Getgents Pages", type: "website", locale: en ? "en_GB" : "fr_FR" },
     twitter: { card: "summary_large_image", title: titre, description: apercu.description },
   };
 }
@@ -60,36 +63,39 @@ export default async function PagePartage(props: { params: Promise<{ jeton: stri
   const params = await props.params;
   const a = await lireArtefact(params.jeton);
   if (!a) notFound();
-  const enFrancais = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" });
-  const date = enFrancais(a.createdAt);
+  const jar = await cookies();
+  // Langue de l'habillage : choix du lecteur, réglage de l'auteur, puis la page (lot anglais 1).
+  const langue = await langueDuLecteur(a, choixDuCookie(jar));
+  const t = textes(langue);
+  const date = dateLisible(a.createdAt, langue);
   // Le lien affiche la DERNIÈRE version de la page : on le dit, sinon le
   // destinataire qui l'a déjà lue croirait relire le même document.
-  const heure = (iso: string) => new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
   const maj =
     a.misAJourLe && Date.parse(a.misAJourLe) > Date.parse(a.createdAt)
-      ? enFrancais(a.misAJourLe) === date
-        ? ` · mis à jour à ${heure(a.misAJourLe)}`
-        : ` · mis à jour le ${enFrancais(a.misAJourLe)}`
+      ? dateLisible(a.misAJourLe, langue) === date
+        ? ` · ${t.misAJourA(heureLisible(a.misAJourLe, langue))}`
+        : ` · ${t.misAJourLe(dateLisible(a.misAJourLe, langue))}`
       : "";
   const assistant = a.assistant && !!a.ownerId;
   // Page protégée : sans cookie d'accès valide, l'écran du code — et rien
   // du document (ni cadre, ni titre au-delà du bandeau).
-  const decision = await decisionAcces(a, (await cookies()).get(nomCookie(a.jeton))?.value);
+  const decision = await decisionAcces(a, jar.get(nomCookie(a.jeton))?.value);
   if (decision !== "ouvert")
     return (
-      <div className={styles.page}>
+      <div className={styles.page} lang={langue}>
         <header className={styles.bandeau}>
           <span className={styles.titre}>{a.titre}</span>
-          <span className={styles.meta}>Lien privé · Getgents</span>
+          <span className={styles.meta}>{t.lienPrive}</span>
+          <ChoixLangue langue={langue} libelle={t.choisirLangue} />
         </header>
-        <EcranCode jeton={a.jeton} masque={masquerEmail(a.destinataire)} etat={decision} />
+        <EcranCode jeton={a.jeton} masque={masquerEmail(a.destinataire)} etat={decision} langue={langue} />
       </div>
     );
 
   const protegee = await protectionActive(a.pageId).catch(() => false);
   // Questions suggérées choisies par l'auteur ; sans choix (ou sans migration 026), celles par défaut.
   const choisies = assistant ? await suggestionsDeLaPage(a.pageId).catch(() => null) : null;
-  const amorces = choisies ? choisies.map((s) => s.texte) : amorcesAssistant(a.format);
+  const amorces = choisies ? choisies.map((s) => s.texte) : amorcesParDefaut(a.format === "svg", langue);
   // Bouton d'engagement : sans migration 031 (ou en erreur), aucun bouton.
   const reglage = await engagementDeLaPage(a.pageId).catch(() => null);
   const engagement = reglage?.actif ? { intitule: reglage.intitule, mot: reglage.mot } : null;
@@ -106,7 +112,7 @@ export default async function PagePartage(props: { params: Promise<{ jeton: stri
         <>
           <span className={styles.titre}>{a.titre}</span>
           <span className={styles.meta}>
-            Pour {a.destinataire} · {date}
+            {t.pour(a.destinataire)} · {date}
             {maj}
           </span>
         </>
@@ -117,6 +123,7 @@ export default async function PagePartage(props: { params: Promise<{ jeton: stri
       destinataire={a.destinataire}
       dejaRepondu={dejaRepondu}
       groupe={groupe}
+      langue={langue}
     />
   );
 }

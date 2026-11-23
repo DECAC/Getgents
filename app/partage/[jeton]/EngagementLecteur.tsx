@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { choixValides, ligneChoix, mentionReponse, MOT_MAX, type ChoixLecteur, type LectureJointe } from "@/lib/engagement";
+import { choixValides, ligneChoix, MOT_MAX, type ChoixLecteur, type LectureJointe } from "@/lib/engagement";
+import { textes, type Langue } from "@/lib/langueLecteur";
 import styles from "./partage.module.css";
 
 /** Délai laissé au document pour rendre ses choix : au-delà, on ouvre sans (un artefact peut ne rien répondre). */
@@ -43,6 +44,7 @@ export default function EngagementLecteur({
   mesure,
   invite = null,
   onRepondu,
+  langue,
 }: {
   jeton: string;
   intitule: string;
@@ -55,7 +57,9 @@ export default function EngagementLecteur({
   /** Lien de groupe : le prénom choisi, transmis avec la réponse. */
   invite?: string | null;
   onRepondu?: () => void;
+  langue: Langue;
 }) {
+  const t = textes(langue);
   const [envoye, setEnvoye] = useState(dejaRepondu);
   const [ouvert, setOuvert] = useState(false);
   const [releve, setReleve] = useState(false);
@@ -109,9 +113,9 @@ export default function EngagementLecteur({
         setToast(true);
         return;
       }
-      setErreur(d.error ?? "Votre réponse n'a pas pu être envoyée. Réessayez.");
+      setErreur(d.error ?? t.reponseEchec);
     } catch {
-      setErreur("Connexion impossible. Réessayez.");
+      setErreur(t.connexionImpossible);
     } finally {
       setEnvoi(false);
     }
@@ -128,19 +132,19 @@ export default function EngagementLecteur({
         disabled={envoye || releve}
         onClick={ouvrir}
       >
-        {envoye ? "✓ Réponse envoyée à l'auteur" : intitule}
+        {envoye ? t.reponseEnvoyee : intitule}
       </button>
 
       {toast && (
         <div className={styles.engagementToast} role="status">
-          Merci, votre réponse a été transmise à l&apos;auteur.
+          {t.merci}
         </div>
       )}
 
       {ouvert && (
         <div className={styles.confVoile} onClick={(e) => e.target === e.currentTarget && !envoi && setOuvert(false)}>
           <div className={styles.engagementBoite} role="dialog" aria-modal="true" aria-labelledby="engagement-titre">
-            <button type="button" className={styles.confFermer} aria-label="Fermer" onClick={() => setOuvert(false)} disabled={envoi}>
+            <button type="button" className={styles.confFermer} aria-label={t.fermer} onClick={() => setOuvert(false)} disabled={envoi}>
               ✕
             </button>
             <h2 id="engagement-titre" className={styles.engagementTitre}>
@@ -149,8 +153,8 @@ export default function EngagementLecteur({
 
             {choix.length > 0 && (
               <fieldset className={styles.engagementChoix}>
-                <legend>Vos choix dans la page</legend>
-                <p className={styles.engagementAide}>Décochez ce que vous ne souhaitez pas transmettre.</p>
+                <legend>{t.vosChoix}</legend>
+                <p className={styles.engagementAide}>{t.decochez}</p>
                 {choix.map((c, i) => (
                   <label key={i} className={styles.engagementLigne}>
                     <input
@@ -166,7 +170,7 @@ export default function EngagementLecteur({
 
             {mot && (
               <label className={styles.engagementMot}>
-                <span>Un mot pour l&apos;auteur (facultatif)</span>
+                <span>{t.unMot}</span>
                 <textarea value={texte} maxLength={MOT_MAX} rows={4} onChange={(e) => setTexte(e.target.value)} />
                 <small>
                   {texte.length} / {MOT_MAX}
@@ -177,12 +181,12 @@ export default function EngagementLecteur({
             <label className={styles.engagementLecture}>
               <input type="checkbox" checked={joindre} onChange={(e) => setJoindre(e.target.checked)} />
               <span>
-                <b>Joindre ma lecture de la page</b>
-                Quand je l&apos;ai ouverte, combien de temps, jusqu&apos;où, sur quel appareil. Pour ce lien seulement.
+                <b>{t.joindreTitre}</b>
+                {t.joindreTexte}
               </span>
             </label>
 
-            <p className={styles.engagementMention}>{mentionReponse(destinataire, nbGardes > 0, joindre)}</p>
+            <p className={styles.engagementMention}>{t.mention(destinataire, nbGardes > 0, joindre)}</p>
             {erreur && (
               <p className={styles.engagementErreur} role="alert">
                 {erreur}
@@ -190,10 +194,10 @@ export default function EngagementLecteur({
             )}
             <div className={styles.engagementActions}>
               <button type="button" className={styles.widgetNon} onClick={() => setOuvert(false)} disabled={envoi}>
-                Annuler
+                {t.annuler}
               </button>
               <button type="button" className={styles.widgetOui} onClick={envoyer} disabled={envoi}>
-                {envoi ? "Envoi…" : "Envoyer"}
+                {envoi ? t.envoi : t.envoyer}
               </button>
             </div>
           </div>

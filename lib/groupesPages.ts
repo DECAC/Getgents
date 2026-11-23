@@ -57,18 +57,30 @@ export function inviteDeLaListe(invites: readonly string[], prenom: unknown): st
 }
 
 /** Le message prêt à envoyer. Le prénom est absent pour un groupe (on salue tout le monde). */
-export function messageWhatsApp(o: { prenom: string | null; titre: string; lien: string }): string {
+export function messageWhatsApp(o: { prenom: string | null; titre: string; lien: string; langue?: "fr" | "en" }): string {
+  // Lu par le destinataire : dans la langue des lecteurs de la page (lot anglais 1).
+  if (o.langue === "en") return `${o.prenom ? `Hi ${o.prenom},` : "Hi everyone,"} here is “${o.titre}”: ${o.lien}`;
   const salut = o.prenom ? `Bonjour ${o.prenom},` : "Bonjour à tous,";
   return `${salut} voici « ${o.titre} » : ${o.lien}`;
 }
 
-/** Relance d'un groupe : nomme ceux qui n'ont pas encore répondu. */
-export function messageRelance(o: { titre: string; lien: string; attente: readonly string[] }): string {
+export function messageRelance(o: { titre: string; lien: string; attente: readonly string[]; langue?: "fr" | "en" }): string {
   const n = o.attente;
+  if (o.langue === "en") {
+    const qui = n.length <= 1 ? n.join("") : `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}`;
+    return n.length
+      ? `Quick reminder for “${o.titre}”: we're still waiting for ${qui}. Reply here: ${o.lien}`
+      : `Thanks everyone for your replies to “${o.titre}”! ${o.lien}`;
+  }
   const qui = n.length <= 1 ? n.join("") : `${n.slice(0, -1).join(", ")} et ${n[n.length - 1]}`;
   return n.length
     ? `Petit rappel pour « ${o.titre} » : il manque encore ${qui}. Votre réponse ici : ${o.lien}`
     : `Merci à tous pour vos réponses à « ${o.titre} » ! ${o.lien}`;
+}
+
+/** Relance d'un lien personnel : « Petit rappel : … ». */
+export function messageRappel(o: { prenom: string | null; titre: string; lien: string; langue?: "fr" | "en" }): string {
+  return `${o.langue === "en" ? "Quick reminder:" : "Petit rappel :"} ${messageWhatsApp(o)}`;
 }
 
 /** Ouvre WhatsApp (application ou WhatsApp Web) avec le texte prérempli ; rien n'est envoyé sans l'auteur. */

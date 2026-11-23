@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { avecMessagesTraduits } from "@/lib/server/routeLecteur";
 import { decisionAcces } from "@/lib/server/accesPartage";
 import { nomCookie } from "@/lib/accesCode";
 import { NextResponse } from "next/server";
@@ -63,7 +64,7 @@ export const maxDuration = 120;
 // Le destinataire n'a jamais vu de « gent » : le message générique des liens ne lui parlerait pas.
 const INDISPONIBLE = "L'assistant est momentanément indisponible. Le document reste consultable ; réessayez plus tard.";
 
-export async function POST(req: Request, props: { params: Promise<{ jeton: string }> }) {
+async function traiter(req: Request, props: { params: Promise<{ jeton: string }> }) {
   const params = await props.params;
   const a = await lireArtefact(params.jeton);
   if (!a) return NextResponse.json({ error: "Ce lien n'existe pas ou a expiré." }, { status: 404 });
@@ -159,3 +160,6 @@ export async function POST(req: Request, props: { params: Promise<{ jeton: strin
     headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" },
   });
 }
+
+/** Messages d'erreur dans la langue du lecteur (lot anglais 1). */
+export const POST = avecMessagesTraduits(traiter);

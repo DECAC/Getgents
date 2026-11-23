@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { avecMessagesTraduits } from "@/lib/server/routeLecteur";
 import { NextResponse } from "next/server";
 import { nomCookie } from "@/lib/accesCode";
 import { choixValides, lectureValide, ligneChoix, motValide, pastillesLecture, type ChoixLecteur, type LectureJointe } from "@/lib/engagement";
@@ -36,7 +37,7 @@ function courriel(titre: string, destinataire: string, intitule: string, mot: st
   };
 }
 
-export async function POST(req: Request, props: { params: Promise<{ jeton: string }> }) {
+async function traiter(req: Request, props: { params: Promise<{ jeton: string }> }) {
   const { jeton } = await props.params;
   const a = await lireArtefact(jeton).catch(() => null);
   if (!a?.pageId || !a.ownerId) return NextResponse.json({ error: "Ce lien n'existe pas ou a expiré." }, { status: 404 });
@@ -75,3 +76,6 @@ export async function POST(req: Request, props: { params: Promise<{ jeton: strin
   console.log(JSON.stringify({ tag: "getgents:engagement", event: "reponse", avecMot: !!m.mot, choix: choix.length, lecture: !!lecture, groupe: !!groupe, notifie }));
   return NextResponse.json({ ok: true });
 }
+
+/** Messages d'erreur dans la langue du lecteur (lot anglais 1). */
+export const POST = avecMessagesTraduits(traiter);
