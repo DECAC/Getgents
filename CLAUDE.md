@@ -962,6 +962,13 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   passe en `destructiveHint: true` (remplace ce que voient tous les liens) :
   Claude demande confirmation à chaque mise à jour. Effet dans Claude après
   DÉCONNEXION/RECONNEXION du connecteur seulement.
+  **SOUMIS à l'annuaire des connecteurs de Claude (23/11)** par l'éditeur
+  (compte Pro, portail claude.ai/directory/manage). Réponses données :
+  API propriétaire, pas de données de santé, pas de contenu sponsorisé,
+  les sept engagements de conformité cochés ; prérequis et remarques en
+  anglais (`docs/annuaires.md`). Examen automatique, listage « Community »
+  attendu ; un passage « Verified » demanderait un compte d'essai DÉDIÉ
+  (jamais celui de l'éditeur).
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
