@@ -992,6 +992,32 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   modèles). Un test garde que FR et EN ont les mêmes clés. Vérifié au
   navigateur (mémoire locale) : page anglaise, réponse, assistant, bascule
   FR, groupe, code, vignette, fiche, téléphone.
+- **QR code d'un lien, prolongation, bandeau d'expiration** (23/11, maquette
+  validée ; étape 1 du lot « Partager » — `lib/qrCode.ts`, `lib/dureeLien.ts`,
+  `FenetreQr`, `POST /api/partages/prolonger`, aucune migration). Le QR est
+  calculé dans le NAVIGATEUR de l'auteur (`qrcode-generator`, MIT ; aucun
+  service extérieur) : noir sur blanc, zone de silence de 4 modules,
+  correction « M » — pas de logo ni de couleur, ils fragilisent la lecture.
+  PNG (échelle ENTIÈRE, ~1 000 px, jamais de module flou), SVG, copie
+  d'image ; relu en test avec `jsqr` (devDependency) et vérifié au
+  navigateur : le PNG ET le SVG téléchargés redonnent le lien. Bouton
+  « ▦ QR code » sur chaque lien actif non bloqué et après la création d'un
+  lien. **Le vrai risque d'un QR est l'EXPIRATION** (30 jours : une affiche
+  imprimée meurt sans prévenir) : la fenêtre dit jusqu'à quand il marche, et
+  **« Prolonger » refait durer 30 jours À PARTIR D'AUJOURD'HUI** (pas un
+  ajout), sans changer le lien ni le QR. Un lien RÉVOQUÉ ne revient jamais ;
+  un lien EXPIRÉ redevient actif et COMPTE dans le plafond de 200 liens
+  actifs (refusé avec le message du plafond sinon) ; prolonger un lien actif
+  n'y change rien. Garde de propriété dans la requête (`owner_id`), 50 jetons
+  au plus par appel. Le lecteur ne voit jamais l'échéance. Bandeau orange en
+  tête de l'onglet quand un lien expire dans moins de 7 jours
+  (`SEUIL_BANDEAU_JOURS`) avec « Prolonger » en bloc ; échéance en couleur
+  sur chaque ligne. Sur une page protégée par code, la fenêtre rappelle que
+  le QR seul n'ouvre rien. Onglet encore nommé « Destinataires » : le renommer
+  « Partager » et le réorganiser est le LOT SUIVANT (décidé, nom choisi par
+  l'éditeur). Vérifié au navigateur (mémoire locale) : liens actif / bientôt /
+  groupe / expiré / révoqué, prolongation depuis la fenêtre, la ligne et le
+  bandeau, téléphone sans débordement.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.

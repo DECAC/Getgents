@@ -2804,3 +2804,79 @@
   background: #dcf3e8;
   color: #1f8a5b;
 }
+
+/* Fenêtre « QR code » et prolongation des liens (lot « Partager »). */
+.qrFenetre {
+  width: min(440px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+.qrCorps {
+  display: grid;
+  gap: 12px;
+  padding: 16px 22px 22px;
+}
+.qrCorps > p {
+  margin: 0;
+}
+.qrCadre {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+.qrImage {
+  width: min(240px, 100%);
+  height: auto;
+  display: block;
+}
+.qrCadre small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.qrEcheance {
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.qrEcheance[data-etat="ok"] {
+  background: color-mix(in srgb, var(--success) 14%, var(--card));
+  color: color-mix(in srgb, var(--success) 80%, var(--ink));
+}
+.qrEcheance[data-etat="bientot"] {
+  background: #fff1dc;
+  color: #7a3d06;
+}
+.qrEcheance[data-etat="expire"] {
+  background: #fff4f2;
+  color: #7a1c12;
+}
+.expireBientot {
+  color: #b45309;
+  font-weight: 700;
+}
+.expireDeja {
+  color: #c0392b;
+  font-weight: 700;
+}
+.bandeauExpire {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 11px 14px;
+  border: 1px solid #f3d6a6;
+  border-radius: 14px;
+  background: #fff1dc;
+  font-size: 13.5px;
+}
+.bandeauExpire > span:first-child {
+  flex: 1;
+}

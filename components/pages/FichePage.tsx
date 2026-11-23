@@ -13,6 +13,8 @@ import { exempleDeOrigine } from "@/lib/exemplesPages";
 import { GuideDecouverte } from "./GuideDecouverte";
 import { BlocEngagement } from "./BlocEngagement";
 import { BlocLangue, langueDesLecteurs, type LangueLecteurs } from "./BlocLangue";
+import { FenetreQr } from "./FenetreQr";
+import { etatEcheance, liensQuiExpirent, peutProlonger, texteExpireDans } from "@/lib/dureeLien";
 import { AdapterExemple } from "./AdapterExemple";
 import { INVITES_MAX, lienWhatsApp, messageWhatsApp } from "@/lib/groupesPages";
 import { ReponsesPage } from "./ReponsesPage";
@@ -90,6 +92,8 @@ export function FichePage({ id }: { id: string }) {
     resultat: null,
   });
   const [editeurInvites, setEditeurInvites] = useState<{ jeton: string; texte: string } | null>(null);
+  // Fenêtre « QR code » : un lien précis (jeton null juste après sa création : il dure 30 jours).
+  const [qr, setQr] = useState<{ lien: string; destinataire: string; jeton: string | null; expiresAt: string | null; protegee: boolean } | null>(null);
 
   const charger = useCallback(async () => {
     const r = await fetch(`/api/pages/${encodeURIComponent(id)}`, { credentials: "include" });
@@ -155,6 +159,17 @@ export function FichePage({ id }: { id: string }) {
     }
   }
 
+  /** Prolonge des liens de 30 jours ; rend la nouvelle échéance du premier, ou null en cas d'échec. */
+  async function prolonger(jetons: string[]): Promise<string | null> {
+    const r = (await appel(
+      `prol-${jetons.length > 1 ? "tous" : jetons[0]}`,
+      "/api/partages/prolonger",
+      { method: "POST", body: JSON.stringify({ jetons }) },
+      jetons.length > 1 ? "Liens prolongés de 30 jours." : "Lien prolongé de 30 jours."
+    )) as { prolonges?: { expiresAt: string }[] } | null;
+    return r?.prolonges?.[0]?.expiresAt ?? null;
+  }
+
   const copier = (texte: string, quoi: string) =>
     void navigator.clipboard?.writeText(texte).then(
       () => signaler(`${quoi} copié.`),
@@ -173,6 +188,7 @@ export function FichePage({ id }: { id: string }) {
   if (!page) return <p className={styles.sous}>Chargement…</p>;
 
   const actifs = page.destinataires.filter(actif);
+  const expirent = liensQuiExpirent(page.destinataires);
   const dernierActif = [...actifs].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   const base = typeof window === "undefined" ? "" : window.location.origin;
   const boutonsPartage = (
@@ -439,6 +455,19 @@ export function FichePage({ id }: { id: string }) {
       )}
       {onglet === "destinataires" && (
         <div className={styles.colonneOnglet}>
+          {expirent.length > 0 && (
+            <div className={styles.bandeauExpire} role="status">
+              <span>
+                ⏳ <b>{expirent.length === 1 ? "1 lien expire" : `${expirent.length} liens expirent`} dans moins de 7 jours</b> —{" "}
+                {expirent.slice(0, 3).map((d) => d.destinataire).join(", ")}
+                {expirent.length > 3 ? "…" : ""}. Prolongez-{expirent.length === 1 ? "le" : "les"} pour qu&apos;{expirent.length === 1 ? "il continue" : "ils continuent"} de s&apos;ouvrir (un QR code
+                imprimé cesserait de fonctionner).
+              </span>
+              <button type="button" className={styles.principalPetit} disabled={enCours?.startsWith("prol-") === true} onClick={() => void prolonger(expirent.map((d) => d.jeton))}>
+                Prolonger
+              </button>
+            </div>
+          )}
           <section className={styles.bloc}>
             <h2 className={styles.blocTitre}>
               Destinataires · {actifs.length} actif{actifs.length > 1 ? "s" : ""}
@@ -554,6 +583,15 @@ export function FichePage({ id }: { id: string }) {
                       >
                         Copier le mail
                       </button>
+                      <button
+                        type="button"
+                        className={styles.secondairePetit}
+                        onClick={() =>
+                          setQr({ lien: partage.resultat!.lien, destinataire: partage.destinataire, jeton: null, expiresAt: null, protegee: page.protection && partage.invites === null && peutRecevoirCode(partage.destinataire) })
+                        }
+                      >
+                        ▦ QR code
+                      </button>
                     </div>
                     <button type="button" className={styles.lienTexte} onClick={() => setPartage({ ouvert: false, destinataire: "", invites: null, resultat: null })}>
                       Fermer
@@ -589,6 +627,9 @@ export function FichePage({ id }: { id: string }) {
                             : !ok
                               ? `Expiré le ${jour(d.expiresAt!)}`
                               : `Envoyé le ${jour(d.createdAt)}${d.expiresAt ? ` · expire le ${jour(d.expiresAt)}` : ""}`}
+                          {ok && d.expiresAt && etatEcheance(d) === "bientot" && (
+                            <span className={styles.expireBientot}> · {texteExpireDans(d.expiresAt)}</span>
+                          )}
                           {invites ? ` · ${invites.length} invité${invites.length > 1 ? "s" : ""}` : ""}
                           {d.questions > 0 ? ` · ${d.questions} question${d.questions > 1 ? "s" : ""}` : ""}
                           {bloque && <span className={styles.alerte}> · Sans adresse e-mail : bloqué par la protection</span>}
@@ -608,6 +649,22 @@ export function FichePage({ id }: { id: string }) {
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1-.8-.3-2.2-1-3.1-2.8-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.3 1 2.5c.1.2 1.6 2.5 4 3.5 1.5.6 2 .7 2.8.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.2Z" /></svg>
                             WhatsApp
                           </a>
+                          {etatEcheance(d) === "bientot" && (
+                            <button type="button" className={styles.lienTexteFort} disabled={enCours === `prol-${d.jeton}`} onClick={() => void prolonger([d.jeton])}>
+                              ⟳ Prolonger
+                            </button>
+                          )}
+                          {!bloque && (
+                            <button
+                              type="button"
+                              className={styles.lienTexte}
+                              onClick={() =>
+                                setQr({ lien: lienD, destinataire: d.destinataire, jeton: d.jeton, expiresAt: d.expiresAt, protegee: page.protection && !invites && peutRecevoirCode(d.destinataire) })
+                              }
+                            >
+                              ▦ QR code
+                            </button>
+                          )}
                           {invites && (
                             <button type="button" className={styles.lienTexte} onClick={() => setEditeurInvites({ jeton: d.jeton, texte: invites.join("\n") })}>
                               Invités
@@ -626,6 +683,13 @@ export function FichePage({ id }: { id: string }) {
                             }}
                           >
                             Révoquer
+                          </button>
+                        </span>
+                      )}
+                      {!ok && peutProlonger(d) && (
+                        <span className={styles.destActions}>
+                          <button type="button" className={styles.lienTexteFort} disabled={enCours === `prol-${d.jeton}`} onClick={() => void prolonger([d.jeton])}>
+                            ⟳ Prolonger
                           </button>
                         </span>
                       )}
@@ -702,6 +766,18 @@ export function FichePage({ id }: { id: string }) {
                 ))}
           </section>
         </div>
+      )}
+      {qr && (
+        <FenetreQr
+          lien={qr.lien}
+          destinataire={qr.destinataire}
+          titrePage={page.titre}
+          expiresAt={qr.expiresAt}
+          protegee={qr.protegee}
+          onFermer={() => setQr(null)}
+          onProlonger={qr.jeton ? () => prolonger([qr.jeton!]) : undefined}
+          onMessage={signaler}
+        />
       )}
     </div>
   );

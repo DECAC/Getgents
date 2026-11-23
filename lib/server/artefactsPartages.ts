@@ -1,3 +1,4 @@
+import { DUREE_LIEN_MS, nouvelleEcheance } from "@/lib/dureeLien";
 import { randomBytes } from "crypto";
 import { getSupabaseAdmin } from "@/lib/server/supabase";
 import type { DemandePartage, Fidelite, FormatArtefact, ResumePartage } from "@/lib/mcpPartage";
@@ -35,8 +36,8 @@ export interface ArtefactPartage {
   misAJourLe: string | null;
 }
 
-/** Durée de vie d'un lien d'essai : 30 jours. */
-export const DUREE_LIEN_MS = 30 * 24 * 3600 * 1000;
+/** Durée de vie d'un lien : 30 jours (et d'une prolongation) — voir lib/dureeLien.ts. */
+export { DUREE_LIEN_MS };
 
 type Memoire = Map<string, ArtefactPartage & { revokedAt: string | null }>;
 const memoire = (): Memoire => {
@@ -296,6 +297,81 @@ export async function revoquerPartage(ownerId: string, jeton: string): Promise<b
   const coupe = (data ?? []).length > 0;
   if (coupe) console.log(JSON.stringify({ tag: "getgents:partage", event: "partage_revoque", ownerId }));
   return coupe;
+}
+
+export interface ResultatProlongation {
+  prolonges: { jeton: string; expiresAt: string }[];
+  ignores: { jeton: string; cause: "introuvable" | "revoque" | "plafond" }[];
+}
+
+/** Au plus autant de liens par appel : le bandeau de la fiche et l'e-mail n'en demandent pas plus. */
+export const PROLONGATION_MAX = 50;
+
+/**
+ * PROLONGE des liens DE CE COMPTE : nouvelle échéance = aujourd'hui + 30 jours
+ * (voir lib/dureeLien.ts). Le filtre sur `owner_id` est la garde : connaître
+ * un jeton ne suffit pas. Un lien RÉVOQUÉ ne revient jamais ; un lien EXPIRÉ
+ * redevient actif — il compte alors dans le plafond des liens actifs (offre
+ * « pages »), les liens encore actifs, eux, n'y changent rien.
+ */
+export async function prolongerPartages(ownerId: string, jetons: string[]): Promise<ResultatProlongation> {
+  const uniques = Array.from(new Set(jetons.filter((j) => /^[A-Za-z0-9_-]{20,64}$/.test(j)))).slice(0, PROLONGATION_MAX);
+  const resultat: ResultatProlongation = { prolonges: [], ignores: [] };
+  const maintenant = Date.now();
+  const iso = new Date(maintenant).toISOString();
+  const sb = getSupabaseAdmin();
+
+  // Ce que chaque jeton est aujourd'hui, pour ce compte.
+  const etat = new Map<string, { revokedAt: string | null; expiresAt: string | null }>();
+  if (!sb) {
+    for (const j of uniques) {
+      const m = memoire().get(j);
+      if (m && m.ownerId === ownerId) etat.set(j, { revokedAt: m.revokedAt, expiresAt: m.expiresAt });
+    }
+  } else if (uniques.length) {
+    const { data, error } = await sb.from("artefacts_partages").select("jeton, revoked_at, expires_at").eq("owner_id", ownerId).in("jeton", uniques);
+    if (error) throw new Error(error.message);
+    for (const d of data ?? []) etat.set(d.jeton, { revokedAt: d.revoked_at, expiresAt: d.expires_at });
+  }
+
+  const plafond = plafondsDuCompte(ownerId)?.liensActifs;
+  let place = plafond == null ? Infinity : plafond - (await liensActifs(ownerId));
+  const echeance = nouvelleEcheance(maintenant);
+
+  for (const j of uniques) {
+    const e = etat.get(j);
+    if (!e) {
+      resultat.ignores.push({ jeton: j, cause: "introuvable" });
+      continue;
+    }
+    if (e.revokedAt) {
+      resultat.ignores.push({ jeton: j, cause: "revoque" });
+      continue;
+    }
+    const expire = !!e.expiresAt && e.expiresAt <= iso;
+    if (expire) {
+      if (place <= 0) {
+        resultat.ignores.push({ jeton: j, cause: "plafond" });
+        continue;
+      }
+      place -= 1;
+    }
+    if (!sb) {
+      const m = memoire().get(j)!;
+      m.expiresAt = echeance;
+    } else {
+      const { data, error } = await sb.from("artefacts_partages").update({ expires_at: echeance }).eq("jeton", j).eq("owner_id", ownerId).is("revoked_at", null).select("jeton");
+      if (error) throw new Error(error.message);
+      if (!(data ?? []).length) {
+        resultat.ignores.push({ jeton: j, cause: "revoque" });
+        continue;
+      }
+    }
+    resultat.prolonges.push({ jeton: j, expiresAt: echeance });
+  }
+  if (resultat.prolonges.length)
+    console.log(JSON.stringify({ tag: "getgents:partage", event: "partage_prolonge", ownerId, nombre: resultat.prolonges.length }));
+  return resultat;
 }
 
 /**
