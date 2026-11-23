@@ -17,7 +17,14 @@ export function PleinEcran({ id }: { id: string }) {
       <a href={`/pages/${encodeURIComponent(id)}`} className={styles.pleinEcranRetour}>
         ← Retour à la fiche
       </a>
-      {monte && <CadreApercu className={styles.pleinEcranCadre} src={src} titre="Aperçu en plein écran" />}
+      {monte && (
+        <CadreApercu
+          className={styles.pleinEcranCadre}
+          src={src}
+          titre="Aperçu en plein écran"
+          stockage={{ url: `/api/pages/${encodeURIComponent(id)}/stockage`, portee: `auteur:${id}` }}
+        />
+      )}
     </div>
   );
 }

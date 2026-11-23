@@ -53,9 +53,14 @@ const TETE = '<meta charset="utf-8"><meta name="viewport" content="width=device-
  * 12/11) : « le rendu est bon, mais aucune donnée ne s'affiche » — la page
  * se dessinait, son script s'arrêtait. Dans un cadre `sandbox` sans
  * `allow-same-origin`, toucher `localStorage` lève une erreur, et un artefact
- * Claude peut appeler `window.storage`, qui n'existe que dans Claude. Les
- * deux sont remplacés par une mémoire de la page : l'artefact tourne, ses
- * données vivent le temps de la visite (rien n'est gardé ni partagé).
+ * Claude peut appeler `window.storage`, qui n'existe que dans Claude.
+ * `localStorage` est remplacé par une mémoire de la page. `window.storage`
+ * (23/11) passe par la PAGE PARENTE quand elle sait le servir — poignée de
+ * main `stockage?` / `stockage!`, puis un message par opération
+ * (`useStockagePartage`) : `shared` vrai = stockage de la page chez Getgents,
+ * commun à tous ses lecteurs (votes) ; faux = données du lecteur, gardées
+ * dans le navigateur de la page parente. Sans réponse en 1,5 s (vignette,
+ * brouillon collé), mémoire de la page comme avant.
  *
  * Toute erreur restante s'affiche dans un bandeau discret au lieu de laisser
  * une page muette : c'est le témoin de l'essai.
@@ -79,11 +84,16 @@ export const AMORCE_ARTEFACT = `<script>(function(){
 try{parent.postMessage({getgents:"pret"},"*")}catch(e){}
 function memoire(){var d=Object.create(null);return{getItem:function(k){k=String(k);return k in d?d[k]:null},setItem:function(k,v){d[String(k)]=String(v)},removeItem:function(k){delete d[String(k)]},clear:function(){d=Object.create(null)},key:function(i){var c=Object.keys(d);return i<c.length?c[i]:null},get length(){return Object.keys(d).length}}}
 ["localStorage","sessionStorage"].forEach(function(n){var ok=false;try{ok=!!window[n];window[n].getItem("__");}catch(e){ok=false}if(!ok){try{Object.defineProperty(window,n,{value:memoire(),configurable:true})}catch(e){}}});
-if(!window.storage){var s=Object.create(null);window.storage={
-get:function(k){k=String(k);return Promise.resolve(k in s?{key:k,value:s[k],shared:false}:null)},
-set:function(k,v){s[String(k)]=v;return Promise.resolve({key:String(k),value:v,shared:false})},
-delete:function(k){delete s[String(k)];return Promise.resolve({key:String(k),deleted:true,shared:false})},
-list:function(p){p=p?String(p):"";return Promise.resolve({keys:Object.keys(s).filter(function(k){return k.indexOf(p)===0}),prefix:p,shared:false})}};}
+if(!window.storage){(function(){
+var mem={p:Object.create(null),s:Object.create(null)},relais=null,file=[],attente=Object.create(null),seq=0;
+function local(o,k,v,pre,sh){var d=sh?mem.s:mem.p;if(o==="get")return k in d?{key:k,value:d[k],shared:sh}:null;if(o==="set"){d[k]=v;return{key:k,value:v,shared:sh}}if(o==="delete"){delete d[k];return{key:k,deleted:true,shared:sh}}return{keys:Object.keys(d).filter(function(c){return c.indexOf(pre)===0}),prefix:pre,shared:sh}}
+function envoyer(o,k,v,pre,sh,ok,ko){var id="s"+(++seq);attente[id]={ok:ok,ko:ko};try{parent.postMessage({getgents:"stockage",id:id,op:o,cle:k,valeur:v,prefixe:pre,partage:sh},"*")}catch(e){delete attente[id];ko(e);return}setTimeout(function(){if(attente[id]){delete attente[id];ko(new Error("stockage de la page indisponible (délai dépassé)"))}},15000)}
+function op(o,k,v,pre,sh){k=k==null?"":String(k);pre=pre==null?"":String(pre);sh=sh===true;if(o==="set"&&typeof v!=="string")v=JSON.stringify(v);return new Promise(function(ok,ko){if(relais===false)return ok(local(o,k,v,pre,sh));if(relais===true)return envoyer(o,k,v,pre,sh,ok,ko);file.push(function(){relais?envoyer(o,k,v,pre,sh,ok,ko):ok(local(o,k,v,pre,sh))})})}
+function decider(r){if(relais!==null)return;relais=r;var f=file;file=[];f.forEach(function(x){x()})}
+window.addEventListener("message",function(e){if(e.source!==parent||!e.data)return;var d=e.data;if(d.getgents==="stockage!")decider(true);else if(d.getgents==="stockage:reponse"&&attente[d.id]){var a=attente[d.id];delete attente[d.id];d.ok?a.ok(d.resultat===undefined?null:d.resultat):a.ko(new Error(d.erreur||"stockage refusé"))}});
+try{parent.postMessage({getgents:"stockage?"},"*")}catch(e){}setTimeout(function(){decider(false)},1500);
+window.storage={get:function(k,sh){return op("get",k,null,"",sh)},set:function(k,v,sh){return op("set",k,v,"",sh)},delete:function(k,sh){return op("delete",k,null,"",sh)},list:function(p,sh){return op("list",null,null,p,sh)}};
+})();}
 var vues=0;function signaler(m){if(vues++>2)return;function poser(){var b=document.createElement("div");b.setAttribute("data-getgents-erreur","");b.style.cssText="position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483647;padding:8px 12px;border-radius:8px;background:#fff4f2;color:#7a1c12;font:12px/1.4 system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.15)";b.textContent="Erreur dans l'artefact : "+m;(document.body||document.documentElement).appendChild(b)}document.body?poser():document.addEventListener("DOMContentLoaded",poser)}
 var pmax=-1;function mesurer(e,force){try{var t=e&&e.target&&e.target!==document&&e.target.scrollHeight?e.target:document.scrollingElement||document.documentElement;var h=t.scrollHeight,v=t===document.scrollingElement||t===document.documentElement?window.innerHeight:t.clientHeight;if(!h)return;var p=Math.min(100,Math.round((t.scrollTop+v)/h*100));if(p>pmax+4||(p===100&&pmax<100)||force){pmax=Math.max(pmax,p);parent.postMessage({getgents:"profondeur",v:pmax},"*")}}catch(x){}}
 window.addEventListener("message",function(e){if(e.source===parent&&e.data&&e.data.getgents==="profondeur?")mesurer(null,true)});

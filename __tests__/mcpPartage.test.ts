@@ -125,7 +125,9 @@ describe("contrôle de fidélité", () => {
   });
 
   it("repère un artefact qui lit ses données dans Claude, et le signale au modèle", async () => {
-    expect(controleFidelite("<script>const r = await window.storage.get('agenda')</script>", "html").dependClaude).toBe(true);
+    expect(controleFidelite("<script>const r = await window.claude.complete('agenda')</script>", "html").dependClaude).toBe(true);
+    // window.storage est servi par Getgents depuis le 23/11 (votes communs) : plus bloquant.
+    expect(controleFidelite("<script>const r = await window.storage.get('votes', true)</script>", "html").dependClaude).toBe(false);
     expect(controleFidelite("<p>Ouvre la page depuis claude.ai pour voir les données.</p>", "html").dependClaude).toBe(true);
     expect(controleFidelite(PAGE, "html").dependClaude).toBe(false);
     const r = (await traiterMessage(

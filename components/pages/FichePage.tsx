@@ -13,6 +13,7 @@ import { exempleDeOrigine } from "@/lib/exemplesPages";
 import { GuideDecouverte } from "./GuideDecouverte";
 import { BlocEngagement } from "./BlocEngagement";
 import { BlocLangue, langueDesLecteurs, type LangueLecteurs } from "./BlocLangue";
+import { BlocDonneesPartagees } from "./BlocDonneesPartagees";
 import { AdapterExemple } from "./AdapterExemple";
 import { INVITES_MAX, lienWhatsApp, messageWhatsApp } from "@/lib/groupesPages";
 import { ReponsesPage } from "./ReponsesPage";
@@ -373,6 +374,7 @@ export function FichePage({ id }: { id: string }) {
             className={styles.apercuCadre}
             src={`/api/pages/${encodeURIComponent(page.id)}/apercu?v=${page.version}`}
             titre={`Aperçu — ${page.titre}`}
+            stockage={{ url: `/api/pages/${encodeURIComponent(page.id)}/stockage`, portee: `auteur:${page.id}` }}
           />
         </section>
 
@@ -386,6 +388,7 @@ export function FichePage({ id }: { id: string }) {
             />
           )}
           <BlocEngagement pageId={page.id} onMessage={signaler} langue={langueDesLecteurs(page.langueLecteurs)} />
+          <BlocDonneesPartagees pageId={page.id} onMessage={signaler} />
 
           <section className={styles.bloc}>
             <h2 className={styles.blocTitre}>Versions</h2>

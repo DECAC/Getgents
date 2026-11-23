@@ -49,9 +49,10 @@ export interface Fidelite {
   /** Le contenu contient une marque d'abréviation typique d'un modèle (« … reste du code »). */
   abreviationSuspecte: boolean;
   /**
-   * L'artefact lit ses données dans Claude (`window.claude`, `window.storage`…) :
+   * L'artefact lit ses données dans Claude (`window.claude`…) :
    * chez le client, il s'affichera VIDE. Vécu au premier essai (12/11) : un
    * « Poste de pilotage » branché sur l'agenda et les e-mails, partagé tel quel.
+   * `window.storage` n'en est PLUS (23/11) : Getgents le sert (votes communs).
    */
   dependClaude: boolean;
   /** Adresses e-mail et téléphones écrits dans la page (repérage simple). */
@@ -71,7 +72,7 @@ const ABREVIATIONS = [
 ];
 
 /** Ce qu'on peut dire de la copie reçue, sans l'original sous les yeux. */
-const APPELS_CLAUDE = [/\bwindow\.claude\b/, /\bwindow\.storage\b/, /depuis claude\.ai/i, /\bclaude\.ai\b.{0,40}\bdonn[ée]es\b/i];
+const APPELS_CLAUDE = [/\bwindow\.claude\b/, /depuis claude\.ai/i, /\bclaude\.ai\b.{0,40}\bdonn[ée]es\b/i];
 
 export function controleFidelite(contenu: string, format: FormatArtefact): Fidelite {
   const net = contenu.trim();
@@ -235,10 +236,11 @@ export const DESCRIPTION_OUTIL =
   "et l'outil rend l'adresse de sa fiche, où l'utilisateur crée un lien de groupe ou des liens personnels. " +
   "`contenu` attend le code ou le texte complet de la page, à l'identique : le destinataire voit exactement ce " +
   "qui est envoyé, et un contenu abrégé (« ... », « reste du code inchangé ») s'affiche tel quel. Une page qui " +
-  "lit des données en direct depuis Claude (window.claude, window.storage) ne les affiche pas chez le " +
+  "lit des données en direct depuis Claude (window.claude : agenda, e-mails) ne les affiche pas chez le " +
   "destinataire : il faut une version figée, données actuelles écrites dans la page. Le destinataire voit tout " +
   "ce que la page contient, données personnelles comprises (agenda, e-mails, contacts) ; la réponse signale " +
-  "les coordonnées repérées. " +
+  "les coordonnées repérées. Le stockage des artefacts (window.storage) fonctionne chez Getgents : les " +
+  "données partagées (`shared`, des votes par exemple) sont communes à tous les lecteurs de la page. " +
   "In English: shares an artifact or canvas privately with one recipient (client, team, group), who can reply " +
   "and ask an assistant about the page.";
 

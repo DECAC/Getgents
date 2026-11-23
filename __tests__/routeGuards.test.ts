@@ -84,6 +84,7 @@ const OUVERTES: Record<string, string> = {
   // n'écrit qu'une ligne par visite, ne lit rien et répond toujours 204.
   "app/api/partage/[jeton]/lecture/route.ts": "jeton du partage + accès par code, une ligne par visite, rien en lecture",
   "app/api/partage/[jeton]/reponse/route.ts": "jeton du partage + accès par code + option de l'auteur, une réponse par lien",
+  "app/api/partage/[jeton]/stockage/route.ts": "jeton du partage + accès par code, bornes et débit par lien, données de la page seule",
 };
 
 function routes(dir: string, acc: string[] = []): string[] {

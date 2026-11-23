@@ -1,10 +1,23 @@
 "use client";
 
 import { adresseDirecte, useCadreAvecRepli } from "@/components/shared/useCadreAvecRepli";
+import { useStockagePartage } from "@/components/shared/useStockagePartage";
 
 /** Aperçu d'une page dans la fiche, avec le repli si le domaine de contenu est bloqué. */
-export function CadreApercu({ src, titre, className }: { src: string; titre: string; className?: string }) {
+export function CadreApercu({
+  src,
+  titre,
+  className,
+  stockage,
+}: {
+  src: string;
+  titre: string;
+  className?: string;
+  /** Page de l'auteur : son `window.storage` partagé (votes…) est relayé, comme chez un lecteur. */
+  stockage?: { url: string; portee: string };
+}) {
   const repli = useCadreAvecRepli(src);
+  useStockagePartage(repli.cadre, stockage?.url, stockage?.portee ?? "");
   return (
     <iframe
       ref={repli.cadre}

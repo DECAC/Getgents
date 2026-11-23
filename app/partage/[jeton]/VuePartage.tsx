@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { adresseDirecte, useCadreAvecRepli } from "@/components/shared/useCadreAvecRepli";
+import { useStockagePartage } from "@/components/shared/useStockagePartage";
 import AssistantDocument from "./AssistantDocument";
 import Confidentialite from "./Confidentialite";
 import EngagementLecteur from "./EngagementLecteur";
@@ -150,6 +151,8 @@ export default function VuePartage({
   const aRepondu = groupe ? !!prenom && repondus.some((r) => cleInvite(r) === cleInvite(prenom)) : dejaRepondu;
 
   const mesure = useLecture(jeton, cadre);
+  // `window.storage` de l'artefact : votes communs à la page, données du lecteur sur cet appareil.
+  useStockagePartage(cadre, `/api/partage/${encodeURIComponent(jeton)}/stockage`, `lien:${jeton}`);
 
   const [ouvert, setOuvert] = useState(false);
   const [agrandi, setAgrandi] = useState(false);

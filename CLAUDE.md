@@ -992,6 +992,25 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   modèles). Un test garde que FR et EN ont les mêmes clés. Vérifié au
   navigateur (mémoire locale) : page anglaise, réponse, assistant, bascule
   FR, groupe, code, vignette, fiche, téléphone.
+- **Pages de GROUPE depuis Claude : sans destinataire, votes partagés** (23/11 ;
+  vécu : Claude refusait de partager une page de vote pour 9 personnes).
+  `partager_page` accepte l'absence de `destinataire` (contenu neuf
+  seulement) : page créée SANS lien, l'outil rend l'adresse de sa fiche, où
+  l'auteur crée un lien de groupe. **`window.storage` est SERVI** (lot 2,
+  `lib/stockagePage.ts`, `lib/server/stockagePages.ts`, migration 035 à
+  passer AVANT — sans elle, le stockage partagé répond « indisponible ») :
+  l'amorce relaie au PARENT (`stockage?`/`stockage!`, puis une requête par
+  opération ; sans réponse en 1,5 s, mémoire de la page comme avant), qui
+  appelle `/api/partage/<jeton>/stockage` (lien + code d'accès) ou, dans la
+  fiche, `/api/pages/<id>/stockage` (`useStockagePartage`). `shared` vrai =
+  commun à TOUS les liens de la page ; faux = localStorage du PARENT, par
+  lien et par appareil. Bornes : clé 200, valeur 100 Ko, 500 clés, 2 Mo par
+  page, 60 écritures/min par lien (mémoire de l'instance). Bloc « Données
+  partagées » (onglet Page) : résumé et « Effacer » ; effacé avec la page.
+  `window.storage` n'est plus signalé comme « branché sur Claude » ;
+  `window.claude` l'est toujours. Vérifié au navigateur (mémoire locale) :
+  deux lecteurs, votes communs, vote personnel retrouvé au rechargement,
+  aperçu de l'auteur, effacement. Fichiers joints (musique, photo) : lot 3.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
