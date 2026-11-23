@@ -896,7 +896,8 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   elle, police par défaut et journal `vignette_sans_polices`. Une police
   manuscrite écartée : pas de « é ». L'aperçu par CAPTURE réelle de la page
   a été discuté et NON retenu (Chromium dans une fonction, contenu réel
-  montré à tout le fil et caché par Meta).
+  montré à tout le fil et caché par Meta). **Déployé, essai réel CONCLUANT
+  dans WhatsApp (20/11).**
 - **Rubrique « Modèles »** (19/11, maquette validée ; « Exemples » renommé
   par l'éditeur — le mot dit qu'on part de la page pour en faire la sienne ;
   `GalerieModeles`, `/pages/modeles`, `modelesEssayes`, `modelesASuggerer`).
