@@ -25,10 +25,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
        service de catégorisation réseau qui découvre le domaine par son plan de
        site doit tomber sur l'identité de l'éditeur — c'est exactement ce qui
        distingue un domaine tenu par quelqu'un d'un domaine jetable. */
-    ...["a-propos", "mentions-legales", "confidentialite", "contact"].map((s) => ({
+    ...["a-propos", "mentions-legales", "confidentialite", "contact", "cgu"].map((s) => ({
       url: `${base}/${s}`,
       changeFrequency: "yearly" as const,
       priority: 0.3,
+    })),
+    // Aide : ce que trouvent les moteurs et les IA qui cherchent « partager un artefact ».
+    ...["aide", "aide/partager-un-artefact", "aide/connecteur"].map((s) => ({
+      url: `${base}/${s}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
     })),
     ...gents.map((g) => ({
       url: `${base}/${g.slug}`,

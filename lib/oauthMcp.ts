@@ -122,7 +122,7 @@ export function metadonneesRessource(origine: string) {
     authorization_servers: [origine],
     scopes_supported: [SCOPE_PARTAGE],
     bearer_methods_supported: ["header"],
-    resource_name: "Getgents — Pages (GetSite)",
+    resource_name: "Getgents Pages",
   };
 }
 

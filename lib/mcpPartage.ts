@@ -230,7 +230,10 @@ export const DESCRIPTION_OUTIL =
   "(window.claude, window.storage, agenda, e-mails, tâches planifiées), elles ne s'afficheront pas chez le " +
   "client — et ne le doivent pas. Envoie alors une version FIGÉE : les données actuelles écrites dans la " +
   "page, datées, sans ces appels. Avant d'envoyer, signale à l'utilisateur toute donnée personnelle " +
-  "(agenda, e-mails, contacts) que la page contient, et demande-lui s'il veut vraiment la partager.";
+  "(agenda, e-mails, contacts) que la page contient, et demande-lui s'il veut vraiment la partager. " +
+  // Les annuaires de connecteurs sont en anglais, et l'utilisateur peut l'être aussi.
+  "In English: share or send an artifact (or canvas) privately with a client, a team or a group — one private " +
+  "link per recipient, who can reply and ask an assistant about the page.";
 
 export const SCHEMA_OUTIL = {
   type: "object",
@@ -315,7 +318,9 @@ export const INSTRUCTIONS_SERVEUR =
   "puis donne-lui le lien et le modèle de mail. Getgents n'envoie aucun e-mail : c'est l'utilisateur qui " +
   "l'envoie. Ne dis jamais que le mail est parti. Pour retrouver ou couper un lien déjà envoyé, " +
   "utilise lister_partages puis revoquer_partage. Pour envoyer une page déjà partagée à quelqu'un d'autre, passe " +
-  "son identifiant (`page`) au lieu de recopier le contenu ; pour la corriger, mettre_a_jour_page.";
+  "son identifiant (`page`) au lieu de recopier le contenu ; pour la corriger, mettre_a_jour_page. " +
+  "In English: when the user asks to share, send or forward an artifact or canvas to someone, call partager_page " +
+  "with its COMPLETE content, then give the private link and the e-mail draft; Getgents sends no e-mail.";
 
 export interface ContexteMcp {
   /** Enregistre l'artefact et rend son lien public. */
@@ -427,7 +432,7 @@ export async function traiterMessage(msg: unknown, ctx: ContexteMcp): Promise<Re
         result: {
           protocolVersion: VERSIONS_PROTOCOLE.includes(demandee) ? demandee : VERSIONS_PROTOCOLE[0],
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: "getgents", title: "Getgents — Pages (GetSite)", version: "0.3.0" },
+          serverInfo: { name: "getgents", title: "Getgents Pages", version: "1.0.0" },
           instructions: INSTRUCTIONS_SERVEUR,
         },
       };

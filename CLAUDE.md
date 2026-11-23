@@ -926,6 +926,23 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   voulu). Vérifié au navigateur sur une page d'essai (Mon compte exige
   Supabase) : échec réel sans Brevo, succès simulé, téléphone. PAS en
   production.
+- **Être proposé par les IA : annuaires et pages d'aide** (23/11, demande de
+  l'éditeur, qui veut rester DISCRET — aucune promotion en son nom ;
+  `lib/connecteurPublic.ts`, `docs/annuaires.md`). Positionnement : PAS
+  « publier » (Claude publie déjà un artefact par lien public) mais « envoyer
+  à une personne et recueillir sa réponse ». Une seule source pour la page
+  `/aide/connecteur` (exigée par l'annuaire de Claude), `/llms.txt`, la fiche
+  du registre (`server.json`, nom `ai.getgents/pages`, preuve de domaine
+  HTTP : `/.well-known/mcp-registry-auth` lit `MCP_REGISTRE_PREUVE`, 404 sans
+  elle) — un test garde leur accord. Page `/aide/partager-un-artefact` :
+  comparaison HONNÊTE des trois façons (publication intégrée, fichier,
+  Getgents). Conditions d'utilisation `/cgu` rédigées par l'agent, NON
+  relues par un juriste. Descriptions des outils et consigne du serveur
+  complétées en anglais ; titre du serveur « Getgents Pages » (GetSite
+  retiré). ChatGPT ÉCARTÉ : vérification d'identité au nom de publication.
+  Ne JAMAIS citer le dépôt GitHub dans une fiche (il porte le nom de
+  l'éditeur). Vérifié au navigateur (ordinateur, téléphone) ; NON fait :
+  publication au registre et soumission à l'annuaire (côté éditeur).
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
@@ -1375,6 +1392,11 @@ absent est « Getgents Pages ». Y mettre SON PROPRE identifiant AVANT de la
 régler, sinon on se ferme ses propres gents (la retirer rouvre tout). Lue
 à l'exécution (middleware et routes), un redéploiement suffit. RÉGLÉE en
 production (13/11) avec le compte de l'éditeur.
+
+`MCP_REGISTRE_PREUVE` : la ligne PUBLIQUE `v=MCPv1; k=ed25519; p=…` qui
+prouve au registre MCP officiel la propriété de getgents.ai (procédure dans
+`docs/annuaires.md`). Pas un secret ; la clé PRIVÉE (`key.pem`) reste sur
+l'ordinateur de l'éditeur, jamais dans le dépôt ni le chat.
 
 `DOMAINE_CONTENU` = `www.getgents-pages.com` (domaine acheté chez
 Squarespace le 13/11). Le `www` est VOULU : Vercel a fait de `www` le

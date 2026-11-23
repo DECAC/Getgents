@@ -16,6 +16,8 @@ export function PiedLegal() {
       <Link href="/a-propos">À propos</Link>
       <Link href="/mentions-legales">Mentions légales</Link>
       <Link href="/confidentialite">Confidentialité</Link>
+      <Link href="/cgu">Conditions</Link>
+      <Link href="/aide">Aide</Link>
       <Link href="/contact">Contact</Link>
     </footer>
   );
