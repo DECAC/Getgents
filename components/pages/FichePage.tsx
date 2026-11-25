@@ -13,6 +13,7 @@ import { exempleDeOrigine } from "@/lib/exemplesPages";
 import { GuideDecouverte } from "./GuideDecouverte";
 import { BlocEngagement } from "./BlocEngagement";
 import { BlocLangue, langueDesLecteurs, type LangueLecteurs } from "./BlocLangue";
+import { BlocApercuLien } from "./BlocApercuLien";
 import { FenetreQr } from "./FenetreQr";
 import { etatEcheance, liensQuiExpirent, peutProlonger, texteExpireDans } from "@/lib/dureeLien";
 import { BlocDonneesPartagees } from "./BlocDonneesPartagees";
@@ -407,6 +408,7 @@ export function FichePage({ id }: { id: string }) {
             />
           )}
           <BlocEngagement pageId={page.id} onMessage={signaler} langue={langueDesLecteurs(page.langueLecteurs)} />
+          <BlocApercuLien pageId={page.id} version={page.version} protegee={page.protection} onMessage={signaler} />
           <BlocFichiers pageId={page.id} onMessage={signaler} onChange={() => setRafraichi((n) => n + 1)} />
           <BlocDonneesPartagees pageId={page.id} onMessage={signaler} />
 

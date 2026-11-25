@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { apercuPourJeton } from "@/lib/server/apercuLien";
+import { policesOg } from "@/lib/server/policesOg";
+import { vignetteAvecCapture } from "@/lib/server/vignetteCapture";
+import { imageCapture } from "@/lib/server/apercusLien";
 import { paletteDuTitre, tailleTitre, enteteVignette, etiquetteVignette } from "@/lib/vignetteLien";
 
 /**
@@ -23,25 +24,6 @@ export const contentType = "image/png";
 export const alt = "Aperçu de la page partagée";
 export const runtime = "nodejs";
 
-const POLICES = join(process.cwd(), "lib/og/polices");
-
-async function polices() {
-  try {
-    const [gras, normal] = await Promise.all([
-      readFile(join(POLICES, "BricolageGrotesque-Bold.ttf")),
-      readFile(join(POLICES, "BricolageGrotesque-Regular.ttf")),
-    ]);
-    return [
-      { name: "B", data: gras, weight: 700 as const, style: "normal" as const },
-      { name: "B", data: normal, weight: 400 as const, style: "normal" as const },
-    ];
-  } catch (e) {
-    // Polices absentes du paquet déployé : police par défaut, la vignette part quand même.
-    console.error(JSON.stringify({ tag: "getgents:partage", event: "vignette_sans_polices", detail: (e as Error).message }));
-    return undefined;
-  }
-}
-
 const etoile = (taille: number, couleur: string) => (
   <svg width={taille} height={taille} viewBox="0 0 24 24">
     <path d="M12 1.5 L14.6 9.4 L22.5 12 L14.6 14.6 L12 22.5 L9.4 14.6 L1.5 12 L9.4 9.4 Z" fill={couleur} />
@@ -50,7 +32,13 @@ const etoile = (taille: number, couleur: string) => (
 
 export default async function Image({ params }: { params: Promise<{ jeton: string }> }) {
   const { jeton } = await params;
-  const [apercu, fonts] = await Promise.all([apercuPourJeton(jeton), polices()]);
+  const apercu = await apercuPourJeton(jeton);
+  // Option « aperçu par capture » activée par l'auteur, capture de la version courante : la page elle-même.
+  if (apercu?.capture) {
+    const png = await imageCapture(apercu.capture.pageId, apercu.capture.version).catch(() => null);
+    if (png) return vignetteAvecCapture({ png, titre: apercu.titre, action: apercu.action, langue: apercu.langue });
+  }
+  const fonts = await policesOg();
   const titre = apercu?.titre ?? "Lien privé · Private link";
   const p = paletteDuTitre(titre);
   const confettis = [

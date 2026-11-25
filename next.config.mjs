@@ -45,7 +45,15 @@ const nextConfig = {
   images: { unoptimized: true },
   // Polices de la vignette d'aperçu des liens, lues par `readFile` : à
   // embarquer explicitement dans la fonction, le traçage ne les voit pas.
-  outputFileTracingIncludes: { "/partage/[jeton]/opengraph-image": ["./lib/og/polices/*.ttf"] },
+  outputFileTracingIncludes: {
+    "/partage/[jeton]/opengraph-image": ["./lib/og/polices/*.ttf"],
+    "/api/pages/[id]/apercu-lien/image": ["./lib/og/polices/*.ttf"],
+    // Chromium de l'aperçu par capture : binaire compressé lu par chemin, que le traçage ne voit pas seul.
+    "/api/pages/[id]/apercu-lien": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/routines/run": ["./node_modules/@sparticuz/chromium/bin/**"],
+  },
+  // Chargés tels quels au moment de l'appel (binaire, `import()` dynamique), jamais empaquetés.
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   async rewrites() {
     if (!DOMAINE_CONTENU) return [];
     return {

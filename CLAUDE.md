@@ -898,6 +898,37 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   a été discuté et NON retenu (Chromium dans une fonction, contenu réel
   montré à tout le fil et caché par Meta). **Déployé, essai réel CONCLUANT
   dans WhatsApp (20/11).**
+- **Aperçu du lien par CAPTURE de la page** (25/11, choix de l'éditeur :
+  « nette » parmi deux maquettes ; `lib/apercuCapture.ts`,
+  `lib/server/captureApercu.ts`, `lib/server/apercusLien.ts`,
+  `lib/server/vignetteCapture.tsx`, `BlocApercuLien`, migration 039 à passer
+  AVANT — sans elle l'option reste coupée et l'activation répond 503). Revient
+  sur le refus du 20/11 parce que c'est une OPTION PAR PAGE, coupée par défaut :
+  l'image sort du lien privé (tout le groupe la voit, WhatsApp la garde,
+  révoquer ne la retire pas d'un message envoyé) — c'est à l'auteur d'en
+  décider, et il VOIT l'image exacte avant d'activer (même fonction que la
+  vignette servie). Jamais sur une page protégée par code (capture et
+  activation refusées, 409). Capture faite UNE FOIS PAR VERSION, jamais quand
+  WhatsApp vient chercher l'image (trop lent) : un vrai Chromium côté serveur
+  (`@sparticuz/chromium` 153 + `puppeteer-core` 25.12 sur Vercel, versions
+  appariées ; en local le Chromium de Playwright, `CHROMIUM_CAPTURE`), haut de
+  la page en 1200×630, document servi sous la CSP `sandbox` des lecteurs,
+  requêtes limitées au web PUBLIC (`adresseAutorisee` : ni localhost, ni
+  réseau privé, ni 169.254.169.254 — le rebond DNS n'est pas couvert), 20 s
+  au plus, page restée vide = pas d'aperçu. Image dans le seau PRIVÉ
+  `pages-apercus` (`<page>/v<version>.png`), servie par la route de la
+  vignette. Une nouvelle version SUSPEND l'aperçu (vignette ordinaire) jusqu'à
+  la capture suivante : refaite à l'ouverture de la fiche, ou par la tâche
+  horaire (3 par passage, `recapturerPagesChangees`). Composition : style
+  « pages empilées », capture sur la feuille de devant, bouton de réponse,
+  étiquette — RIEN de propre au lien (pas « pour Marie »), même image pour
+  tous. Binaire embarqué par `outputFileTracingIncludes` (vérifié dans le
+  `.nft.json`), `serverExternalPackages`. Vérifié en local (mémoire locale) :
+  capture ~1 à 8 s, activation, vignette du lien, nouvelle version → vignette
+  ordinaire puis recapture à l'ouverture, page protégée, suppression. NON
+  vérifié : Chromium sur Vercel (démarrage à froid, mémoire, polices et
+  emoji du paquet), et l'aperçu réel dans WhatsApp — premier essai à lire
+  dans `getgents:apercu-lien` (`capture_faite` / `capture_echouee`).
 - **Rubrique « Modèles »** (19/11, maquette validée ; « Exemples » renommé
   par l'éditeur — le mot dit qu'on part de la page pour en faire la sienne ;
   `GalerieModeles`, `/pages/modeles`, `modelesEssayes`, `modelesASuggerer`).

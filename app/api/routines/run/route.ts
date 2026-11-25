@@ -8,6 +8,7 @@ import { consommerPourVisiteur, requireGentOrDraftAccess } from "@/lib/server/ge
 import { contexteForUser } from "@/lib/server/openRouterKey";
 import { purgerActivite } from "@/lib/server/activitePages";
 import { rappelerExpirations } from "@/lib/server/rappelsExpiration";
+import { recapturerPagesChangees } from "@/lib/server/apercusLien";
 
 export const dynamic = "force-dynamic";
 // Un run de veille (recherche web + synthèse) peut être long.
@@ -136,6 +137,8 @@ export async function GET(req: Request) {
   // Rappel d'expiration des liens : un e-mail par auteur et par jour, à 8 h
   // (Paris). Ne lève jamais ; indépendant des routines des gents.
   await rappelerExpirations();
+  // Aperçu du lien par capture : refait celles des pages mises à jour depuis (connecteur). Jamais bloquant.
+  await recapturerPagesChangees().catch((e) => console.error(JSON.stringify({ tag: "getgents:apercu-lien", event: "tache_echouee", detail: (e as Error).message })));
   try {
     return NextResponse.json(await runBatch(null));
   } catch (e) {

@@ -2922,3 +2922,19 @@
   font-size: 0.85em;
   line-height: 1.4;
 }
+
+/* Aperçu du lien par capture (BlocApercuLien) */
+.apercuLienImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+  margin: 8px 0;
+}
+.apercuLienActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 6px 0 10px;
+}

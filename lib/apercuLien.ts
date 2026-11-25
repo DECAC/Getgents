@@ -23,6 +23,8 @@ export interface ApercuLien {
   protegee: boolean;
   /** Langue de l'aperçu : celle des lecteurs de la page (lot anglais 1). */
   langue: Langue;
+  /** Capture de la page à montrer (option de l'auteur, version courante, page non protégée), sinon absent. */
+  capture?: { pageId: string; version: number } | null;
 }
 
 const DESCRIPTION_MAX = 200;

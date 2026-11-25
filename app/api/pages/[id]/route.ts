@@ -6,6 +6,7 @@ import { groupesDesLiens } from "@/lib/server/groupesPages";
 import { definirLangue, reglageLangue } from "@/lib/server/langueLecteur";
 import { langueDeclaree, langueDeLaPage, reglageValide } from "@/lib/langueLecteur";
 import { supprimerFichiersPage } from "@/lib/server/fichiersPages";
+import { supprimerCaptures } from "@/lib/server/apercusLien";
 
 /**
  * Fiche d'une page. Toutes les opérations filtrent sur le PROPRIÉTAIRE
@@ -98,6 +99,7 @@ export async function DELETE(_req: Request, props: { params: Promise<{ id: strin
   if (ok) {
     console.log(JSON.stringify({ tag: "getgents:pages", event: "page_supprimee", ownerId: auth.user.id }));
     await supprimerFichiersPage(params.id).catch(() => undefined);
+    await supprimerCaptures(params.id).catch(() => undefined);
   }
   return ok ? NextResponse.json({ supprimee: true }) : introuvable();
 }
