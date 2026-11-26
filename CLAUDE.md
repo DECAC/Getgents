@@ -1113,6 +1113,14 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (`MCP_REGISTRE_PREUVE`, voir `docs/annuaires.md`) : à faire sur demande.
   Non fait : revendiquer la fiche (DNS ou fichier sur getgents.ai, +5 points
   et alertes de panne) — attend les instructions de mcptry.
+- **Vision « expérience » et prototype « Le premier couteau »** (25-26/11,
+  réflexion produit avec l'éditeur, RIEN dans l'application) : Getgents comme
+  canal qui amplifie l'intention d'un créateur (voix humaine, visuels sans
+  « effet IA », musique jouée), un « publiciste » qui mène l'entretien puis
+  propose ; niveau de référence thelastboring.com. Brief complet, décisions,
+  analyse de la référence et plan du prototype : `mockups/recit/premier-couteau-brief.md`
+  — À LIRE avant de reprendre. Maquette antérieure (histoire fictive, jugée
+  insuffisante) : `mockups/recit/fil-de-claire.html`.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
