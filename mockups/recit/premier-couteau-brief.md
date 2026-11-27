@@ -530,3 +530,9 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
      restent sur l'appareil de l'éditeur (téléchargés), aucun stockage
      serveur. À trancher avant l'ouverture (Supabase gratuit : 50 Mo par
      fichier).
+- **Test d'encodage, relevé 1 (27/11, Mac de l'éditeur)** : H.264 1080×1920
+  oui, AAC OUI, Opus oui, MediaRecorder MP4 H.264 oui, 78 images/s sur la
+  scène de test, MP4 lisible. ATTENTION : relevé fait dans l'APPLICATION
+  Claude (Electron 45, Chromium 156), pas dans Chrome lui-même — même moteur
+  et même encodeur système sur Mac, donc très probablement identique, mais
+  non vérifié. iPhone (WebKit) : relevé ATTENDU.
