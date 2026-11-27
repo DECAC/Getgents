@@ -1192,8 +1192,25 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   générés (`publiciste_fichiers.cout`) : le coût de l'entretien (texte) n'y
   est PAS encore compté. 100 projets par gent au plus. Vérifié au navigateur
   (mémoire locale, vrai modèle) : création, entretien, rechargement, second
-  projet sur fil vierge, renommage, suppression, téléphone. Lots suivants : 2 direction
-  visuelle, typo, couleurs ; 3 musique et voix (6 voix Gemini H/F + « Ma
+  projet sur fil vierge, renommage, suppression, téléphone. **Lot 2 (27/11, écrit, branche)** : direction
+  visuelle, typographie, couleurs (`lib/publicisteDirection.ts`,
+  `lib/server/publicisteDirection.ts`, `EtapeDirection`, routes
+  `projets/<id>/pistes`, `/planche`, `/fichiers/<nom>`). Trois pistes par étape
+  en UN appel (Sonnet 5.5, JSON validé, 2 essais), « Autre proposition » à
+  partir d'une remarque. Rien ne se génère sans clic : coût estimé affiché
+  avant. Planches : `google/gemini-3-pro-image`, `image_config.aspect_ratio`
+  4:5 → 928×1152 comme la maquette, ~18 s et ~0,14 $ chacune, trois appels
+  en PARALLÈLE lancés par la page ; seau privé, adresse signée d'1 h ; nom
+  unique par génération (`visuel-<piste>-<base36>`). PNG de ~1,8 Mo (pas de
+  `sharp` dans le projet : à convertir un jour). Polices : liste FERMÉE de 10
+  associations Google Fonts (`POLICES`, toutes vérifiées), graisses
+  REGROUPÉES par famille dans l'adresse. Couleurs : 5 hex validés, rôles
+  fond/encre/accent. Coûts réels (`usage.cost`) : texte dans
+  `etat.depenseTexte`, planches sur la piste ; « Dépensé » de la liste =
+  fichiers + texte. Mesuré (vrai modèle, mémoire locale) : visuel 41 s
+  planches comprises, typo 11 s, couleurs 20 s, 0,48 $ en tout ; tout revient
+  après rechargement. Piège payé : des limites de longueur trop courtes
+  coupaient les textes en plein mot. Lots suivants : 3 musique et voix (6 voix Gemini H/F + « Ma
   voix » recomposée par Mistral, clé Gemini sur Vercel) ; 4 storyboard,
   croquis, animatique, Valider. Le premier lot (« atelier du film »,
   `d2819e3`, `bae9877`, annulés par `a8d5489`) : rendu MP4 WebCodecs et route

@@ -579,3 +579,6 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
 - **« Vos projets » VALIDÉ et CODÉ (27/11)** ; « ‹ » de la liste → Mes gents.
   Migration 041 (`supabase/migrations/041_publiciste_projets_multiples.sql`)
   à passer AVANT le déploiement.
+- **Lot 2 ÉCRIT (27/11)** : direction visuelle (3 planches Gemini 3 Pro
+  Image), typographie (10 associations Google Fonts), couleurs (3 palettes).
+  Essai réel : 0,48 $ pour les trois étapes d'un projet.
