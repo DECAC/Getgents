@@ -576,3 +576,6 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   (`mockups/recit/publiciste/projets.html`,
   https://claude.ai/artifact/KHhTr4nW9imTD3JTN8Lq1o). À valider ; puis
   migration 041 (plusieurs projets par auteur et par gent).
+- **« Vos projets » VALIDÉ et CODÉ (27/11)** ; « ‹ » de la liste → Mes gents.
+  Migration 041 (`supabase/migrations/041_publiciste_projets_multiples.sql`)
+  à passer AVANT le déploiement.

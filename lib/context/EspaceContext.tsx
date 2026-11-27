@@ -359,6 +359,10 @@ interface EspaceContextValue {
   modifierArtefact: (artefactId: string, apres: Artefact, resume?: string) => void;
   startNewConversation: () => void;
   switchConversation: (id: string) => void;
+  /** Ouvre le fil `id`, créé vide s'il n'existe pas (Publiciste : un fil par projet). */
+  ouvrirFil: (id: string) => void;
+  /** Retire le fil `id` de l'espace (projet supprimé). */
+  retirerFil: (id: string) => void;
   confirmReservation: (itemId: string) => void;
   cancelReservation: (itemId: string) => void;
   connectTool: (toolName: string) => void;
@@ -2381,6 +2385,28 @@ export function EspaceProvider({
     });
   }, [currentId]);
 
+  const ouvrirFil = useCallback((id: string) => {
+    setEspaces((prev) => {
+      const espace = prev[currentId];
+      if (!espace) return prev;
+      if (espace.activeConversationId === id && espace.conversations.some((t) => t.id === id)) return prev;
+      const conversations = espace.conversations.some((t) => t.id === id)
+        ? espace.conversations
+        : [{ id, startedAt: formatConversationStartedAt(), messages: [] } as ConversationThread, ...espace.conversations];
+      return { ...prev, [currentId]: { ...espace, conversations, activeConversationId: id } };
+    });
+  }, [currentId]);
+
+  const retirerFil = useCallback((id: string) => {
+    setEspaces((prev) => {
+      const espace = prev[currentId];
+      if (!espace || !espace.conversations.some((t) => t.id === id)) return prev;
+      const conversations = espace.conversations.filter((t) => t.id !== id);
+      const activeConversationId = espace.activeConversationId === id ? (conversations[0]?.id ?? "") : espace.activeConversationId;
+      return { ...prev, [currentId]: { ...espace, conversations, activeConversationId } };
+    });
+  }, [currentId]);
+
   const getResvItem = useCallback((id: string): ReservationItem | undefined => {
     const tab = espaces[currentId].tabs.find((t) => t.kind === "resv");
     return tab?.items?.find((x) => x.id === id);
@@ -2534,6 +2560,8 @@ export function EspaceProvider({
         modifierArtefact,
         startNewConversation,
         switchConversation,
+        ouvrirFil,
+        retirerFil,
         confirmReservation,
         cancelReservation,
         connectTool,

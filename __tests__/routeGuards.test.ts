@@ -21,6 +21,8 @@ const GARDES = [
   "requireGentOrDraftAccess",
   "requireDraftOwner",
   "checkCronSecret",
+  // Publiciste (lib/server/routePubliciste.ts) : requireUser + refusOffrePages.
+  "auteurPubliciste",
 ];
 
 /** Routes publiques PAR NATURE, chacune avec sa justification. */

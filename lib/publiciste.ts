@@ -175,3 +175,36 @@ export function validerEtat(brut: unknown): EtatProjet | null {
   }
   return { etape, fiche: validerFiche(o.fiche) ?? FICHE_VIDE, choix };
 }
+
+// ── Plusieurs projets par gent (migration 041 ; maquette « Vos projets ») ──
+
+export const NOM_MAX = 80;
+export const PROJETS_MAX_PAR_GENT = 100;
+
+export type StatutProjet = "entretien" | "direction" | "validee";
+
+/** Le nom affiché : celui donné par l'auteur, sinon celui de la fiche, sinon « Nouveau projet ». */
+export function nomAffiche(nom: string, fiche: FichePubliciste): string {
+  return nom.trim() || fiche.projet || "Nouveau projet";
+}
+
+export function validerNom(brut: unknown): string | null {
+  if (typeof brut !== "string") return null;
+  const n = brut.replace(/\s+/g, " ").trim().slice(0, NOM_MAX);
+  return n;
+}
+
+/** Ce que montre une carte de « Vos projets » : statut, étape en cours, avancement. */
+export function resumeProjet(etat: EtatProjet): { statut: StatutProjet; index: number; libelle: string } {
+  const index = Math.max(0, ETAPES_PUBLICISTE.findIndex((e) => e.id === etat.etape));
+  const choixFaits = (["visuel", "typo", "couleurs", "musique", "voix", "storyboard"] as const).every((k) => !!etat.choix[k]);
+  if (etat.etape === "recap" && choixFaits) return { statut: "validee", index: 7, libelle: "Validée · prête pour la production" };
+  if (etat.etape === "entretien" && !etat.fiche.pret) {
+    const { remplies, total } = remplissage(etat.fiche);
+    return { statut: "entretien", index: 0, libelle: remplies ? `L'entretien · fiche remplie à ${remplies} sur ${total}` : "L'entretien · à commencer" };
+  }
+  return { statut: "direction", index, libelle: index ? `Étape ${index} sur 7 · ${ETAPES_PUBLICISTE[index].nom}` : "L'entretien · terminé" };
+}
+
+/** Le fil de conversation de l'entretien d'un projet, dans l'espace du gent. */
+export const filDuProjet = (projetId: string) => `projet-${projetId}`;

@@ -1178,9 +1178,21 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   avancement sur 8 étapes, coût dépensé, date ; « + Nouveau projet »,
   Reprendre, ⋯ Renommer / Supprimer avec confirmation) — MAQUETTE à valider
   (`mockups/recit/publiciste/projets.html`,
-  https://claude.ai/artifact/KHhTr4nW9imTD3JTN8Lq1o). Exige de modifier la
-  migration 040 (retirer `unique (owner_id, gent_id)`, ajouter un nom et un
-  identifiant de projet dans l'adresse). Lots suivants : 2 direction
+  https://claude.ai/artifact/KHhTr4nW9imTD3JTN8Lq1o), VALIDÉE et CODÉE
+  (`ListeProjets`, `/api/publiciste/projets`, `/api/publiciste/projets/<id>` :
+  GET, PUT conditionnel, PATCH nom, DELETE avec les fichiers du seau ;
+  migration 041 à passer AVANT : plus d'unicité par gent, colonne `nom`). Le
+  projet ouvert se lit dans l'adresse (`?projet=<uuid>`) ; « ‹ » d'un projet
+  ramène à la liste, celui de la liste à « Mes gents » (choix de l'éditeur).
+  Chaque projet a SON fil d'entretien dans l'espace du gent
+  (`filDuProjet` → `projet-<uuid>`, `ouvrirFil` / `retirerFil` du contexte) ;
+  la fiche n'est reprise que du fil de CE projet (`filPret`) — sinon, au
+  changement de projet, la fiche d'un autre fil pouvait s'y écrire. Nom =
+  celui donné, sinon celui de la fiche. « Dépensé » = somme des fichiers
+  générés (`publiciste_fichiers.cout`) : le coût de l'entretien (texte) n'y
+  est PAS encore compté. 100 projets par gent au plus. Vérifié au navigateur
+  (mémoire locale, vrai modèle) : création, entretien, rechargement, second
+  projet sur fil vierge, renommage, suppression, téléphone. Lots suivants : 2 direction
   visuelle, typo, couleurs ; 3 musique et voix (6 voix Gemini H/F + « Ma
   voix » recomposée par Mistral, clé Gemini sur Vercel) ; 4 storyboard,
   croquis, animatique, Valider. Le premier lot (« atelier du film »,

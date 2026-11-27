@@ -159,3 +159,55 @@
   .main { padding-top: 24px; }
 }
 @media (prefers-reduced-motion: reduce) { .studio * { transition-duration: .01s !important; } }
+
+/* ── « Vos projets » : reprise de mockups/recit/publiciste/projets.html ── */
+button.retour { border: 0; background: none; }
+.barreSeule { padding-block: 12px; }
+.mainListe { padding-bottom: 64px; display: grid; gap: 24px; }
+.listeTete { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.liste { display: grid; gap: 14px; }
+.projet {
+  position: relative; display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: 18px; align-items: center;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; box-shadow: var(--ombre);
+  transition: border-color .15s, transform .15s;
+}
+.projet:hover { border-color: #d9c4b9; transform: translateY(-1px); }
+.lienCarte { position: absolute; inset: 0; border: 0; background: none; border-radius: var(--r); padding: 0; }
+.vignette { box-sizing: border-box; width: 112px; max-width: 100%; aspect-ratio: 928 / 1152; border-radius: 10px; overflow: hidden; background: var(--line-soft); display: grid; place-items: center; }
+.vignetteVide { color: var(--faint); font-size: 11.5px; text-align: center; padding: 8px; line-height: 1.35; }
+.corpsProjet { display: grid; gap: 8px; min-width: 0; }
+.nomProjet { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.nomProjet h3 { margin: 0; font-size: 19px; letter-spacing: -.015em; }
+.marque { color: var(--muted); font-size: 13.5px; }
+.statut { justify-self: start; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.statut_entretien { background: #fdf1d6; color: #7a5300; }
+.statut_direction { background: var(--corail-tint); color: var(--corail-700); }
+.statut_validee { background: var(--succes-tint); color: #2f6e33; }
+.avancement { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.points { display: flex; gap: 4px; }
+.points i { width: 22px; height: 5px; border-radius: 3px; background: var(--line); }
+.points i.pointFait { background: var(--succes); }
+.points i.pointCours { background: var(--corail); }
+.etapeTxt { font-size: 13px; color: var(--ink-2); }
+.metaProjet { display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.actionsProjet { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; }
+.plus { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); font-size: 18px; line-height: 1; }
+.menu { position: absolute; right: 0; top: 44px; z-index: 3; min-width: 180px; display: grid; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-s); box-shadow: var(--ombre); overflow: hidden; }
+.menu button { border: 0; background: none; text-align: left; padding: 10px 14px; font-size: 14px; }
+.menu button:hover { background: var(--bg); }
+.menu .danger { color: var(--corail-700); }
+.renommer { display: flex; gap: 8px; flex-wrap: wrap; position: relative; z-index: 1; }
+.renommer input { flex: 1 1 220px; min-width: 0; border: 1px solid var(--line); border-radius: var(--r-s); padding: 8px 10px; font-size: 15px; background: #fff; }
+.confirmer { position: relative; z-index: 1; grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-radius: var(--r-s); background: var(--corail-tint); font-size: 14px; }
+.confirmer span { flex: 1 1 260px; min-width: 0; }
+.videEtat { display: grid; gap: 14px; justify-items: start; max-width: 640px; background: var(--card); border: 1px dashed #d9c4b9; border-radius: var(--r); padding: 28px; }
+.videEtat h2 { margin: 0; font-size: 21px; letter-spacing: -.015em; }
+.videEtat p { margin: 0; color: var(--muted); }
+.videEtat ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--ink-2); }
+@media (max-width: 640px) {
+  .projet { grid-template-columns: 76px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .vignette { width: 76px; }
+  .actionsProjet { grid-column: 1 / -1; justify-content: flex-end; margin-top: -4px; }
+  .points i { width: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .projet:hover { transform: none; } }

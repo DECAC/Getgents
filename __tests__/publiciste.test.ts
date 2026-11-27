@@ -62,3 +62,30 @@ describe("Publiciste : état du projet", () => {
     expect(validerEtat({ etape: "entretien", bourrage: "x".repeat(ETAT_MAX_OCTETS) })).toBeNull();
   });
 });
+
+import { nomAffiche, resumeProjet, validerNom, filDuProjet, ETAT_VIDE, FICHE_VIDE } from "@/lib/publiciste";
+
+describe("Publiciste : « Vos projets »", () => {
+  const fiche = (o: object) => ({ ...FICHE_VIDE, ...o });
+  it("nomme un projet : nom donné, sinon celui de la fiche, sinon « Nouveau projet »", () => {
+    expect(nomAffiche("  ", fiche({}))).toBe("Nouveau projet");
+    expect(nomAffiche("", fiche({ projet: "Le premier couteau" }))).toBe("Le premier couteau");
+    expect(nomAffiche("La cabane d'hiver", fiche({ projet: "Le premier couteau" }))).toBe("La cabane d'hiver");
+    expect(validerNom("  Vœux   2027 ")).toBe("Vœux 2027");
+    expect(validerNom(42)).toBeNull();
+  });
+
+  it("résume l'état d'un projet comme la maquette", () => {
+    expect(resumeProjet(ETAT_VIDE)).toEqual({ statut: "entretien", index: 0, libelle: "L'entretien · à commencer" });
+    const enCours = { ...ETAT_VIDE, fiche: fiche({ fond: { vend: "a", coeur: "b" }, forme: { ou: "c" } }) };
+    expect(resumeProjet(enCours).libelle).toBe("L'entretien · fiche remplie à 3 sur 9");
+    expect(resumeProjet({ ...ETAT_VIDE, etape: "storyboard" })).toMatchObject({ statut: "direction", index: 6, libelle: "Étape 6 sur 7 · Storyboard" });
+    const tout = { visuel: "a", typo: "b", couleurs: "c", musique: "d", voix: "e", storyboard: "f" };
+    expect(resumeProjet({ ...ETAT_VIDE, etape: "recap", choix: tout }).statut).toBe("validee");
+    expect(resumeProjet({ ...ETAT_VIDE, etape: "recap" }).statut).toBe("direction");
+  });
+
+  it("donne à chaque projet son propre fil d'entretien", () => {
+    expect(filDuProjet("abc")).toBe("projet-abc");
+  });
+});
