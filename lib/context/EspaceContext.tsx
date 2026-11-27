@@ -73,6 +73,7 @@ import { langueDeLEnTete } from "@/lib/langue";
 import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import { noteDepuisReponse } from "@/lib/noteDepuisReponse";
 import { extraireScript, titreScript, TYPE_SCRIPT } from "@/lib/prompteur";
+import { extraireFiche } from "@/lib/publiciste";
 import { amorcesAJour } from "@/lib/amorcesContextuelles";
 import { noteEnTexte, TYPE_NOTE, TYPE_NOTE_MISE_EN_FORME } from "@/lib/miseEnForme";
 import {
@@ -1191,7 +1192,10 @@ export function EspaceProvider({
         // Gent « Prompteur » : le texte à dire, encadré par ses marqueurs. Les
         // marqueurs partent, le texte reste visible dans la réponse.
         const afterScript = espace.prompteur?.enabled ? extraireScript(fullRaw) : { text: fullRaw, script: undefined };
-        const afterEtatJeu = extractEtatJeu(afterScript.text);
+        // Gent « Publiciste » : la fiche de l'entretien voyage en JSON entre ses
+        // marqueurs ; elle quitte le texte et s'affiche à côté de la conversation.
+        const afterFiche = espace.publiciste?.enabled ? extraireFiche(afterScript.text) : { text: afterScript.text, fiche: undefined };
+        const afterEtatJeu = extractEtatJeu(afterFiche.text);
         const jeuEtat = afterEtatJeu.etat ?? undefined;
         const extracted = extractQuestions(afterEtatJeu.text);
         // Repli : le modèle a posé une question et listé les choix en clair
@@ -1311,6 +1315,7 @@ export function EspaceProvider({
                   followups,
                   reasoning: reasoning || undefined,
                   script: afterScript.script,
+                  fichePubliciste: afterFiche.fiche,
                 };
               msgs.push({
                 id: proposalId,
@@ -1353,6 +1358,7 @@ export function EspaceProvider({
                   followups,
                   reasoning: reasoning || undefined,
                   script: afterScript.script,
+                  fichePubliciste: afterFiche.fiche,
                   artefactEchec,
                   artefactPossible: afterPossible.possible && !proposition && !artefactEchec,
                 };
@@ -1387,6 +1393,7 @@ export function EspaceProvider({
             followups,
             reasoning: reasoning || undefined,
             script: afterScript.script,
+            fichePubliciste: afterFiche.fiche,
             artefactEchec,
             artefactPossible: afterPossible.possible && !proposition && !artefactEchec,
           }));

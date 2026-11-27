@@ -213,6 +213,11 @@ export interface ConversationMessage {
   script?: string;
   /** Le script de cette réponse, gardé à son lancement dans le prompteur. */
   scriptId?: string;
+  /**
+   * Gent « Le Publiciste » : la fiche de l'entretien que porte la réponse
+   * (entre `<!--FICHE-->` et `<!--/FICHE-->`), validée.
+   */
+  fichePubliciste?: import("@/lib/publiciste").FichePubliciste;
   tab?: string;
   icon?: string;
   status?: "pending" | "sent";
@@ -550,6 +555,8 @@ export interface Espace {
   visionneuse?: VisionneuseConfig;
   /** Type de gent « Le Prompteur » : texte écrit ici, lu et filmé au prompteur. */
   prompteur?: PrompteurConfig;
+  /** Type de gent « Le Publiciste » : les huit étapes de la maquette (lib/publiciste.ts). */
+  publiciste?: PublicisteConfig;
   /**
    * Type de gent « Le chantier » : assistant de maître d'œuvre, dont le
    * dossier (artefacts `chantier-*`) existe dès l'ouverture — lib/chantier.ts.
@@ -584,6 +591,11 @@ export interface Espace {
  */
 /** Type de gent « Le chantier » (voir lib/chantier.ts). */
 export interface ChantierConfig {
+  enabled: boolean;
+}
+
+/** Type de gent « Le Publiciste » (voir lib/publiciste.ts). */
+export interface PublicisteConfig {
   enabled: boolean;
 }
 

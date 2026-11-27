@@ -7,6 +7,7 @@ import { WorkspaceCanvas } from "@/components/center/WorkspaceCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
 import { Prompteur } from "@/components/prompteur/Prompteur";
 import { LimitePrompteur } from "@/components/prompteur/LimitePrompteur";
+import { StudioPubliciste } from "@/components/publiciste/StudioPubliciste";
 import { MemoireGent } from "./MemoireGent";
 import { ArtefactModal, ArtefactCorps } from "@/components/shared/ArtefactModal";
 import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
@@ -236,6 +237,10 @@ export function SharedGentBody({
   // tester Gemini. L'aperçu est une photo de la version de travail au clic
   // sur Preview — un changement fait ensuite dans le studio n'y est pas.
   const modeleApercu = modeleConversationEffectif(currentEspace.chatModelId);
+
+  // Gent « Le Publiciste » : ses huit étapes, conformes à la maquette, à la
+  // place de la page ordinaire — l'entretien y est la conversation.
+  if (currentEspace.publiciste?.enabled) return <StudioPubliciste apercuDe={apercuDe} personnelDe={personnelDe} token={token} />;
 
   return (
     <div className={styles.page}>
