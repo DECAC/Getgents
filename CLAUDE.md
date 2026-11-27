@@ -1155,6 +1155,13 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (27/11)** : `mockups/recit/premier-couteau/` (page + `medias/`), publié en
   artefact privé (https://claude.ai/artifact/1eSthRc2VWqkYwhTxSCnbG). État,
   choix et limites : section « Prototype construit » du brief.
+- **Formes des boutons, À TRANCHER PLUS TARD** (27/11, l'éditeur « n'en peut
+  plus » des pilules et du crème) : maquette de quatre pistes sur la fiche
+  d'une page — A coupe franche (recommandée : angles droits, encre, corail
+  dosé, Archivo + Inter), B tampon, C biseau (charte actuelle), D arrondi
+  discret — toile https://claude.ai/artifact/PH7jSZZddsLMqjHAx2GH33. Rien
+  n'est appliqué ; l'appliquer = revoir `styles/tokens.css` et les arrondis
+  codés en dur dans les composants.
 - **« Ce qu'il sait de moi »** (espace personnel, `MemoireGent`) : la
   mémoire du gent (`memory`, usage, `memoryNote`) écrite par l'utilisateur —
   métier, situation, ton — jointe à chaque tour, 4 000 caractères au plus.
