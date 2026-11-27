@@ -150,23 +150,42 @@ h2.titre { margin: 4px 0 0; font-size: clamp(22px, 5.2vw, 28px); line-height: 1.
 .jeux { display: flex; gap: 8px; flex-wrap: wrap; }
 .jeux .mini-b { padding: 8px 14px; font-size: 13.5px; }
 
-/* Storyboard */
+/* Storyboard : une ligne par scène — la scène à gauche, le texte à droite */
 .sb-tete { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.plans { display: grid; gap: 12px; grid-template-columns: 1fr; }
-@media (min-width: 700px) { .plans { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 1000px) { .plans { grid-template-columns: repeat(3, 1fr); } }
-.plan { display: grid; grid-template-columns: 116px 1fr; gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 10px; min-width: 0; }
-.plan img { width: 116px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 8px; display: block; background: #fff; border: 1px solid var(--line-soft); }
-.plan .corps { min-width: 0; display: grid; gap: 6px; align-content: start; font-size: 13px; }
-.plan .num { display: flex; gap: 8px; align-items: baseline; }
-.plan .num b { font-size: 14px; }
-.plan .temps { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); }
-.plan .vo { font-style: italic; color: var(--ink); }
-.plan .lab { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); display: block; }
-.plan .trans { font-size: 12px; color: var(--muted); }
-.plan textarea { width: 100%; min-height: 58px; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 7px 9px; font-size: 14px; resize: vertical; }
-.plan .com { justify-self: start; border: 0; background: none; padding: 0; color: var(--corail-700); font-size: 12.5px; font-weight: 600; }
-
+.sequences { display: grid; gap: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.seq-entete, .seq { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.seq-entete { background: var(--line-soft); font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.seq-entete span { padding: 8px 12px; }
+.seq-entete span + span, .seq-texte { border-left: 1px solid var(--line-soft); }
+.seq { border-top: 1px solid var(--line); }
+.seq.modifiee { background: #fffaf3; }
+.seq-scene, .seq-texte { min-width: 0; padding: 12px; display: grid; gap: 8px; align-content: start; }
+.seq-titre { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.seq-titre b { font-size: 14px; }
+.seq-titre .temps { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.seq-visu { display: grid; gap: 8px; grid-template-columns: 1fr; }
+.seq-visu img { width: 100%; max-width: 150px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 8px; display: block; background: #fff; border: 1px solid var(--line-soft); }
+@media (min-width: 760px) { .seq-visu { grid-template-columns: 112px minmax(0, 1fr); align-items: start; } .seq-visu img { max-width: none; } }
+.lab { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); display: block; margin-bottom: 3px; }
+.seq textarea, .global textarea {
+  width: 100%; border: 1px solid transparent; border-radius: 9px; background: transparent; padding: 6px 8px; margin: 0 -8px; width: calc(100% + 16px);
+  font-size: 14px; line-height: 1.45; resize: vertical; transition: border-color .15s, background .15s;
+}
+.seq textarea:hover { border-color: var(--line); background: #fff; }
+.seq textarea:focus { border-color: var(--ink); background: #fff; outline: none; }
+.seq textarea.vo { font-style: italic; font-size: 15px; }
+.seq textarea { resize: none; }
+.seq textarea.court { font-size: 13px; color: var(--muted); min-height: 0; resize: none; overflow: hidden; }
+.seq textarea { overflow: hidden; }
+.seq-etat { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--corail-700); font-weight: 600; }
+.seq-etat button { border: 0; background: none; padding: 0; color: var(--muted); font-size: 12px; text-decoration: underline; text-underline-offset: 2px; }
+.global { display: grid; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; }
+.global h3 { margin: 0; font-size: 16px; }
+.global textarea { margin: 0; width: 100%; min-height: 96px; border-color: var(--line); background: #fff; font-size: 15px; }
+.global textarea:focus { border-color: var(--ink); outline: none; }
+.puces { display: flex; gap: 6px; flex-wrap: wrap; }
+.global .reponse { background: var(--line-soft); border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+@media (max-width: 520px) { .seq-scene, .seq-texte { padding: 10px; } .seq textarea { font-size: 13.5px; } .seq textarea.vo { font-size: 14px; } }
 /* Animatique */
 #animatique { position: fixed; inset: 0; z-index: 30; background: #0f0c0a; display: grid; place-items: center; }
 #animatique canvas { width: 100%; height: 100%; display: block; }
@@ -319,7 +338,8 @@ const DEVIS_PROD = [["Images finales (≈ 16 dessins et photos, avec retouches)"
 
 /* ── État (gardé sur cet appareil) ───────────────────────── */
 const CLE = "publiciste:premier-couteau";
-let S = { etape: "brief", visuel: null, typo: null, couleurs: null, musique: null, voix: null, jeu: null, ecartees: [], retenues: [], commentaires: {}, valide: false, remarques: {} };
+const vierge = () => ({ etape: "brief", visuel: null, typo: null, couleurs: null, musique: null, voix: null, jeu: null, ecartees: [], retenues: [], sb: {}, sbCommentaire: "", sbEnvoye: false, valide: false, remarques: {} });
+let S = vierge();
 try { Object.assign(S, JSON.parse(localStorage.getItem(CLE) || "{}")); } catch (e) {}
 const garder = () => { try { localStorage.setItem(CLE, JSON.stringify(S)); } catch (e) {} };
 if (location.hash && ETAPES.some((e) => e.id === location.hash.slice(1))) S.etape = location.hash.slice(1);
@@ -464,36 +484,68 @@ const VUES = {
     ];
   },
   storyboard() {
-    const plans = h("div", { class: "plans" }, PLANS.map((p, i) => {
-      const id = "com-" + i, ta = h("textarea", { id, placeholder: "Votre remarque sur ce plan…", hidden: !S.commentaires[i] });
-      ta.value = S.commentaires[i] || ""; ta.addEventListener("input", () => { S.commentaires[i] = ta.value; garder(); majPied(); });
-      return h("article", { class: "plan" },
-        h("img", { src: `medias/p${String(i + 1).padStart(2, "0")}.webp`, alt: "Croquis du plan " + (i + 1), loading: "lazy" }),
-        h("div", { class: "corps" },
-          h("div", { class: "num" }, h("b", {}, `${i + 1}. ${p.titre}`)),
-          h("span", { class: "temps" }, `${fmt(p.t[0])} → ${fmt(p.t[1])} · ${Math.round(p.t[1] - p.t[0])} s`),
-          h("span", {}, h("span", { class: "lab" }, "On voit"), p.voit),
-          (p.vo != null || p.entend) ? h("span", {}, h("span", { class: "lab" }, "On entend"), p.vo != null ? h("span", { class: "vo" }, "« " + LIGNES[p.vo][1] + " » ") : null, p.entend) : null,
-          h("span", { class: "trans" }, "↳ " + p.trans),
-          h("button", { class: "com", type: "button", onclick: () => { ta.hidden = false; ta.focus(); } }, S.commentaires[i] ? "Modifier la remarque" : "Ajouter une remarque"),
-          ta));
-    }));
     const voixAnim = S.voix || "cedar", musAnim = S.musique || "souvenir";
+    const origine = (i) => { const p = PLANS[i]; return { voit: p.voit, vo: p.vo != null ? LIGNES[p.vo][1] : "", entend: p.entend || "", trans: p.trans }; };
+    const valeur = (i, k) => (S.sb[i] && S.sb[i][k] != null) ? S.sb[i][k] : origine(i)[k];
+    const modifiee = (i) => !!S.sb[i] && Object.keys(S.sb[i]).some((k) => S.sb[i][k] !== origine(i)[k]);
+    const ajuster = (el) => { el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; };
+    requestAnimationFrame(() => document.querySelectorAll(".seq textarea").forEach(ajuster));
+    const lignes = PLANS.map((p, i) => {
+      const etat = h("div", { class: "seq-etat", hidden: !modifiee(i) }, "Modifiée",
+        h("button", { type: "button", onclick: () => { delete S.sb[i]; garder(); rendre(); } }, "Revenir au texte d'origine"));
+      const champ = (k, tag, attrs) => {
+        const el = h(tag, { id: `sb-${i}-${k}`, ...attrs }); el.value = valeur(i, k);
+        el.addEventListener("input", () => { ajuster(el); (S.sb[i] = S.sb[i] || {})[k] = el.value; garder(); const m = modifiee(i); etat.hidden = !m; ligne.classList.toggle("modifiee", m); majPied(); });
+        return el;
+      };
+      const ligne = h("article", { class: "seq" + (modifiee(i) ? " modifiee" : ""), "aria-label": `Scène ${i + 1}` },
+        h("div", { class: "seq-scene" },
+          h("div", { class: "seq-titre" }, h("b", {}, `${i + 1}. ${p.titre}`), h("span", { class: "temps" }, `${fmt(p.t[0])}–${fmt(p.t[1])} · ${Math.round(p.t[1] - p.t[0])} s`)),
+          h("div", { class: "seq-visu" },
+            h("img", { src: `medias/p${String(i + 1).padStart(2, "0")}.webp`, alt: "Croquis de la scène " + (i + 1), loading: "lazy" }),
+            h("label", { for: `sb-${i}-voit` }, h("span", { class: "lab" }, "On voit"), champ("voit", "textarea", { class: "voit", rows: "3" }))),
+          h("label", { for: `sb-${i}-trans` }, h("span", { class: "lab" }, "Passage à la suivante"), champ("trans", "textarea", { class: "court", rows: "1" }))),
+        h("div", { class: "seq-texte" },
+          h("label", { for: `sb-${i}-vo` }, h("span", { class: "lab" }, "Voix"), champ("vo", "textarea", { class: "vo", rows: "2", placeholder: "Pas de voix sur cette scène. Écrivez ici pour en ajouter une." })),
+          h("label", { for: `sb-${i}-entend` }, h("span", { class: "lab" }, "Sons et musique"), champ("entend", "textarea", { class: "court", rows: "1", placeholder: "—" })),
+          etat));
+      return ligne;
+    });
+    const ta = h("textarea", { id: "sb-global", placeholder: "Par exemple : ajoutez une scène où l'enfant montre sa cabane à son oncle ; supprimez la gravure ; la fin est trop rapide…" });
+    ta.value = S.sbCommentaire || "";
+    const reponse = h("div", { class: "reponse", hidden: !S.sbEnvoye });
+    const majReponse = () => {
+      const n = PLANS.filter((_, i) => modifiee(i)).length;
+      reponse.textContent = `Bien reçu${n === 1 ? ", avec votre scène modifiée" : n > 1 ? `, avec vos ${n} scènes modifiées` : ""}. Dans le gent, je vous proposerais un storyboard révisé : seules les scènes changées ou ajoutées sont redessinées (≈ 0,035 $ chacune), et je vous montre les différences avant de remplacer quoi que ce soit.`;
+    };
+    if (S.sbEnvoye) majReponse();
+    ta.addEventListener("input", () => { S.sbCommentaire = ta.value; S.sbEnvoye = false; reponse.hidden = true; garder(); majPied(); });
+    const puce = (txt) => h("button", { class: "mini-b", type: "button", onclick: () => { ta.value = (ta.value ? ta.value.replace(/\s*$/, "\n") : "") + txt; ta.dispatchEvent(new Event("input")); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }, txt.replace(/ …$/, ""));
+    const voEditee = PLANS.some((_, i) => S.sb[i] && S.sb[i].vo != null && S.sb[i].vo !== origine(i).vo);
     return [
-      entete(6, "Storyboard", "Les enchaînements, plan par plan. Les dessins sont volontairement grossiers : on juge l'histoire, pas l'image."),
-      bulle("Voici l'histoire découpée en onze plans, avec le temps de chacun, ce qu'on voit, ce qu'on entend et la façon de passer au suivant.",
-        "L'<strong>animatique</strong> fait défiler ces croquis avec la voix et la musique que vous avez choisies : c'est le film à l'état d'esquisse. Commentez les plans qui vous gênent, avant que je produise quoi que ce soit."),
+      entete(6, "Storyboard", "Une ligne par scène : ce qu'on voit à gauche, ce qu'on entend à droite. Les dessins sont volontairement grossiers."),
+      bulle("Voici l'histoire en onze scènes. Corrigez directement le texte ou la description d'une scène : vos changements sont gardés, ligne par ligne.",
+        "Pour <strong>ajouter, supprimer ou déplacer</strong> une scène, dites-le en bas, dans vos remarques sur l'ensemble. L'<strong>animatique</strong> fait défiler les croquis avec la voix et la musique choisies."),
       h("div", { class: "sb-tete" },
         h("button", { class: "bouton corail", type: "button", onclick: lancerAnimatique }, "▶ Lire l'animatique (72 s)"),
-        h("span", { class: "note" }, `Avec ${S.voix ? nomVoix(S.voix) : "la voix 4, en attendant votre choix"} et « ${MUSIQUES.find((m) => m.id === musAnim).nom} »${S.musique ? "" : " (ma recommandation)"}.`)),
-      plans,
+        h("span", { class: "note" }, `Avec ${S.voix ? nomVoix(S.voix) : "la voix 4, en attendant votre choix"} et « ${MUSIQUES.find((m) => m.id === musAnim).nom} »${S.musique ? "" : " (ma recommandation)"}.` + (voEditee ? " La voix lit encore le texte d'origine : vos changements seront enregistrés à la production." : ""))),
+      h("section", { class: "sequences", "aria-label": "Scènes" }, h("div", { class: "seq-entete", "aria-hidden": "true" }, h("span", {}, "La scène"), h("span", {}, "Le texte")), ...lignes),
+      h("section", { class: "global", "aria-labelledby": "titre-global" },
+        h("h3", { id: "titre-global" }, "Vos remarques sur l'ensemble"),
+        h("p", { class: "note", style: "margin:0" }, "Ajouter, supprimer, déplacer une scène, changer le rythme ou la fin."),
+        h("div", { class: "puces" }, puce("Ajouter une scène après la … : "), puce("Supprimer la scène … "), puce("Échanger les scènes … et … "), puce("Le rythme : …")),
+        ta,
+        h("div", { style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap" },
+          h("button", { class: "bouton", type: "button", onclick: () => { if (!ta.value.trim() && !PLANS.some((_, i) => modifiee(i))) { ta.focus(); return; } S.sbEnvoye = true; garder(); majReponse(); reponse.hidden = false; majPied(); } }, "Envoyer au Publiciste")),
+        reponse),
     ];
   },
   recap() {
     const ligne = (k, etape, val, detail) => h("div", { class: "l" }, h("span", { class: "k" }, k),
       h("span", { class: "v" + (val ? "" : " vide") }, val || "À choisir", detail ? h("small", {}, detail) : null),
       h("button", { type: "button", onclick: () => aller(etape) }, val ? "Modifier" : "Choisir"));
-    const nbCom = Object.values(S.commentaires).filter((x) => x && x.trim()).length;
+    const nbMod = Object.keys(S.sb || {}).filter((i) => Object.entries(S.sb[i]).some(([k, v]) => { const p = PLANS[i]; const o = { voit: p.voit, vo: p.vo != null ? LIGNES[p.vo][1] : "", entend: p.entend || "", trans: p.trans }[k]; return v !== o; })).length;
+    const resumeSb = [nbMod ? `${nbMod} scène${nbMod > 1 ? "s" : ""} modifiée${nbMod > 1 ? "s" : ""}` : "", S.sbCommentaire && S.sbCommentaire.trim() ? "une remarque sur l'ensemble" : ""].filter(Boolean).join(" · ");
     const manque = ["visuel", "typo", "couleurs", "musique", "voix"].filter((k) => !S[k]);
     const totalDA = COUTS_DA.reduce((a, [, c]) => a + c, 0), totalProd = DEVIS_PROD.reduce((a, [, c]) => a + c, 0);
     const eur = (x) => x.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " $";
@@ -506,7 +558,7 @@ const VUES = {
         ligne("Couleurs", "couleurs", nomDe(PALETTES, S.couleurs)),
         ligne("Musique", "musique", nomDe(MUSIQUES, S.musique)),
         ligne("Voix", "voix", S.voix ? nomVoix(S.voix) : null, S.jeu ? "Jeu : " + JEUX.find((j) => j.id === S.jeu).nom : "Jeu : à préciser"),
-        ligne("Storyboard", "storyboard", nbCom ? `${nbCom} remarque${nbCom > 1 ? "s" : ""}` : "Aucune remarque", "11 plans · 72 s")),
+        ligne("Storyboard", "storyboard", resumeSb || "Accepté tel quel", "11 scènes · 72 s")),
       h("div", { class: "couts" },
         h("b", { style: "font-size:13px" }, "Ce que coûte la direction artistique (déjà engagé)"),
         ...COUTS_DA.map(([n, c]) => h("div", {}, h("span", {}, n), h("span", {}, eur(c)))),
@@ -517,7 +569,7 @@ const VUES = {
       S.valide ? h("div", { class: "valide" }, h("b", {}, "Direction validée. "), "Dans le gent, la production démarrerait ici et vous recevriez le film à revoir. Ce prototype s'arrête là.") :
         h("div", { style: "display:flex;gap:10px;flex-wrap:wrap" },
           h("button", { class: "bouton corail", type: "button", disabled: manque.length > 0, style: manque.length ? "opacity:.45" : "", onclick: () => { S.valide = true; garder(); rendre(); } }, "Valider et lancer la production"),
-          h("button", { class: "bouton leger", type: "button", onclick: () => { S = { etape: "brief", visuel: null, typo: null, couleurs: null, musique: null, voix: null, jeu: null, ecartees: [], retenues: [], commentaires: {}, valide: false, remarques: {} }; garder(); rendre(); } }, "Tout recommencer")),
+          h("button", { class: "bouton leger", type: "button", onclick: () => { S = vierge(); garder(); rendre(); } }, "Tout recommencer")),
       h("p", { class: "note", style: "max-width:760px" }, "Prototype. Les choix restent sur cet appareil. Planches, storyboard, voix et musiques sont de vraies générations ; les coûts sont ceux mesurés sur OpenRouter. La production n'est pas branchée."),
     ];
   },
@@ -542,7 +594,7 @@ function majPied() {
   $("#prec").hidden = i === 0; $("#suiv").hidden = i === ETAPES.length - 1;
   $("#suiv").textContent = i === 0 ? "Commencer" : "Suivant";
   const msg = { visuel: S.visuel && "Univers : " + nomDe(DIRECTIONS, S.visuel), typo: S.typo && "Lettres : " + nomDe(TYPOS, S.typo), couleurs: S.couleurs && "Couleurs : " + nomDe(PALETTES, S.couleurs), musique: S.musique && "Musique : " + nomDe(MUSIQUES, S.musique), voix: S.voix && "Voix : " + nomVoix(S.voix) }[S.etape];
-  $("#etat").textContent = msg || (S.etape === "brief" ? "Environ 10 minutes" : S.etape === "recap" ? "" : S.etape === "storyboard" ? "11 plans · 72 s" : "Pas encore choisi");
+  $("#etat").textContent = msg || (S.etape === "brief" ? "Environ 10 minutes" : S.etape === "recap" ? "" : S.etape === "storyboard" ? "11 scènes · 72 s" : "Pas encore choisi");
 }
 $("#prec").addEventListener("click", () => { const i = ETAPES.findIndex((e) => e.id === S.etape); if (i > 0) aller(ETAPES[i - 1].id); });
 $("#suiv").addEventListener("click", () => { const i = ETAPES.findIndex((e) => e.id === S.etape); if (i < ETAPES.length - 1) aller(ETAPES[i + 1].id); });
