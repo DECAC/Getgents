@@ -76,9 +76,9 @@ describe("Publiciste : « Vos projets »", () => {
   });
 
   it("résume l'état d'un projet comme la maquette", () => {
-    expect(resumeProjet(ETAT_VIDE)).toEqual({ statut: "entretien", index: 0, libelle: "L'entretien · à commencer" });
+    expect(resumeProjet(ETAT_VIDE)).toEqual({ statut: "entretien", index: 0, libelle: "Le brief · à commencer" });
     const enCours = { ...ETAT_VIDE, fiche: fiche({ fond: { vend: "a", coeur: "b" }, forme: { ou: "c" } }) };
-    expect(resumeProjet(enCours).libelle).toBe("L'entretien · fiche remplie à 3 sur 9");
+    expect(resumeProjet(enCours).libelle).toBe("Le brief · fiche remplie à 3 sur 9");
     expect(resumeProjet({ ...ETAT_VIDE, etape: "storyboard" })).toMatchObject({ statut: "direction", index: 6, libelle: "Étape 6 sur 7 · Storyboard" });
     const tout = { visuel: "a", typo: "b", couleurs: "c", musique: "d", voix: "e", storyboard: "f" };
     expect(resumeProjet({ ...ETAT_VIDE, etape: "recap", choix: tout }).statut).toBe("validee");

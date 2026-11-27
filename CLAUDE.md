@@ -1210,8 +1210,40 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   fichiers + texte. Mesuré (vrai modèle, mémoire locale) : visuel 41 s
   planches comprises, typo 11 s, couleurs 20 s, 0,48 $ en tout ; tout revient
   après rechargement. Piège payé : des limites de longueur trop courtes
-  coupaient les textes en plein mot. Lots suivants : 3 musique et voix (6 voix Gemini H/F + « Ma
-  voix » recomposée par Mistral, clé Gemini sur Vercel) ; 4 storyboard,
+  coupaient les textes en plein mot. **Lot 3 (27/11, écrit, branche)** : musique et voix
+  (`EtapeVoix`, `Lecteur`, `lib/server/gemini.ts`, `lib/server/mistral.ts`,
+  routes `projets/<id>/musique`, `/voix`, `/api/publiciste/ma-voix`).
+  Musique : trois pistes (texte), puis trois extraits Lyria
+  (`google/lyria-3-clip-preview`, FLUX obligatoire, son en base64 dans
+  `delta.audio.data`) lancés ensemble — ~0,04 $ et ~8 s chacun, MP3 de 30 s.
+  « Morceau INSTRUMENTAL, sans aucune voix » en tête de la demande : sans
+  lui, Lyria CHANTE des paroles. Voix : les six voix Gemini de la maquette
+  (Mistral prêtes-à-l'emploi retirées, décision de l'éditeur), deux appels à
+  la fois — à trois, Gemini répond 429 ; le serveur attend 5 s et réessaie.
+  `gemini-3.1-flash-tts-preview` refuse une fois sur deux (`SAFETY`) : trois
+  essais puis repli sur `gemini-2.5-flash-preview-tts`. PCM 24 kHz enveloppé
+  en WAV. « Ma voix » : enregistrement (ou import) converti DANS LE
+  NAVIGATEUR en WAV mono 24 kHz coupé à 29,5 s (Mistral refuse au-delà de
+  30 s), accord coché exigé (en-tête `x-accord-ma-voix`), rangé UN par
+  compte (`<owner>/ma-voix/reference.wav` + `accord.json`, seau privé),
+  supprimable ; recomposé par Voxtral à chaque extrait (`ref_audio`, rien
+  gardé chez Mistral), « … » remplacés par une virgule (Voxtral improvise).
+  Clés Gemini et Mistral lues chacune par UN module (test
+  `clesPlateforme.test.ts`) : toujours la PLATEFORME qui paie, hors quota
+  OpenRouter — plafond de 60 voix/heure/compte en mémoire
+  (`lib/server/limiteVoix.ts`). Coût des voix NON relevé (« + voix » dans
+  l'en-tête, comme la maquette). Seul ajout à la maquette : le TEXTE
+  D'ESSAI modifiable (le texte du film n'existe qu'au storyboard) ;
+  « Texte entier » est grisé jusqu'au lot 4. CSP : `media-src` nomme
+  l'origine Supabase (sons servis par adresse signée, comme les planches).
+  **Deux défauts du lot 1 corrigés en passant** : le projet était RELU à
+  chaque rendu du parent (`auRevoir` recréé → `lire` recréé), et au
+  rechargement la fiche du fil partait au serveur AVANT la première
+  lecture — un projet entier écrasé par un état vide (vu à l'essai : liste
+  revenue à « Brief en cours »). Rien ne s'écrit avant la première lecture
+  (`charge`), une lecture jette l'écriture en attente. Vérifié au
+  navigateur (mémoire locale, VRAIS modèles : Lyria, Gemini, Voxtral avec
+  le mémo de l'éditeur). Lot suivant : 4 storyboard,
   croquis, animatique, Valider. Le premier lot (« atelier du film »,
   `d2819e3`, `bae9877`, annulés par `a8d5489`) : rendu MP4 WebCodecs et route
   de voix Mistral à REPRENDRE de l'historique.

@@ -12,14 +12,14 @@
  *
  * Module PUR : aucune dépendance au navigateur ni au serveur.
  */
-import { ETAPES_DIRECTION, validerProposition, type EtapeDirection, type Proposition } from "@/lib/publicisteDirection";
+import { ETAPES_DIRECTION, validerProposition, validerVoix, type EtapeDirection, type EtatVoix, type Proposition } from "@/lib/publicisteDirection";
 
 export const MARQUEUR_FICHE = "<!--FICHE-->";
 export const MARQUEUR_FICHE_FIN = "<!--/FICHE-->";
 
 /** Les étapes de la maquette, dans son ordre et avec ses mots. */
 export const ETAPES_PUBLICISTE = [
-  { id: "entretien", nom: "L'entretien" },
+  { id: "entretien", nom: "Le brief" },
   { id: "visuel", nom: "Direction visuelle" },
   { id: "typo", nom: "Typographie" },
   { id: "couleurs", nom: "Couleurs" },
@@ -123,7 +123,7 @@ export function consignePubliciste(): string {
   const fond = RUBRIQUES_FOND.map((r) => `"${r.cle}" (${r.libelle})`).join(", ");
   const forme = RUBRIQUES_FORME.map((r) => `"${r.cle}" (${r.libelle})`).join(", ");
   return (
-    "RÔLE PUBLICISTE — L'ENTRETIEN : tu mènes l'entretien qui ouvre un projet de communication pour la marque de l'utilisateur. " +
+    "RÔLE PUBLICISTE — LE BRIEF : tu mènes le brief (un entretien, une question à la fois) qui ouvre un projet de communication pour la marque de l'utilisateur. " +
     "L'écran a déjà posé la première question, avant le premier message de l'utilisateur : « Racontez-moi votre marque. Qu'est-ce que vous vendez, au fond ? » ; " +
     "sa première réponse y répond. " +
     "Une seule question à la fois, courte et concrète. D'abord le FOND : ce qu'il vend et à qui, le souvenir ou l'émotion au cœur de sa marque " +
@@ -131,7 +131,7 @@ export function consignePubliciste(): string {
     "et ce qu'on a sous la main (photos, images, une voix). Puis la FORME : où ce sera vu, et la forme pressentie (film court, histoire qu'on fait " +
     "avancer au clic, présentation animée…) ; la forme peut rester pressentie, elle s'affine pendant la direction artistique. " +
     "Reformule ce que tu as compris quand c'est utile, et dis franchement quand une idée sonne comme une publicité banale. " +
-    "Huit à dix questions suffisent ; quand tu as de quoi travailler, dis-le et annonce la suite : la direction artistique, trois pistes à chaque étape, et ta recommandation. " +
+    "Huit à dix questions suffisent ; appelle cet échange « le brief » si tu le nommes ; quand tu as de quoi travailler, dis-le et annonce la suite : la direction artistique, trois pistes à chaque étape, et ta recommandation. " +
     `À la fin de CHAQUE réponse, recopie la fiche ENTIÈRE, à jour, entre ${MARQUEUR_FICHE} et ${MARQUEUR_FICHE_FIN}, chacun seul sur sa ligne, en JSON strict : ` +
     '{"projet": "nom court du projet", "marque": "…", "fond": {…}, "forme": {…}, "formeDecidee": false, "pret": false}. ' +
     `Clés de "fond" : ${fond}. Clés de "forme" : ${forme}. ` +
@@ -155,6 +155,10 @@ export interface EtatProjet {
   direction?: Partial<Record<EtapeDirection, Proposition>>;
   /** Coût cumulé des appels de TEXTE (pistes) ; les fichiers ont le leur. */
   depenseTexte?: number;
+  /** Lot 3 : le casting des voix (texte d'essai, extraits, voix écartées, jeu). */
+  voix?: EtatVoix;
+  /** Coût cumulé des voix générées, quand le fournisseur le donne. */
+  depenseVoix?: number;
 }
 
 export const ETAT_VIDE: EtatProjet = { etape: "entretien", fiche: FICHE_VIDE, choix: {} };
@@ -188,7 +192,9 @@ export function validerEtat(brut: unknown): EtatProjet | null {
     }
   }
   const depense = typeof o.depenseTexte === "number" && Number.isFinite(o.depenseTexte) && o.depenseTexte >= 0 ? Math.min(o.depenseTexte, 1000) : 0;
-  return { etape, fiche: validerFiche(o.fiche) ?? FICHE_VIDE, choix, direction, depenseTexte: depense };
+  const voix = validerVoix(o.voix);
+  const depVoix = typeof o.depenseVoix === "number" && Number.isFinite(o.depenseVoix) && o.depenseVoix >= 0 ? Math.min(o.depenseVoix, 1000) : 0;
+  return { etape, fiche: validerFiche(o.fiche) ?? FICHE_VIDE, choix, direction, depenseTexte: depense, ...(voix ? { voix } : {}), depenseVoix: depVoix };
 }
 
 // ── Plusieurs projets par gent (migration 041 ; maquette « Vos projets ») ──
@@ -216,9 +222,9 @@ export function resumeProjet(etat: EtatProjet): { statut: StatutProjet; index: n
   if (etat.etape === "recap" && choixFaits) return { statut: "validee", index: 7, libelle: "Validée · prête pour la production" };
   if (etat.etape === "entretien" && !etat.fiche.pret) {
     const { remplies, total } = remplissage(etat.fiche);
-    return { statut: "entretien", index: 0, libelle: remplies ? `L'entretien · fiche remplie à ${remplies} sur ${total}` : "L'entretien · à commencer" };
+    return { statut: "entretien", index: 0, libelle: remplies ? `Le brief · fiche remplie à ${remplies} sur ${total}` : "Le brief · à commencer" };
   }
-  return { statut: "direction", index, libelle: index ? `Étape ${index} sur 7 · ${ETAPES_PUBLICISTE[index].nom}` : "L'entretien · terminé" };
+  return { statut: "direction", index, libelle: index ? `Étape ${index} sur 7 · ${ETAPES_PUBLICISTE[index].nom}` : "Le brief · terminé" };
 }
 
 /** Le fil de conversation de l'entretien d'un projet, dans l'espace du gent. */

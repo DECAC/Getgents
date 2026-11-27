@@ -44,6 +44,16 @@ export interface OptionsCsp {
   origineContenu?: string | null;
 }
 
+/** L'origine du stockage Supabase (figée à la construction), ou rien. */
+function origineStockage(): string {
+  try {
+    const u = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return u ? ` ${new URL(u).origin}` : "";
+  } catch {
+    return "";
+  }
+}
+
 export function politiqueCsp({ nonce, encadrable = false, developpement = false, origineContenu = null }: OptionsCsp): string {
   const contenu = origineContenu ? ` ${origineContenu}` : "";
   return [
@@ -77,7 +87,9 @@ export function politiqueCsp({ nonce, encadrable = false, developpement = false,
     // Images produites par les modèles (data:), aperçus locaux (blob:), fonds
     // de carte et pièces jointes distantes.
     "img-src 'self' data: blob: https:",
-    "media-src 'self' data: blob:",
+    // Sons du Publiciste (musiques, voix) : servis par une adresse signée du
+    // stockage Supabase, vers laquelle la route redirige — comme les planches.
+    `media-src 'self' data: blob:${origineStockage()}`,
 
     // Flux SSE de la conversation, tuiles IGN, appels des connecteurs.
     "connect-src 'self' https:",

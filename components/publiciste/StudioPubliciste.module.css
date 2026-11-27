@@ -269,3 +269,82 @@ button.retour { border: 0; background: none; }
 @media (max-width: 520px) { .coutL { display: none; } }
 @media (prefers-reduced-motion: reduce) { .carte:hover { transform: none; } }
 .tot { border-top: 1px solid var(--line); padding-top: 7px; font-weight: 600; }
+
+/* Lot 3 — lecteur audio, musique, voix, « Ma voix » (repris de la maquette) */
+.sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.sectionT { margin: 0; font-size: 17px; letter-spacing: -.01em; }
+.lecteur { display: flex; align-items: center; gap: 12px; margin: 0 6px; min-width: 0; }
+.play { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--ink); color: var(--card) !important; display: grid; place-items: center; flex: none; cursor: pointer; }
+.play:hover { background: var(--corail-700); }
+.play svg { width: 17px; height: 17px; }
+.piste { flex: 1; min-width: 40px; height: 4px; background: var(--line-soft); border-radius: 2px; overflow: hidden; }
+.piste i { display: block; height: 100%; width: 0; background: var(--corail); }
+.duree { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+.lecteurPetit { margin: 0; }
+.lecteurPetit .play { width: 36px; height: 36px; }
+.lecteurPetit .play svg { width: 14px; height: 14px; }
+.ressenti { margin: 0 6px; font-size: 14px; color: var(--ink-2); }
+.demande { margin: 0 6px 2px; padding: 9px 11px; background: var(--line-soft); border-radius: 10px; font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); line-height: 1.55; }
+.titreMusique { margin-top: 34px !important; }
+.extraitAttente { margin: 0 6px; font-size: 13.5px; color: var(--muted); min-height: 44px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+
+.tableauVoix { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--ombre); overflow: hidden; }
+.tableauVoix table { width: 100%; border-collapse: collapse; }
+.tableauVoix th { text-align: left; font-family: var(--f-mono); font-weight: 500; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); padding: 12px 14px; background: var(--bg-2); border-bottom: 1px solid var(--line); }
+.tableauVoix td { padding: 12px 14px; border-top: 1px solid var(--line-soft); vertical-align: middle; }
+.tableauVoix tbody tr:first-child td { border-top: 0; }
+.tableauVoix tr.groupeVoix th { color: var(--ink-2); background: var(--line-soft); border-top: 1px solid var(--line); border-bottom: 0; padding: 8px 14px; }
+.tableauVoix tbody tr.groupeVoix:first-child th { border-top: 0; }
+.tableauVoix tr.ligneChoisie td { background: #fff6f3; }
+.tableauVoix tr.ligneChoisie td:first-child { box-shadow: inset 3px 0 0 var(--corail); }
+.tableauVoix tr.ligneEcartee td { color: var(--faint); }
+.tableauVoix tr.ligneEcartee .lecteur, .tableauVoix tr.ligneEcartee .vNom b { opacity: .5; }
+.vNom b { display: block; font-size: 15.5px; letter-spacing: -.01em; }
+.vNom span { font-size: 12.5px; color: var(--muted); }
+.vGenre { display: inline-block; font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--line-soft); color: var(--ink-2); }
+.vTimbre { font-size: 13.5px; color: var(--ink-2); }
+.vActions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.miniB { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 6px 12px; font-size: 12.5px; white-space: nowrap; cursor: pointer; }
+.miniB:hover { border-color: #d9c4b9; }
+.miniB:disabled { opacity: .45; cursor: default; }
+.miniB[aria-pressed="true"] { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.miniB.non[aria-pressed="true"] { background: var(--corail-tint); color: var(--corail-700); border-color: var(--corail-tint); }
+@media (max-width: 760px) {
+  .tableauVoix thead { display: none; }
+  .tableauVoix tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; padding: 14px; border-top: 1px solid var(--line-soft); }
+  .tableauVoix tbody tr:first-child { border-top: 0; }
+  .tableauVoix tr.groupeVoix { display: block; padding: 0; }
+  .tableauVoix tr.groupeVoix th { display: block; }
+  .tableauVoix td { padding: 0; border: 0; min-width: 0; }
+  .tableauVoix td.cLarge { grid-column: 1 / -1; }
+  .tableauVoix tr.ligneChoisie { background: #fff6f3; box-shadow: inset 3px 0 0 var(--corail); }
+  .tableauVoix tr.ligneChoisie td, .tableauVoix tr.ligneChoisie td:first-child { background: none; box-shadow: none; }
+  .vActions { justify-content: flex-start; }
+}
+.jeux { display: flex; gap: 8px; flex-wrap: wrap; }
+.jeux .miniB { padding: 8px 14px; font-size: 13.5px; }
+.texteEssai { display: grid; gap: 6px; }
+.texteEssai textarea { width: 100%; min-height: 64px; resize: vertical; border: 1px solid var(--line); border-radius: var(--r-s); padding: 10px 12px; background: var(--card); font: inherit; font-size: 15px; line-height: 1.5; }
+
+.maVoix { display: grid; gap: 14px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--ombre); padding: 20px; }
+.maVoixChoisie { border-color: var(--corail); box-shadow: 0 0 0 3px rgba(230,93,118,.12), var(--ombre); }
+.mvTete { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.mvTete h3 { margin: 4px 0 0; font-size: 22px; letter-spacing: -.02em; }
+.mvStatut { font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--line-soft); color: var(--muted); white-space: nowrap; }
+.mvStatutOk { background: var(--succes-tint); color: #2f6e33; }
+.mvIntro { margin: 0; max-width: 64ch; color: var(--ink-2); }
+.mvRappel { margin: 0; padding: 10px 12px; border-radius: var(--r-s); background: var(--bg); font-size: 13.5px; color: var(--ink-2); max-width: 72ch; }
+.mvEtapes { margin: 0; padding-left: 22px; display: grid; gap: 18px; }
+.mvEtapes li { display: grid; gap: 8px; padding-left: 4px; }
+.mvEtapes li::marker { font-weight: 700; color: var(--corail-700); }
+.mvTexte { margin: 0; padding: 14px 16px; border-left: 3px solid var(--corail); background: var(--bg); border-radius: 0 var(--r-s) var(--r-s) 0; font-size: 16px; line-height: 1.6; max-width: 70ch; }
+.mvActions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.mvActions label { cursor: pointer; display: inline-flex; align-items: center; }
+.mvEch { display: grid; gap: 4px; max-width: 420px; }
+.mvEch audio { width: 100%; }
+.mvNom { font-size: 12.5px; color: var(--muted); }
+.mvConsent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; max-width: 64ch; cursor: pointer; }
+.mvConsent input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--corail-700); flex: none; }
+.mvResultat { display: grid; gap: 8px; padding: 12px 14px; background: var(--succes-tint); border-radius: var(--r-s); max-width: 70ch; }
+.parler { display: inline-flex; align-items: center; gap: 8px; }
+.parler svg { width: 17px; height: 17px; }

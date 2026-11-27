@@ -225,3 +225,64 @@ export function coutFichiersMemoire(projetId: string): number {
   for (const f of memoireFichiers().values()) if (f.projet === projetId) t += f.cout;
   return t;
 }
+
+// ── « Ma voix » : l'enregistrement de référence de l'AUTEUR (un par compte) ──
+// Rangé dans le seau privé, sous son identifiant : il sert à tous SES projets,
+// jamais à ceux d'un autre. L'accord (date, texte coché) est gardé à côté.
+
+const REF = (owner: string) => `${owner}/ma-voix/reference.wav`;
+const ACCORD = (owner: string) => `${owner}/ma-voix/accord.json`;
+
+function memoireVoix(): Map<string, { octets: Uint8Array; le: string }> {
+  if (process.env.NODE_ENV === "production") throw new Error("supabase_non_configure");
+  const g = globalThis as unknown as { __publicisteMaVoix?: Map<string, { octets: Uint8Array; le: string }> };
+  return (g.__publicisteMaVoix ??= new Map());
+}
+
+export async function enregistrerMaVoix(owner: string, octets: Uint8Array, accord: string): Promise<{ ok: true; le: string } | Echec> {
+  const le = new Date().toISOString();
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    memoireVoix().set(owner, { octets, le });
+    return { ok: true, le };
+  }
+  const { error: e1 } = await sb.storage.from("publiciste").upload(REF(owner), octets, { contentType: "audio/wav", upsert: true });
+  if (e1) return echec("ma_voix_envoi_echoue", e1);
+  const { error: e2 } = await sb.storage
+    .from("publiciste")
+    .upload(ACCORD(owner), new TextEncoder().encode(JSON.stringify({ le, accord })), { contentType: "application/json", upsert: true });
+  if (e2) return echec("ma_voix_accord_echoue", e2);
+  return { ok: true, le };
+}
+
+/** L'enregistrement de référence, ou null s'il n'y en a pas. */
+export async function lireMaVoix(owner: string): Promise<{ ok: true; octets: Uint8Array | null; le: string | null } | Echec> {
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    const m = memoireVoix().get(owner);
+    return { ok: true, octets: m?.octets ?? null, le: m?.le ?? null };
+  }
+  const { data, error } = await sb.storage.from("publiciste").download(REF(owner));
+  if (error) {
+    // Objet absent : pas de voix enregistrée (le message varie selon la version de Storage).
+    if (/not found|does not exist|404|Object not found/i.test(`${error.message} ${(error as { statusCode?: string }).statusCode ?? ""}`) || !error.message) {
+      return { ok: true, octets: null, le: null };
+    }
+    return echec("ma_voix_lecture_echouee", error);
+  }
+  let le: string | null = null;
+  const a = await sb.storage.from("publiciste").download(ACCORD(owner));
+  if (!a.error && a.data) le = (JSON.parse(await a.data.text().catch(() => "{}")) as { le?: string }).le ?? null;
+  return { ok: true, octets: new Uint8Array(await data.arrayBuffer()), le };
+}
+
+export async function supprimerMaVoix(owner: string): Promise<{ ok: true } | Echec> {
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    memoireVoix().delete(owner);
+    return { ok: true };
+  }
+  const { error } = await sb.storage.from("publiciste").remove([REF(owner), ACCORD(owner)]);
+  if (error) return echec("ma_voix_suppression_echouee", error);
+  return { ok: true };
+}

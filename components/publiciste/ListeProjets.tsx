@@ -23,7 +23,7 @@ interface Ligne {
 }
 
 const LIBELLE_STATUT: Record<StatutProjet, string> = {
-  entretien: "Entretien en cours",
+  entretien: "Brief en cours",
   direction: "Direction artistique",
   validee: "Direction validée",
 };
@@ -134,7 +134,7 @@ export function ListeProjets({ gentId, ouvrir }: { gentId: string; ouvrir: (id: 
           <div className={styles.intro}>
             <span className={styles.mono}>Vos projets</span>
             <h2 className={styles.titre}>Ce que nous racontons ensemble</h2>
-            <p className={styles.sous}>Chaque projet suit les huit étapes : l&apos;entretien, la direction artistique, puis la validation. Reprenez là où vous vous étiez arrêté.</p>
+            <p className={styles.sous}>Chaque projet suit les huit étapes : le brief, la direction artistique, puis la validation. Reprenez là où vous vous étiez arrêté.</p>
           </div>
           {n > 0 && (
             <button type="button" className={[styles.bouton, styles.corail].join(" ")} onClick={nouveau} disabled={cree}>
@@ -149,10 +149,10 @@ export function ListeProjets({ gentId, ouvrir }: { gentId: string; ouvrir: (id: 
         )}
         {projets !== null && n === 0 && (
           <div className={styles.videEtat}>
-            <h2>Votre premier projet commence par un entretien</h2>
+            <h2>Votre premier projet commence par un brief</h2>
             <p>Une quinzaine de minutes pour parler de votre marque. Ensuite, je vous propose la direction artistique, étape par étape.</p>
             <ol>
-              <li>L&apos;entretien : le fond, puis la forme.</li>
+              <li>Le brief : le fond, puis la forme.</li>
               <li>La direction artistique : univers, lettres, couleurs, musique, voix, storyboard.</li>
               <li>Vous validez, puis on produit.</li>
             </ol>
@@ -168,7 +168,7 @@ export function ListeProjets({ gentId, ouvrir }: { gentId: string; ouvrir: (id: 
             return (
               <article key={p.id} className={styles.projet} aria-label={nom}>
                 {renommage !== p.id && <button type="button" className={styles.lienCarte} onClick={() => ouvrir(p.id)} aria-label={`Ouvrir ${nom}`} />}
-                <div className={[styles.vignette, styles.vignetteVide].join(" ")}>{r.statut === "entretien" ? "L'univers viendra après l'entretien" : "—"}</div>
+                <div className={[styles.vignette, styles.vignetteVide].join(" ")}>{r.statut === "entretien" ? "L'univers viendra après le brief" : "—"}</div>
                 <div className={styles.corpsProjet}>
                   {renommage === p.id ? (
                     <Renommer initial={nom} valider={(v) => renommer(p, v)} annuler={() => setRenommage(null)} />
@@ -221,7 +221,7 @@ export function ListeProjets({ gentId, ouvrir }: { gentId: string; ouvrir: (id: 
                 </div>
                 {aSupprimer === p.id && (
                   <div className={styles.confirmer} role="alert">
-                    <span>Supprimer « {nom} » ? Son entretien, ses planches, musiques, voix et croquis seront effacés. Rien ne pourra être récupéré.</span>
+                    <span>Supprimer « {nom} » ? Son brief, ses planches, musiques, voix et croquis seront effacés. Rien ne pourra être récupéré.</span>
                     <button type="button" className={[styles.bouton, styles.leger].join(" ")} onClick={() => setASupprimer(null)}>
                       Annuler
                     </button>

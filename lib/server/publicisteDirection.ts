@@ -7,6 +7,7 @@ import {
   consigneDirection,
   validerProposition,
   MODELE_PLANCHE,
+  MODELE_MUSIQUE,
   FORMAT_PLANCHE,
   type ChoixPrecedents,
   type EtapeDirection,
@@ -120,4 +121,78 @@ export async function genererPlanche(ctx: ContexteLlm, prompt: string): Promise<
   const m = url?.match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
   if (!m) return { ok: false, erreur: "Le modèle n'a renvoyé aucune image. Réessayez.", statut: 502 };
   return { ok: true, octets: Uint8Array.from(Buffer.from(m[2], "base64")), type: m[1], cout };
+}
+
+export type ResultatExtrait = { ok: true; octets: Uint8Array; cout: number } | { ok: false; erreur: string; statut: number };
+
+/**
+ * Un extrait de musique de 30 s (Lyria, lot 3). Lyria ne répond qu'en FLUX :
+ * le son arrive en base64 dans `choices[0].delta.audio.data`, découpé ou non,
+ * et le coût dans le dernier morceau (`usage.cost`). Mesuré le 27/11 : ~0,04 $,
+ * MP3 de 30 s, une vingtaine de secondes.
+ */
+export async function genererExtraitMusique(ctx: ContexteLlm, prompt: string): Promise<ResultatExtrait> {
+  if (!ctx.cle) return { ok: false, erreur: "Aucune clé de modèle disponible.", statut: 503 };
+  const debut = Date.now();
+  let res: Response;
+  try {
+    res = await fetch(OPENROUTER_API, {
+      method: "POST",
+      headers: enTetesOpenRouter(ctx.cle),
+      body: JSON.stringify({
+        model: MODELE_MUSIQUE,
+        messages: [{ role: "user", content: prompt }],
+        modalities: ["audio", "text"],
+        audio: { format: "mp3" },
+        stream: true,
+        usage: { include: true },
+      }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(150_000),
+    });
+  } catch (e) {
+    journal("musique_echec", { cause: (e as Error).name, ms: Date.now() - debut });
+    return { ok: false, erreur: "Le compositeur n'a pas répondu à temps. Réessayez.", statut: 504 };
+  }
+  if (!res.ok || !res.body) {
+    const corps = (await res.text().catch(() => "")).slice(0, 160);
+    journal("musique_refus", { statut: res.status, corps });
+    return { ok: false, erreur: `Le compositeur a refusé la demande (réf. ${res.status}).`, statut: res.status === 402 || res.status === 403 ? 503 : 502 };
+  }
+  const morceaux: string[] = [];
+  let cout = 0;
+  const lecteur = res.body.getReader();
+  const dec = new TextDecoder();
+  let reste = "";
+  const lireLigne = (ligne: string) => {
+    const l = ligne.trim();
+    if (!l.startsWith("data:")) return;
+    const donnee = l.slice(5).trim();
+    if (!donnee || donnee === "[DONE]") return;
+    try {
+      const j = JSON.parse(donnee);
+      const a = j?.choices?.[0]?.delta?.audio?.data;
+      if (typeof a === "string" && a) morceaux.push(a);
+      if (j?.usage?.cost != null) cout = Number(j.usage.cost) || cout;
+    } catch {
+      /* ligne de service */
+    }
+  };
+  for (;;) {
+    const { value, done } = await lecteur.read();
+    if (done) break;
+    reste += dec.decode(value, { stream: true });
+    const lignes = reste.split("\n");
+    reste = lignes.pop() ?? "";
+    lignes.forEach(lireLigne);
+  }
+  lireLigne(reste);
+  // Morceaux rembourrés séparément (« = » avant la fin) : décodés un à un.
+  const separes = morceaux.slice(0, -1).some((m) => m.endsWith("="));
+  const octets = separes
+    ? Uint8Array.from(Buffer.concat(morceaux.map((m) => Buffer.from(m, "base64"))))
+    : Uint8Array.from(Buffer.from(morceaux.join(""), "base64"));
+  journal("musique", { ok: octets.length > 1000, ms: Date.now() - debut, cout, octets: octets.length });
+  if (octets.length < 1000) return { ok: false, erreur: "Le compositeur n'a renvoyé aucun son. Réessayez.", statut: 502 };
+  return { ok: true, octets, cout };
 }

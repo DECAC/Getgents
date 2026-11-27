@@ -61,7 +61,7 @@ describe("Publiciste, lot 2 : pistes de direction", () => {
     const p = validerProposition("visuel", visuel())!;
     p.visuel![0].cout = 0.14;
     p.visuel![1].cout = 0.15;
-    expect(coutDirection({ visuel: p }, 0.05)).toEqual({ texte: 0.05, planches: 0.29, total: 0.34 });
+    expect(coutDirection({ visuel: p }, 0.05)).toEqual({ texte: 0.05, planches: 0.29, musique: 0, voix: 0, total: 0.34 });
   });
 
   it("l'état enregistré garde les propositions, planches comprises, à l'aller-retour", () => {

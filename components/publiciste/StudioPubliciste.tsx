@@ -7,7 +7,8 @@ import { SafeHTML } from "@/components/shared/SafeHTML";
 import { apiFetchInit } from "@/lib/apiFetch";
 import { ListeProjets } from "./ListeProjets";
 import { EtapeDirection } from "./EtapeDirection";
-import { ETAPES_DIRECTION, POLICES, coutDirection, type EtapeDirection as IdEtapeDirection } from "@/lib/publicisteDirection";
+import { EtapeVoix } from "./EtapeVoix";
+import { ETAPES_DIRECTION, MA_VOIX, POLICES, VOIX_GEMINI, JEUX_VOIX, coutDirection, type EtapeDirection as IdEtapeDirection } from "@/lib/publicisteDirection";
 import {
   ETAPES_PUBLICISTE,
   ETAT_VIDE,
@@ -48,26 +49,42 @@ function useProjet(projetId: string | null, auRevoir: () => void) {
   const version = useRef(0);
   const minuteur = useRef<number | null>(null);
   const aEcrire = useRef<EtatProjet | null>(null);
+  // Rien ne s'écrit avant la PREMIÈRE lecture : au rechargement, la fiche du fil
+  // passait dans l'état vide et partait au serveur — un projet entier écrasé
+  // par « brief en cours, rien de choisi » (vu au lot 3).
+  const charge = useRef(!persister);
   const adresse = projetId ? `/api/publiciste/projets/${encodeURIComponent(projetId)}` : "";
+  // Dans une référence : la fonction change à chaque rendu du parent, et `lire`
+  // en dépendait — le projet était RELU à chaque rendu, ce qui pouvait écraser
+  // une modification pas encore enregistrée (vu au lot 3 : 37 lectures).
+  const auRevoirRef = useRef(auRevoir);
+  useEffect(() => {
+    auRevoirRef.current = auRevoir;
+  });
 
   const lire = useCallback(async () => {
     try {
       const r = await fetch(adresse, apiFetchInit());
       const j = await r.json().catch(() => null);
-      if (r.status === 404) return auRevoir();
+      if (r.status === 404) return auRevoirRef.current();
       if (!r.ok) {
         setStatut(j?.error === "non_installe" ? "non_installe" : "erreur");
         setMessage(j?.message ?? `Lecture du projet impossible (réf. ${r.status}).`);
         return;
       }
       version.current = j.version ?? 1;
+      // Ce qui attendait d'être écrit portait un état ANTÉRIEUR à cette lecture : jeté.
+      if (minuteur.current) window.clearTimeout(minuteur.current);
+      minuteur.current = null;
+      aEcrire.current = null;
+      charge.current = true;
       setEtat({ ...ETAT_VIDE, ...j.etat, fiche: { ...FICHE_VIDE, ...j.etat?.fiche } });
       setStatut("pret");
     } catch {
       setStatut("erreur");
       setMessage("Lecture du projet impossible (réseau).");
     }
-  }, [adresse, auRevoir]);
+  }, [adresse]);
 
   useEffect(() => {
     if (persister) lire();
@@ -84,7 +101,7 @@ function useProjet(projetId: string | null, auRevoir: () => void) {
         setMessage(j?.message ?? "Le projet a changé dans un autre onglet : il a été relu.");
         return lire();
       }
-      if (r.status === 404) return auRevoir();
+      if (r.status === 404) return auRevoirRef.current();
       if (!r.ok) {
         setStatut(j?.error === "non_installe" ? "non_installe" : "erreur");
         setMessage(j?.message ?? `Enregistrement impossible (réf. ${r.status}).`);
@@ -95,13 +112,13 @@ function useProjet(projetId: string | null, auRevoir: () => void) {
     } catch {
       setMessage("Enregistrement impossible (réseau). Il sera retenté au prochain changement.");
     }
-  }, [adresse, lire, auRevoir]);
+  }, [adresse, lire]);
 
   const modifier = useCallback(
     (f: (e: EtatProjet) => EtatProjet) => {
       setEtat((prev) => {
         const suivant = f(prev);
-        if (persister && suivant !== prev) {
+        if (persister && charge.current && suivant !== prev) {
           aEcrire.current = suivant;
           if (minuteur.current) window.clearTimeout(minuteur.current);
           minuteur.current = window.setTimeout(ecrire, 700);
@@ -224,9 +241,11 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
     if (e === "visuel") return etat.direction?.visuel?.visuel?.find((p) => p.id === id)?.nom ?? null;
     if (e === "typo") return etat.direction?.typo?.typo?.find((p) => p.id === id)?.nom ?? POLICES.find((p) => p.id === id)?.nom ?? null;
     if (e === "couleurs") return etat.direction?.couleurs?.couleurs?.find((p) => p.id === id)?.nom ?? null;
+    if (e === "musique") return etat.direction?.musique?.musique?.find((p) => p.id === id)?.nom ?? null;
+    if (e === "voix") return id === MA_VOIX ? "Votre voix" : (VOIX_GEMINI.find((v) => v.id === id)?.nom ?? null);
     return id;
   };
-  const LIBELLES_PIED: Record<string, string> = { visuel: "Univers", typo: "Lettres", couleurs: "Couleurs" };
+  const LIBELLES_PIED: Record<string, string> = { visuel: "Univers", typo: "Lettres", couleurs: "Couleurs", musique: "Musique", voix: "Voix" };
   const etatPied =
     etat.etape === "entretien"
       ? "Fond et forme, avant de produire"
@@ -261,9 +280,10 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
               <b>Le Publiciste</b>
               <small>{sousTitreProjet}</small>
             </span>
-            <span className={styles.cout} title="Ce qu'a coûté la direction artistique de ce projet">
+            <span className={styles.cout} title="Coût de la direction artistique déjà engagé, hors voix (facturation Google et Mistral non relevée)">
               <span className={styles.coutL}>Direction artistique</span>
               <b>{coutDirection(etat.direction, etat.depenseTexte).total.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $</b>
+              <span>+ voix</span>
             </span>
           </div>
           <nav className={styles.etapes} aria-label="Étapes" ref={navRef}>
@@ -312,6 +332,8 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
               fiche={fiche}
               allerEntretien={() => aller("entretien")}
             />
+          ) : etat.etape === "voix" ? (
+            <EtapeVoix numero={index} projetId={projetId} etat={etat} modifier={modifier} fiche={fiche} />
           ) : (
             <EtapeAVenir etape={etat.etape} numero={index} fiche={fiche} aller={aller} />
           )}
@@ -407,12 +429,12 @@ function Entretien({
 
   return (
     <>
-      <Entete n={0} titre="L'entretien" sous="On parle du fond, puis de la forme. Répondez avec vos mots : le Publiciste tient la fiche à jour." />
+      <Entete n={0} titre="Le brief" sous="On parle du fond, puis de la forme. Répondez avec vos mots : le Publiciste tient la fiche à jour." />
       <div className={styles.entretien}>
         <section className={styles.filE} aria-label="Conversation avec le Publiciste">
           <div className={styles.filTete}>
             <p className={styles.note}>
-              {fil.length ? `${fil.length + 1} messages` : "L'entretien commence"} · {remplies} rubrique{remplies > 1 ? "s" : ""} sur {total} remplie{remplies > 1 ? "s" : ""}
+              {fil.length ? `${fil.length + 1} messages` : "Le brief commence"} · {remplies} rubrique{remplies > 1 ? "s" : ""} sur {total} remplie{remplies > 1 ? "s" : ""}
             </p>
           </div>
           <div className={[styles.msg, styles.msgP].join(" ")}>
@@ -535,9 +557,9 @@ function EtapeAVenir({ etape, numero, fiche, aller }: { etape: string; numero: n
         <p>{a.bulle}</p>
         {!fiche.pret && (
           <p>
-            Terminons d&apos;abord l&apos;entretien : la fiche est remplie à {remplies} sur {total}.{" "}
+            Terminons d&apos;abord le brief : la fiche est remplie à {remplies} sur {total}.{" "}
             <button type="button" className={styles.lien} onClick={() => aller("entretien")}>
-              Reprendre l&apos;entretien
+              Reprendre le brief
             </button>
           </p>
         )}
@@ -570,12 +592,12 @@ function Recap({ fiche, etat, aller, nomChoisi }: { fiche: FichePubliciste; etat
         <p>{manque ? `Il reste ${manque === 1 ? "un choix" : `${manque} choix`} à faire avant de valider la direction.` : "Tout est choisi."}</p>
       </Bulle>
       <div className={styles.recap}>
-        {ligne("Forme", "entretien", fiche.forme.forme || null, fiche.forme.forme ? (fiche.formeDecidee ? "Décidée à l'entretien" : "Pressentie à l'entretien") : undefined)}
+        {ligne("Forme", "entretien", fiche.forme.forme || null, fiche.forme.forme ? (fiche.formeDecidee ? "Décidée au brief" : "Pressentie au brief") : undefined)}
         {ligne("Univers", "visuel", nomChoisi("visuel"))}
         {ligne("Lettres", "typo", nomChoisi("typo"), etat.choix.typo ? POLICES.find((p) => p.id === etat.choix.typo)?.detail : undefined)}
         {ligne("Couleurs", "couleurs", nomChoisi("couleurs"))}
-        {ligne("Musique", "musique", etat.choix.musique ?? null)}
-        {ligne("Voix", "voix", etat.choix.voix ?? null)}
+        {ligne("Musique", "musique", nomChoisi("musique"))}
+        {ligne("Voix", "voix", nomChoisi("voix"), etat.voix?.jeu ? JEUX_VOIX.find((j) => j.id === etat.voix?.jeu)?.nom : undefined)}
         {ligne("Storyboard", "storyboard", etat.choix.storyboard ?? null)}
       </div>
       <Couts etat={etat} />
@@ -592,6 +614,7 @@ function Recap({ fiche, etat, aller, nomChoisi }: { fiche: FichePubliciste; etat
 function Couts({ etat }: { etat: EtatProjet }) {
   const c = coutDirection(etat.direction, etat.depenseTexte);
   const n = (etat.direction?.visuel?.visuel ?? []).filter((p) => p.cout !== undefined).length;
+  const nm = (etat.direction?.musique?.musique ?? []).filter((p) => p.cout !== undefined).length;
   const eur = (x: number) => x.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " $";
   return (
     <div className={styles.couts}>
@@ -607,9 +630,23 @@ function Couts({ etat }: { etat: EtatProjet }) {
             <span>Pistes proposées (texte)</span>
             <span>{eur(c.texte)}</span>
           </div>
+          {n > 0 && (
+            <div>
+              <span>{n} planche{n > 1 ? "s" : ""} d&apos;ambiance</span>
+              <span>{eur(c.planches)}</span>
+            </div>
+          )}
+          {nm > 0 && (
+            <div>
+              <span>
+                {nm} extrait{nm > 1 ? "s" : ""} de musique
+              </span>
+              <span>{eur(c.musique)}</span>
+            </div>
+          )}
           <div>
-            <span>{n} planche{n > 1 ? "s" : ""} d&apos;ambiance</span>
-            <span>{eur(c.planches)}</span>
+            <span>Voix (facturées par Google et Mistral)</span>
+            <span>non relevé</span>
           </div>
           <div className={styles.tot}>
             <span>Total</span>

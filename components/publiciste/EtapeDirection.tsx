@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./StudioPubliciste.module.css";
 import { apiFetchInit } from "@/lib/apiFetch";
+import { Lecteur } from "./Lecteur";
 import type { EtatProjet, FichePubliciste } from "@/lib/publiciste";
 import {
   POLICES,
@@ -10,6 +11,7 @@ import {
   coutEstime,
   type EtapeDirection,
   type PistePalette,
+  type PisteMusique,
   type PisteTypo,
   type PisteVisuel,
   type Proposition,
@@ -44,6 +46,12 @@ const TEXTES: Record<EtapeDirection, { titre: string; sous: string; attente: str
     attente: "Je compose trois palettes à partir de votre marque…",
     autre: "Une autre envie de couleurs ? (ex. : plus chaud, moins de rouge)",
   },
+  musique: {
+    titre: "Musique",
+    sous: "Choisissez avec vos oreilles : trois extraits de 30 secondes.",
+    attente: "Je traduis l'émotion de votre projet en instruments et en tempo…",
+    autre: "Décrivez ce que la musique doit vous faire ressentir…",
+  },
 };
 
 const euros = (x: number) => x.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " $";
@@ -73,6 +81,32 @@ export function EtapeDirection({
   // Planches en cours de génération, et leurs échecs (ce qui se passe dans CET onglet).
   const [planchesEnCours, setPlanchesEnCours] = useState<Record<string, boolean>>({});
   const [planchesEchec, setPlanchesEchec] = useState<Record<string, string>>({});
+
+  const genererExtrait = async (p: PisteMusique) => {
+    if (!projetId) return;
+    setPlanchesEnCours((s) => ({ ...s, [p.id]: true }));
+    setPlanchesEchec((s) => ({ ...s, [p.id]: "" }));
+    try {
+      const r = await fetch(
+        `/api/publiciste/projets/${projetId}/musique`,
+        apiFetchInit({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ piste: p.id, demande: p.demande, ressenti: p.ressenti }) })
+      );
+      const j = await r.json().catch(() => null);
+      if (!r.ok) throw new Error(j?.message ?? `réf. ${r.status}`);
+      modifier((e) => {
+        const m = e.direction?.musique;
+        if (!m?.musique?.some((x) => x.id === p.id && x.demande === p.demande)) return e;
+        return {
+          ...e,
+          direction: { ...e.direction, musique: { ...m, musique: m.musique.map((x) => (x.id === p.id ? { ...x, audio: j.nom, cout: j.cout } : x)) } },
+        };
+      });
+    } catch (e) {
+      setPlanchesEchec((s) => ({ ...s, [p.id]: (e as Error).message }));
+    } finally {
+      setPlanchesEnCours((s) => ({ ...s, [p.id]: false }));
+    }
+  };
 
   const genererPlanche = async (p: PisteVisuel) => {
     if (!projetId) return;
@@ -120,6 +154,7 @@ export function EtapeDirection({
       });
       setRemarque("");
       if (etape === "visuel") p.visuel?.forEach((x) => void genererPlanche(x));
+      if (etape === "musique") p.musique?.forEach((x) => void genererExtrait(x));
     } catch (e) {
       setErreur((e as Error).message);
     } finally {
@@ -146,9 +181,9 @@ export function EtapeDirection({
             <p>{enCours ? t.attente : "Je vous propose trois pistes, chacune avec ce qu'elle apporte et ce qu'elle risque, et ma recommandation."}</p>
             {!fiche.pret && !enCours && (
               <p>
-                L&apos;entretien n&apos;est pas terminé : les pistes seront moins justes.{" "}
+                Le brief n&apos;est pas terminé : les pistes seront moins justes.{" "}
                 <button type="button" className={styles.lien} onClick={allerEntretien}>
-                  Reprendre l&apos;entretien
+                  Reprendre le brief
                 </button>
               </p>
             )}
@@ -182,7 +217,7 @@ export function EtapeDirection({
             </button>
             <span className={styles.note}>
               ≈ {euros(coutEstime(etape))}
-              {etape === "visuel" ? " · environ une minute, planches comprises" : " · une trentaine de secondes"}
+              {etape === "visuel" ? " · environ une minute, planches comprises" : etape === "musique" ? " · environ une minute, extraits compris" : " · une trentaine de secondes"}
             </span>
           </div>
         ) : (
@@ -220,6 +255,30 @@ export function EtapeDirection({
               </Carte>
             ))}
           {etape === "typo" && proposition.typo && proposition.specimen && <Typos pistes={proposition.typo} specimen={proposition.specimen} reco={proposition.recommandee} choisi={etat.choix.typo} choisir={choisir} />}
+          {etape === "musique" &&
+            proposition.musique?.map((p) => (
+              <Carte key={p.id} reco={proposition.recommandee === p.id} choisie={etat.choix.musique === p.id} nom={p.nom} choisir={() => choisir(p.id)}>
+                <h3 className={styles.titreMusique}>{p.nom}</h3>
+                <p className={styles.ressenti}>{p.ressenti}</p>
+                {p.audio ? (
+                  <Lecteur src={`/api/publiciste/projets/${projetId}/fichiers/${p.audio}`} libelle={p.nom} />
+                ) : (
+                  <p className={styles.extraitAttente}>
+                    {planchesEnCours[p.id]
+                      ? "Le compositeur joue l'extrait…"
+                      : planchesEchec[p.id]
+                        ? `L'extrait n'a pas pu être fait (${planchesEchec[p.id]}).`
+                        : "Extrait à faire."}{" "}
+                    {projetId && !planchesEnCours[p.id] && (
+                      <button type="button" className={styles.lien} onClick={() => genererExtrait(p)}>
+                        {planchesEchec[p.id] ? "Réessayer" : "Le composer"}
+                      </button>
+                    )}
+                  </p>
+                )}
+                <p className={styles.demande}>Ce que j&apos;ai demandé : {p.demande}</p>
+              </Carte>
+            ))}
           {etape === "couleurs" &&
             proposition.couleurs?.map((p) => (
               <Carte key={p.id} reco={proposition.recommandee === p.id} choisie={etat.choix.couleurs === p.id} nom={p.nom} choisir={() => choisir(p.id)}>

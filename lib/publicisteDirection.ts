@@ -15,8 +15,24 @@
  */
 import type { FichePubliciste } from "@/lib/publiciste";
 
-export type EtapeDirection = "visuel" | "typo" | "couleurs";
-export const ETAPES_DIRECTION: readonly EtapeDirection[] = ["visuel", "typo", "couleurs"];
+export type EtapeDirection = "visuel" | "typo" | "couleurs" | "musique";
+export const ETAPES_DIRECTION: readonly EtapeDirection[] = ["visuel", "typo", "couleurs", "musique"];
+
+/** Lot 3 : extraits de 30 s (Lyria « clip »), MP3. Mesuré le 27/11 : 0,04 $ l'extrait. */
+export const MODELE_MUSIQUE = "google/lyria-3-clip-preview";
+export const COUT_EXTRAIT_ESTIME = 0.04;
+
+export interface PisteMusique {
+  id: string;
+  nom: string;
+  /** Ce que la musique doit faire ressentir, dans les mots de l'auteur. */
+  ressenti: string;
+  /** La traduction en instruments et en tempo, montrée à l'auteur (« Ce que j'ai demandé »). */
+  demande: string;
+  /** Fichier de l'extrait généré, et son coût. */
+  audio?: string;
+  cout?: number;
+}
 
 export const MODELE_PLANCHE = "google/gemini-3-pro-image";
 export const FORMAT_PLANCHE = "4:5";
@@ -91,6 +107,7 @@ export interface Proposition {
   typo?: PisteTypo[];
   specimen?: Specimen;
   couleurs?: PistePalette[];
+  musique?: PisteMusique[];
   /** La remarque de l'auteur qui a motivé cette proposition, s'il y en a une. */
   remarque?: string;
 }
@@ -123,6 +140,16 @@ export function validerProposition(etape: EtapeDirection, brut: unknown, remarqu
     });
     if (visuel.some((p) => !p.nom || !p.prompt) || new Set(visuel.map((p) => p.id)).size !== 3) return null;
     return { ...base, visuel, recommandee: choisirReco(o.recommandee, visuel.map((p) => p.id)) };
+  }
+  if (etape === "musique") {
+    const musique: PisteMusique[] = pistes.map((p, i) => {
+      const r = (p ?? {}) as Record<string, unknown>;
+      const audio = typeof r.audio === "string" && /^musique-[a-z0-9-]{1,80}$/.test(r.audio) ? r.audio : undefined;
+      const cout = typeof r.cout === "number" && Number.isFinite(r.cout) && r.cout >= 0 ? Math.min(r.cout, 10) : undefined;
+      return { id: ident(r.id ?? r.nom, i), nom: txt(r.nom, 80), ressenti: txt(r.ressenti, 500), demande: txt(r.demande, 600), ...(audio ? { audio } : {}), ...(cout !== undefined ? { cout } : {}) };
+    });
+    if (musique.some((p) => !p.nom || !p.demande) || new Set(musique.map((p) => p.id)).size !== 3) return null;
+    return { ...base, musique, recommandee: choisirReco(o.recommandee, musique.map((p) => p.id)) };
   }
   if (etape === "typo") {
     const typo: PisteTypo[] = [];
@@ -178,11 +205,11 @@ function resumeFiche(f: FichePubliciste): string {
 /** La consigne de l'appel qui prépare les trois pistes d'une étape. */
 export function consigneDirection(etape: EtapeDirection, fiche: FichePubliciste, avant: ChoixPrecedents, remarque?: string): string {
   const commun =
-    "Tu es le Publiciste : tu proposes la direction artistique d'un projet de communication, à partir de l'entretien avec l'auteur. " +
+    "Tu es le Publiciste : tu proposes la direction artistique d'un projet de communication, à partir du brief mené avec l'auteur. " +
     "Tu écris en français, au vouvoiement, avec franchise : chaque piste a ce qu'elle apporte et ce qu'elle risque. " +
     "Sois bref : une phrase par champ de texte (« pour », « contre », « note »), deux au plus pour une description. " +
     "Tu réponds UNIQUEMENT par un objet JSON valide, sans texte autour.\n\n" +
-    `CE QUE L'ENTRETIEN A ÉTABLI :\n${resumeFiche(fiche) || "(fiche encore vide)"}\n` +
+    `CE QUE LE BRIEF A ÉTABLI :\n${resumeFiche(fiche) || "(fiche encore vide)"}\n` +
     (avant.visuel ? `\nUnivers choisi : ${avant.visuel.nom} — ${avant.visuel.desc}` : "") +
     (avant.typo ? `\nLettres choisies : ${avant.typo.nom} (${avant.typo.detail})` : "") +
     (remarque ? `\n\nREMARQUE DE L'AUTEUR SUR LA PROPOSITION PRÉCÉDENTE (à suivre) : ${remarque}` : "") +
@@ -195,6 +222,16 @@ export function consigneDirection(etape: EtapeDirection, fiche: FichePubliciste,
       'Format : {"bulle": ["ce que tu as relevé de la marque, en deux phrases", "ta recommandation et pourquoi, en deux phrases"], "recommandee": "id", ' +
       '"pistes": [{"id": "court-sans-accent", "nom": "nom évocateur", "desc": "l\'univers en une ou deux phrases", "pour": "ce qu\'il apporte", "contre": "ce qu\'il risque", ' +
       '"prompt": "description détaillée de la planche pour un modèle d\'image : un collage de 5 à 6 vignettes (photos, dessins, matières, lumière, palette) qui fait sentir l\'univers ; précise technique, lumière et matières ; aucun texte lisible, aucun logo"}]}'
+    );
+  }
+  if (etape === "musique") {
+    return (
+      commun +
+      "ÉTAPE : MUSIQUE. L'auteur choisit avec ses oreilles : propose TROIS intentions musicales nettement différentes, chacune nommée par ce qu'elle doit FAIRE RESSENTIR, " +
+      "puis traduite en instruments, tonalité éventuelle, tempo et prise de son pour le compositeur. Musique jouée, acoustique de préférence, sans effet « publicité ». " +
+      'Format : {"bulle": ["comment tu as traduit l\'émotion du projet en musique", "ta recommandation, et où une autre piste pourrait servir"], "recommandee": "id", ' +
+      '"pistes": [{"id": "court-sans-accent", "nom": "l\'émotion en quelques mots", "ressenti": "ce qu\'on ressent, en une phrase", ' +
+      '"demande": "instruments · tonalité · tempo en bpm · prise de son, en une ligne (pas de voix, pas de paroles)"}]}'
     );
   }
   if (etape === "typo") {
@@ -250,13 +287,119 @@ export function adressePolices(ids: readonly string[]): string | null {
 }
 
 /** Ce qu'a coûté la direction artistique d'un projet : texte des pistes + planches. */
-export function coutDirection(direction: Partial<Record<EtapeDirection, Proposition>> | undefined, depenseTexte = 0): { texte: number; planches: number; total: number } {
+export function coutDirection(
+  direction: Partial<Record<EtapeDirection, Proposition>> | undefined,
+  depenseTexte = 0,
+  depenseVoix = 0
+): { texte: number; planches: number; musique: number; voix: number; total: number } {
   const planches = (direction?.visuel?.visuel ?? []).reduce((a, p) => a + (p.cout ?? 0), 0);
+  const musique = (direction?.musique?.musique ?? []).reduce((a, p) => a + (p.cout ?? 0), 0);
   const r = (x: number) => Math.round(x * 100) / 100;
-  return { texte: r(depenseTexte), planches: r(planches), total: r(depenseTexte + planches) };
+  return { texte: r(depenseTexte), planches: r(planches), musique: r(musique), voix: r(depenseVoix), total: r(depenseTexte + planches + musique + depenseVoix) };
 }
 
 /** Estimation montrée AVANT de lancer une étape (comme « ≈ 0,42 $ » dans la maquette). */
 export function coutEstime(etape: EtapeDirection): number {
-  return etape === "visuel" ? Math.round((3 * COUT_PLANCHE_ESTIME + 0.04) * 100) / 100 : 0.04;
+  if (etape === "visuel") return Math.round((3 * COUT_PLANCHE_ESTIME + 0.04) * 100) / 100;
+  if (etape === "musique") return Math.round((3 * COUT_EXTRAIT_ESTIME + 0.03) * 100) / 100;
+  return 0.04;
+}
+
+/** Ce qui est demandé au compositeur (Lyria). « Instrumental » explicite : sans lui, Lyria écrit et CHANTE des paroles (vécu le 27/11). */
+export function promptMusique(p: Pick<PisteMusique, "demande" | "ressenti">): string {
+  return `Morceau INSTRUMENTAL, sans aucune voix, sans paroles ni chant. ${p.demande}. ${p.ressenti}`.slice(0, 1200);
+}
+
+export const nomFichierMusique = (pisteId: string, quand = Date.now()) => `musique-${pisteId}-${quand.toString(36)}`.slice(0, 88);
+
+// ── Voix (lot 3) : les six voix Gemini de la maquette, et « Ma voix » (Mistral) ──
+
+/** Les six voix du casting de la maquette ; le timbre est celui que Google annonce. */
+export const VOIX_GEMINI = [
+  { id: "charon", nom: "Charon", genre: "homme", timbre: "Informatif" },
+  { id: "orus", nom: "Orus", genre: "homme", timbre: "Ferme" },
+  { id: "puck", nom: "Puck", genre: "homme", timbre: "Enjoué" },
+  { id: "kore", nom: "Kore", genre: "femme", timbre: "Ferme" },
+  { id: "aoede", nom: "Aoede", genre: "femme", timbre: "Aérien" },
+  { id: "leda", nom: "Leda", genre: "femme", timbre: "Juvénile" },
+] as const;
+export type IdVoix = (typeof VOIX_GEMINI)[number]["id"] | "ma-voix";
+export const MA_VOIX = "ma-voix";
+
+/** Les trois jeux de la maquette (« Comment la voix doit-elle jouer ? »), appliqués à la prise finale. */
+export const JEUX_VOIX = [
+  { id: "confie", nom: "Confiée à l'oreille", note: "Basse, proche, presque un secret.", reco: true },
+  { id: "conteur", nom: "Conteur posé", note: "Plus de distance, plus de rythme." },
+  { id: "lumineux", nom: "Plus jeune, plus lumineux", note: "Le souvenir raconté avec le sourire." },
+] as const;
+
+export const TEXTE_ESSAI_MAX = 300;
+
+export interface EtatVoix {
+  /** Le texte lu par toutes les voix (l'extrait), modifiable par l'auteur. */
+  texte: string;
+  /** Extraits générés : voix → fichier (et texte lu, pour savoir s'il est à jour). */
+  extraits: Partial<Record<IdVoix, { fichier: string; texte: string }>>;
+  ecartees: IdVoix[];
+  jeu?: string;
+}
+
+const ID_VOIX = new Set<string>([...VOIX_GEMINI.map((v) => v.id), MA_VOIX]);
+
+export function validerVoix(brut: unknown): EtatVoix | undefined {
+  if (!brut || typeof brut !== "object") return undefined;
+  const o = brut as Record<string, unknown>;
+  const extraits: EtatVoix["extraits"] = {};
+  if (o.extraits && typeof o.extraits === "object") {
+    for (const [k, v] of Object.entries(o.extraits as Record<string, unknown>)) {
+      const e = (v ?? {}) as Record<string, unknown>;
+      if (ID_VOIX.has(k) && typeof e.fichier === "string" && /^voix-[a-z0-9-]{1,80}$/.test(e.fichier)) {
+        extraits[k as IdVoix] = { fichier: e.fichier, texte: txt(e.texte, TEXTE_ESSAI_MAX) };
+      }
+    }
+  }
+  const ecartees = (Array.isArray(o.ecartees) ? o.ecartees : []).filter((x): x is IdVoix => typeof x === "string" && ID_VOIX.has(x));
+  const jeu = JEUX_VOIX.find((j) => j.id === o.jeu)?.id;
+  return { texte: txt(o.texte, TEXTE_ESSAI_MAX), extraits, ecartees: Array.from(new Set(ecartees)), ...(jeu ? { jeu } : {}) };
+}
+
+/** Le texte d'essai par défaut : tiré du projet (spécimen choisi, sinon la fiche). */
+export function texteEssaiParDefaut(specimen: Specimen | undefined, marque: string, projet: string): string {
+  if (specimen?.titre) return [specimen.titre, specimen.fin].filter(Boolean).join(" ").slice(0, TEXTE_ESSAI_MAX);
+  const qui = marque || projet;
+  // « l'histoire de Le Fournil » : un nom propre ne se décline pas, il ouvre la phrase.
+  return qui ? `${qui}. Voici notre histoire. Elle commence par un souvenir.`.slice(0, TEXTE_ESSAI_MAX) : "Voici notre histoire. Elle commence par un souvenir.";
+}
+
+/** Ce que dit la voix Gemini : la consigne de la maquette (français de France, voix basse et chaude), puis le texte. */
+export function promptVoixGemini(texte: string): string {
+  return `Dis en français de France, accent parisien neutre, d'une voix basse et chaude, comme une confidence, sans traîner : ${texte}`;
+}
+
+export const nomFichierVoix = (voix: string, quand = Date.now()) => `voix-${voix}-${quand.toString(36)}`.slice(0, 88);
+
+/** Les points de suspension font improviser Voxtral (vécu au casting : « et vlan ! ») : une virgule les remplace. */
+export function texteSansSuspension(t: string): string {
+  return t.replace(/\s*(?:…|\.{3,})\s*/g, ", ").replace(/,\s*([.!?])/g, "$1").replace(/,\s*$/, ".").replace(/\s+/g, " ").trim();
+}
+
+/** La case de la maquette : ce que l'auteur accepte en envoyant sa voix (gardé avec l'enregistrement). */
+export const ACCORD_MA_VOIX = "C'est ma voix, et j'autorise sa reproduction pour mes propres projets. Je pourrai la supprimer à tout moment.";
+
+/** Durée d'un WAV PCM (en-tête RIFF lu, bloc `data` cherché), ou null s'il n'en est pas un. */
+export function dureeWav(o: Uint8Array): number | null {
+  if (o.length < 44) return null;
+  const txt = (i: number) => String.fromCharCode(o[i], o[i + 1], o[i + 2], o[i + 3]);
+  if (txt(0) !== "RIFF" || txt(8) !== "WAVE") return null;
+  const d = new DataView(o.buffer, o.byteOffset, o.byteLength);
+  let octetsParSeconde = 0;
+  let i = 12;
+  while (i + 8 <= o.length) {
+    const id = txt(i);
+    const taille = d.getUint32(i + 4, true);
+    if (id === "fmt ") octetsParSeconde = d.getUint32(i + 16, true);
+    if (id === "data") return octetsParSeconde ? Math.min(taille, o.length - i - 8) / octetsParSeconde : null;
+    i += 8 + taille + (taille % 2);
+  }
+  return null;
 }
