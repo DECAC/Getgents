@@ -261,7 +261,7 @@ pistes par étape et une recommandation argumentée. Tout est réellement géné
 - La marque est NOMMÉE dans l'interface du gent (c'est son client), mais
   aucun logo n'est reproduit.
 
-## Reprise : voix Gemini TTS (27/11, NON fait — à faire dans une nouvelle session)
+## Reprise : voix Gemini TTS (27/11, NON fait — bloqué par les crédits AI Studio)
 
 Demande de l'éditeur : tester les voix Gemini TTS, **3 voix d'homme et 3 de
 femme**, et les ajouter au casting (étape « Voix ») de
@@ -299,3 +299,39 @@ femmes Kore, Aoede, Leda. Produire `essai-<voix>.mp3` et `voix-<voix>.mp3`
 comme pour les voix OpenAI, puis ajouter un groupe « Gemini » au casting
 (avec homme/femme indiqué). Contrôler la DURÉE de chaque phrase, pas
 seulement le texte (onyx a rendu 6 s de silence une fois).
+
+**Essai du 27/11 (2ᵉ session) — rien n'a été ajouté au casting.** Établi :
+- `GEMINI_API_KEY` marche avec `x-goog-api-key` ; `gemini-3.8-flash-tts`
+  rend du **WAV** (24 kHz mono), les modèles 3.1-preview et 2.5 du **PCM brut**
+  (`audio/L16`) — gérer les deux.
+- **`gemini-3.8-flash-tts` LIT LA CONSIGNE À VOIX HAUTE** : « Dis en français
+  de France, d'une voix basse… : » est prononcé avant la phrase (2,3 s sans
+  consigne, 8,7 s avec), de même un préfixe entre crochets
+  (« [voix basse, chaude, confiée] ») et les balises `<texte>`. La consigne
+  en anglais (« Say in a low… voice: ») rallonge pareil (8,4 s, probablement
+  lue). `systemInstruction` : non testé sur 3.8 (quota), REFUSÉ par
+  `gemini-3.8-flash-lite-tts` (« Developer instruction is not enabled »).
+  `gemini-3.1-flash-tts-preview` avec la consigne française NE l'a PAS lue
+  (4,2 s, seule la phrase entendue, débit lent) : c'est le modèle à reprendre,
+  ou 3.8 SANS aucune direction.
+- **Piège de contrôle** : une transcription Gemini du fichier ENTIER a rendu
+  la phrase seule alors que la consigne y était prononcée. Le contrôle fiable :
+  la DURÉE (une phrase de 7 mots ≈ 2-4 s) et la transcription d'un SEGMENT
+  découpé avant la phrase.
+- **Quotas** : `gemini-3.8-flash-tts` est en offre gratuite à **10 requêtes
+  par jour** (épuisé le 27/11), puis tous les modèles ont répondu « Your
+  prepayment credits are depleted » (TTS ET transcription). Avant de reprendre,
+  l'éditeur doit RECHARGER les crédits du projet sur aistudio.google.com
+  (Billing). Sans recharge, 6 voix × 9 phrases (54 appels, plus les reprises)
+  ne tiennent pas dans les quotas gratuits.
+- Plan pour économiser les appels : UN appel par voix sur le texte entier
+  (phrases séparées par des sauts de ligne), découpé ensuite aux silences
+  (`silencedetect`), chaque segment rogné, contrôlé (durée ≤ place disponible
+  jusqu'à l'instant suivant, moins 0,35 s ; silence interne ≤ 1,1 s ;
+  transcription du segment), puis posé aux instants fixes (`adelay`) sur une
+  piste de 66,4 s, 44,1 kHz mono 64 kb/s comme `voix-cedar.mp3` ; `essai-<voix>`
+  = phrases 1 et 2 séparées de 0,7 s (≈ 7 s). Les durées vont dans `DUREES`
+  de `publiciste/index.html` (l'animatique s'en sert). Reprendre une phrase
+  seule en cas d'échec de contrôle. Accélérer (`atempo`) au plus ×1,2 si une
+  prise déborde.
+
