@@ -418,3 +418,19 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   `mistralai/voxtral-small-24b-2507` (audio en ENTRÉE, texte en sortie :
   transcription, pas de synthèse). Pour un essai réel : ouvrir ces hôtes et
   fournir une clé Mistral, puis tester sur un enregistrement de l'auteur.
+- **Voxtral TTS VÉRIFIÉ dans la documentation Mistral (27/11)** : modèle
+  `voxtral-mini-tts-3-0`, `POST https://api.mistral.ai/v1/audio/speech`
+  (`Authorization: Bearer`), corps `{model, input, ref_audio (MP3/WAV en
+  base64, recomposition « zero-shot » sans entraînement, pour une requête),
+  response_format: "wav"}` → `audio_data` en base64. Voix gardée :
+  `POST /v1/audio/voices` (`name`, `sample_audio`, `languages: ["fr"]`,
+  conservation 30 j par défaut, 1 à 365) puis `voice_id`. 35 langues ; 4 voix
+  françaises toutes prêtes. Balises d'émotion et de rythme dans le texte ;
+  « style instructions » pas encore disponibles. La voix recomposée reprend
+  AUSSI le ton, le bruit de fond et le micro de l'enregistrement : enregistrer
+  dans le style voulu. Réseau ouvert le 27/11 (api.mistral.ai,
+  docs.mistral.ai, mistral.ai, environnement Default). Clé : variable
+  d'environnement `MISTRAL_API_KEY`, saisie par l'éditeur (pas de secret
+  réseau) ; une NOUVELLE session la lit. Essai à faire : les 4 voix
+  françaises dans le casting, puis « Ma voix » sur un enregistrement de
+  l'éditeur.
