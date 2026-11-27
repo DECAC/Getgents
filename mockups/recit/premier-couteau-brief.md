@@ -219,3 +219,44 @@ l'environnement Default).
   silencieux — `navigator.audioSession` posé à « playback »), écoute de la
   voix et de la musique, fluidité sur un téléphone d'entrée de gamme.
   Aperçu du lien : non fait (un artefact ne le règle pas).
+
+## Retours de l'éditeur sur le prototype, et étape « direction artistique » (27/11)
+
+Retours à chaud : images et transitions bonnes ; voix « limite » (accent
+québécois — un risque connu des voix françaises de synthèse) ; typo et
+couleurs « très Claude », il fallait partir de la charte du site ; couteau mal
+détouré, gravure grossière ; rien ne rappelle la marque. Proposition de
+l'éditeur, retenue : APRÈS l'entretien et AVANT toute production, faire
+choisir la direction (planches visuelles, musique décrite par ce qu'elle doit
+faire ressentir, voix, typo, couleurs) et valider un storyboard grossier.
+
+Maquette du futur gent « Le Publiciste » : `mockups/recit/publiciste/`,
+artefact privé https://claude.ai/artifact/4uz96sweiEHgrYvAPYTnmr. Huit étapes
+(brief, univers, typo, couleurs, musique, voix, storyboard, validation), trois
+pistes par étape et une recommandation argumentée. Tout est réellement généré
+(coût de l'étape : 1,47 $ ; cumul du projet : 4,74 $) :
+- **Charte relevée** sur lecadeaufrancais.fr : Montserrat (titres 800, texte),
+  bleu marine `#29377d`, bleu nuit `#192563`, rouge `#c54538`, gris
+  `#f6f6f6` ; logo manuscrit + avion en papier à trajectoire pointillée ;
+  polaroïds inclinés ; filet tricolore. Police script du logo « Liar Script »
+  — licence NON vérifiée.
+- **Univers** : 3 planches (Gemini 3 Pro Image) — « la marque telle quelle »,
+  « carnet d'atelier » (le prototype), « cahier d'écolier, encre bleue »
+  (RECOMMANDÉ : stylo-bille bleu marine sur Seyès, marge rouge, avion en
+  papier comme fil du temps).
+- **Typo** : spécimens vivants ; recommandé Montserrat + Playwrite FR Trad
+  (cursive scolaire française, Google Fonts).
+- **Musique** : 3 intentions (« le souvenir qui serre le cœur », « l'été qui
+  rit », « la fierté du geste »), extraits Lyria de 30 s, avec la traduction
+  en instruments montrée au commanditaire.
+- **Voix** : 8 voix gpt-audio (alloy, ash, ballad, cedar, echo, marin, onyx,
+  verse) sur le TEXTE ENTIER, consigne « français de France, ni québécois, ni
+  belge, ni Midi ». NON écoutées par l'agent : le tri est à l'oreille de
+  l'éditeur. Piège : onyx a une fois rendu 6 s de silence dans une phrase —
+  contrôler la durée, pas seulement la transcription.
+- **Storyboard** : 11 plans au feutre (gemini-3.1-flash-lite-image, ~0,035 $
+  le plan), temps, ce qu'on voit / entend, passage ; remarques par plan ;
+  ANIMATIQUE (croquis + voix choisie + extrait musical en boucle, Web Audio).
+  Un plan raté (hors sujet, puis lame ouverte vers l'enfant) a été refait.
+- La marque est NOMMÉE dans l'interface du gent (c'est son client), mais
+  aucun logo n'est reproduit.

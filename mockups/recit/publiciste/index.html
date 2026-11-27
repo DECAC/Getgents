@@ -1,0 +1,636 @@
+<title>Le Publiciste</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&family=Montserrat:ital,wght@0,400;0,500;0,700;0,800;1,500&family=Playwrite+FR+Trad:wght@300;400&family=Gochi+Hand&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&display=swap">
+<style>
+/* Interface d'un gent Getgents (jetons de styles/tokens.css : crème, corail, Sora). Chaque proposition, elle, porte sa propre direction.
+   Une colonne lisible ; les cartes de choix passent sur 3 colonnes au-delà de 900 px. Univers clair assumé : toutes les couleurs sont posées ici. */
+:root {
+  --ink: #2a1f19; --muted: #73665f; --faint: #a2958f;
+  --bg: #fbf3ed; --card: #fffdf9; --line: #eadbd3; --line-soft: #f3e9e3;
+  --corail: #e65d76; --corail-700: #c73758; --corail-tint: #ffdee2;
+  --succes: #57a45b; --succes-tint: #d4f1d4;
+  --r: 18px;
+  --f-ui: "Sora", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  /* charte relevée sur le site de la marque, 27/11 */
+  --marque-bleu: #29377d; --marque-bleu-nuit: #192563; --marque-rouge: #c54538; --marque-gris: #f6f6f6;
+  color-scheme: light;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--f-ui); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--corail); outline-offset: 2px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--card); }
+
+.barre {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--card) 92%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line);
+}
+.barre-in { max-width: 1080px; margin: 0 auto; padding-block: 10px 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.ident { display: flex; align-items: center; gap: 12px; }
+.avatar { width: 38px; height: 38px; border-radius: 12px; flex: none; display: grid; place-items: center; background: var(--ink); color: var(--card); font-weight: 700; font-size: 15px; letter-spacing: -.02em; }
+.ident b { display: block; font-size: 15px; line-height: 1.2; }
+.ident small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.3; }
+@media (max-width: 480px) { .cout-l { display: none; } }
+.ident .cout { margin-left: auto; flex: none; font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); text-align: right; }
+.etapes { display: flex; gap: 6px; overflow-x: auto; padding-block: 10px; scrollbar-width: none; margin: 0 -4px; padding-inline: 4px; }
+.etapes::-webkit-scrollbar { display: none; }
+.etape-b {
+  flex: none; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--card);
+  border-radius: 999px; padding: 6px 12px 6px 7px; font-size: 13px; color: var(--muted); white-space: nowrap;
+}
+.etape-b .n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11.5px; font-weight: 600; background: var(--line-soft); color: var(--muted); }
+.etape-b[aria-current="step"] { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+.etape-b[aria-current="step"] .n { background: var(--ink); color: var(--card); }
+.etape-b.fait .n { background: var(--succes); color: #fff; }
+
+main { max-width: 1080px; margin: 0 auto; padding-block: 22px 120px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.vue { display: grid; gap: 20px; }
+.bulle { display: grid; grid-template-columns: 38px 1fr; gap: 12px; align-items: start; max-width: 760px; }
+.bulle .avatar { width: 38px; height: 38px; }
+.bulle .txt { background: var(--card); border: 1px solid var(--line); border-radius: 4px var(--r) var(--r) var(--r); padding: 14px 16px; min-width: 0; }
+.bulle .txt p { margin: 0; }
+.bulle .txt p + p { margin-top: 8px; }
+.bulle .txt strong { font-weight: 600; }
+h2.titre { margin: 4px 0 0; font-size: clamp(22px, 5.2vw, 28px); line-height: 1.15; letter-spacing: -.02em; text-wrap: balance; }
+.sous { margin: 4px 0 0; color: var(--muted); max-width: 62ch; }
+
+.choix { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .choix.trois { grid-template-columns: repeat(3, 1fr); } .choix.deux-col { grid-template-columns: repeat(2, 1fr); } }
+.carte {
+  position: relative; display: grid; gap: 10px; align-content: start; text-align: left; min-width: 0;
+  background: var(--card); border: 1.5px solid var(--line); border-radius: var(--r); padding: 12px; transition: border-color .15s, box-shadow .15s;
+}
+.carte:hover { border-color: #d9c4b9; }
+.carte[aria-pressed="true"], .carte.choisie { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(42,31,25,.08); }
+.carte .badge-reco { position: absolute; top: 18px; left: 18px; z-index: 1; background: var(--corail); color: #fff; font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.carte .badge-choisi { position: absolute; top: 18px; right: 18px; z-index: 1; background: var(--ink); color: var(--card); font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; display: none; }
+.carte[aria-pressed="true"] .badge-choisi, .carte.choisie .badge-choisi { display: block; }
+.carte img.planche { width: 100%; aspect-ratio: 928 / 1152; object-fit: cover; border-radius: 10px; display: block; background: var(--line-soft); }
+.carte h3 { margin: 2px 4px 0; font-size: 17px; letter-spacing: -.01em; }
+.carte .desc { margin: 0 4px; color: #4d4139; font-size: 14px; }
+.pour-contre { margin: 0 4px 4px; display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.pour-contre span::before { font-family: var(--f-mono); margin-right: 6px; color: var(--ink); }
+.pour-contre .p::before { content: "+"; color: var(--succes); }
+.pour-contre .c::before { content: "−"; color: var(--corail-700); }
+.carte .action { margin: 0 4px 4px; justify-self: start; border: 1px solid var(--ink); background: transparent; border-radius: 999px; padding: 7px 14px; font-size: 13.5px; font-weight: 600; }
+.carte[aria-pressed="true"] .action, .carte.choisie .action { background: var(--ink); color: var(--card); }
+
+.autre { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: transparent; border: 1px dashed #d9c4b9; border-radius: var(--r); padding: 14px 16px; color: var(--muted); font-size: 14px; }
+.autre textarea { flex: 1 1 260px; min-height: 44px; border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 10px 12px; resize: vertical; font-size: 15px; }
+.bouton { border: 0; border-radius: 999px; background: var(--ink); color: var(--card); padding: 11px 18px; font-weight: 600; font-size: 14.5px; }
+.bouton.corail { background: var(--corail); }
+.bouton.leger { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.note { font-size: 12.5px; color: var(--muted); }
+.mono { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+
+/* Typographie : spécimens */
+.specimen { border-radius: 12px; padding: 18px 16px; display: grid; gap: 12px; min-height: 260px; align-content: start; }
+.specimen .etq { justify-self: start; padding: 6px 12px; border-radius: 3px; transform: rotate(-2deg); box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+.specimen .h { margin: 0; line-height: 1.08; letter-spacing: -.01em; text-wrap: balance; }
+.specimen .b { margin: 0; font-size: 13.5px; line-height: 1.5; }
+.specimen .dev { margin: 0; }
+.specimen .btn { justify-self: start; padding: 9px 16px; border-radius: 999px; font-size: 13px; }
+.spec-marque { background: var(--marque-gris); color: var(--marque-bleu); font-family: "Montserrat", sans-serif; }
+.spec-marque .etq { background: #fff; font-family: "Gochi Hand", "Segoe Print", cursive; font-size: 21px; color: var(--marque-bleu); }
+.spec-marque .h { font-weight: 800; font-size: 25px; color: #000; }
+.spec-marque .dev { font-family: "Gochi Hand", cursive; font-size: 22px; color: var(--marque-rouge); }
+.spec-marque .btn { background: var(--marque-bleu); color: #fff; font-weight: 700; }
+.spec-cahier { color: var(--marque-bleu); font-family: "Montserrat", sans-serif;
+  background-color: #fbfaf5;
+  background-image: linear-gradient(90deg, transparent 0 30px, rgba(197,69,56,.55) 30px 31px, transparent 31px),
+    linear-gradient(rgba(41,55,125,.32) 1px, transparent 1px), linear-gradient(rgba(120,150,210,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(120,150,210,.22) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 32px, 100% 8px, 32px 100%; padding-left: 44px; }
+.spec-cahier .etq { background: #fff; font-family: "Playwrite FR Trad", "Segoe Script", cursive; font-size: 15px; line-height: 1.9; color: var(--marque-bleu); }
+.spec-cahier .h { font-weight: 800; font-size: 24px; color: var(--marque-bleu-nuit); }
+.spec-cahier .dev { font-family: "Playwrite FR Trad", cursive; font-size: 16px; line-height: 2; color: var(--marque-bleu); }
+.spec-cahier .dev u { text-decoration-color: var(--marque-rouge); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+.spec-cahier .btn { background: var(--marque-bleu); color: #fff; font-weight: 700; }
+.spec-affiche { background: #efe6d6; color: #24201a; font-family: "Montserrat", sans-serif; }
+.spec-affiche .etq { background: #24201a; color: #efe6d6; font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 15px; letter-spacing: .04em; text-transform: uppercase; border-radius: 2px; }
+.spec-affiche .h { font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 29px; letter-spacing: -.03em; }
+.spec-affiche .dev { font-family: "Bricolage Grotesque", sans-serif; font-weight: 500; font-size: 18px; color: var(--marque-rouge); }
+.spec-affiche .btn { background: #24201a; color: #efe6d6; font-weight: 700; }
+
+/* Couleurs */
+.nuancier { display: grid; grid-template-columns: repeat(5, 1fr); border-radius: 12px; overflow: hidden; height: 64px; }
+.nuancier span { display: block; }
+.teintes { display: grid; gap: 3px; margin: 0 4px; }
+.teintes div { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.teintes code { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.mini { border-radius: 12px; padding: 18px; display: grid; gap: 10px; justify-items: start; }
+.mini .couv { width: 100%; height: 92px; border-radius: 6px; position: relative; overflow: hidden; }
+.mini .couv i { position: absolute; left: 14px; top: 22px; padding: 6px 10px; font-style: normal; font-size: 13px; transform: rotate(-2deg); border-radius: 2px; }
+.mini .filet { width: 100%; height: 4px; border-radius: 2px; }
+
+/* Lecteur audio */
+.lecteur { display: flex; align-items: center; gap: 12px; margin: 0 4px; }
+.play { width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--ink); color: var(--card); display: grid; place-items: center; flex: none; }
+.play svg { width: 18px; height: 18px; }
+.piste { flex: 1; height: 4px; background: var(--line-soft); border-radius: 2px; overflow: hidden; }
+.piste i { display: block; height: 100%; width: 0; background: var(--corail); }
+.duree { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); min-width: 34px; text-align: right; }
+.musique .ressenti { margin: 0 4px; font-size: 14px; color: #4d4139; }
+.musique .demande { margin: 0 4px; padding: 8px 10px; background: var(--line-soft); border-radius: 10px; font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+.forme-onde { height: 54px; margin: 0 4px; border-radius: 10px; }
+
+.voix-grille { display: grid; gap: 10px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .voix-grille { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 980px) { .voix-grille { grid-template-columns: repeat(4, 1fr); } }
+.voix { padding: 12px; gap: 8px; }
+.voix.ecartee { opacity: .45; }
+.voix .tete { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0 4px; }
+.voix .tete b { font-size: 16px; }
+.voix .rangee { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 4px; }
+.mini-b { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 6px 11px; font-size: 12.5px; }
+.mini-b[aria-pressed="true"] { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.mini-b.non[aria-pressed="true"] { background: var(--corail-tint); color: var(--corail-700); border-color: var(--corail-tint); }
+.jeux { display: flex; gap: 8px; flex-wrap: wrap; }
+.jeux .mini-b { padding: 8px 14px; font-size: 13.5px; }
+
+/* Storyboard */
+.sb-tete { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.plans { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 700px) { .plans { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1000px) { .plans { grid-template-columns: repeat(3, 1fr); } }
+.plan { display: grid; grid-template-columns: 116px 1fr; gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 10px; min-width: 0; }
+.plan img { width: 116px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 8px; display: block; background: #fff; border: 1px solid var(--line-soft); }
+.plan .corps { min-width: 0; display: grid; gap: 6px; align-content: start; font-size: 13px; }
+.plan .num { display: flex; gap: 8px; align-items: baseline; }
+.plan .num b { font-size: 14px; }
+.plan .temps { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); }
+.plan .vo { font-style: italic; color: var(--ink); }
+.plan .lab { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); display: block; }
+.plan .trans { font-size: 12px; color: var(--muted); }
+.plan textarea { width: 100%; min-height: 58px; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 7px 9px; font-size: 14px; resize: vertical; }
+.plan .com { justify-self: start; border: 0; background: none; padding: 0; color: var(--corail-700); font-size: 12.5px; font-weight: 600; }
+
+/* Animatique */
+#animatique { position: fixed; inset: 0; z-index: 30; background: #0f0c0a; display: grid; place-items: center; }
+#animatique canvas { width: 100%; height: 100%; display: block; }
+.an-haut { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #f3ece6; font-size: 12.5px; }
+.an-haut .mono { color: #cfc4bc; }
+.an-haut button { border: 0; border-radius: 999px; padding: 8px 14px; background: rgba(255,255,255,.14); color: #fff; font-size: 13px; }
+.an-st { position: absolute; left: 0; right: 0; bottom: calc(50px + env(safe-area-inset-bottom, 0px)); text-align: center; padding-inline: 24px; color: #fff; font-size: clamp(16px, 4.4vw, 20px); text-shadow: 0 1px 3px #000, 0 0 14px rgba(0,0,0,.7); text-wrap: balance; min-height: 1.4em; }
+.an-fil { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.12); }
+.an-fil i { display: block; height: 100%; width: 0; background: var(--corail); }
+
+/* Récapitulatif */
+.recap { display: grid; gap: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; max-width: 760px; }
+.recap .l { display: grid; grid-template-columns: 112px 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--line-soft); }
+.recap .l:first-child { border-top: 0; }
+.recap .l .k { font-size: 12.5px; color: var(--muted); }
+.recap .l .v { font-weight: 600; min-width: 0; }
+.recap .l .v small { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; }
+.recap .l .v.vide { color: var(--corail-700); font-weight: 500; }
+.recap .l button { border: 0; background: none; color: var(--corail-700); font-size: 13px; font-weight: 600; padding: 4px; }
+.couts { display: grid; gap: 6px; max-width: 760px; background: var(--line-soft); border-radius: var(--r); padding: 14px 16px; font-size: 14px; }
+.couts div { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+.couts div span:last-child { white-space: nowrap; }
+.couts div span:first-child { min-width: 0; }
+.couts .tot { border-top: 1px solid var(--line); padding-top: 6px; font-weight: 600; }
+.valide { max-width: 760px; background: var(--succes-tint); border-radius: var(--r); padding: 14px 16px; font-size: 14.5px; }
+
+.pied { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: color-mix(in srgb, var(--card) 94%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line); }
+.pied-in { max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.pied .etat { font-size: 13px; color: var(--muted); min-width: 0; }
+
+.brief { max-width: 760px; display: grid; gap: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.brief div { display: grid; grid-template-columns: 112px 1fr; gap: 12px; padding: 11px 14px; border-top: 1px solid var(--line-soft); font-size: 14px; }
+.brief div:first-child { border-top: 0; }
+.brief dt, .brief .k { color: var(--muted); font-size: 12.5px; }
+.brief blockquote { margin: 0; font-style: italic; }
+@media (max-width: 420px) { .brief div, .recap .l { grid-template-columns: 1fr; gap: 2px; } .recap .l button { justify-self: start; padding-left: 0; } }
+@media (prefers-reduced-motion: reduce) { * { transition-duration: .01s !important; } }
+</style>
+
+<header class="barre">
+  <div class="barre-in">
+    <div class="ident">
+      <span class="avatar" aria-hidden="true">P</span>
+      <span><b>Le Publiciste</b><small>Projet « Le premier couteau » · Le Cadeau Français</small></span>
+      <span class="cout"><span class="cout-l">Direction artistique<br></span><span id="cout-haut">1,47 $</span></span>
+    </div>
+    <nav class="etapes" id="etapes" aria-label="Étapes"></nav>
+  </div>
+</header>
+
+<main id="main"></main>
+
+<footer class="pied">
+  <div class="pied-in">
+    <span class="etat" id="etat"></span>
+    <span style="display:flex;gap:8px"><button class="bouton leger" id="prec" type="button">Retour</button><button class="bouton" id="suiv" type="button">Suivant</button></span>
+  </div>
+</footer>
+
+<div id="animatique" hidden>
+  <canvas id="an-toile" aria-hidden="true"></canvas>
+  <div class="an-haut"><span><b>Animatique</b> <span class="mono" id="an-info"></span></span><span style="display:flex;gap:8px"><button type="button" id="an-pause">Pause</button><button type="button" id="an-fermer">Fermer</button></span></div>
+  <p class="an-st" id="an-st"></p>
+  <div class="an-fil"><i id="an-fil"></i></div>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const h = (tag, attrs = {}, ...enfants) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v; else if (k === "html") e.innerHTML = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else if (v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of enfants.flat()) if (c != null) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+};
+const ICONE = {
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>',
+};
+
+/* ── Données du projet ───────────────────────────────────── */
+const DIRECTIONS = [
+  { id: "marque", nom: "La marque, telle qu'elle est", img: "planche-marque",
+    desc: "Votre univers du site : photos nettes en polaroïds, bleu marine et rouge, l'avion en papier, le ruban tricolore.",
+    pour: "On reconnaît Le Cadeau Français au premier coup d'œil.", contre: "C'est l'univers d'un catalogue : il montre des objets, il ne raconte pas un souvenir." },
+  { id: "atelier", nom: "Carnet d'atelier", img: "planche-atelier",
+    desc: "Le premier prototype : crayon et aquarelle ambre, puis photos dorées d'artisan.",
+    pour: "Chaleureux, très « fait main ».", contre: "Vous l'avez dit : il ne ressemble pas à votre marque, et ses couleurs font penser à d'autres." },
+  { id: "cahier", nom: "Cahier d'écolier, encre bleue", img: "planche-cahier", reco: true,
+    desc: "Le souvenir dessiné au stylo-bille bleu sur un cahier à grands carreaux, avec le rouge de la marge ; l'avion en papier trace le fil du temps, puis les vraies images prennent le relais.",
+    pour: "Votre bleu et votre rouge, et une enfance que tout Français reconnaît.", contre: "Le cahier doit rester un décor : trop d'écolier, et on parle à des enfants." },
+];
+const TYPOS = [
+  { id: "marque", nom: "Celle du site", cls: "spec-marque", detail: "Montserrat · manuscrit façon feutre", note: "La police script du logo (« Liar Script ») n'est pas libre de droits, à vérifier : ici une écriture proche, en attendant." },
+  { id: "cahier", nom: "Montserrat et écriture d'écolier", cls: "spec-cahier", reco: true, detail: "Montserrat · Playwrite FR Trad (cursive scolaire française)", note: "Votre police de titres reste la même : on ajoute seulement l'écriture de l'enfant pour l'étiquette et la phrase de fin." },
+  { id: "affiche", nom: "Affiche d'atelier", cls: "spec-affiche", detail: "Bricolage Grotesque · Montserrat", note: "Plus graphique et plus contemporaine ; elle s'éloigne de votre marque." },
+];
+const PALETTES = [
+  { id: "tricolore", nom: "Tricolore de la marque", couleurs: [["Bleu marine", "#29377d"], ["Bleu nuit", "#192563"], ["Rouge", "#c54538"], ["Gris clair", "#f6f6f6"], ["Blanc", "#ffffff"]], fond: "#f6f6f6", encre: "#29377d", accent: "#c54538", couv: "#29377d", etq: "#ffffff" },
+  { id: "encre", nom: "Encre bleue et kraft", reco: true, couleurs: [["Encre", "#29377d"], ["Crayon rouge", "#c54538"], ["Kraft", "#d9c6a5"], ["Papier", "#f8f6ef"], ["Carreaux", "#9db0d6"]], fond: "#f8f6ef", encre: "#29377d", accent: "#c54538", couv: "#d9c6a5", etq: "#f8f6ef" },
+  { id: "ete", nom: "Été du Perche", couleurs: [["Ambre", "#b8741f"], ["Vert sauge", "#8aa36b"], ["Papier", "#faf8ea"], ["Graphite", "#2d2a24"], ["Miel", "#e7c27d"]], fond: "#faf8ea", encre: "#2d2a24", accent: "#b8741f", couv: "#9c7a4e", etq: "#faf8ea", note: "Celle du premier prototype." },
+];
+const MUSIQUES = [
+  { id: "souvenir", nom: "Le souvenir qui serre le cœur", reco: true, ressenti: "Une tendresse un peu nostalgique : on revoit quelque chose de perdu, et on sourit quand même.",
+    demande: "Guitare acoustique en arpèges, violoncelle chaleureux · ré majeur · 66 bpm · enregistrement intime, sans batterie ni synthétiseur" },
+  { id: "ete", nom: "L'été qui rit", ressenti: "La malice, le plein air, l'enfant qui construit sa cabane en riant.",
+    demande: "Guitare acoustique enjouée, contrebasse pizzicato, sifflement léger · 96 bpm · joué en direct" },
+  { id: "geste", nom: "La fierté du geste", ressenti: "Le respect pour les mains qui prennent leur temps. Plus solennel, plus adulte.",
+    demande: "Piano droit feutré, petit quatuor à cordes qui entre doucement · 72 bpm · lente montée" },
+];
+const VOIX = [
+  ["alloy", "Voix 1"], ["ash", "Voix 2"], ["ballad", "Voix 3"], ["cedar", "Voix 4"], ["echo", "Voix 5"], ["marin", "Voix 6"], ["onyx", "Voix 7"], ["verse", "Voix 8"],
+];
+const DUREES = { alloy: [3.92, 3.11, 3.67, 4.43, 2.58, 4.38, 3.04, 3.31, 3.3], ash: [4.3, 4.08, 3.24, 6.85, 3.27, 5.41, 4.07, 2.95, 3.81], ballad: [4.93, 2.63, 3.08, 5, 2.68, 5.53, 4.12, 2.27, 4.38], cedar: [3.94, 2.43, 2.98, 4.88, 2.49, 4.5, 3.15, 2.84, 3.36], echo: [4.36, 2.74, 3.77, 5.09, 2.64, 5.49, 3.13, 2.38, 3.46], marin: [5.62, 2.97, 3.18, 4.93, 2.51, 4.41, 3.43, 3.87, 4.26], onyx: [4.83, 3.03, 2.9, 4.56, 2.65, 4.41, 4.26, 2.63, 2.75], verse: [5.25, 2.9, 3.11, 6.1, 3.01, 5.21, 3.17, 2.87, 3.83] };
+const JEUX = [
+  { id: "confie", nom: "Confiée à l'oreille", reco: true, note: "Basse, proche, presque un secret." },
+  { id: "conteur", nom: "Conteur posé", note: "Plus de distance, plus de rythme." },
+  { id: "lumineux", nom: "Plus jeune, plus lumineux", note: "Le souvenir raconté avec le sourire." },
+];
+const LIGNES = [
+  [1.8, "J'avais huit ans. C'était l'été, dans l'atelier."], [7.8, "Mon oncle m'a tendu mon premier couteau."],
+  [18.5, "Avec, j'ai construit une cabane."], [24.0, "Et une petite voiture en bois, qui roulait… à peu près."],
+  [34.5, "Il y a des objets qu'on n'oublie pas."], [38.5, "Ils sont faits par des mains patientes, ici, en France."],
+  [48.3, "Cette année, mon entreprise m'en a offert un."], [56.5, "Je crois que je sais à qui je vais le donner."], [62.0, "Offrez un cadeau qui a une histoire."],
+];
+const PLANS = [
+  { t: [0, 7.4], titre: "L'atelier, un été", voit: "Plan large : le soleil par la fenêtre, l'établi, la sciure qui flotte.", entend: "Été dehors, grillons. La guitare commence.", vo: 0, trans: "S'ouvre depuis le carnet ; le dessin se trace." },
+  { t: [7.4, 15.2], titre: "Le premier couteau", voit: "Gros plan : la main de l'oncle tend le couteau fermé à la main de l'enfant.", entend: "", vo: 1, trans: "Le dessin se colore." },
+  { t: [15.2, 19], titre: "La branche", voit: "L'enfant, de dos, taille une branche à la lisière du bois.", entend: "La lame sur l'écorce. Silence de la voix.", trans: "Tourne la page." },
+  { t: [19, 23.6], titre: "La cabane", voit: "La cabane de branches se construit trait par trait contre le chêne.", entend: "", vo: 2, trans: "Se dessine sous nos yeux." },
+  { t: [23.6, 30.8], titre: "La petite voiture", voit: "La voiture en bois roule, un peu de travers, sur le plancher.", entend: "Les roues sur les lattes.", vo: 3, trans: "L'avion en papier traverse : le temps passe." },
+  { t: [30.8, 38], titre: "Les mains grandissent", voit: "Des mains d'adulte affûtent une lame. Le dessin devient image réelle.", entend: "Le violoncelle entre. L'affûtage.", vo: 4, trans: "Du dessin à la photo, au pinceau." },
+  { t: [38, 46], titre: "Le geste de l'artisan", voit: "Le bois poli, puis la gravure du logo de l'entreprise sur la lame.", entend: "", vo: 5, trans: "Fondus courts." },
+  { t: [46, 54], titre: "L'écrin", voit: "Un soir de décembre, un salarié ouvre l'écrin aux couleurs de son entreprise.", entend: "La musique se retire. Le déclic de l'écrin.", vo: 6, trans: "Passage par le noir." },
+  { t: [54, 60.6], titre: "La transmission", voit: "Il pose le couteau fermé dans la main de son enfant : le geste du plan 2.", entend: "La musique revient.", vo: 7, trans: "Fondu." },
+  { t: [60.6, 67], titre: "Le retour au dessin", voit: "L'image redevient dessin d'écolier. La phrase s'écrit.", entend: "", vo: 8, trans: "Au pinceau, la photo redevient cahier." },
+  { t: [67, 72], titre: "Votre coffret", voit: "La page à son nom : l'écrin gravé, trois coffrets, « Composer mon coffret ».", entend: "La musique s'éteint.", trans: "La page se tourne." },
+];
+const ETAPES = [
+  { id: "brief", nom: "Le brief" }, { id: "visuel", nom: "Direction visuelle" }, { id: "typo", nom: "Typographie" }, { id: "couleurs", nom: "Couleurs" },
+  { id: "musique", nom: "Musique" }, { id: "voix", nom: "Voix" }, { id: "storyboard", nom: "Storyboard" }, { id: "recap", nom: "Valider" },
+];
+const COUTS_DA = [["Casting de 8 voix sur le texte entier", 0.55], ["3 extraits de musique", 0.12], ["3 planches d'ambiance", 0.42], ["Storyboard, 11 plans", 0.38]];
+const DEVIS_PROD = [["Images finales (≈ 16 dessins et photos, avec retouches)", 2.6], ["Voix retenue, prises supplémentaires", 0.15], ["Musique en morceau complet (2 essais)", 0.16], ["Sons réels (banque ou génération)", 0]];
+
+/* ── État (gardé sur cet appareil) ───────────────────────── */
+const CLE = "publiciste:premier-couteau";
+let S = { etape: "brief", visuel: null, typo: null, couleurs: null, musique: null, voix: null, jeu: null, ecartees: [], retenues: [], commentaires: {}, valide: false, remarques: {} };
+try { Object.assign(S, JSON.parse(localStorage.getItem(CLE) || "{}")); } catch (e) {}
+const garder = () => { try { localStorage.setItem(CLE, JSON.stringify(S)); } catch (e) {} };
+if (location.hash && ETAPES.some((e) => e.id === location.hash.slice(1))) S.etape = location.hash.slice(1);
+
+/* ── Lecteur audio partagé ───────────────────────────────── */
+const audio = new Audio(); audio.preload = "none";
+let boutonActif = null, barreActive = null, dureeActive = null;
+const fmt = (s) => isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "–:––";
+function lecteur(src, libelle) {
+  const b = h("button", { class: "play", type: "button", "aria-label": "Écouter " + libelle, html: ICONE.play });
+  const barre = h("i"), d = h("span", { class: "duree" }, "▶");
+  b.addEventListener("click", () => {
+    if (boutonActif === b && !audio.paused) { audio.pause(); return; }
+    if (boutonActif !== b) {
+      if (boutonActif) { boutonActif.innerHTML = ICONE.play; barreActive.style.width = "0"; }
+      audio.src = src; boutonActif = b; barreActive = barre; dureeActive = d;
+    }
+    arreterAnimatique(); audio.play().catch(() => { d.textContent = "erreur"; });
+  });
+  return h("div", { class: "lecteur" }, b, h("span", { class: "piste" }, barre), d);
+}
+audio.addEventListener("play", () => { if (boutonActif) boutonActif.innerHTML = ICONE.pause; });
+audio.addEventListener("pause", () => { if (boutonActif) boutonActif.innerHTML = ICONE.play; });
+audio.addEventListener("ended", () => { if (boutonActif) { boutonActif.innerHTML = ICONE.play; barreActive.style.width = "100%"; } });
+audio.addEventListener("timeupdate", () => { if (barreActive && audio.duration) { barreActive.style.width = (audio.currentTime / audio.duration * 100) + "%"; dureeActive.textContent = fmt(audio.duration - audio.currentTime); } });
+
+/* ── Vues ─────────────────────────────────────────────────── */
+const bulle = (...p) => h("div", { class: "bulle" }, h("span", { class: "avatar", "aria-hidden": "true" }, "P"), h("div", { class: "txt" }, ...p.map((x) => typeof x === "string" ? h("p", { html: x }) : x)));
+const entete = (n, titre, sous) => h("div", {}, h("span", { class: "mono" }, `Étape ${n} sur 7`), h("h2", { class: "titre" }, titre), sous ? h("p", { class: "sous" }, sous) : null);
+function carteChoix(cle, item, contenu) {
+  const choisi = S[cle] === item.id;
+  const c = h("div", { class: "carte" + (choisi ? " choisie" : ""), role: "group", "aria-label": item.nom },
+    item.reco ? h("span", { class: "badge-reco" }, "Ma recommandation") : null,
+    h("span", { class: "badge-choisi" }, "Votre choix"),
+    ...contenu,
+    h("button", { class: "action", type: "button", "aria-pressed": String(choisi), onclick: () => { S[cle] = choisi ? null : item.id; garder(); rendre(); } }, choisi ? "Choisie" : "Choisir"));
+  return c;
+}
+function autreDemande(cle, invite, prix) {
+  const ta = h("textarea", { id: "autre-" + cle, rows: "1", placeholder: invite });
+  ta.value = S.remarques[cle] || "";
+  ta.addEventListener("input", () => { S.remarques[cle] = ta.value; garder(); });
+  const msg = h("span", { class: "note", hidden: true });
+  return h("div", { class: "autre" }, ta, h("button", { class: "bouton leger", type: "button", onclick: () => { msg.hidden = false; msg.textContent = `Dans le gent, je relancerais trois nouvelles propositions à partir de vos mots (≈ ${prix}). Ici, votre remarque est gardée pour la production.`; } }, "Autre proposition"), msg);
+}
+
+const VUES = {
+  brief() {
+    return [
+      entete(0, "On choisit la direction avant de produire", "Sept décisions, une dizaine de minutes. Rien n'est produit tant que le storyboard n'est pas validé."),
+      bulle("Alfred, merci pour l'entretien. Voici ce que j'en ai retenu. Avant de fabriquer l'histoire, je vous propose de choisir <strong>ensemble</strong> son allure : les images, les lettres, les couleurs, la musique et la voix.",
+        "À chaque étape, je vous montre trois pistes et je vous dis laquelle je retiendrais, et pourquoi. Si aucune ne vous parle, dites-le avec vos mots : j'en refais."),
+      h("dl", { class: "brief" },
+        h("div", {}, h("dt", {}, "Pour qui"), h("dd", { style: "margin:0" }, "L'élu de CSE ou le RH qui vient de remplir votre formulaire, avant le devis.")),
+        h("div", {}, h("dt", {}, "Ce qu'il doit ressentir"), h("dd", { style: "margin:0" }, "Retrouver l'enfant de la première cabane, et vouloir transmettre ce souvenir.")),
+        h("div", {}, h("dt", {}, "Ce qu'il doit faire"), h("dd", { style: "margin:0" }, "« Composer mon coffret » : le devis part de ses choix.")),
+        h("div", {}, h("dt", {}, "Format"), h("dd", { style: "margin:0" }, "Une histoire de 60 s sur téléphone, puis une page à son nom.")),
+        h("div", {}, h("dt", {}, "Le texte"), h("dd", { style: "margin:0" }, h("blockquote", {}, "J'avais huit ans. C'était l'été, dans l'atelier. Mon oncle m'a tendu mon premier couteau… Offrez un cadeau qui a une histoire."))),
+        h("div", {}, h("dt", {}, "À ne pas dire"), h("dd", { style: "margin:0" }, "Rien qui sonne « gadget » ; pas de prix dans l'histoire.")),
+      ),
+    ];
+  },
+  visuel() {
+    return [
+      entete(1, "Direction visuelle", "Trois planches d'ambiance. On juge un univers, pas une image finale."),
+      bulle("J'ai relevé la charte de votre site : <strong>bleu marine, rouge, blanc, Montserrat, l'avion en papier</strong>. Elle dit très bien « fabriqué en France », mais c'est la voix d'un catalogue.",
+        "Je vous recommande la troisième : elle garde vos couleurs et parle d'enfance sans quitter votre marque. Le cahier à carreaux, tout le monde l'a eu sous les doigts."),
+      h("div", { class: "choix trois" }, DIRECTIONS.map((d) => carteChoix("visuel", d, [
+        h("img", { class: "planche", src: `medias/${d.img}.webp`, alt: "Planche d'ambiance : " + d.nom, loading: "lazy" }),
+        h("h3", {}, d.nom), h("p", { class: "desc" }, d.desc),
+        h("div", { class: "pour-contre" }, h("span", { class: "p" }, d.pour), h("span", { class: "c" }, d.contre)),
+      ]))),
+      autreDemande("visuel", "Une autre idée d'univers ? (ex. : plus de photos, moins de dessin)", "0,42 $"),
+    ];
+  },
+  typo() {
+    return [
+      entete(2, "Typographie", "Les lettres de l'étiquette, de la page finale et de la phrase de fin."),
+      bulle("Je garde <strong>Montserrat</strong>, votre police de titres : elle relie l'histoire à votre site. Ce qui change, c'est l'écriture à la main. Je propose une vraie cursive d'écolier français pour l'étiquette et la phrase de fin."),
+      h("div", { class: "choix trois" }, TYPOS.map((t) => carteChoix("typo", t, [
+        h("div", { class: "specimen " + t.cls },
+          h("span", { class: "etq" }, "Pour Sophie, Ateliers Morvan"),
+          h("p", { class: "h" }, "Le couteau qu'on garde, puis qu'on transmet."),
+          h("p", { class: "b" }, "Fabriqué en France, gravé au nom de votre entreprise, offert dans un écrin à vos couleurs."),
+          h("p", { class: "dev", html: t.id === "cahier" ? "Offrez un cadeau qui a <u>une histoire</u>." : "Offrez un cadeau qui a une histoire." }),
+          h("span", { class: "btn" }, "Composer mon coffret")),
+        h("h3", {}, t.nom), h("p", { class: "mono", style: "margin:0 4px" }, t.detail), h("p", { class: "desc" }, t.note),
+      ]))),
+    ];
+  },
+  couleurs() {
+    return [
+      entete(3, "Couleurs", "La palette de l'histoire et de la page à son nom."),
+      bulle("Vos deux couleurs restent les maîtresses : le bleu devient l'encre du stylo, le rouge celui de la marge et du crayon. Le kraft apporte la chaleur que le gris clair du site n'a pas."),
+      h("div", { class: "choix trois" }, PALETTES.map((p) => carteChoix("couleurs", p, [
+        h("div", { class: "nuancier", "aria-hidden": "true" }, p.couleurs.map(([, c]) => h("span", { style: `background:${c}` }))),
+        h("div", { class: "mini", style: `background:${p.fond};color:${p.encre}` },
+          h("div", { class: "couv", style: `background:${p.couv}` }, h("i", { style: `background:${p.etq};color:${p.encre}` }, "Pour Sophie, Ateliers Morvan")),
+          h("div", { class: "filet", style: `background:linear-gradient(90deg, ${p.encre} 0 33%, ${p.fond === "#ffffff" ? "#eee" : "#fff"} 33% 66%, ${p.accent} 66%)` }),
+          h("span", { style: `font-family:Montserrat,sans-serif;font-weight:800;font-size:17px` }, "Un cadeau qui a une histoire."),
+          h("span", { style: `background:${p.encre};color:${p.fond};padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:700;font-family:Montserrat,sans-serif` }, "Composer mon coffret")),
+        h("h3", {}, p.nom),
+        h("div", { class: "teintes" }, p.couleurs.map(([n, c]) => h("div", {}, h("span", {}, n), h("code", {}, c)))),
+        p.note ? h("p", { class: "desc" }, p.note) : null,
+      ]))),
+    ];
+  },
+  musique() {
+    return [
+      entete(4, "Musique", "Choisissez avec vos oreilles : trois extraits de 30 secondes."),
+      bulle("Vous me dites ce que la musique doit faire ressentir ; je le traduis en instruments et en tempo pour le compositeur. Écoutez, puis choisissez.",
+        "Ma recommandation : <strong>le souvenir</strong>. Pour le plan de la cabane, un passage plus joueur de « L'été qui rit » pourrait s'y glisser, à décider au storyboard."),
+      h("div", { class: "choix trois" }, MUSIQUES.map((m) => carteChoix("musique", m, [
+        h("h3", { style: "margin-top:34px" }, m.nom),
+        h("p", { class: "ressenti" }, m.ressenti),
+        lecteur(`medias/mus-${m.id}.mp3`, m.nom),
+        h("p", { class: "demande" }, "Ce que j'ai demandé : " + m.demande),
+      ]))),
+      autreDemande("musique", "Décrivez ce que la musique doit vous faire ressentir…", "0,12 $"),
+    ];
+  },
+  voix() {
+    const grille = h("div", { class: "voix-grille" }, VOIX.map(([id, nom]) => {
+      const ecartee = S.ecartees.includes(id), choisie = S.voix === id;
+      const basc = (liste, val) => { const i = S[liste].indexOf(id); if (val && i < 0) S[liste].push(id); if (!val && i >= 0) S[liste].splice(i, 1); };
+      return h("div", { class: "carte voix" + (ecartee ? " ecartee" : "") + (choisie ? " choisie" : ""), role: "group", "aria-label": nom },
+        h("div", { class: "tete" }, h("b", {}, nom), h("span", { class: "mono" }, choisie ? "votre choix" : "")),
+        lecteur(`medias/essai-${id}.mp3`, nom + ", deux phrases"),
+        h("div", { class: "rangee" },
+          h("button", { class: "mini-b", type: "button", onclick: (e) => lireTexteEntier(id, e.currentTarget) }, "Texte entier"),
+          h("button", { class: "mini-b non", type: "button", "aria-pressed": String(ecartee), onclick: () => { basc("ecartees", !ecartee); if (!ecartee && S.voix === id) S.voix = null; garder(); rendre(); } }, ecartee ? "Écartée" : "Accent à écarter"),
+          h("button", { class: "mini-b", type: "button", "aria-pressed": String(choisie), onclick: () => { S.voix = choisie ? null : id; basc("ecartees", false); garder(); rendre(); } }, choisie ? "Choisie" : "Choisir")));
+    }));
+    return [
+      entete(5, "Voix", "Huit voix lisent le même texte. Écartez, puis choisissez."),
+      bulle("Toutes ont reçu la même consigne : <strong>français de France</strong>, pas d'accent québécois, belge ou du Midi. Mais je n'entends pas les accents moi-même : c'est votre oreille qui tranche.",
+        "Commencez par écarter celles qui ne sonnent pas d'ici. Pour comparer les meilleures, « Texte entier » fait entendre l'histoire complète, avec ses silences."),
+      grille,
+      h("div", {}, h("h3", { style: "margin:4px 0 8px;font-size:16px" }, "Comment la voix doit-elle jouer ?"),
+        h("div", { class: "jeux" }, JEUX.map((j) => h("button", { class: "mini-b", type: "button", "aria-pressed": String(S.jeu === j.id), title: j.note, onclick: () => { S.jeu = S.jeu === j.id ? null : j.id; garder(); rendre(); } }, j.nom + (j.reco ? " · recommandé" : "")))),
+        h("p", { class: "note", style: "margin:8px 0 0" }, "Ce réglage s'applique à la prise finale : il n'est pas encore entendu ici.")),
+    ];
+  },
+  storyboard() {
+    const plans = h("div", { class: "plans" }, PLANS.map((p, i) => {
+      const id = "com-" + i, ta = h("textarea", { id, placeholder: "Votre remarque sur ce plan…", hidden: !S.commentaires[i] });
+      ta.value = S.commentaires[i] || ""; ta.addEventListener("input", () => { S.commentaires[i] = ta.value; garder(); majPied(); });
+      return h("article", { class: "plan" },
+        h("img", { src: `medias/p${String(i + 1).padStart(2, "0")}.webp`, alt: "Croquis du plan " + (i + 1), loading: "lazy" }),
+        h("div", { class: "corps" },
+          h("div", { class: "num" }, h("b", {}, `${i + 1}. ${p.titre}`)),
+          h("span", { class: "temps" }, `${fmt(p.t[0])} → ${fmt(p.t[1])} · ${Math.round(p.t[1] - p.t[0])} s`),
+          h("span", {}, h("span", { class: "lab" }, "On voit"), p.voit),
+          (p.vo != null || p.entend) ? h("span", {}, h("span", { class: "lab" }, "On entend"), p.vo != null ? h("span", { class: "vo" }, "« " + LIGNES[p.vo][1] + " » ") : null, p.entend) : null,
+          h("span", { class: "trans" }, "↳ " + p.trans),
+          h("button", { class: "com", type: "button", onclick: () => { ta.hidden = false; ta.focus(); } }, S.commentaires[i] ? "Modifier la remarque" : "Ajouter une remarque"),
+          ta));
+    }));
+    const voixAnim = S.voix || "cedar", musAnim = S.musique || "souvenir";
+    return [
+      entete(6, "Storyboard", "Les enchaînements, plan par plan. Les dessins sont volontairement grossiers : on juge l'histoire, pas l'image."),
+      bulle("Voici l'histoire découpée en onze plans, avec le temps de chacun, ce qu'on voit, ce qu'on entend et la façon de passer au suivant.",
+        "L'<strong>animatique</strong> fait défiler ces croquis avec la voix et la musique que vous avez choisies : c'est le film à l'état d'esquisse. Commentez les plans qui vous gênent, avant que je produise quoi que ce soit."),
+      h("div", { class: "sb-tete" },
+        h("button", { class: "bouton corail", type: "button", onclick: lancerAnimatique }, "▶ Lire l'animatique (72 s)"),
+        h("span", { class: "note" }, `Avec ${S.voix ? nomVoix(S.voix) : "la voix 4, en attendant votre choix"} et « ${MUSIQUES.find((m) => m.id === musAnim).nom} »${S.musique ? "" : " (ma recommandation)"}.`)),
+      plans,
+    ];
+  },
+  recap() {
+    const ligne = (k, etape, val, detail) => h("div", { class: "l" }, h("span", { class: "k" }, k),
+      h("span", { class: "v" + (val ? "" : " vide") }, val || "À choisir", detail ? h("small", {}, detail) : null),
+      h("button", { type: "button", onclick: () => aller(etape) }, val ? "Modifier" : "Choisir"));
+    const nbCom = Object.values(S.commentaires).filter((x) => x && x.trim()).length;
+    const manque = ["visuel", "typo", "couleurs", "musique", "voix"].filter((k) => !S[k]);
+    const totalDA = COUTS_DA.reduce((a, [, c]) => a + c, 0), totalProd = DEVIS_PROD.reduce((a, [, c]) => a + c, 0);
+    const eur = (x) => x.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " $";
+    return [
+      entete(7, "Valider la direction", "Vérifiez vos choix. La production ne démarre qu'après votre accord."),
+      bulle(manque.length ? `Il reste ${manque.length === 1 ? "un choix" : manque.length + " choix"} à faire avant de lancer la production.` : "Tout est choisi. Si vous validez, je produis les images finales, la voix et la musique complètes sur cette base, puis je vous montre le film."),
+      h("div", { class: "recap" },
+        ligne("Univers", "visuel", nomDe(DIRECTIONS, S.visuel)),
+        ligne("Lettres", "typo", nomDe(TYPOS, S.typo), S.typo ? TYPOS.find((t) => t.id === S.typo).detail : null),
+        ligne("Couleurs", "couleurs", nomDe(PALETTES, S.couleurs)),
+        ligne("Musique", "musique", nomDe(MUSIQUES, S.musique)),
+        ligne("Voix", "voix", S.voix ? nomVoix(S.voix) : null, S.jeu ? "Jeu : " + JEUX.find((j) => j.id === S.jeu).nom : "Jeu : à préciser"),
+        ligne("Storyboard", "storyboard", nbCom ? `${nbCom} remarque${nbCom > 1 ? "s" : ""}` : "Aucune remarque", "11 plans · 72 s")),
+      h("div", { class: "couts" },
+        h("b", { style: "font-size:13px" }, "Ce que coûte la direction artistique (déjà engagé)"),
+        ...COUTS_DA.map(([n, c]) => h("div", {}, h("span", {}, n), h("span", {}, eur(c)))),
+        h("div", { class: "tot" }, h("span", {}, "Total"), h("span", {}, eur(totalDA))),
+        h("b", { style: "font-size:13px;margin-top:10px" }, "Estimation de la production"),
+        ...DEVIS_PROD.map(([n, c]) => h("div", {}, h("span", {}, n), h("span", {}, c ? "≈ " + eur(c) : "à décider"))),
+        h("div", { class: "tot" }, h("span", {}, "Total estimé"), h("span", {}, "≈ " + eur(totalProd)))),
+      S.valide ? h("div", { class: "valide" }, h("b", {}, "Direction validée. "), "Dans le gent, la production démarrerait ici et vous recevriez le film à revoir. Ce prototype s'arrête là.") :
+        h("div", { style: "display:flex;gap:10px;flex-wrap:wrap" },
+          h("button", { class: "bouton corail", type: "button", disabled: manque.length > 0, style: manque.length ? "opacity:.45" : "", onclick: () => { S.valide = true; garder(); rendre(); } }, "Valider et lancer la production"),
+          h("button", { class: "bouton leger", type: "button", onclick: () => { S = { etape: "brief", visuel: null, typo: null, couleurs: null, musique: null, voix: null, jeu: null, ecartees: [], retenues: [], commentaires: {}, valide: false, remarques: {} }; garder(); rendre(); } }, "Tout recommencer")),
+      h("p", { class: "note", style: "max-width:760px" }, "Prototype. Les choix restent sur cet appareil. Planches, storyboard, voix et musiques sont de vraies générations ; les coûts sont ceux mesurés sur OpenRouter. La production n'est pas branchée."),
+    ];
+  },
+};
+const nomDe = (liste, id) => (liste.find((x) => x.id === id) || {}).nom || null;
+const nomVoix = (id) => (VOIX.find(([v]) => v === id) || [, id])[1];
+
+/* ── Navigation ──────────────────────────────────────────── */
+const fait = (id) => ({ visuel: !!S.visuel, typo: !!S.typo, couleurs: !!S.couleurs, musique: !!S.musique, voix: !!S.voix, storyboard: S.etape === "recap" || S.valide, recap: S.valide, brief: S.etape !== "brief" })[id];
+function aller(id) { S.etape = id; garder(); try { history.replaceState(null, "", "#" + id); } catch (e) {} rendre(); window.scrollTo(0, 0); }
+function rendre() {
+  const nav = $("#etapes"); nav.textContent = "";
+  ETAPES.forEach((e, i) => nav.append(h("button", { class: "etape-b" + (fait(e.id) ? " fait" : ""), type: "button", "aria-current": S.etape === e.id ? "step" : false, onclick: () => aller(e.id) },
+    h("span", { class: "n" }, fait(e.id) && S.etape !== e.id ? "✓" : String(i)), e.nom)));
+  const cur = nav.querySelector('[aria-current="step"]'); if (cur) cur.scrollIntoView({ block: "nearest", inline: "center" });
+  const main = $("#main"); main.textContent = "";
+  main.append(h("section", { class: "vue", "aria-live": "polite" }, ...VUES[S.etape]()));
+  majPied();
+}
+function majPied() {
+  const i = ETAPES.findIndex((e) => e.id === S.etape);
+  $("#prec").hidden = i === 0; $("#suiv").hidden = i === ETAPES.length - 1;
+  $("#suiv").textContent = i === 0 ? "Commencer" : "Suivant";
+  const msg = { visuel: S.visuel && "Univers : " + nomDe(DIRECTIONS, S.visuel), typo: S.typo && "Lettres : " + nomDe(TYPOS, S.typo), couleurs: S.couleurs && "Couleurs : " + nomDe(PALETTES, S.couleurs), musique: S.musique && "Musique : " + nomDe(MUSIQUES, S.musique), voix: S.voix && "Voix : " + nomVoix(S.voix) }[S.etape];
+  $("#etat").textContent = msg || (S.etape === "brief" ? "Environ 10 minutes" : S.etape === "recap" ? "" : S.etape === "storyboard" ? "11 plans · 72 s" : "Pas encore choisi");
+}
+$("#prec").addEventListener("click", () => { const i = ETAPES.findIndex((e) => e.id === S.etape); if (i > 0) aller(ETAPES[i - 1].id); });
+$("#suiv").addEventListener("click", () => { const i = ETAPES.findIndex((e) => e.id === S.etape); if (i < ETAPES.length - 1) aller(ETAPES[i + 1].id); });
+addEventListener("hashchange", () => { const id = location.hash.slice(1); if (ETAPES.some((e) => e.id === id) && id !== S.etape) { S.etape = id; rendre(); } });
+
+/* ── Texte entier d'une voix : piste de 67 s ─────────────── */
+function lireTexteEntier(id, bouton) {
+  arreterAnimatique();
+  if (boutonActif) { boutonActif.innerHTML = ICONE.play; barreActive.style.width = "0"; }
+  const encours = audio.dataset.entier === id && !audio.paused;
+  document.querySelectorAll(".voix .mini-b:first-child").forEach((b) => b.textContent = "Texte entier");
+  if (encours) { audio.pause(); audio.dataset.entier = ""; return; }
+  boutonActif = null; audio.src = `medias/voix-${id}.mp3`; audio.dataset.entier = id; audio.play().catch(() => {});
+  bouton.textContent = "Arrêter";
+}
+
+/* ── Animatique : croquis + voix + musique ───────────────── */
+const AC = window.AudioContext || window.webkitAudioContext;
+let actx = null, anim = null;
+const cacheBuf = {}, cacheImg = {};
+async function tampon(url) {
+  if (cacheBuf[url]) return cacheBuf[url];
+  const ab = await fetch(url).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); });
+  return cacheBuf[url] = await new Promise((ok, ko) => { const p = actx.decodeAudioData(ab, ok, ko); if (p && p.then) p.then(ok, ko); });
+}
+function image(src) { return cacheImg[src] || (cacheImg[src] = new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; })); }
+async function lancerAnimatique() {
+  audio.pause();
+  const voix = S.voix || "cedar", mus = S.musique || "souvenir";
+  const ov = $("#animatique"); ov.hidden = false; $("#an-st").textContent = "Chargement…"; $("#an-info").textContent = `${nomVoix(voix)} · ${nomDe(MUSIQUES, mus)}`;
+  const toile = $("#an-toile"), g = toile.getContext("2d");
+  const dpr = Math.min(2, devicePixelRatio || 1); toile.width = toile.clientWidth * dpr; toile.height = toile.clientHeight * dpr;
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+  if (!actx && AC) actx = new AC();
+  const imgs = await Promise.all(PLANS.map((_, i) => image(`medias/p${String(i + 1).padStart(2, "0")}.webp`)));
+  let bv = null, bm = null;
+  if (actx) { try { await actx.resume(); [bv, bm] = await Promise.all([tampon(`medias/voix-${voix}.mp3`), tampon(`medias/mus-${mus}.mp3`)]); } catch (e) { console.warn(e); } }
+  if ($("#animatique").hidden) return;
+  const T0 = actx && bv ? actx.currentTime + 0.1 : 0, debut = performance.now() + 100;
+  const sources = [];
+  if (actx && bv) {
+    const sortie = actx.createGain(); sortie.connect(actx.destination);
+    const v = actx.createBufferSource(); v.buffer = bv; v.connect(sortie); v.start(T0); sources.push(v);
+    if (bm) { // la musique boucle sous la voix et s'efface quand elle parle
+      const gm = actx.createGain(); gm.connect(sortie); gm.gain.setValueAtTime(0, T0); gm.gain.linearRampToValueAtTime(0.5, T0 + 1);
+      const d = DUREES[voix] || DUREES.cedar;
+      LIGNES.forEach(([t], k) => { gm.gain.setTargetAtTime(0.28, T0 + t - 0.2, 0.12); gm.gain.setTargetAtTime(0.5, T0 + t + d[k] + 0.2, 0.3); });
+      gm.gain.setTargetAtTime(0.0001, T0 + 70, 0.6);
+      const m = actx.createBufferSource(); m.buffer = bm; m.loop = true; m.connect(gm); m.start(T0); m.stop(T0 + 73); sources.push(m);
+    }
+    anim = { sources, sortie, T0, pause: false };
+  } else anim = { sources, T0: 0, pause: false };
+  anim.debut = debut;
+  const temps = () => anim.sortie ? actx.currentTime - anim.T0 : (performance.now() - anim.debut) / 1000;
+  const dessiner = (src, alpha, zoom) => {
+    if (!src) return; const W = toile.width, H = toile.height, s = Math.min(W / src.width, H / src.height) * 0.94 * zoom;
+    g.globalAlpha = alpha; g.drawImage(src, (W - src.width * s) / 2, (H - src.height * s) / 2, src.width * s, src.height * s); g.globalAlpha = 1;
+  };
+  const boucle = () => {
+    if (!anim) return;
+    const t = temps();
+    g.fillStyle = "#0f0c0a"; g.fillRect(0, 0, toile.width, toile.height);
+    const i = Math.max(0, PLANS.findIndex((p) => t >= p.t[0] && t < p.t[1]));
+    const p = PLANS[i], k = (t - p.t[0]) / (p.t[1] - p.t[0]);
+    if (i > 0 && t - p.t[0] < 0.5) dessiner(imgs[i - 1], 1, 1.04);
+    dessiner(imgs[i], i === 0 ? 1 : Math.min(1, (t - p.t[0]) / 0.5), 1 + 0.04 * k);
+    const l = LIGNES.findIndex(([d], n) => t >= d && t < d + (DUREES[S.voix || "cedar"] || DUREES.cedar)[n] + 0.5);
+    $("#an-st").textContent = l >= 0 ? LIGNES[l][1] : `${i + 1}. ${p.titre}`;
+    $("#an-fil").style.width = Math.min(100, t / 72 * 100) + "%";
+    if (t >= 72.5) return arreterAnimatique();
+    anim.raf = requestAnimationFrame(boucle);
+  };
+  boucle();
+}
+function arreterAnimatique() {
+  if (!anim) return; cancelAnimationFrame(anim.raf);
+  for (const s of anim.sources) { try { s.stop(); } catch (e) {} }
+  if (anim.sortie) try { anim.sortie.disconnect(); } catch (e) {}
+  anim = null; $("#animatique").hidden = true; $("#an-pause").textContent = "Pause";
+  if (actx && actx.state === "suspended") actx.resume().catch(() => {});
+}
+$("#an-fermer").addEventListener("click", arreterAnimatique);
+$("#an-pause").addEventListener("click", () => {
+  if (!anim || !actx) return;
+  if (actx.state === "running") { actx.suspend(); $("#an-pause").textContent = "Reprendre"; } else { actx.resume(); $("#an-pause").textContent = "Pause"; }
+});
+addEventListener("keydown", (e) => { if (e.key === "Escape" && anim) arreterAnimatique(); });
+
+rendre();
+})();
+</script>
