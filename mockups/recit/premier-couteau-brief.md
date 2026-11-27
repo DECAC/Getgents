@@ -260,3 +260,42 @@ pistes par étape et une recommandation argumentée. Tout est réellement géné
   Un plan raté (hors sujet, puis lame ouverte vers l'enfant) a été refait.
 - La marque est NOMMÉE dans l'interface du gent (c'est son client), mais
   aucun logo n'est reproduit.
+
+## Reprise : voix Gemini TTS (27/11, NON fait — à faire dans une nouvelle session)
+
+Demande de l'éditeur : tester les voix Gemini TTS, **3 voix d'homme et 3 de
+femme**, et les ajouter au casting (étape « Voix ») de
+`mockups/recit/publiciste/` (artefact https://claude.ai/artifact/4uz96sweiEHgrYvAPYTnmr,
+republier par le même `file_path` pour garder l'adresse).
+
+Ce qui a été établi :
+- La clé AI Studio de l'éditeur est valide (65 modèles listés). Modèles TTS
+  vus : `gemini-3.8-flash-tts`, `gemini-3.8-flash-lite-tts`,
+  `gemini-3.1-flash-tts-preview`, `gemini-2.5-flash-preview-tts`,
+  `gemini-2.5-pro-preview-tts` (ce dernier : 429 « quota », sans doute offre
+  gratuite).
+- **Le Bearer ne marche pas** : l'API native exige `x-goog-api-key` (401 avec
+  Bearer) ; l'interface compatible OpenAI (`/v1beta/openai/chat/completions`)
+  accepte le Bearer mais JETTE l'audio (200 sans son, ou « Unhandled generated
+  data mime type: audio/l16 ») et n'a pas `/audio/speech` (404). Le formulaire
+  de secret ne sait enregistrer que du Bearer.
+- **Repli choisi par l'éditeur** : variable d'environnement `GEMINI_API_KEY`
+  (saisie par lui ; lisible par les commandes des sessions de l'environnement
+  Default). Le secret réseau Bearer de `generativelanguage.googleapis.com`
+  doit être SUPPRIMÉ, sinon le proxy écrase l'en-tête.
+
+À faire : vérifier `GEMINI_API_KEY` (sans jamais l'afficher), appeler
+`POST https://generativelanguage.googleapis.com/v1beta/models/<modèle>:generateContent`
+avec l'en-tête `x-goog-api-key: $GEMINI_API_KEY`,
+`generationConfig.responseModalities=["AUDIO"]`,
+`speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName`. L'audio revient en
+PCM 16 bits 24 kHz mono (base64 dans `inlineData`). Une phrase par appel,
+mêmes instants que les pistes existantes (1,8 / 7,8 / 18,5 / 24 / 34,5 /
+38,5 / 48,3 / 56,5 / 62 s), consigne « français de France, ni québécois, ni
+belge, ni Midi ; voix basse, chaude, confiée » mise dans le texte (le TTS
+Gemini se dirige en langage naturel dans le prompt). Voix proposées d'après
+les descriptions de Google (NON écoutées) : hommes Charon, Orus, Puck ;
+femmes Kore, Aoede, Leda. Produire `essai-<voix>.mp3` et `voix-<voix>.mp3`
+comme pour les voix OpenAI, puis ajouter un groupe « Gemini » au casting
+(avec homme/femme indiqué). Contrôler la DURÉE de chaque phrase, pas
+seulement le texte (onyx a rendu 6 s de silence une fois).
