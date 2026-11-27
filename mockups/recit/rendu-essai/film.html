@@ -1,0 +1,142 @@
+<!doctype html><meta charset="utf-8"><title>Essai rendu</title>
+<body style="margin:0;background:#000">
+<canvas id="c"></canvas>
+<script type="module">
+// Essai de rendu MP4 (27/11) : un film de 72 s écrit comme une fonction du temps, dessiner(t),
+// rendu de trois façons. A : image par image, exportée vers ffmpeg (serveur). B : MediaRecorder en temps réel.
+// C : WebCodecs image par image dans le navigateur + mp4-muxer.
+import { Muxer, ArrayBufferTarget } from "./node_modules/mp4-muxer/build/mp4-muxer.mjs" /* npm install mp4-muxer@5.2.1 ; medias = lien vers ../publiciste/medias */;
+const DUREE = 72;
+const PLANS = [[0, 7.4], [7.4, 15.2], [15.2, 19], [19, 23.6], [23.6, 30.8], [30.8, 38], [38, 46], [46, 54], [54, 60.6], [60.6, 67], [67, 72]];
+const LIGNES = [[1.8, "J'avais huit ans. C'était l'été, dans l'atelier."], [7.8, "Mon oncle m'a tendu mon premier couteau."],
+  [18.5, "Avec, j'ai construit une cabane."], [24.0, "Et une petite voiture en bois, qui roulait… à peu près."],
+  [34.5, "Il y a des objets qu'on n'oublie pas."], [38.5, "Ils sont faits par des mains patientes, ici, en France."],
+  [48.3, "Cette année, mon entreprise m'en a offert un."], [56.5, "Je crois que je sais à qui je vais le donner."], [62.0, "Offrez un cadeau qui a une histoire."]];
+const DUREES = [3.61, 2.73, 2.41, 3.92, 2.14, 4.41, 3.07, 2.42, 3.02]; // Charon
+const c = document.getElementById("c"), g = c.getContext("2d");
+const imgs = await Promise.all(PLANS.map((_, i) => fetch(`medias/p${String(i + 1).padStart(2, "0")}.webp`).then((r) => r.blob()).then(createImageBitmap)));
+const fonds = imgs.map((im) => { // fond flou précalculé (le flou par image coûte cher)
+  const o = new OffscreenCanvas(108, 192), x = o.getContext("2d"); x.filter = "blur(6px) brightness(.55)"; x.drawImage(im, -10, -10, 128, 212); return o; });
+
+function image(im, fond, alpha, zoom, W, H) {
+  g.globalAlpha = alpha;
+  const sc = Math.max(W / fond.width, H / fond.height); // fond : couvre
+  g.drawImage(fond, (W - fond.width * sc) / 2, (H - fond.height * sc) / 2, fond.width * sc, fond.height * sc);
+  const s = Math.min(W / im.width, H / im.height) * zoom; // croquis : contenu entier, léger travelling
+  g.drawImage(im, (W - im.width * s) / 2, (H - im.height * s) / 2 - H * 0.01 * zoom, im.width * s, im.height * s);
+  g.globalAlpha = 1;
+}
+function soustitre(texte, W, H) {
+  const taille = Math.round(Math.min(W, H) * 0.045);
+  g.font = `600 ${taille}px "DejaVu Sans", sans-serif`; g.textAlign = "center"; g.textBaseline = "alphabetic";
+  const mots = texte.split(" "), lignes = [], max = W * 0.84; let l = "";
+  for (const m of mots) { const e = l ? l + " " + m : m; if (g.measureText(e).width > max && l) { lignes.push(l); l = m; } else l = e; }
+  lignes.push(l);
+  const y0 = H * 0.86 - (lignes.length - 1) * taille * 1.25;
+  lignes.forEach((li, k) => { g.lineWidth = taille * 0.16; g.strokeStyle = "rgba(0,0,0,.75)"; g.lineJoin = "round"; g.strokeText(li, W / 2, y0 + k * taille * 1.25); g.fillStyle = "#fff"; g.fillText(li, W / 2, y0 + k * taille * 1.25); });
+}
+function dessiner(t, W, H) {
+  g.fillStyle = "#0f0c0a"; g.fillRect(0, 0, W, H);
+  const i = Math.max(0, PLANS.findIndex(([a, b]) => t >= a && t < b)), [a, b] = PLANS[i], k = (t - a) / (b - a);
+  if (i > 0 && t - a < 0.6) image(imgs[i - 1], fonds[i - 1], 1, 1.05, W, H);
+  image(imgs[i], fonds[i], i === 0 ? Math.min(1, t / 0.8) : Math.min(1, (t - a) / 0.6), 1 + 0.05 * k, W, H);
+  const l = LIGNES.findIndex(([d], n) => t >= d && t < d + DUREES[n] + 0.5);
+  if (l >= 0) soustitre(LIGNES[l][1], W, H);
+  g.fillStyle = "rgba(230,93,118,.9)"; g.fillRect(0, H - Math.max(4, H * 0.004), W * t / DUREE, Math.max(4, H * 0.004)); // repère de temps
+}
+window.preparer = (W, H) => { c.width = W; c.height = H; };
+window.imageJpeg = (t, W, H, q) => { dessiner(t, W, H); return c.toDataURL("image/jpeg", q); };
+
+// Son : voix + musique, la musique baisse sous la voix (mêmes règles que l'animatique). Le même pour A, B, C.
+async function decoder(ctx, url) { return ctx.decodeAudioData(await (await fetch(url)).arrayBuffer()); }
+function brancher(ctx, voix, mus, dest, t0) {
+  const v = ctx.createBufferSource(); v.buffer = voix; v.connect(dest); v.start(t0);
+  const gm = ctx.createGain(); gm.connect(dest); gm.gain.setValueAtTime(0, t0); gm.gain.linearRampToValueAtTime(0.5, t0 + 1);
+  LIGNES.forEach(([t], n) => { gm.gain.setTargetAtTime(0.28, t0 + t - 0.2, 0.12); gm.gain.setTargetAtTime(0.5, t0 + t + DUREES[n] + 0.2, 0.3); });
+  gm.gain.setTargetAtTime(0.0001, t0 + 70, 0.6);
+  const m = ctx.createBufferSource(); m.buffer = mus; m.loop = true; m.connect(gm); m.start(t0); m.stop(t0 + DUREE);
+}
+async function mixage() {
+  const oc = new OfflineAudioContext(2, 48000 * DUREE, 48000);
+  const [v, m] = await Promise.all([decoder(oc, "medias/voix-charon.mp3"), decoder(oc, "medias/mus-souvenir.mp3")]);
+  brancher(oc, v, m, oc.destination, 0); return oc.startRendering();
+}
+function telecharger(blob, nom) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nom; document.body.append(a); a.click(); }
+window.sonWav = async () => { // pour A : le mixage en WAV 16 bits, téléchargé
+  const b = await mixage(), n = b.length, buf = new ArrayBuffer(44 + n * 4), d = new DataView(buf);
+  const ecr = (o, s) => [...s].forEach((ch, k) => d.setUint8(o + k, ch.charCodeAt(0)));
+  ecr(0, "RIFF"); d.setUint32(4, 36 + n * 4, true); ecr(8, "WAVEfmt "); d.setUint32(16, 16, true); d.setUint16(20, 1, true); d.setUint16(22, 2, true);
+  d.setUint32(24, 48000, true); d.setUint32(28, 48000 * 4, true); d.setUint16(32, 4, true); d.setUint16(34, 16, true); ecr(36, "data"); d.setUint32(40, n * 4, true);
+  const L = b.getChannelData(0), R = b.getChannelData(1);
+  for (let i = 0; i < n; i++) { d.setInt16(44 + i * 4, Math.max(-1, Math.min(1, L[i])) * 32767, true); d.setInt16(46 + i * 4, Math.max(-1, Math.min(1, R[i])) * 32767, true); }
+  telecharger(new Blob([buf], { type: "audio/wav" }), "son.wav");
+};
+
+// B : temps réel, comme l'habillage du prompteur.
+window.tempsReel = async (W, H, debit) => {
+  window.preparer(W, H);
+  const ctx = new AudioContext({ sampleRate: 48000 }); await ctx.resume();
+  const [v, m] = await Promise.all([decoder(ctx, "medias/voix-charon.mp3"), decoder(ctx, "medias/mus-souvenir.mp3")]);
+  const dest = ctx.createMediaStreamDestination();
+  const flux = new MediaStream([...c.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]);
+  const types = ["video/mp4;codecs=avc1.640028,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"];
+  const type = types.find((x) => MediaRecorder.isTypeSupported(x));
+  const rec = new MediaRecorder(flux, { mimeType: type, videoBitsPerSecond: debit, audioBitsPerSecond: 160000 }), morceaux = [];
+  rec.ondataavailable = (e) => morceaux.push(e.data);
+  const t0 = ctx.currentTime + 0.15; brancher(ctx, v, m, dest, t0);
+  let images = 0, retards = 0, avant = performance.now();
+  rec.start(1000);
+  await new Promise((fin) => {
+    const boucle = () => {
+      const t = ctx.currentTime - t0, mtn = performance.now(); if (mtn - avant > 50) retards++; avant = mtn;
+      if (t >= DUREE) return fin();
+      dessiner(Math.max(0, t), W, H); images++; requestAnimationFrame(boucle);
+    }; boucle();
+  });
+  await new Promise((ok) => { rec.onstop = ok; rec.stop(); });
+  telecharger(new Blob(morceaux, { type }), "b.bin");
+  return { type, images, retards };
+};
+
+// C : WebCodecs, image par image, plus vite que le temps réel, puis mise en boîte MP4 dans la page.
+window.webCodecs = async (W, H, fps, debit) => {
+  window.preparer(W, H);
+  const vc = { codec: "avc1.640028", width: W, height: H, bitrate: debit, framerate: fps, avc: { format: "avc" } };
+  const okV = await VideoEncoder.isConfigSupported(vc);
+  if (!okV.supported) return { erreur: "H.264 non pris en charge par VideoEncoder" };
+  let audio = null;
+  for (const codec of ["mp4a.40.2", "opus"]) {
+    const ac = { codec, sampleRate: 48000, numberOfChannels: 2, bitrate: 160000 };
+    if ((await AudioEncoder.isConfigSupported(ac)).supported) { audio = ac; break; }
+  }
+  const muxer = new Muxer({ target: new ArrayBufferTarget(), fastStart: "in-memory",
+    video: { codec: "avc", width: W, height: H, frameRate: fps },
+    audio: audio ? { codec: audio.codec === "opus" ? "opus" : "aac", sampleRate: 48000, numberOfChannels: 2 } : undefined });
+  const venc = new VideoEncoder({ output: (ch, meta) => muxer.addVideoChunk(ch, meta), error: (e) => { throw e; } });
+  venc.configure(vc);
+  const n = Math.round(DUREE * fps), debut = performance.now();
+  for (let i = 0; i < n; i++) {
+    dessiner(i / fps, W, H);
+    const f = new VideoFrame(c, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
+    venc.encode(f, { keyFrame: i % (fps * 2) === 0 }); f.close();
+    if (venc.encodeQueueSize > 8) await new Promise((ok) => venc.addEventListener("dequeue", ok, { once: true }));
+  }
+  await venc.flush(); const tVideo = performance.now() - debut;
+  if (audio) {
+    const b = await mixage(), aenc = new AudioEncoder({ output: (ch, meta) => muxer.addAudioChunk(ch, meta), error: (e) => { throw e; } });
+    aenc.configure(audio);
+    const pas = 4800;
+    for (let o = 0; o < b.length; o += pas) {
+      const k = Math.min(pas, b.length - o), data = new Float32Array(k * 2);
+      data.set(b.getChannelData(0).subarray(o, o + k), 0); data.set(b.getChannelData(1).subarray(o, o + k), k);
+      const ad = new AudioData({ format: "f32-planar", sampleRate: 48000, numberOfFrames: k, numberOfChannels: 2, timestamp: Math.round(o * 1e6 / 48000), data });
+      aenc.encode(ad); ad.close();
+    }
+    await aenc.flush();
+  }
+  muxer.finalize();
+  telecharger(new Blob([muxer.target.buffer], { type: "video/mp4" }), "c.mp4");
+  return { tVideo: Math.round(tVideo), audio: audio ? audio.codec : "aucun", total: Math.round(performance.now() - debut) };
+};
+window.pret = true;
+</script>

@@ -484,3 +484,25 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   dans l'espace temporaire de l'agent et `.gitignore` (`*recomposee*`,
   `*mavoix*`) : JAMAIS dans le dépôt. NON écoutée par l'agent. Dans le
   produit : limiter l'enregistrement à 30 s, ou couper dans une pause.
+- **Essai du rendu MP4 (27/11 ; `mockups/recit/rendu-essai/`)** : un film de
+  72 s (11 croquis, mouvements, fondus, sous-titres, voix + musique) écrit
+  comme UNE fonction `dessiner(t)`, rendu de trois façons, 30 i/s, H.264.
+  Machine de l'agent : 4 cœurs, sans carte graphique.
+  | Méthode | 9:16 | 1:1 | 16:9 | 9:16 sur 1 cœur |
+  |---|---|---|---|---|
+  | A serveur (Chromium → JPEG → ffmpeg x264 CRF 18) | 87 s | – | – | 243 s |
+  | B navigateur temps réel (MediaRecorder) | 72,5 s | (72 s) | (72 s) | – |
+  | C navigateur image par image (WebCodecs + mp4-muxer) | 37 s | 18 s | 28 s | 62 s |
+  Qualité A et C ÉQUIVALENTES (SSIM 0,99), images identiques à l'œil ; B
+  idem à l'œil. Pièges : B annonçait `video/mp4;avc1` (isTypeSupported) mais
+  a écrit du VP9 dans le MP4 (Chromium Linux), et perd des images (27,97 i/s
+  au lieu de 30) ; C dans ce Chromium n'a PAS d'encodeur AAC → son Opus dans
+  le MP4, que des réseaux peuvent refuser. Poids : A 29 Mo (CRF 18), C 70 Mo
+  à 8 Mb/s (débit trop haut : ~4-5 Mb/s suffit). Trois formats ≈ 90-150 Mo,
+  au-dessus des 100 Mo par page de Pages. A sur Vercel : 243 s par format
+  sur 1 cœur, sans le démarrage de Chromium, contre 300 s de plafond — trop
+  juste, et 3 appels pour 3 formats. Les croquis (432×768) sont flous une
+  fois agrandis : c'est la source, pas le rendu. RECOMMANDATION : C, avec
+  vérification de l'AAC sur les vrais navigateurs (page « Test d'encodage
+  vidéo », https://claude.ai/artifact/K5oz6LqiV8A1GLdDyhLAZ9) ; A gardé en
+  secours hors Vercel si un navigateur ne sait pas.

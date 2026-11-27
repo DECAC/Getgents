@@ -1,0 +1,137 @@
+<title>Test d'encodage vidéo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Une colonne de mesure : une question, un bouton, un relevé lisible et copiable. */
+:root {
+  --fond: #f5f3ef; --carte: #ffffff; --encre: #1f1d1a; --doux: #6b655d; --ligne: #e3ddd4;
+  --accent: #c73758; --ok: #2f7d3b; --ko: #b23a2a; --attente: #8a6d1d;
+  --f-texte: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --fond: #171513; --carte: #211e1b; --encre: #f1ece5; --doux: #a59d93; --ligne: #3a3530; --accent: #ef7d95; --ok: #7cc489; --ko: #f08a7b; --attente: #d9b65c; color-scheme: dark; } }
+:root[data-theme="dark"] { --fond: #171513; --carte: #211e1b; --encre: #f1ece5; --doux: #a59d93; --ligne: #3a3530; --accent: #ef7d95; --ok: #7cc489; --ko: #f08a7b; --attente: #d9b65c; color-scheme: dark; }
+body { background: var(--fond); color: var(--encre); font-family: var(--f-texte); font-size: 15px; line-height: 1.55; }
+main { max-width: 680px; margin: 0 auto; padding-block: 32px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 20px; }
+h1 { margin: 0; font-size: 26px; letter-spacing: -.02em; text-wrap: balance; }
+p { margin: 0; max-width: 62ch; }
+.doux { color: var(--doux); font-size: 13.5px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+button { font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 11px 18px; background: var(--accent); color: #fff; cursor: pointer; }
+button.second { background: var(--carte); color: var(--encre); border: 1px solid var(--ligne); }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible { outline: 2px solid var(--encre); outline-offset: 2px; }
+.releve { background: var(--carte); border: 1px solid var(--ligne); border-radius: 12px; overflow: hidden; }
+.l { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 14px; border-top: 1px solid var(--ligne); align-items: baseline; }
+.l:first-child { border-top: 0; }
+.l .k { font-weight: 600; font-size: 14px; }
+.l .d { grid-column: 1 / -1; color: var(--doux); font-size: 12.5px; }
+.v { font-family: var(--f-mono); font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+.v.ok { color: var(--ok); } .v.ko { color: var(--ko); } .v.attente { color: var(--attente); }
+video { width: 100%; max-width: 240px; border-radius: 10px; background: #000; }
+.ua { font-family: var(--f-mono); font-size: 11.5px; color: var(--doux); word-break: break-all; }
+</style>
+
+<main>
+  <div style="display:grid;gap:8px">
+    <h1>Test d'encodage vidéo</h1>
+    <p>Ce test vérifie si ce navigateur peut fabriquer lui-même le MP4 du film, image par image, avec un son que LinkedIn et Instagram acceptent. Il encode 3 secondes au format vertical, sans rien envoyer.</p>
+  </div>
+  <div class="actions">
+    <button id="lancer" type="button">Lancer le test</button>
+    <button id="copier" class="second" type="button" disabled>Copier le relevé</button>
+  </div>
+  <section class="releve" id="releve" aria-live="polite"></section>
+  <video id="apercu" controls playsinline hidden></video>
+  <p class="ua" id="ua"></p>
+</main>
+
+<script type="module">
+const LIGNES = [
+  ["video", "Vidéo H.264 en 1080×1920", "VideoEncoder, profil High : ce que LinkedIn et Instagram lisent."],
+  ["aac", "Son AAC", "AudioEncoder AAC : le son attendu dans un MP4 pour les réseaux."],
+  ["opus", "Son Opus (repli)", "Accepté par les navigateurs, refusé par certains réseaux."],
+  ["rec", "Enregistrement en temps réel en MP4 H.264", "MediaRecorder, l'autre méthode, plus lente."],
+  ["vitesse", "Vitesse d'encodage", "Au-dessus de 30 images par seconde, le film se fabrique plus vite que sa durée."],
+  ["fichier", "Fichier produit", "Taille du MP4 de 3 secondes, et s'il se relit dans ce navigateur."],
+];
+const releve = document.getElementById("releve"), res = {};
+const vals = {};
+for (const [id, k, d] of LIGNES) {
+  const v = document.createElement("span"); v.className = "v attente"; v.textContent = "à tester"; vals[id] = v;
+  const l = document.createElement("div"); l.className = "l";
+  const kk = document.createElement("span"); kk.className = "k"; kk.textContent = k;
+  const dd = document.createElement("span"); dd.className = "d"; dd.textContent = d;
+  l.append(kk, v, dd); releve.append(l);
+}
+const ecrire = (id, texte, etat) => { vals[id].textContent = texte; vals[id].className = "v " + etat; res[id] = texte; };
+document.getElementById("ua").textContent = navigator.userAgent;
+
+async function tester() {
+  const W = 1080, H = 1920, FPS = 30, N = 90;
+  const vc = { codec: "avc1.640028", width: W, height: H, bitrate: 5e6, framerate: FPS, avc: { format: "avc" } };
+  const aacC = { codec: "mp4a.40.2", sampleRate: 48000, numberOfChannels: 2, bitrate: 160000 };
+  const opusC = { ...aacC, codec: "opus" };
+  const sup = async (cls, c) => { try { return !!(window[cls] && (await window[cls].isConfigSupported(c)).supported); } catch (e) { return false; } };
+  const okV = await sup("VideoEncoder", vc), okA = await sup("AudioEncoder", aacC), okO = await sup("AudioEncoder", opusC);
+  ecrire("video", okV ? "oui" : (window.VideoEncoder ? "non" : "absent"), okV ? "ok" : "ko");
+  ecrire("aac", okA ? "oui" : (window.AudioEncoder ? "non" : "absent"), okA ? "ok" : "ko");
+  ecrire("opus", okO ? "oui" : "non", okO ? "ok" : "ko");
+  const recType = ["video/mp4;codecs=avc1.640028,mp4a.40.2", "video/mp4;codecs=avc1,mp4a.40.2", "video/mp4;codecs=avc1"].find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
+  ecrire("rec", recType ? "oui" : "non", recType ? "ok" : "ko");
+  if (!okV) { ecrire("vitesse", "impossible", "ko"); ecrire("fichier", "aucun", "ko"); return; }
+
+  const { Muxer, ArrayBufferTarget } = await import("https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/build/mp4-muxer.mjs");
+  const audio = okA ? aacC : okO ? opusC : null;
+  const muxer = new Muxer({ target: new ArrayBufferTarget(), fastStart: "in-memory", video: { codec: "avc", width: W, height: H, frameRate: FPS },
+    audio: audio ? { codec: audio.codec === "opus" ? "opus" : "aac", sampleRate: 48000, numberOfChannels: 2 } : undefined });
+  const toile = new OffscreenCanvas(W, H), g = toile.getContext("2d");
+  let erreur = null;
+  const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => { erreur = e; } });
+  venc.configure(vc);
+  const debut = performance.now();
+  for (let i = 0; i < N; i++) {
+    const t = i / FPS;
+    g.fillStyle = "#f8f6ef"; g.fillRect(0, 0, W, H);
+    g.fillStyle = "#29377d"; g.beginPath(); g.arc(W / 2 + Math.sin(t * 2) * 300, H / 2, 160, 0, Math.PI * 2); g.fill();
+    g.font = "600 64px sans-serif"; g.textAlign = "center"; g.fillStyle = "#1f1d1a"; g.fillText("Offrez un cadeau qui a une histoire.", W / 2, H * 0.82);
+    g.fillText(t.toFixed(2) + " s", W / 2, H * 0.2);
+    const f = new VideoFrame(toile, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    venc.encode(f, { keyFrame: i % 60 === 0 }); f.close();
+    if (venc.encodeQueueSize > 8) await new Promise((ok) => venc.addEventListener("dequeue", ok, { once: true }));
+  }
+  await venc.flush();
+  const ips = N / ((performance.now() - debut) / 1000);
+  ecrire("vitesse", Math.round(ips) + " images/s", ips >= 30 ? "ok" : "attente");
+  if (audio) {
+    const oc = new OfflineAudioContext(2, 48000 * 3, 48000), o = oc.createOscillator(), gg = oc.createGain();
+    o.frequency.value = 440; gg.gain.value = 0.2; o.connect(gg).connect(oc.destination); o.start(); const b = await oc.startRendering();
+    const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => { erreur = e; } });
+    aenc.configure(audio);
+    for (let p = 0; p < b.length; p += 4800) {
+      const k = Math.min(4800, b.length - p), data = new Float32Array(k * 2);
+      data.set(b.getChannelData(0).subarray(p, p + k), 0); data.set(b.getChannelData(1).subarray(p, p + k), k);
+      const ad = new AudioData({ format: "f32-planar", sampleRate: 48000, numberOfFrames: k, numberOfChannels: 2, timestamp: Math.round(p * 1e6 / 48000), data });
+      aenc.encode(ad); ad.close();
+    }
+    await aenc.flush();
+  }
+  muxer.finalize();
+  if (erreur) { ecrire("fichier", "erreur : " + erreur.message, "ko"); return; }
+  const blob = new Blob([muxer.target.buffer], { type: "video/mp4" }), mo = (blob.size / 1e6).toFixed(1).replace(".", ",") + " Mo";
+  const v = document.getElementById("apercu"); v.src = URL.createObjectURL(blob); v.hidden = false;
+  const lisible = await new Promise((ok) => { v.onloadedmetadata = () => ok(v.duration > 2); v.onerror = () => ok(false); setTimeout(() => ok(null), 5000); });
+  ecrire("fichier", mo + (lisible ? ", lisible" : lisible === false ? ", illisible" : ", lecture non vérifiée"), lisible ? "ok" : "attente");
+}
+
+const bouton = document.getElementById("lancer"), copier = document.getElementById("copier");
+bouton.addEventListener("click", async () => {
+  bouton.disabled = true; bouton.textContent = "Test en cours…";
+  try { await tester(); } catch (e) { ecrire("fichier", "erreur : " + e.message, "ko"); }
+  bouton.disabled = false; bouton.textContent = "Relancer le test"; copier.disabled = false;
+});
+copier.addEventListener("click", async () => {
+  const texte = LIGNES.map(([id, k]) => `${k} : ${res[id] || "non testé"}`).join("\n") + "\n" + navigator.userAgent;
+  try { await navigator.clipboard.writeText(texte); copier.textContent = "Relevé copié"; }
+  catch (e) { const r = document.createRange(); r.selectNodeContents(releve); getSelection().removeAllRanges(); getSelection().addRange(r); copier.textContent = "Sélectionné : copiez-le"; }
+});
+</script>
