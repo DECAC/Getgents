@@ -434,3 +434,17 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   réseau) ; une NOUVELLE session la lit. Essai à faire : les 4 voix
   françaises dans le casting, puis « Ma voix » sur un enregistrement de
   l'éditeur.
+- **Casting Voxtral FAIT (27/11)** : `casting-mistral.py` (mêmes contrôles
+  que `casting-gemini.py`, transcription par Gemini). Les 4 voix françaises
+  toutes prêtes sont TOUTES FÉMININES : Marie, Manon, Léa, Camille (plus des
+  variantes d'émotion de Marie, non essayées). Aucune consigne de style
+  possible : le texte est envoyé seul. Les 4 passent les contrôles ; piège :
+  sur « qui roulait… à peu près », Voxtral improvise sur les points de
+  suspension (« et vlan ! », « Montrez-nous sa grandeur ») — rattrapé par la
+  transcription ; la prise de Manon gardée dit « euh » et perd le « Et ».
+  Contrôle de début assoupli (l'un des deux premiers mots) : l'extrait de
+  1,3 s perdait le « Et » initial. Niveau aligné (−18,7 à −18,9 LUFS).
+  Groupe « Mistral » ajouté au tableau de l'étape Voix, artefact republié
+  (version 7). NON écoutées par l'agent. Le compte Mistral porte déjà une
+  voix PERSONNALISÉE privée « Charles » (créée le 07/08) : non utilisée.
+  « Ma voix » : l'enregistrement ne doit JAMAIS entrer dans le dépôt (public).

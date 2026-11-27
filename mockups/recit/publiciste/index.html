@@ -155,6 +155,8 @@ h2.titre { margin: 0; font-size: clamp(26px, 5.4vw, 38px); line-height: 1.08; le
 .tableau-voix th { text-align: left; font-family: var(--f-mono); font-weight: 500; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); padding: 12px 14px; background: var(--bg-2); border-bottom: 1px solid var(--line); }
 .tableau-voix td { padding: 12px 14px; border-top: 1px solid var(--line-soft); vertical-align: middle; }
 .tableau-voix tbody tr:first-child td { border-top: 0; }
+.tableau-voix tr.groupe-voix th { color: var(--ink-2); background: var(--line-soft); border-top: 1px solid var(--line); border-bottom: 0; padding: 8px 14px; }
+.tableau-voix tbody tr.groupe-voix:first-child th { border-top: 0; }
 .tableau-voix tr.choisie td { background: #fff6f3; }
 .tableau-voix tr.choisie td:first-child { box-shadow: inset 3px 0 0 var(--corail); }
 .tableau-voix tr.ecartee td { color: var(--faint); }
@@ -175,6 +177,8 @@ h2.titre { margin: 0; font-size: clamp(26px, 5.4vw, 38px); line-height: 1.08; le
   .tableau-voix thead { display: none; }
   .tableau-voix tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; padding: 14px; border-top: 1px solid var(--line-soft); }
   .tableau-voix tbody tr:first-child { border-top: 0; }
+  .tableau-voix tr.groupe-voix { display: block; padding: 0; }
+  .tableau-voix tr.groupe-voix th { display: block; }
   .tableau-voix td { padding: 0; border: 0; min-width: 0; }
   .tableau-voix td.c-timbre, .tableau-voix td.c-extrait, .tableau-voix td.c-actions { grid-column: 1 / -1; }
   .tableau-voix tr.choisie { background: #fff6f3; box-shadow: inset 3px 0 0 var(--corail); }
@@ -431,13 +435,17 @@ const MUSIQUES = [
   { id: "geste", nom: "La fierté du geste", ressenti: "Le respect pour les mains qui prennent leur temps. Plus solennel, plus adulte.",
     demande: "Piano droit feutré, petit quatuor à cordes qui entre doucement · 72 bpm · lente montée" },
 ];
-// Voix Gemini TTS (gemini-3.1-flash-tts-preview), 27/11. Timbre : la description de Google, pas une écoute.
+// Voix Gemini TTS (gemini-3.1-flash-tts-preview) et Mistral Voxtral TTS (voxtral-mini-tts-3-0, les 4 voix françaises
+// toutes prêtes), 27/11. Timbre : la description de Google, pas une écoute ; Mistral n'en publie pas.
 const VOIX = [
-  ["charon", "Charon", "homme", "Informatif"], ["orus", "Orus", "homme", "Ferme"], ["puck", "Puck", "homme", "Enjoué"],
-  ["kore", "Kore", "femme", "Ferme"], ["aoede", "Aoede", "femme", "Aérien"], ["leda", "Leda", "femme", "Juvénile"],
+  ["charon", "Charon", "homme", "Informatif", "Gemini"], ["orus", "Orus", "homme", "Ferme", "Gemini"], ["puck", "Puck", "homme", "Enjoué", "Gemini"],
+  ["kore", "Kore", "femme", "Ferme", "Gemini"], ["aoede", "Aoede", "femme", "Aérien", "Gemini"], ["leda", "Leda", "femme", "Juvénile", "Gemini"],
+  ["marie", "Marie", "femme", "Non décrit", "Mistral"], ["manon", "Manon", "femme", "Non décrit", "Mistral"],
+  ["lea", "Léa", "femme", "Non décrit", "Mistral"], ["camille", "Camille", "femme", "Non décrit", "Mistral"],
 ];
+const GROUPES_VOIX = { Gemini: "Gemini · Google", Mistral: "Mistral · Voxtral" };
 const VOIX_DEFAUT = "charon";
-const DUREES = { charon: [3.61, 2.73, 2.41, 3.92, 2.14, 4.41, 3.07, 2.42, 3.02], orus: [4.06, 2.44, 2.41, 3.84, 2.07, 3.99, 2.74, 2.21, 2.42], puck: [3.54, 2.8, 2.63, 3.97, 2.1, 4.01, 2.58, 1.98, 2.21], kore: [3.96, 2.75, 3.1, 4.73, 2.72, 4.33, 2.73, 1.93, 2.52], aoede: [3.72, 2.55, 2.72, 4.57, 2.09, 3.82, 2.86, 2.08, 2.34], leda: [3.74, 2.46, 2.77, 3.69, 1.93, 4.3, 2.72, 2.43, 2.41] };
+const DUREES = { charon: [3.61, 2.73, 2.41, 3.92, 2.14, 4.41, 3.07, 2.42, 3.02], orus: [4.06, 2.44, 2.41, 3.84, 2.07, 3.99, 2.74, 2.21, 2.42], puck: [3.54, 2.8, 2.63, 3.97, 2.1, 4.01, 2.58, 1.98, 2.21], kore: [3.96, 2.75, 3.1, 4.73, 2.72, 4.33, 2.73, 1.93, 2.52], aoede: [3.72, 2.55, 2.72, 4.57, 2.09, 3.82, 2.86, 2.08, 2.34], leda: [3.74, 2.46, 2.77, 3.69, 1.93, 4.3, 2.72, 2.43, 2.41], marie: [3.14, 1.86, 1.99, 3.28, 1.59, 3.55, 2.32, 1.76, 1.77], manon: [3.12, 1.82, 1.68, 4.41, 1.39, 3.45, 2.05, 1.93, 1.72], lea: [2.59, 1.81, 1.6, 3.46, 1.28, 3.25, 1.79, 1.49, 1.71], camille: [3.18, 2.02, 1.55, 3.39, 1.33, 2.99, 2.13, 1.67, 1.65] };
 const JEUX = [
   { id: "confie", nom: "Confiée à l'oreille", reco: true, note: "Basse, proche, presque un secret." },
   { id: "conteur", nom: "Conteur posé", note: "Plus de distance, plus de rythme." },
@@ -501,7 +509,7 @@ const ETAPES = [
   { id: "entretien", nom: "L'entretien" }, { id: "visuel", nom: "Direction visuelle" }, { id: "typo", nom: "Typographie" }, { id: "couleurs", nom: "Couleurs" },
   { id: "musique", nom: "Musique" }, { id: "voix", nom: "Voix" }, { id: "storyboard", nom: "Storyboard" }, { id: "recap", nom: "Valider" },
 ];
-const COUTS_DA = [["Casting de 6 voix sur le texte entier (Google)", null], ["3 extraits de musique", 0.12], ["3 planches d'ambiance", 0.42], ["Storyboard, 11 plans", 0.38]];
+const COUTS_DA = [["Casting de 10 voix sur le texte entier (Google, Mistral)", null], ["3 extraits de musique", 0.12], ["3 planches d'ambiance", 0.42], ["Storyboard, 11 plans", 0.38]];
 const DEVIS_PROD = [["Images finales (≈ 16 dessins et photos, avec retouches)", 2.6], ["Voix retenue, prises supplémentaires", 0.15], ["Musique en morceau complet (2 essais)", 0.16], ["Sons réels (banque ou génération)", 0]];
 
 /* ── État (gardé sur cet appareil) ───────────────────────── */
@@ -619,7 +627,7 @@ function blocMaVoix() {
               h("div", { class: "mv-actions" }, h("button", { class: "mini-b", type: "button", "aria-pressed": String(choisie), onclick: () => { S.voix = choisie ? null : "mavoix"; garder(); rendre(); } }, choisie ? "Choisie pour la narration" : "Choisir ma voix"),
                 h("button", { class: "mini-b non", type: "button", onclick: () => { S.maVoix = { consentement: false, demandee: false }; if (S.voix === "mavoix") S.voix = null; if (echantillon) { URL.revokeObjectURL(echantillon.url); echantillon = null; } garder(); rendre(); } }, "Supprimer ma voix")))
           : h("div", { class: "mv-actions" }, creer))),
-    h("p", { class: "note", style: "margin:0" }, "Votre voix ne sert qu'à vos projets, jamais à ceux d'un autre auteur. Modèle de recomposition à choisir : Mistral est pressenti, son offre reste à vérifier."));
+    h("p", { class: "note", style: "margin:0" }, "Votre voix ne sert qu'à vos projets, jamais à ceux d'un autre auteur. Recomposition par Mistral (Voxtral) : elle reprend aussi le ton, le bruit de fond et le micro de l'enregistrement, alors enregistrez-vous dans le ton voulu pour le film."));
 }
 
 const VUES = {
@@ -730,16 +738,18 @@ const VUES = {
           h("button", { class: "mini-b", type: "button", "aria-pressed": String(choisie), onclick: () => { S.voix = choisie ? null : id; basc(false); garder(); rendre(); } }, choisie ? "Choisie" : "Choisir"))));
     };
     return [
-      entete(5, "Voix", "Six voix lisent le même texte : trois voix d'homme, trois voix de femme."),
-      bulle("Toutes ont reçu la même consigne : <strong>français de France</strong>, voix basse et chaude, comme une confidence. Mais je n'entends pas les accents moi-même : c'est votre oreille qui tranche.",
+      entete(5, "Voix", "Dix voix lisent le même texte : six chez Google, quatre chez Mistral."),
+      bulle("Les voix Gemini ont reçu la même consigne : <strong>français de France</strong>, voix basse et chaude, comme une confidence. Les voix Mistral n'acceptent pas encore de consigne : elles lisent le texte seul, avec leur ton naturel. Je n'entends pas les accents moi-même : c'est votre oreille qui tranche.",
         "L'extrait fait entendre les deux premières phrases. « Texte entier » joue l'histoire complète, avec ses silences, telle qu'elle sera posée sur les images."),
       h("div", { class: "tableau-voix" }, h("table", {},
         h("thead", {}, h("tr", {}, h("th", { scope: "col" }, "Voix"), h("th", { scope: "col" }, "Genre"), h("th", { scope: "col" }, "Timbre annoncé"), h("th", { scope: "col", style: "width:34%" }, "Extrait · 7 s"), h("th", { scope: "col" }, h("span", { class: "sr" }, "Actions")))),
-        h("tbody", {}, VOIX.map(ligne)))),
+        h("tbody", {}, Object.keys(GROUPES_VOIX).flatMap((g) => [
+          h("tr", { class: "groupe-voix" }, h("th", { scope: "colgroup", colspan: "5" }, GROUPES_VOIX[g])),
+          ...VOIX.filter((v) => v[4] === g).map(ligne)])))),
       blocMaVoix(),
       h("div", { style: "display:grid;gap:10px" }, h("h3", { class: "section-t" }, "Comment la voix doit-elle jouer ?"),
         h("div", { class: "jeux" }, JEUX.map((j) => h("button", { class: "mini-b", type: "button", "aria-pressed": String(S.jeu === j.id), title: j.note, onclick: () => { S.jeu = S.jeu === j.id ? null : j.id; garder(); rendre(); } }, j.nom + (j.reco ? " · recommandé" : "")))),
-        h("p", { class: "note", style: "margin:0" }, "Ce réglage s'applique à la prise finale : il n'est pas encore entendu ici. Le timbre est celui que Google annonce pour chaque voix.")),
+        h("p", { class: "note", style: "margin:0" }, "Ce réglage s'applique à la prise finale : il n'est pas encore entendu ici. Le timbre est celui que Google annonce pour chaque voix ; Mistral n'en décrit aucune.")),
     ];
   },
   storyboard() {
