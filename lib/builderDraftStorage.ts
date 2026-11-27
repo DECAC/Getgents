@@ -1,4 +1,3 @@
-import { PROMPT_PUBLICISTE_DEFAUT } from "@/lib/publiciste";
 import type { GentDraft, GentDraftsMap } from "@/lib/types/builder";
 import type { Espace } from "@/lib/types";
 import { GENT_DRAFTS } from "@/lib/mock-data/builder";
@@ -411,9 +410,9 @@ export function allocateDraftFromDescription(
  * Format de départ d'un gent. Il PRÉCONFIGURE, il ne verrouille rien : un gent
  * conversationnel peut recevoir une mini-app plus tard, et l'inverse.
  */
-export type FormatGent = "conversationnel" | "miniapp" | "visionneuse" | "collaboratif" | "prompteur" | "chantier" | "publiciste";
+export type FormatGent = "conversationnel" | "miniapp" | "visionneuse" | "collaboratif" | "prompteur" | "chantier";
 
-export const FORMATS_GENT: readonly FormatGent[] = ["conversationnel", "miniapp", "visionneuse", "collaboratif", "prompteur", "chantier", "publiciste"];
+export const FORMATS_GENT: readonly FormatGent[] = ["conversationnel", "miniapp", "visionneuse", "collaboratif", "prompteur", "chantier"];
 
 /** Onglet où atterrit le créateur : là où le format se configure. */
 export const ONGLET_DU_FORMAT: Record<FormatGent, "prompt" | "miniapp" | "visionneuse" | "collaboratif" | "prompteur"> = {
@@ -424,8 +423,6 @@ export const ONGLET_DU_FORMAT: Record<FormatGent, "prompt" | "miniapp" | "vision
   prompteur: "prompteur",
   // Le dossier se règle dans le prompt : pas d'onglet propre pour l'instant.
   chantier: "prompt",
-  // Le film se règle dans la conversation et l'atelier : pas d'onglet propre.
-  publiciste: "prompt",
 };
 
 /** Instructions de départ d'un « Prompteur » — le créateur les ajuste à sa voix. */
@@ -456,17 +453,6 @@ export function appliquerFormat(draft: GentDraft, format: FormatGent): GentDraft
       prompteur: { enabled: true, dureeCible: draft.prompteur?.dureeCible },
     };
   }
-  if (format === "publiciste") {
-    // Création seulement, comme le Prompteur : rien d'écrit n'est remplacé.
-    return {
-      ...draft,
-      name: "Le Publiciste",
-      icon: "🎞️",
-      objective: draft.objective || "Raconter ma marque dans un film court, pour les réseaux sociaux et mon site.",
-      systemPrompt: draft.systemPrompt || PROMPT_PUBLICISTE_DEFAUT,
-      publiciste: { enabled: true },
-    };
-  }
   if (format === "chantier") {
     // Création seulement, comme le Prompteur : rien d'écrit n'est remplacé.
     return {
@@ -495,7 +481,7 @@ export function brouillonNeuf(id: string, format: FormatGent, description = ""):
     draft = {
       ...draft,
       // Le gabarit Event Manager porte déjà son emblème.
-      icon: format === "collaboratif" || format === "prompteur" || format === "chantier" || format === "publiciste" ? draft.icon : suggestGentIcon(role),
+      icon: format === "collaboratif" || format === "prompteur" || format === "chantier" ? draft.icon : suggestGentIcon(role),
       objective: role.slice(0, 240),
       pendingBuilderMessage: role,
     };
@@ -597,7 +583,6 @@ export function restoreDraftFromPublished(id: string, espace: Espace): GentDraft
     fileDownloadFormEnabled: espace.fileDownloadFormEnabled,
     jumpForm: espace.jumpForm,
     prompteur: espace.prompteur,
-    publiciste: espace.publiciste?.enabled ? { enabled: true } : undefined,
     chantier: espace.chantier?.enabled ? { enabled: true } : undefined,
     connectors,
     pinnedArtefact: pinned,

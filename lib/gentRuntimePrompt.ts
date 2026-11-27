@@ -10,7 +10,6 @@ import { GMAIL_PROMPT_INSTRUCTION } from "@/lib/gmailPrompt";
 import { IMAGE_PROMPT_INSTRUCTION } from "@/lib/imageSignal";
 import { consigneDeLangue } from "@/lib/langue";
 import { consignePrompteur } from "@/lib/prompteur";
-import { consignePubliciste } from "@/lib/publiciste";
 import { consigneChantier } from "@/lib/chantier";
 
 /**
@@ -130,8 +129,6 @@ export function buildGentSystemPrompt(espace: Espace, options: GentPromptOptions
   if (espace.gmail) blocks.push(GMAIL_PROMPT_INSTRUCTION);
   // Gent « Prompteur » : la forme du texte à dire et ses marqueurs.
   if (espace.prompteur?.enabled && !superGent) blocks.push(consignePrompteur(espace.prompteur.dureeCible));
-  // Gent « Publiciste » : l'entretien, puis le storyboard entre ses marqueurs.
-  if (espace.publiciste?.enabled && !superGent) blocks.push(consignePubliciste());
   // Mini-application dont la conversation est ouverte : où est le tableau.
   if (conversationOuverte(espace.pinnedArtefact) && !superGent) blocks.push(consigneMiniApp());
   // Gent « chantier » : où vit le dossier et comment le retoucher.

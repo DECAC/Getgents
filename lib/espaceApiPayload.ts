@@ -129,7 +129,6 @@ export function espaceForPublicLink(espace: Espace): Espace {
     // Le prompteur est un OUTIL du gent, pas une donnée du créateur : le
     // visiteur écrit et filme SA capsule, dans son navigateur.
     prompteur: espace.prompteur?.enabled ? espace.prompteur : undefined,
-    publiciste: espace.publiciste?.enabled ? { enabled: true } : undefined,
     // Gent collaboratif : la mission, le cadre et les questions sont écrits
     // POUR les participants — ils passent tels quels. Aucun secret n'y vit.
     collab: espace.collab?.enabled ? espace.collab : undefined,

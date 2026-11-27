@@ -7,8 +7,6 @@ import { WorkspaceCanvas } from "@/components/center/WorkspaceCanvas";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
 import { Prompteur } from "@/components/prompteur/Prompteur";
 import { LimitePrompteur } from "@/components/prompteur/LimitePrompteur";
-import { AtelierFilm } from "@/components/publiciste/AtelierFilm";
-import { LimiteAtelier } from "@/components/publiciste/LimiteAtelier";
 import { MemoireGent } from "./MemoireGent";
 import { ArtefactModal, ArtefactCorps } from "@/components/shared/ArtefactModal";
 import { DocumentViewerModal } from "@/components/shared/DocumentViewerModal";
@@ -66,8 +64,6 @@ export function SharedGentBody({
     versionPersonnelle,
     prompteurOuvert,
     fermerPrompteur,
-    atelierFilm,
-    fermerAtelierFilm,
   } = useEspace();
 
   /**
@@ -549,11 +545,6 @@ export function SharedGentBody({
             onClose={fermerPrompteur}
           />
         </LimitePrompteur>
-      )}
-      {atelierFilm && (
-        <LimiteAtelier onClose={fermerAtelierFilm}>
-          <AtelierFilm key={atelierFilm.cle} storyboard={atelierFilm.storyboard} cle={atelierFilm.cle} onClose={fermerAtelierFilm} />
-        </LimiteAtelier>
       )}
     </div>
   );

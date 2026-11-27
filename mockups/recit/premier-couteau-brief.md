@@ -556,3 +556,11 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   (« réf. mistral-<code> », nom de la voix). **Cible d'usage : le Mac**
   (décision de l'éditeur : un film se prépare au bureau) ; l'iPhone passe au
   second plan, plus de temps de test dessus.
+- **REVIREMENT (27/11, éditeur) : le gent = la MAQUETTE, rien de plus.** Le
+  lot 1 (atelier du film) est RETIRÉ de la production. Décisions : même
+  interface que `mockups/recit/publiciste/index.html` (8 étapes : entretien,
+  direction visuelle, typographie, couleurs, musique, voix, storyboard,
+  valider), mais avec de VRAIES générations pour le projet de l'auteur ;
+  étape Voix conforme à la maquette : 6 voix Gemini + 4 voix Mistral + « Ma
+  voix » (revient sur « Mistral seul »). Le code du lot 1 (rendu MP4 dans le
+  navigateur, route de voix Mistral) reste dans l'historique, à reprendre.

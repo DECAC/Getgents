@@ -12,7 +12,6 @@ const FORMATS: { id: FormatGent; titre: string; desc: string }[] = [
   { id: "visionneuse", titre: "Visionneuse", desc: "Un document que vous fixez, lu en pleine page." },
   { id: "collaboratif", titre: "Event Manager", desc: "Un salon à plusieurs : dispos, options, synthèse." },
   { id: "prompteur", titre: "Le Prompteur", desc: "Il écrit votre capsule vidéo, vous la lisez et la filmez." },
-  { id: "publiciste", titre: "Le Publiciste", desc: "Un entretien sur votre marque, puis un film court à publier." },
   { id: "chantier", titre: "Le chantier", desc: "Votre assistant de maître d'œuvre, et son dossier tenu à jour." },
 ];
 
