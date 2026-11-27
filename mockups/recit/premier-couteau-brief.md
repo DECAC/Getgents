@@ -536,3 +536,10 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   Claude (Electron 45, Chromium 156), pas dans Chrome lui-même — même moteur
   et même encodeur système sur Mac, donc très probablement identique, mais
   non vérifié. iPhone (WebKit) : relevé ATTENDU.
+- **Test d'encodage, relevé 2 (27/11, iPhone de l'éditeur, iOS 18.7, dans
+  l'application Claude, donc WebKit)** : H.264 1080×1920 oui, AAC OUI, Opus
+  oui, MediaRecorder MP4 H.264 oui, 101 images/s (plus rapide que le Mac),
+  MP4 lisible. DÉCISION : rendu dans le NAVIGATEUR par WebCodecs (méthode C),
+  son AAC, sur Mac comme sur iPhone. Non vérifié : un film COMPLET de 72 s
+  sur iPhone (mémoire : ~30-50 Mo par format gardés en mémoire ; baisser le
+  débit à 4-5 Mb/s).
