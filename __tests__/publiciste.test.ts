@@ -81,7 +81,9 @@ describe("Publiciste : « Vos projets »", () => {
     expect(resumeProjet(enCours).libelle).toBe("Le brief · fiche remplie à 3 sur 9");
     expect(resumeProjet({ ...ETAT_VIDE, etape: "storyboard" })).toMatchObject({ statut: "direction", index: 6, libelle: "Étape 6 sur 7 · Storyboard" });
     const tout = { visuel: "a", typo: "b", couleurs: "c", musique: "d", voix: "e", storyboard: "f" };
-    expect(resumeProjet({ ...ETAT_VIDE, etape: "recap", choix: tout }).statut).toBe("validee");
+    // Validée seulement quand l'auteur a cliqué « Valider » (lot 4), pas quand tout est choisi.
+    expect(resumeProjet({ ...ETAT_VIDE, etape: "recap", choix: tout }).statut).toBe("direction");
+    expect(resumeProjet({ ...ETAT_VIDE, etape: "recap", choix: tout, valide: true }).statut).toBe("validee");
     expect(resumeProjet({ ...ETAT_VIDE, etape: "recap" }).statut).toBe("direction");
   });
 

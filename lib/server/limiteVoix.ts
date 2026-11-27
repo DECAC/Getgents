@@ -1,11 +1,12 @@
 /**
  * Plafond des voix du Publiciste : Gemini et Mistral sont payés par la
- * PLATEFORME, hors du quota OpenRouter. 60 extraits par heure et par compte,
+ * PLATEFORME, hors du quota OpenRouter. 200 répliques par heure et par compte,
  * en mémoire de l'instance (approximatif, voulu : un garde-fou, pas une
- * facturation).
+ * facturation). 200 : l'animatique et « Texte entier » font dire chaque
+ * réplique du storyboard (une dizaine) par la voix demandée.
  */
 const FENETRE = 3_600_000;
-export const VOIX_PAR_HEURE = 60;
+export const VOIX_PAR_HEURE = 200;
 const traces = new Map<string, number[]>();
 
 export function voixAutorisee(userId: string, maintenant = Date.now()): boolean {

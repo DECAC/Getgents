@@ -8,6 +8,8 @@ import { apiFetchInit } from "@/lib/apiFetch";
 import { ListeProjets } from "./ListeProjets";
 import { EtapeDirection } from "./EtapeDirection";
 import { EtapeVoix } from "./EtapeVoix";
+import { EtapeStoryboard } from "./EtapeStoryboard";
+import { coutCroquis, devisProduction, dureeTotale, sceneModifiee } from "@/lib/publicisteStoryboard";
 import { ETAPES_DIRECTION, MA_VOIX, POLICES, VOIX_GEMINI, JEUX_VOIX, coutDirection, type EtapeDirection as IdEtapeDirection } from "@/lib/publicisteDirection";
 import {
   ETAPES_PUBLICISTE,
@@ -224,7 +226,13 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
   };
   const index = ETAPES_PUBLICISTE.findIndex((e) => e.id === etat.etape);
   const fait = (id: EtapePubliciste) =>
-    id === "entretien" ? fiche.pret || etat.etape !== "entretien" : id === "recap" ? false : !!etat.choix[id as keyof EtatProjet["choix"]];
+    id === "entretien"
+      ? fiche.pret || etat.etape !== "entretien"
+      : id === "recap"
+        ? !!etat.valide
+        : id === "storyboard"
+          ? !!etat.storyboard && (etat.etape === "recap" || !!etat.valide)
+          : !!etat.choix[id as keyof EtatProjet["choix"]];
 
   const navRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -251,7 +259,11 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
       ? "Fond et forme, avant de produire"
       : etat.etape === "recap"
         ? ""
-        : nomChoisi(etat.etape)
+        : etat.etape === "storyboard"
+          ? etat.storyboard
+            ? `${etat.storyboard.scenes.length} scènes · ${dureeTotale(etat.storyboard.scenes)} s`
+            : "Pas encore écrit"
+          : nomChoisi(etat.etape)
           ? `${LIBELLES_PIED[etat.etape] ?? "Choix"} : ${nomChoisi(etat.etape)}`
           : "Pas encore choisi";
 
@@ -282,7 +294,7 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
             </span>
             <span className={styles.cout} title="Coût de la direction artistique déjà engagé, hors voix (facturation Google et Mistral non relevée)">
               <span className={styles.coutL}>Direction artistique</span>
-              <b>{coutDirection(etat.direction, etat.depenseTexte).total.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $</b>
+              <b>{coutTotal(etat).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $</b>
               <span>+ voix</span>
             </span>
           </div>
@@ -320,7 +332,7 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
               arreter={stopGeneration}
             />
           ) : etat.etape === "recap" ? (
-            <Recap fiche={fiche} etat={etat} aller={aller} nomChoisi={nomChoisi} />
+            <Recap fiche={fiche} etat={etat} aller={aller} nomChoisi={nomChoisi} modifier={modifier} projetId={projetId} />
           ) : (ETAPES_DIRECTION as readonly string[]).includes(etat.etape) ? (
             <EtapeDirection
               key={etat.etape}
@@ -332,11 +344,11 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
               fiche={fiche}
               allerEntretien={() => aller("entretien")}
             />
+          ) : etat.etape === "storyboard" ? (
+            <EtapeStoryboard numero={index} projetId={projetId} etat={etat} modifier={modifier} fiche={fiche} allerEntretien={() => aller("entretien")} />
           ) : etat.etape === "voix" ? (
             <EtapeVoix numero={index} projetId={projetId} etat={etat} modifier={modifier} fiche={fiche} />
-          ) : (
-            <EtapeAVenir etape={etat.etape} numero={index} fiche={fiche} aller={aller} />
-          )}
+          ) : null}
         </section>
       </main>
 
@@ -506,72 +518,22 @@ function Entretien({
   );
 }
 
-/** Ce que chaque étape fera, dans les mots de la maquette, et le lot qui l'apporte. */
-const A_VENIR: Record<string, { titre: string; sous: string; bulle: string; lot: string }> = {
-  visuel: {
-    titre: "Direction visuelle",
-    sous: "Trois planches d'ambiance. On juge un univers, pas une image finale.",
-    bulle: "Je relève votre univers, puis je vous propose trois planches d'ambiance, chacune avec ce qu'elle apporte et ce qu'elle risque, et ma recommandation.",
-    lot: "lot 2",
-  },
-  typo: {
-    titre: "Typographie",
-    sous: "Les lettres de l'étiquette, de la page finale et de la phrase de fin.",
-    bulle: "Je vous montre trois associations de polices en spécimens vivants, avec le texte de votre projet.",
-    lot: "lot 2",
-  },
-  couleurs: {
-    titre: "Couleurs",
-    sous: "La palette de l'histoire et de la page à son nom.",
-    bulle: "Trois palettes de cinq couleurs, tirées de votre marque et de l'univers choisi.",
-    lot: "lot 2",
-  },
-  musique: {
-    titre: "Musique",
-    sous: "Choisissez avec vos oreilles : trois extraits de 30 secondes.",
-    bulle: "Vous me dites ce que la musique doit faire ressentir ; je le traduis en instruments et en tempo pour le compositeur.",
-    lot: "lot 3",
-  },
-  voix: {
-    titre: "Voix",
-    sous: "Six voix lisent le même texte : trois voix d'homme, trois voix de femme. Et la vôtre, si vous le souhaitez.",
-    bulle: "Toutes reçoivent la même consigne : français de France, la voix qui sert votre histoire. Votre voix peut aussi être recomposée à partir d'un enregistrement de 30 secondes.",
-    lot: "lot 3",
-  },
-  storyboard: {
-    titre: "Storyboard",
-    sous: "Les scènes, leurs croquis, et l'animatique avec la voix et la musique choisies.",
-    bulle: "Je raconte l'histoire scène par scène, avec un croquis pour chacune. Vous corrigez directement, et je redessine seulement ce qui change.",
-    lot: "lot 4",
-  },
-};
-
-function EtapeAVenir({ etape, numero, fiche, aller }: { etape: string; numero: number; fiche: FichePubliciste; aller: (id: EtapePubliciste) => void }) {
-  const a = A_VENIR[etape];
-  if (!a) return null;
-  const { remplies, total } = remplissage(fiche);
-  return (
-    <>
-      <Entete n={numero} titre={a.titre} sous={a.sous} />
-      <Bulle>
-        <p>{a.bulle}</p>
-        {!fiche.pret && (
-          <p>
-            Terminons d&apos;abord le brief : la fiche est remplie à {remplies} sur {total}.{" "}
-            <button type="button" className={styles.lien} onClick={() => aller("entretien")}>
-              Reprendre le brief
-            </button>
-          </p>
-        )}
-      </Bulle>
-      <div className={styles.aVenir}>
-        <b>Cette étape arrive au {a.lot}.</b> Ses propositions seront générées pour votre projet ; rien n&apos;est simulé ici.
-      </div>
-    </>
-  );
-}
-
-function Recap({ fiche, etat, aller, nomChoisi }: { fiche: FichePubliciste; etat: EtatProjet; aller: (id: EtapePubliciste) => void; nomChoisi: (e: string) => string | null }) {
+function Recap({
+  fiche,
+  etat,
+  aller,
+  nomChoisi,
+  modifier,
+  projetId,
+}: {
+  fiche: FichePubliciste;
+  etat: EtatProjet;
+  aller: (id: EtapePubliciste) => void;
+  nomChoisi: (e: string) => string | null;
+  modifier: (f: (e: EtatProjet) => EtatProjet) => void;
+  projetId: string | null;
+}) {
+  const [confirmer, setConfirmer] = useState(false);
   const ligne = (k: string, id: EtapePubliciste, val: string | null, detail?: string) => (
     <div className={styles.l} key={k}>
       <span className={styles.k}>{k}</span>
@@ -584,12 +546,25 @@ function Recap({ fiche, etat, aller, nomChoisi }: { fiche: FichePubliciste; etat
       </button>
     </div>
   );
-  const manque = (["visuel", "typo", "couleurs", "musique", "voix"] as const).filter((k) => !etat.choix[k]).length;
+  const manque = (["visuel", "typo", "couleurs", "musique", "voix"] as const).filter((k) => !etat.choix[k]).length + (etat.storyboard ? 0 : 1);
+  const sb = etat.storyboard;
+  const nbMod = sb ? sb.scenes.filter(sceneModifiee).length : 0;
+  const resumeSb = sb
+    ? [nbMod ? `${nbMod} scène${nbMod > 1 ? "s modifiées" : " modifiée"}` : "", sb.commentaire.trim() ? "une remarque sur l'ensemble" : ""].filter(Boolean).join(" · ") || "Accepté tel quel"
+    : null;
+  const recommencer = () => {
+    setConfirmer(false);
+    modifier((e) => ({ ...e, etape: "visuel", choix: {}, direction: {}, storyboard: undefined, valide: undefined, voix: e.voix ? { ...e.voix, extraits: {}, lignes: undefined, ecartees: [], jeu: undefined } : undefined }));
+  };
   return (
     <>
       <Entete n={7} titre="Valider la direction" sous="Vérifiez vos choix. La production ne démarre qu'après votre accord." />
       <Bulle>
-        <p>{manque ? `Il reste ${manque === 1 ? "un choix" : `${manque} choix`} à faire avant de valider la direction.` : "Tout est choisi."}</p>
+        <p>
+          {manque
+            ? `Il reste ${manque === 1 ? "un choix" : `${manque} choix`} à faire avant de lancer la production.`
+            : "Tout est choisi. Si vous validez, je produis les images finales, la voix et la musique complètes sur cette base, puis je vous montre le film."}
+        </p>
       </Bulle>
       <div className={styles.recap}>
         {ligne("Forme", "entretien", fiche.forme.forme || null, fiche.forme.forme ? (fiche.formeDecidee ? "Décidée au brief" : "Pressentie au brief") : undefined)}
@@ -597,29 +572,54 @@ function Recap({ fiche, etat, aller, nomChoisi }: { fiche: FichePubliciste; etat
         {ligne("Lettres", "typo", nomChoisi("typo"), etat.choix.typo ? POLICES.find((p) => p.id === etat.choix.typo)?.detail : undefined)}
         {ligne("Couleurs", "couleurs", nomChoisi("couleurs"))}
         {ligne("Musique", "musique", nomChoisi("musique"))}
-        {ligne("Voix", "voix", nomChoisi("voix"), etat.voix?.jeu ? JEUX_VOIX.find((j) => j.id === etat.voix?.jeu)?.nom : undefined)}
-        {ligne("Storyboard", "storyboard", etat.choix.storyboard ?? null)}
+        {ligne("Voix", "voix", nomChoisi("voix"), etat.choix.voix ? `Jeu : ${etat.voix?.jeu ? JEUX_VOIX.find((j) => j.id === etat.voix?.jeu)?.nom : "à préciser"}` : undefined)}
+        {ligne("Storyboard", "storyboard", resumeSb, sb ? `${sb.scenes.length} scènes · ${dureeTotale(sb.scenes)} s` : undefined)}
       </div>
       <Couts etat={etat} />
-      <div className={styles.actionsRecap}>
-        <button type="button" className={[styles.bouton, styles.corail].join(" ")} disabled>
-          Valider la direction
-        </button>
-      </div>
+      {etat.valide ? (
+        <div className={styles.valide}>
+          <b>Direction validée. </b>La production n&apos;est pas encore branchée dans le gent : elle arrive au lot suivant. Vos choix sont gardés dans ce projet.
+        </div>
+      ) : confirmer ? (
+        <div className={styles.confirmer} role="alert">
+          <span>Effacer toute la direction artistique de ce projet (pistes, choix, voix lues, storyboard) ? Le brief est gardé.</span>
+          <button type="button" className={[styles.bouton, styles.leger].join(" ")} onClick={() => setConfirmer(false)}>
+            Annuler
+          </button>
+          <button type="button" className={[styles.bouton, styles.corail].join(" ")} onClick={recommencer}>
+            Tout recommencer
+          </button>
+        </div>
+      ) : (
+        <div className={styles.actionsRecap}>
+          <button type="button" className={[styles.bouton, styles.corail].join(" ")} disabled={manque > 0 || !projetId} onClick={() => modifier((e) => ({ ...e, valide: true }))}>
+            Valider et lancer la production
+          </button>
+          <button type="button" className={[styles.bouton, styles.leger].join(" ")} onClick={() => setConfirmer(true)} disabled={!projetId}>
+            Tout recommencer
+          </button>
+        </div>
+      )}
     </>
   );
 }
 
-/** Ce qu'a coûté la direction artistique, mesuré (texte des pistes, planches) — comme le bloc de la maquette. */
+/** Ce qu'a coûté la direction artistique, mesuré, puis l'estimation de la production — comme le bloc de la maquette. */
+const coutTotal = (etat: EtatProjet) => Math.round((coutDirection(etat.direction, etat.depenseTexte).total + coutCroquis(etat.storyboard)) * 100) / 100;
+
 function Couts({ etat }: { etat: EtatProjet }) {
   const c = coutDirection(etat.direction, etat.depenseTexte);
   const n = (etat.direction?.visuel?.visuel ?? []).filter((p) => p.cout !== undefined).length;
   const nm = (etat.direction?.musique?.musique ?? []).filter((p) => p.cout !== undefined).length;
+  const nc = (etat.storyboard?.scenes ?? []).filter((s) => s.coutCroquis !== undefined).length;
+  const total = coutTotal(etat);
+  const devis = devisProduction(etat.storyboard?.scenes.length ?? 10);
+  const totalProd = devis.reduce((a, d) => a + (d.cout ?? 0), 0);
   const eur = (x: number) => x.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " $";
   return (
     <div className={styles.couts}>
       <b>Ce que coûte la direction artistique (déjà engagé)</b>
-      {c.total === 0 ? (
+      {total === 0 ? (
         <div>
           <span>Rien n&apos;a encore été généré pour ce projet.</span>
           <span>0,00 $</span>
@@ -627,7 +627,7 @@ function Couts({ etat }: { etat: EtatProjet }) {
       ) : (
         <>
           <div>
-            <span>Pistes proposées (texte)</span>
+            <span>Pistes et storyboard (texte)</span>
             <span>{eur(c.texte)}</span>
           </div>
           {n > 0 && (
@@ -644,16 +644,33 @@ function Couts({ etat }: { etat: EtatProjet }) {
               <span>{eur(c.musique)}</span>
             </div>
           )}
+          {nc > 0 && (
+            <div>
+              <span>Storyboard, {nc} croquis</span>
+              <span>{eur(coutCroquis(etat.storyboard))}</span>
+            </div>
+          )}
           <div>
             <span>Voix (facturées par Google et Mistral)</span>
             <span>non relevé</span>
           </div>
           <div className={styles.tot}>
-            <span>Total</span>
-            <span>{eur(c.total)}</span>
+            <span>Total hors voix</span>
+            <span>{eur(total)}</span>
           </div>
         </>
       )}
+      <b style={{ marginTop: 10 }}>Estimation de la production</b>
+      {devis.map((d) => (
+        <div key={d.libelle}>
+          <span>{d.libelle}</span>
+          <span>{d.cout ? `≈ ${eur(d.cout)}` : "à décider"}</span>
+        </div>
+      ))}
+      <div className={styles.tot}>
+        <span>Total estimé</span>
+        <span>≈ {eur(totalProd)}</span>
+      </div>
     </div>
   );
 }

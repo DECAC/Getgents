@@ -192,7 +192,7 @@ export interface ChoixPrecedents {
   typo?: { nom: string; detail: string };
 }
 
-function resumeFiche(f: FichePubliciste): string {
+export function resumeFiche(f: FichePubliciste): string {
   const lignes = [
     f.projet && `Projet : ${f.projet}`,
     f.marque && `Marque : ${f.marque}`,
@@ -342,6 +342,8 @@ export interface EtatVoix {
   extraits: Partial<Record<IdVoix, { fichier: string; texte: string }>>;
   ecartees: IdVoix[];
   jeu?: string;
+  /** Lot 4 : les répliques du storyboard dites par chaque voix (scène → fichier et texte dit). */
+  lignes?: Partial<Record<IdVoix, Record<string, { fichier: string; texte: string }>>>;
 }
 
 const ID_VOIX = new Set<string>([...VOIX_GEMINI.map((v) => v.id), MA_VOIX]);
@@ -360,7 +362,25 @@ export function validerVoix(brut: unknown): EtatVoix | undefined {
   }
   const ecartees = (Array.isArray(o.ecartees) ? o.ecartees : []).filter((x): x is IdVoix => typeof x === "string" && ID_VOIX.has(x));
   const jeu = JEUX_VOIX.find((j) => j.id === o.jeu)?.id;
-  return { texte: txt(o.texte, TEXTE_ESSAI_MAX), extraits, ecartees: Array.from(new Set(ecartees)), ...(jeu ? { jeu } : {}) };
+  const lignes: NonNullable<EtatVoix["lignes"]> = {};
+  if (o.lignes && typeof o.lignes === "object") {
+    for (const [v, parScene] of Object.entries(o.lignes as Record<string, unknown>)) {
+      if (!ID_VOIX.has(v) || !parScene || typeof parScene !== "object") continue;
+      const l: Record<string, { fichier: string; texte: string }> = {};
+      for (const [sc, e] of Object.entries(parScene as Record<string, unknown>).slice(0, 20)) {
+        const x = (e ?? {}) as Record<string, unknown>;
+        if (/^s[a-z0-9]{1,12}$/.test(sc) && typeof x.fichier === "string" && /^voix-[a-z0-9-]{1,80}$/.test(x.fichier)) l[sc] = { fichier: x.fichier, texte: txt(x.texte, TEXTE_ESSAI_MAX) };
+      }
+      if (Object.keys(l).length) lignes[v as IdVoix] = l;
+    }
+  }
+  return {
+    texte: txt(o.texte, TEXTE_ESSAI_MAX),
+    extraits,
+    ecartees: Array.from(new Set(ecartees)),
+    ...(jeu ? { jeu } : {}),
+    ...(Object.keys(lignes).length ? { lignes } : {}),
+  };
 }
 
 /** Le texte d'essai par défaut : tiré du projet (spécimen choisi, sinon la fiche). */

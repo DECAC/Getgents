@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import styles from "./StudioPubliciste.module.css";
 import { apiFetchInit } from "@/lib/apiFetch";
 import { Lecteur } from "./Lecteur";
+import { arreterLecture, enchainer, lignesManquantes, preparerLignes, urlFichier } from "./lignesVoix";
 import type { EtatProjet, FichePubliciste } from "@/lib/publiciste";
 import {
   ACCORD_MA_VOIX,
@@ -93,6 +94,42 @@ export function EtapeVoix({
   const [enCours, setEnCours] = useState<Partial<Record<IdVoix, boolean>>>({});
   const [echecs, setEchecs] = useState<Partial<Record<IdVoix, string>>>({});
   const [maVoix, setMaVoix] = useState<{ presente: boolean; duree: number | null } | null>(null);
+  // « Texte entier » : les répliques du storyboard, dites par une voix, enchaînées avec leurs silences.
+  const [entier, setEntier] = useState<{ id: IdVoix; etat: "prepa" | "lecture"; progres?: string } | null>(null);
+  const sb = etat.storyboard;
+  useEffect(() => () => arreterLecture(), []);
+  const texteEntier = async (id: IdVoix) => {
+    if (!sb || !projetId) return;
+    if (entier?.id === id && entier.etat === "lecture") {
+      arreterLecture();
+      return setEntier(null);
+    }
+    arreterLecture();
+    const manquantes = lignesManquantes(etat, id, sb.scenes);
+    let lignes = etat.voix?.lignes?.[id] ?? {};
+    if (manquantes.length) {
+      setEntier({ id, etat: "prepa", progres: `0/${manquantes.length}` });
+      const faites: Record<string, { fichier: string; texte: string }> = {};
+      const r = await preparerLignes(
+        projetId,
+        id,
+        manquantes,
+        (f) =>
+          modifier((e) => {
+            const n = f(e);
+            Object.assign(faites, n.voix?.lignes?.[id] ?? {});
+            return n;
+          }),
+        (k) => setEntier({ id, etat: "prepa", progres: `${k}/${manquantes.length}` })
+      );
+      if (r.echecs) setEchecs((s) => ({ ...s, [id]: `${r.echecs} réplique(s) non dite(s) : ${r.message}` }));
+      lignes = { ...lignes, ...faites };
+    }
+    const urls = sb.scenes.filter((s) => s.vo && lignes[s.id]?.texte === s.vo).map((s) => urlFichier(projetId, lignes[s.id].fichier));
+    if (!urls.length) return setEntier(null);
+    setEntier({ id, etat: "lecture" });
+    enchainer(urls, 0.8, () => setEntier((x) => (x?.id === id ? null : x)));
+  };
 
   useEffect(() => {
     if (!projetId) return;
@@ -203,8 +240,14 @@ export function EtapeVoix({
         <td className={styles.cLarge}>{extrait(id, nom)}</td>
         <td className={styles.cLarge}>
           <div className={styles.vActions}>
-            <button type="button" className={styles.miniB} disabled title="Arrive avec le storyboard : l'histoire complète, avec ses silences.">
-              Texte entier
+            <button
+              type="button"
+              className={styles.miniB}
+              disabled={!sb || !projetId || (entier?.etat === "prepa" && entier.id !== id)}
+              title={sb ? "L'histoire complète du storyboard, avec ses silences." : "Arrive avec le storyboard : l'histoire complète, avec ses silences."}
+              onClick={() => texteEntier(id)}
+            >
+              {entier?.id === id ? (entier.etat === "prepa" ? `Préparation ${entier.progres}` : "Arrêter") : "Texte entier"}
             </button>
             {id !== MA_VOIX && (
               <button type="button" className={[styles.miniB, styles.non].join(" ")} aria-pressed={ecartee} onClick={() => basculerEcart(id)}>
@@ -236,7 +279,10 @@ export function EtapeVoix({
             Les voix Gemini reçoivent la même consigne : <strong>français de France</strong>, voix basse et chaude, comme une confidence. Je
             n&apos;entends pas les accents moi-même : c&apos;est votre oreille qui tranche.
           </p>
-          <p>L&apos;extrait fait entendre le texte d&apos;essai. « Texte entier » jouera l&apos;histoire complète, avec ses silences, une fois le storyboard écrit.</p>
+          <p>
+            L&apos;extrait fait entendre le texte d&apos;essai. « Texte entier » joue l&apos;histoire complète, avec ses silences
+            {sb ? ", telle qu'elle sera posée sur les images." : ", une fois le storyboard écrit."}
+          </p>
         </div>
       </div>
 

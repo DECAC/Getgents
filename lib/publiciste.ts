@@ -13,6 +13,7 @@
  * Module PUR : aucune dépendance au navigateur ni au serveur.
  */
 import { ETAPES_DIRECTION, validerProposition, validerVoix, type EtapeDirection, type EtatVoix, type Proposition } from "@/lib/publicisteDirection";
+import { validerStoryboard, type Storyboard } from "@/lib/publicisteStoryboard";
 
 export const MARQUEUR_FICHE = "<!--FICHE-->";
 export const MARQUEUR_FICHE_FIN = "<!--/FICHE-->";
@@ -159,6 +160,10 @@ export interface EtatProjet {
   voix?: EtatVoix;
   /** Coût cumulé des voix générées, quand le fournisseur le donne. */
   depenseVoix?: number;
+  /** Lot 4 : le storyboard (scènes, croquis, révision proposée). */
+  storyboard?: Storyboard;
+  /** Lot 4 : la direction est validée par l'auteur (la production n'est pas encore branchée). */
+  valide?: boolean;
 }
 
 export const ETAT_VIDE: EtatProjet = { etape: "entretien", fiche: FICHE_VIDE, choix: {} };
@@ -194,7 +199,18 @@ export function validerEtat(brut: unknown): EtatProjet | null {
   const depense = typeof o.depenseTexte === "number" && Number.isFinite(o.depenseTexte) && o.depenseTexte >= 0 ? Math.min(o.depenseTexte, 1000) : 0;
   const voix = validerVoix(o.voix);
   const depVoix = typeof o.depenseVoix === "number" && Number.isFinite(o.depenseVoix) && o.depenseVoix >= 0 ? Math.min(o.depenseVoix, 1000) : 0;
-  return { etape, fiche: validerFiche(o.fiche) ?? FICHE_VIDE, choix, direction, depenseTexte: depense, ...(voix ? { voix } : {}), depenseVoix: depVoix };
+  const storyboard = validerStoryboard(o.storyboard);
+  return {
+    etape,
+    fiche: validerFiche(o.fiche) ?? FICHE_VIDE,
+    choix,
+    direction,
+    depenseTexte: depense,
+    ...(voix ? { voix } : {}),
+    depenseVoix: depVoix,
+    ...(storyboard ? { storyboard } : {}),
+    ...(o.valide === true ? { valide: true } : {}),
+  };
 }
 
 // ── Plusieurs projets par gent (migration 041 ; maquette « Vos projets ») ──
@@ -218,8 +234,7 @@ export function validerNom(brut: unknown): string | null {
 /** Ce que montre une carte de « Vos projets » : statut, étape en cours, avancement. */
 export function resumeProjet(etat: EtatProjet): { statut: StatutProjet; index: number; libelle: string } {
   const index = Math.max(0, ETAPES_PUBLICISTE.findIndex((e) => e.id === etat.etape));
-  const choixFaits = (["visuel", "typo", "couleurs", "musique", "voix", "storyboard"] as const).every((k) => !!etat.choix[k]);
-  if (etat.etape === "recap" && choixFaits) return { statut: "validee", index: 7, libelle: "Validée · prête pour la production" };
+  if (etat.valide) return { statut: "validee", index: 7, libelle: "Validée · prête pour la production" };
   if (etat.etape === "entretien" && !etat.fiche.pret) {
     const { remplies, total } = remplissage(etat.fiche);
     return { statut: "entretien", index: 0, libelle: remplies ? `Le brief · fiche remplie à ${remplies} sur ${total}` : "Le brief · à commencer" };

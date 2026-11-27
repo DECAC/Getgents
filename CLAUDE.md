@@ -1230,7 +1230,7 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   gardé chez Mistral), « … » remplacés par une virgule (Voxtral improvise).
   Clés Gemini et Mistral lues chacune par UN module (test
   `clesPlateforme.test.ts`) : toujours la PLATEFORME qui paie, hors quota
-  OpenRouter — plafond de 60 voix/heure/compte en mémoire
+  OpenRouter — plafond de 200 répliques/heure/compte en mémoire (60 au lot 3)
   (`lib/server/limiteVoix.ts`). Coût des voix NON relevé (« + voix » dans
   l'en-tête, comme la maquette). Seul ajout à la maquette : le TEXTE
   D'ESSAI modifiable (le texte du film n'existe qu'au storyboard) ;
@@ -1243,8 +1243,38 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   revenue à « Brief en cours »). Rien ne s'écrit avant la première lecture
   (`charge`), une lecture jette l'écriture en attente. Vérifié au
   navigateur (mémoire locale, VRAIS modèles : Lyria, Gemini, Voxtral avec
-  le mémo de l'éditeur). Lot suivant : 4 storyboard,
-  croquis, animatique, Valider. Le premier lot (« atelier du film »,
+  le mémo de l'éditeur). **Lot 4 (27/11, écrit, branche)** : storyboard, croquis, animatique,
+  Valider (`lib/publicisteStoryboard.ts`, `EtapeStoryboard`, `Animatique`,
+  `lignesVoix.ts`, routes `projets/<id>/storyboard`, `/croquis`). Récit en UN
+  appel (Sonnet 5.5, JSON validé ; durée visée lue dans la forme du brief,
+  `dureeVisee`) ; croquis `gemini-3.1-flash-lite-image` en 9:16 (mesuré :
+  3-5 s, 0,034 $, JPEG), trois à la fois. Corrections directes par scène
+  (« Modifiée », « Revenir au texte d'origine », champ `origine`). « Vos
+  remarques sur l'ensemble » → RÉVISION par le modèle, montrée en
+  DIFFÉRENCES (ajoutées / supprimées / retouchées / ordre, croquis à
+  redessiner et leur coût) AVANT « Remplacer » — la promesse de la maquette,
+  seul écran ajouté ; « Revenir au précédent » ensuite. Une scène nouvelle
+  d'une révision s'appelle `n…` jusqu'à la fusion (`fusionnerRevision`) : un
+  `s3` inventé aurait volé le croquis d'une scène existante. Seules les
+  scènes dont « On voit » diffère du texte dessiné (`dessine`) sont
+  redessinées. Voix : UNE réplique = UN fichier par scène et par voix
+  (`voix.lignes`), dite à la demande (animatique, « Texte entier » du
+  tableau des voix), gardée tant que son texte ne change pas ; l'animatique
+  place chaque phrase sur sa scène et allonge une scène trop courte
+  (`minutage`), musique en boucle qui s'efface sous la voix. Voix par
+  défaut de l'animatique : Charon (maquette) tant qu'aucune n'est choisie.
+  Valider : récapitulatif, coûts mesurés (croquis compris ; ceux des scènes
+  SUPPRIMÉES n'y figurent plus, la liste des projets les compte), estimation
+  de la production (`devisProduction`, ordres de grandeur), « Valider et
+  lancer la production » pose `valide` — la production n'est PAS branchée et
+  l'écran le dit ; « Tout recommencer » efface la direction, garde le brief,
+  avec confirmation. Statut « validée » = `valide`, plus « tout choisi ».
+  Vérifié au navigateur (mémoire locale, vrais modèles) : récit en 15-23 s,
+  9-10 croquis en ~36 s, révision en 15 s, animatique avec Kore et la
+  musique, visionneuse, texte entier, récapitulatif, rechargement,
+  téléphone. NON vérifié : Supabase (croquis et sons servis par adresse
+  signée : `fetch` de l'animatique vers le stockage exige ses en-têtes CORS).
+  Lot suivant : la PRODUCTION (rien de décidé). Le premier lot (« atelier du film »,
   `d2819e3`, `bae9877`, annulés par `a8d5489`) : rendu MP4 WebCodecs et route
   de voix Mistral à REPRENDRE de l'historique.
 - **Formes des boutons, À TRANCHER PLUS TARD** (27/11, l'éditeur « n'en peut

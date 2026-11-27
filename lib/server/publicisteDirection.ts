@@ -1,4 +1,5 @@
 import { enTetesOpenRouter, type ContexteLlm } from "@/lib/server/openRouterKey";
+import { validerReponseStoryboard, type Scene } from "@/lib/publicisteStoryboard";
 import { extractLlmMessageText } from "@/lib/server/llmMessageText";
 import { resolveModelId } from "@/lib/allowedModels";
 import { MODELE_CHAT_PAR_DEFAUT } from "@/lib/modeleConversation";
@@ -86,7 +87,7 @@ export async function proposerPistes(
 export type ResultatPlanche = { ok: true; octets: Uint8Array; type: string; cout: number } | { ok: false; erreur: string; statut: number };
 
 /** Une planche d'ambiance, au format de la maquette (928×1152). */
-export async function genererPlanche(ctx: ContexteLlm, prompt: string): Promise<ResultatPlanche> {
+export async function genererPlanche(ctx: ContexteLlm, prompt: string, modele = MODELE_PLANCHE, format = FORMAT_PLANCHE): Promise<ResultatPlanche> {
   if (!ctx.cle) return { ok: false, erreur: "Aucune clé de modèle disponible.", statut: 503 };
   const debut = Date.now();
   let res: Response;
@@ -95,10 +96,10 @@ export async function genererPlanche(ctx: ContexteLlm, prompt: string): Promise<
       method: "POST",
       headers: enTetesOpenRouter(ctx.cle),
       body: JSON.stringify({
-        model: MODELE_PLANCHE,
+        model: modele,
         messages: [{ role: "user", content: prompt }],
         modalities: ["image", "text"],
-        image_config: { aspect_ratio: FORMAT_PLANCHE },
+        image_config: { aspect_ratio: format },
         usage: { include: true },
       }),
       cache: "no-store",
@@ -117,7 +118,7 @@ export async function genererPlanche(ctx: ContexteLlm, prompt: string): Promise<
   const msg = data?.choices?.[0]?.message ?? {};
   const url: string | undefined = msg?.images?.[0]?.image_url?.url;
   const cout = Number(data?.usage?.cost ?? 0) || 0;
-  journal("planche", { ok: !!url, ms: Date.now() - debut, cout });
+  journal("planche", { modele, ok: !!url, ms: Date.now() - debut, cout });
   const m = url?.match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
   if (!m) return { ok: false, erreur: "Le modèle n'a renvoyé aucune image. Réessayez.", statut: 502 };
   return { ok: true, octets: Uint8Array.from(Buffer.from(m[2], "base64")), type: m[1], cout };
@@ -195,4 +196,40 @@ export async function genererExtraitMusique(ctx: ContexteLlm, prompt: string): P
   journal("musique", { ok: octets.length > 1000, ms: Date.now() - debut, cout, octets: octets.length });
   if (octets.length < 1000) return { ok: false, erreur: "Le compositeur n'a renvoyé aucun son. Réessayez.", statut: 502 };
   return { ok: true, octets, cout };
+}
+
+export type ResultatStoryboard = { ok: true; bulle: string[]; scenes: Scene[]; cout: number } | { ok: false; erreur: string; statut: number };
+
+/** Lot 4 : écrire ou réviser le storyboard (un appel, JSON validé, deux essais). */
+export async function ecrireStoryboard(ctx: ContexteLlm, consigne: string, revision: boolean): Promise<ResultatStoryboard> {
+  if (!ctx.cle) return { ok: false, erreur: "Aucune clé de modèle disponible.", statut: 503 };
+  const modele = ctx.source === "plateforme" ? resolveModelId(MODELE_CHAT_PAR_DEFAUT) : MODELE_CHAT_PAR_DEFAUT;
+  let cout = 0;
+  for (let essai = 1; essai <= 2; essai++) {
+    const debut = Date.now();
+    let res: Response;
+    try {
+      res = await fetch(OPENROUTER_API, {
+        method: "POST",
+        headers: enTetesOpenRouter(ctx.cle),
+        body: JSON.stringify({ model: modele, messages: [{ role: "user", content: consigne }], max_tokens: 8_000, usage: { include: true } }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(150_000),
+      });
+    } catch (e) {
+      journal("storyboard_echec", { essai, cause: (e as Error).name });
+      continue;
+    }
+    if (!res.ok) {
+      const corps = (await res.text().catch(() => "")).slice(0, 160);
+      journal("storyboard_refus", { essai, statut: res.status, corps });
+      return { ok: false, erreur: `Le modèle a refusé la demande (réf. ${res.status}).`, statut: res.status === 402 || res.status === 403 ? 503 : 502 };
+    }
+    const data = await res.json();
+    cout += Number(data?.usage?.cost ?? 0) || 0;
+    const r = validerReponseStoryboard(jsonDuTexte(extractLlmMessageText(data)), revision);
+    journal("storyboard", { revision, essai, ok: !!r, scenes: r?.scenes.length ?? 0, ms: Date.now() - debut, cout: data?.usage?.cost ?? null });
+    if (r) return { ok: true, ...r, cout };
+  }
+  return { ok: false, erreur: "Le storyboard n'a pas pu être écrit. Réessayez.", statut: 502 };
 }
