@@ -42,7 +42,7 @@ export async function listerProjets(owner: string, gent: string): Promise<{ ok: 
   if (!sb) {
     const projets = Array.from(memoire())
       .filter(([, l]) => l.owner === owner && l.gent === gent)
-      .map(([id, l]) => ({ id, nom: l.nom, etat: l.etat, modifieLe: l.modifie, cout: 0 }))
+      .map(([id, l]) => ({ id, nom: l.nom, etat: l.etat, modifieLe: l.modifie, cout: Math.round((coutFichiersMemoire(id) + (l.etat.depenseTexte ?? 0)) * 100) / 100 }))
       .sort((a, b) => b.modifieLe.localeCompare(a.modifieLe));
     return { ok: true, projets };
   }
@@ -68,7 +68,8 @@ export async function listerProjets(owner: string, gent: string): Promise<{ ok: 
       nom: (l.nom as string) ?? "",
       etat: { ...ETAT_VIDE, ...((l.etat as EtatProjet) ?? {}) },
       modifieLe: l.modifie_le as string,
-      cout: Math.round((couts.get(l.id as string) ?? 0) * 100) / 100,
+      // « Dépensé » : les fichiers générés + les appels de texte (pistes), relevés dans l'état.
+      cout: Math.round(((couts.get(l.id as string) ?? 0) + Number((l.etat as EtatProjet)?.depenseTexte ?? 0)) * 100) / 100,
     })),
   };
 }
@@ -167,4 +168,60 @@ export async function supprimerProjet(owner: string, id: string): Promise<{ ok: 
   const { error } = await sb.from("publiciste_projets").delete().eq("owner_id", owner).eq("id", id);
   if (error) return echec("suppression_echouee", error);
   return { ok: true };
+}
+
+// ── Fichiers générés (seau privé `publiciste`, table `publiciste_fichiers`) ──
+
+interface FichierMemoire { type: string; octets: Uint8Array; cout: number; projet: string }
+function memoireFichiers(): Map<string, FichierMemoire> {
+  if (process.env.NODE_ENV === "production") throw new Error("supabase_non_configure");
+  const g = globalThis as unknown as { __publicisteFichiers?: Map<string, FichierMemoire> };
+  return (g.__publicisteFichiers ??= new Map());
+}
+
+const EXTENSIONS: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "audio/mpeg": "mp3", "audio/wav": "wav" };
+
+/** Range un fichier généré pour ce projet (l'appelant a vérifié que le projet est à `owner`). */
+export async function enregistrerFichier(owner: string, projetId: string, nom: string, type: string, octets: Uint8Array, cout: number): Promise<{ ok: true } | Echec> {
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    memoireFichiers().set(`${projetId}/${nom}`, { type, octets, cout, projet: projetId });
+    return { ok: true };
+  }
+  const chemin = `${owner}/${projetId}/${nom}.${EXTENSIONS[type] ?? "bin"}`;
+  const { error: e1 } = await sb.storage.from("publiciste").upload(chemin, octets, { contentType: type, upsert: true });
+  if (e1) return echec("fichier_envoi_echoue", e1);
+  const { error: e2 } = await sb
+    .from("publiciste_fichiers")
+    .upsert({ projet_id: projetId, nom, type, taille: octets.length, chemin, cout: Math.round(cout * 10000) / 10000 });
+  if (e2) return echec("fichier_ligne_echouee", e2);
+  return { ok: true };
+}
+
+/** Un fichier du projet : adresse signée d'une heure (Supabase), ou les octets (mémoire locale). */
+export async function lireFichier(
+  owner: string,
+  projetId: string,
+  nom: string
+): Promise<{ ok: true; adresse: string } | { ok: true; type: string; octets: Uint8Array } | Echec> {
+  const projet = await lireProjet(owner, projetId);
+  if (!projet.ok) return projet;
+  const sb = getSupabaseAdmin();
+  if (!sb) {
+    const f = memoireFichiers().get(`${projetId}/${nom}`);
+    return f ? { ok: true, type: f.type, octets: f.octets } : { ok: false, cause: "introuvable" };
+  }
+  const { data, error } = await sb.from("publiciste_fichiers").select("chemin").eq("projet_id", projetId).eq("nom", nom).maybeSingle();
+  if (error) return echec("fichier_lecture_echouee", error);
+  if (!data) return { ok: false, cause: "introuvable" };
+  const { data: s, error: e2 } = await sb.storage.from("publiciste").createSignedUrl(data.chemin as string, 3600);
+  if (e2 || !s?.signedUrl) return echec("fichier_signature_echouee", e2 ?? { message: "sans adresse" });
+  return { ok: true, adresse: s.signedUrl };
+}
+
+/** Coût des fichiers en mémoire locale (développement) : la liste les additionne comme en base. */
+export function coutFichiersMemoire(projetId: string): number {
+  let t = 0;
+  for (const f of memoireFichiers().values()) if (f.projet === projetId) t += f.cout;
+  return t;
 }

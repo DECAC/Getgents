@@ -217,3 +217,55 @@ button.retour { border: 0; background: none; }
   .points i { width: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .projet:hover { transform: none; } }
+
+/* ── Lot 2 : cartes de choix (reprise de la maquette) ── */
+.lancer { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.choix { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .choix { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.carte {
+  position: relative; display: grid; gap: 12px; align-content: start; text-align: left; min-width: 0;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; box-shadow: var(--ombre);
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.carte:hover { border-color: #d9c4b9; transform: translateY(-1px); }
+.carteChoisie { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(42, 31, 25, .08), var(--ombre); }
+.badgeReco { position: absolute; top: 20px; left: 20px; z-index: 1; background: var(--corail); color: #fff; font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.badgeChoisi { position: absolute; top: 20px; right: 20px; z-index: 1; background: var(--ink); color: var(--card); font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.carte h3 { margin: 2px 6px 0; font-size: 18px; letter-spacing: -.015em; }
+.desc { margin: 0 6px; color: var(--ink-2); font-size: 14px; }
+.planche { width: 100%; max-width: 100%; aspect-ratio: 928 / 1152; border-radius: 10px; overflow: hidden; background: var(--line-soft); display: grid; place-items: center; }
+.planche img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.plancheAttente { padding: 16px; text-align: center; color: var(--muted); font-size: 13.5px; }
+.pourContre { margin: 0 6px 2px; display: grid; gap: 6px; font-size: 13px; color: var(--muted); padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.pourContre span { display: grid; grid-template-columns: 14px 1fr; gap: 4px; }
+.pourContre span::before { font-family: var(--f-mono); font-weight: 500; }
+.pourContre .p::before { content: "+"; color: var(--succes); }
+.pourContre .c::before { content: "−"; color: var(--corail-700); }
+.action { margin: 0 6px 6px; justify-self: start; border: 1px solid var(--ink); background: transparent; border-radius: 999px; padding: 8px 16px; font-size: 13.5px; font-weight: 600; }
+.carteChoisie .action { background: var(--ink); color: var(--card); }
+.autre { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border: 1px dashed #d9c4b9; border-radius: var(--r); padding: 14px 16px; color: var(--muted); font-size: 14px; }
+.autre textarea { flex: 1 1 260px; min-width: 0; min-height: 44px; border: 1px solid var(--line); background: var(--card); border-radius: var(--r-s); padding: 10px 12px; resize: vertical; font-size: 15px; }
+/* Typographie : spécimens */
+.specimen { border-radius: 10px; padding: 20px 18px; display: grid; gap: 12px; min-height: 270px; align-content: start; background: #fbfaf5; color: var(--ink); }
+.etq { justify-self: start; padding: 6px 12px; border-radius: 3px; transform: rotate(-2deg); box-shadow: 0 1px 2px rgba(0, 0, 0, .18); background: #fff; font-size: 18px; }
+.specH { margin: 0; line-height: 1.08; letter-spacing: -.01em; text-wrap: balance; font-size: 25px; }
+.specB { margin: 0; font-size: 13.5px; line-height: 1.5; }
+.specDev { margin: 0; font-size: 19px; color: var(--corail-700); }
+.specBtn { justify-self: start; padding: 9px 16px; border-radius: 999px; font-size: 13px; background: var(--ink); color: #fff; font-weight: 700; }
+/* Couleurs */
+.nuancier { display: grid; grid-template-columns: repeat(5, 1fr); border-radius: 10px; overflow: hidden; height: 64px; }
+.nuancier span { display: block; }
+.teintes { display: grid; gap: 4px; margin: 0 6px; }
+.teintes div { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.teintes code { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.mini { border-radius: 10px; padding: 18px; display: grid; gap: 10px; justify-items: start; }
+.couv { width: 100%; height: 92px; border-radius: 6px; position: relative; overflow: hidden; }
+.couv i { position: absolute; left: 14px; top: 22px; padding: 6px 10px; font-style: normal; font-size: 13px; transform: rotate(-2deg); border-radius: 2px; }
+.filet { width: 100%; height: 4px; border-radius: 2px; }
+.miniBtn { padding: 8px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+/* Coût dans la barre (comme la maquette) */
+.cout { margin-left: auto; flex: none; display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.cout b { font-size: 12px; color: var(--ink); font-weight: 500; }
+@media (max-width: 520px) { .coutL { display: none; } }
+@media (prefers-reduced-motion: reduce) { .carte:hover { transform: none; } }
+.tot { border-top: 1px solid var(--line); padding-top: 7px; font-weight: 600; }

@@ -6,6 +6,8 @@ import { useEspace } from "@/lib/context/EspaceContext";
 import { SafeHTML } from "@/components/shared/SafeHTML";
 import { apiFetchInit } from "@/lib/apiFetch";
 import { ListeProjets } from "./ListeProjets";
+import { EtapeDirection } from "./EtapeDirection";
+import { ETAPES_DIRECTION, POLICES, coutDirection, type EtapeDirection as IdEtapeDirection } from "@/lib/publicisteDirection";
 import {
   ETAPES_PUBLICISTE,
   ETAT_VIDE,
@@ -216,12 +218,23 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
     fiche.projet || fiche.marque
       ? `Projet « ${fiche.projet || fiche.marque} »${fiche.marque && fiche.projet && fiche.marque !== fiche.projet ? ` · ${fiche.marque}` : ""}`
       : "Nouveau projet";
+  const nomChoisi = (e: string) => {
+    const id = etat.choix[e as keyof EtatProjet["choix"]];
+    if (!id) return null;
+    if (e === "visuel") return etat.direction?.visuel?.visuel?.find((p) => p.id === id)?.nom ?? null;
+    if (e === "typo") return etat.direction?.typo?.typo?.find((p) => p.id === id)?.nom ?? POLICES.find((p) => p.id === id)?.nom ?? null;
+    if (e === "couleurs") return etat.direction?.couleurs?.couleurs?.find((p) => p.id === id)?.nom ?? null;
+    return id;
+  };
+  const LIBELLES_PIED: Record<string, string> = { visuel: "Univers", typo: "Lettres", couleurs: "Couleurs" };
   const etatPied =
     etat.etape === "entretien"
       ? "Fond et forme, avant de produire"
       : etat.etape === "recap"
         ? ""
-        : "Pas encore choisi";
+        : nomChoisi(etat.etape)
+          ? `${LIBELLES_PIED[etat.etape] ?? "Choix"} : ${nomChoisi(etat.etape)}`
+          : "Pas encore choisi";
 
   return (
     <div className={styles.studio} data-defilement-studio="">
@@ -247,6 +260,10 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
             <span className={styles.identTexte}>
               <b>Le Publiciste</b>
               <small>{sousTitreProjet}</small>
+            </span>
+            <span className={styles.cout} title="Ce qu'a coûté la direction artistique de ce projet">
+              <span className={styles.coutL}>Direction artistique</span>
+              <b>{coutDirection(etat.direction, etat.depenseTexte).total.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $</b>
             </span>
           </div>
           <nav className={styles.etapes} aria-label="Étapes" ref={navRef}>
@@ -283,7 +300,18 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
               arreter={stopGeneration}
             />
           ) : etat.etape === "recap" ? (
-            <Recap fiche={fiche} etat={etat} aller={aller} />
+            <Recap fiche={fiche} etat={etat} aller={aller} nomChoisi={nomChoisi} />
+          ) : (ETAPES_DIRECTION as readonly string[]).includes(etat.etape) ? (
+            <EtapeDirection
+              key={etat.etape}
+              etape={etat.etape as IdEtapeDirection}
+              numero={index}
+              projetId={projetId}
+              etat={etat}
+              modifier={modifier}
+              fiche={fiche}
+              allerEntretien={() => aller("entretien")}
+            />
           ) : (
             <EtapeAVenir etape={etat.etape} numero={index} fiche={fiche} aller={aller} />
           )}
@@ -521,7 +549,7 @@ function EtapeAVenir({ etape, numero, fiche, aller }: { etape: string; numero: n
   );
 }
 
-function Recap({ fiche, etat, aller }: { fiche: FichePubliciste; etat: EtatProjet; aller: (id: EtapePubliciste) => void }) {
+function Recap({ fiche, etat, aller, nomChoisi }: { fiche: FichePubliciste; etat: EtatProjet; aller: (id: EtapePubliciste) => void; nomChoisi: (e: string) => string | null }) {
   const ligne = (k: string, id: EtapePubliciste, val: string | null, detail?: string) => (
     <div className={styles.l} key={k}>
       <span className={styles.k}>{k}</span>
@@ -543,25 +571,52 @@ function Recap({ fiche, etat, aller }: { fiche: FichePubliciste; etat: EtatProje
       </Bulle>
       <div className={styles.recap}>
         {ligne("Forme", "entretien", fiche.forme.forme || null, fiche.forme.forme ? (fiche.formeDecidee ? "Décidée à l'entretien" : "Pressentie à l'entretien") : undefined)}
-        {ligne("Univers", "visuel", etat.choix.visuel ?? null)}
-        {ligne("Lettres", "typo", etat.choix.typo ?? null)}
-        {ligne("Couleurs", "couleurs", etat.choix.couleurs ?? null)}
+        {ligne("Univers", "visuel", nomChoisi("visuel"))}
+        {ligne("Lettres", "typo", nomChoisi("typo"), etat.choix.typo ? POLICES.find((p) => p.id === etat.choix.typo)?.detail : undefined)}
+        {ligne("Couleurs", "couleurs", nomChoisi("couleurs"))}
         {ligne("Musique", "musique", etat.choix.musique ?? null)}
         {ligne("Voix", "voix", etat.choix.voix ?? null)}
         {ligne("Storyboard", "storyboard", etat.choix.storyboard ?? null)}
       </div>
-      <div className={styles.couts}>
-        <b>Ce que coûte la direction artistique</b>
-        <div>
-          <span>Rien n&apos;a encore été généré pour ce projet.</span>
-          <span>0,00 $</span>
-        </div>
-      </div>
+      <Couts etat={etat} />
       <div className={styles.actionsRecap}>
         <button type="button" className={[styles.bouton, styles.corail].join(" ")} disabled>
           Valider la direction
         </button>
       </div>
     </>
+  );
+}
+
+/** Ce qu'a coûté la direction artistique, mesuré (texte des pistes, planches) — comme le bloc de la maquette. */
+function Couts({ etat }: { etat: EtatProjet }) {
+  const c = coutDirection(etat.direction, etat.depenseTexte);
+  const n = (etat.direction?.visuel?.visuel ?? []).filter((p) => p.cout !== undefined).length;
+  const eur = (x: number) => x.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " $";
+  return (
+    <div className={styles.couts}>
+      <b>Ce que coûte la direction artistique (déjà engagé)</b>
+      {c.total === 0 ? (
+        <div>
+          <span>Rien n&apos;a encore été généré pour ce projet.</span>
+          <span>0,00 $</span>
+        </div>
+      ) : (
+        <>
+          <div>
+            <span>Pistes proposées (texte)</span>
+            <span>{eur(c.texte)}</span>
+          </div>
+          <div>
+            <span>{n} planche{n > 1 ? "s" : ""} d&apos;ambiance</span>
+            <span>{eur(c.planches)}</span>
+          </div>
+          <div className={styles.tot}>
+            <span>Total</span>
+            <span>{eur(c.total)}</span>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

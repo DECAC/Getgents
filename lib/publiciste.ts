@@ -12,6 +12,7 @@
  *
  * Module PUR : aucune dépendance au navigateur ni au serveur.
  */
+import { ETAPES_DIRECTION, validerProposition, type EtapeDirection, type Proposition } from "@/lib/publicisteDirection";
 
 export const MARQUEUR_FICHE = "<!--FICHE-->";
 export const MARQUEUR_FICHE_FIN = "<!--/FICHE-->";
@@ -150,6 +151,10 @@ export interface EtatProjet {
   fiche: FichePubliciste;
   /** Choix de l'auteur, étape par étape (identifiants des pistes). */
   choix: Partial<Record<Exclude<EtapePubliciste, "entretien" | "recap">, string>>;
+  /** Lot 2 : la proposition en cours de chaque étape de direction (trois pistes). */
+  direction?: Partial<Record<EtapeDirection, Proposition>>;
+  /** Coût cumulé des appels de TEXTE (pistes) ; les fichiers ont le leur. */
+  depenseTexte?: number;
 }
 
 export const ETAT_VIDE: EtatProjet = { etape: "entretien", fiche: FICHE_VIDE, choix: {} };
@@ -173,7 +178,17 @@ export function validerEtat(brut: unknown): EtatProjet | null {
       if (v) choix[e.id] = v;
     }
   }
-  return { etape, fiche: validerFiche(o.fiche) ?? FICHE_VIDE, choix };
+  const direction: EtatProjet["direction"] = {};
+  if (o.direction && typeof o.direction === "object") {
+    for (const e of ETAPES_DIRECTION) {
+      const p = (o.direction as Record<string, unknown>)[e] as Record<string, unknown> | undefined;
+      if (!p) continue;
+      const v = validerProposition(e, { ...p, pistes: p[e] ?? p.pistes }, typeof p.remarque === "string" ? p.remarque : undefined);
+      if (v) direction[e] = { ...v, recommandee: typeof p.recommandee === "string" ? p.recommandee : v.recommandee };
+    }
+  }
+  const depense = typeof o.depenseTexte === "number" && Number.isFinite(o.depenseTexte) && o.depenseTexte >= 0 ? Math.min(o.depenseTexte, 1000) : 0;
+  return { etape, fiche: validerFiche(o.fiche) ?? FICHE_VIDE, choix, direction, depenseTexte: depense };
 }
 
 // ── Plusieurs projets par gent (migration 041 ; maquette « Vos projets ») ──
