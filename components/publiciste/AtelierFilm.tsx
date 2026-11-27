@@ -211,7 +211,9 @@ export function AtelierFilm({ storyboard, cle, onClose }: { storyboard: Storyboa
           ton: "erreur",
           texte:
             (detail && typeof detail.message === "string" ? detail.message : "La voix n'a pas pu être générée.") +
-            ` (scène ${i + 1}${reponse ? `, réf. ${reponse.status}` : ", réseau"}). Les voix déjà prêtes sont gardées.`,
+            ` (scène ${i + 1}, voix ${VOIX_PUBLICISTE.find((v) => v.id === voix)?.nom ?? voix}, réf. ${
+              detail && typeof detail.ref === "string" ? detail.ref : reponse ? reponse.status : "réseau"
+            }). Les voix déjà prêtes sont gardées.`,
         });
         break;
       }

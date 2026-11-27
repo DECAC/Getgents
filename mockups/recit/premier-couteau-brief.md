@@ -547,3 +547,12 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   storyboard, atelier du film (voix Mistral, images et musique importées,
   aperçu, MP4 vertical dans le navigateur). Détails dans CLAUDE.md. Prochain :
   lot 2, la direction artistique générée.
+- **Premier essai en production (27/11)** : sur iPhone, seule la voix Manon
+  a été générée ; aucune image (normal au lot 1 : images importées). Non
+  reproduit d'ici : avec la clé du conteneur, les 4 voix passent (local) et
+  Mistral n'a aucun plafond gênant (24 000 caractères/min, 6 appels enchaînés
+  en < 2 s). Hypothèse NON vérifiée : la clé de Vercel n'est pas la même
+  (autre compte ou offre). L'atelier affiche désormais la cause
+  (« réf. mistral-<code> », nom de la voix). **Cible d'usage : le Mac**
+  (décision de l'éditeur : un film se prépare au bureau) ; l'iPhone passe au
+  second plan, plus de temps de test dessus.

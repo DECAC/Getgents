@@ -44,7 +44,10 @@ export async function POST(req: Request) {
   if (!r.ok) {
     console.error(JSON.stringify({ tag: "getgents:publiciste", event: "voix_echec", statut: r.statut, cause: r.cause, voix }));
     const message = r.statut === 400 ? "Texte ou voix refusé." : "La voix n'a pas pu être générée. Réessayez dans un instant.";
-    return NextResponse.json({ error: "voix_echec", message }, { status: r.statut >= 500 || r.statut === 429 ? r.statut : 502 });
+    // La référence dit QUI a refusé (Mistral et son code, ou le réseau) : de quoi
+    // diagnostiquer depuis l'écran, sans les journaux. Jamais le détail brut.
+    const ref = r.cause.startsWith("mistral_") ? `mistral-${r.statut}` : r.cause.split(":")[0];
+    return NextResponse.json({ error: "voix_echec", message, ref, voix }, { status: r.statut >= 500 || r.statut === 429 ? r.statut : 502 });
   }
   console.log(JSON.stringify({ tag: "getgents:publiciste", event: "voix_generee", voix, caracteres: texte.length, ms: Date.now() - debut }));
   return new Response(r.wav as unknown as BodyInit, { headers: { "Content-Type": "audio/wav", "Cache-Control": "no-store" } });
