@@ -506,3 +506,13 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   vérification de l'AAC sur les vrais navigateurs (page « Test d'encodage
   vidéo », https://claude.ai/artifact/K5oz6LqiV8A1GLdDyhLAZ9) ; A gardé en
   secours hors Vercel si un navigateur ne sait pas.
+- **Ouverture au public : principe accepté (27/11)**. Le Publiciste reste
+  réservé à l'éditeur tant que la qualité n'est pas prouvée sur 2 ou 3 vrais
+  films. Trois décisions à prendre AVANT le code, parce qu'elles coûtent cher
+  à changer après : où vit le produit (Pages ou gents), une file de tâches
+  pour les générations longues, le stockage des vidéos hors de Supabase
+  gratuit (50 Mo par fichier). Avant l'ouverture, pas avant le code :
+  juridique (voix recomposée, règlement européen sur l'IA, droits Lyria et
+  images, marques), modèle payant (donc SIREN : le régime anonyme tombe),
+  plafond global. « Ma voix » ouverte au public seulement avec une vraie
+  vérification d'identité et un avis juridique.
