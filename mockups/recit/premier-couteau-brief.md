@@ -405,3 +405,16 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   Fiche « Ce que j'en retiens » à côté (fond, forme + degré de certitude).
   Dans le gent réel : reconnaissance vocale (navigateur ou API) + TTS, à
   concevoir — non fait.
+- **« Ma voix »** (27/11, étape Voix, demande de l'éditeur) : la narration
+  dite par la voix RECOMPOSÉE de l'auteur. Parcours : lire un texte de
+  ~30 s dont la PREMIÈRE PHRASE vaut accord (« je m'appelle… et j'autorise la
+  reproduction de ma voix pour mes propres projets »), enregistrer (micro)
+  ou importer un fichier, cocher « c'est ma voix », recomposer, choisir,
+  supprimer à tout moment ; la voix ne sert qu'aux projets de son auteur.
+  Maquette seulement : rien n'est envoyé, l'enregistrement reste dans le
+  navigateur ; l'animatique prend Charon à la place. Modèle pressenti par
+  l'éditeur : MISTRAL — NON vérifié : le réseau de l'agent refuse
+  mistral.ai, docs.mistral.ai et api.mistral.ai, et OpenRouter ne liste que
+  `mistralai/voxtral-small-24b-2507` (audio en ENTRÉE, texte en sortie :
+  transcription, pas de synthèse). Pour un essai réel : ouvrir ces hôtes et
+  fournir une clé Mistral, puis tester sur un enregistrement de l'auteur.

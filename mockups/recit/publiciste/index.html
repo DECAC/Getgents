@@ -184,6 +184,29 @@ h2.titre { margin: 0; font-size: clamp(26px, 5.4vw, 38px); line-height: 1.08; le
 .jeux { display: flex; gap: 8px; flex-wrap: wrap; }
 .jeux .mini-b { padding: 8px 14px; font-size: 13.5px; }
 
+/* Ma voix */
+.ma-voix { display: grid; gap: 14px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--ombre); padding: 20px; }
+.ma-voix.choisie { border-color: var(--corail); box-shadow: 0 0 0 3px rgba(230,93,118,.12), var(--ombre); }
+.mv-tete { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.mv-tete h3 { margin: 4px 0 0; font-size: 22px; letter-spacing: -.02em; }
+.mv-statut { font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--line-soft); color: var(--muted); white-space: nowrap; }
+.mv-statut.ok { background: var(--succes-tint); color: #2f6e33; }
+.mv-intro { margin: 0; max-width: 64ch; color: var(--ink-2); }
+.mv-rappel { margin: 0; padding: 10px 12px; border-radius: var(--r-s); background: var(--bg); font-size: 13.5px; color: var(--ink-2); max-width: 72ch; }
+.mv-etapes { margin: 0; padding-left: 22px; display: grid; gap: 18px; }
+.mv-etapes li { display: grid; gap: 8px; padding-left: 4px; }
+.mv-etapes li::marker { font-weight: 700; color: var(--corail-700); }
+.mv-texte { margin: 0; padding: 14px 16px; border-left: 3px solid var(--corail); background: var(--bg); border-radius: 0 var(--r-s) var(--r-s) 0; font-size: 16px; line-height: 1.6; max-width: 70ch; }
+.mv-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.mv-actions label.bouton { cursor: pointer; display: inline-flex; align-items: center; }
+.mv-ech { display: grid; gap: 4px; max-width: 420px; }
+.mv-ech:empty { display: none; }
+.mv-ech audio { width: 100%; }
+.mv-nom { font-size: 12.5px; color: var(--muted); }
+.mv-consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; max-width: 64ch; cursor: pointer; }
+.mv-consent input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--corail-700); flex: none; }
+.mv-resultat { display: grid; gap: 8px; padding: 12px 14px; background: var(--succes-tint); border-radius: var(--r-s); max-width: 70ch; }
+
 /* Storyboard : une scène par carte, le croquis en grand */
 .sb-tete { display: flex; justify-content: space-between; align-items: center; gap: 12px 20px; flex-wrap: wrap; padding: 16px 18px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--ombre); }
 .sb-tete .note { max-width: 56ch; }
@@ -487,7 +510,7 @@ const vierge = () => ({ etape: "entretien", visuel: null, typo: null, couleurs: 
 let S = vierge();
 try { Object.assign(S, JSON.parse(localStorage.getItem(CLE) || "{}")); } catch (e) {}
 const garder = () => { try { localStorage.setItem(CLE, JSON.stringify(S)); } catch (e) {} };
-const idsVoix = VOIX.map(([v]) => v);
+const idsVoix = [...VOIX.map(([v]) => v), "mavoix"];
 if (S.voix && !idsVoix.includes(S.voix)) S.voix = null;
 S.ecartees = (S.ecartees || []).filter((v) => idsVoix.includes(v));
 if (S.etape === "brief") S.etape = "entretien";
@@ -534,6 +557,69 @@ function autreDemande(cle, invite, prix) {
   ta.addEventListener("input", () => { S.remarques[cle] = ta.value; garder(); });
   const msg = h("span", { class: "note", hidden: true });
   return h("div", { class: "autre" }, ta, h("button", { class: "bouton leger", type: "button", onclick: () => { msg.hidden = false; msg.textContent = `Dans le gent, je relancerais trois nouvelles propositions à partir de vos mots (≈ ${prix}). Ici, votre remarque est gardée pour la production.`; } }, "Autre proposition"), msg);
+}
+
+/* ── Ma voix : recomposer la voix de l'auteur pour la narration ── */
+const TEXTE_MA_VOIX = "Je m'appelle Alfred et j'autorise la reproduction de ma voix pour mes propres projets. J'avais huit ans. C'était l'été, dans l'atelier. Mon oncle m'a tendu mon premier couteau. Avec, j'ai construit une cabane, et une petite voiture en bois qui roulait à peu près. Il y a des objets qu'on n'oublie pas.";
+let echantillon = null; // { url, duree, nom } : reste dans ce navigateur, n'est jamais envoyé
+function blocMaVoix() {
+  const mv = S.maVoix || (S.maVoix = { consentement: false, demandee: false });
+  const choisie = S.voix === "mavoix";
+  const etat = h("p", { class: "note", style: "margin:0", "aria-live": "polite" });
+  const lecteurEch = h("div", { class: "mv-ech" });
+  const majEch = () => {
+    lecteurEch.textContent = "";
+    if (!echantillon) return;
+    const a = h("audio", { controls: true, src: echantillon.url, preload: "metadata" });
+    lecteurEch.append(h("span", { class: "mv-nom" }, echantillon.nom + (echantillon.duree ? ` · ${Math.round(echantillon.duree)} s` : "")), a);
+    if (echantillon.duree && echantillon.duree < 20) { etat.textContent = "Un peu court : visez 30 secondes, en lisant tout le texte."; }
+  };
+  const garderEchantillon = (blob, nom) => {
+    if (echantillon) URL.revokeObjectURL(echantillon.url);
+    echantillon = { url: URL.createObjectURL(blob), duree: 0, nom };
+    const a = new Audio(); a.preload = "metadata"; a.src = echantillon.url;
+    a.onloadedmetadata = () => { if (echantillon) { echantillon.duree = isFinite(a.duration) ? a.duration : 0; majEch(); } };
+    etat.textContent = ""; majEch(); majBouton();
+  };
+  const fichier = h("input", { type: "file", id: "mv-fichier", accept: "audio/*", class: "sr", onchange: (e) => { const f = e.target.files && e.target.files[0]; if (f) garderEchantillon(f, f.name); } });
+  let enreg = null;
+  const btnEnreg = h("button", { class: "bouton corail parler", type: "button", html: ICONE.micro + "<span>Enregistrer</span>", onclick: async () => {
+    if (enreg) { enreg.stop(); return; }
+    try {
+      const flux = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      const morceaux = []; enreg = new MediaRecorder(flux);
+      enreg.ondataavailable = (e) => morceaux.push(e.data);
+      enreg.onstop = () => { flux.getTracks().forEach((t) => t.stop()); enreg = null; btnEnreg.innerHTML = ICONE.micro + "<span>Recommencer</span>"; garderEchantillon(new Blob(morceaux, { type: morceaux[0] ? morceaux[0].type : "audio/webm" }), "Votre enregistrement"); };
+      enreg.start(); btnEnreg.innerHTML = ICONE.micro + "<span>Arrêter</span>"; etat.textContent = "Enregistrement… lisez le texte jusqu'au bout.";
+    } catch (e) {
+      etat.textContent = "Le micro n'est pas accessible ici. Importez un enregistrement de votre voix (mémo vocal, fichier audio).";
+    }
+  } });
+  const consent = h("input", { type: "checkbox", id: "mv-consent", checked: mv.consentement || false, onchange: (e) => { mv.consentement = e.target.checked; garder(); majBouton(); } });
+  const creer = h("button", { class: "bouton", type: "button", onclick: () => { mv.demandee = true; garder(); rendre(); } }, "Recomposer ma voix");
+  const majBouton = () => { creer.disabled = !(echantillon && mv.consentement); creer.style.opacity = creer.disabled ? ".45" : ""; };
+  majEch(); majBouton();
+  return h("section", { class: "ma-voix" + (choisie ? " choisie" : ""), "aria-labelledby": "mv-titre" },
+    h("div", { class: "mv-tete" },
+      h("div", {}, h("span", { class: "lab" }, "Votre voix"), h("h3", { id: "mv-titre" }, "Ma voix")),
+      h("span", { class: "mv-statut" + (mv.demandee ? " ok" : "") }, mv.demandee ? "Demandée" : "Facultatif")),
+    h("p", { class: "mv-intro" }, "La narration peut être dite par votre propre voix, recomposée à partir d'un enregistrement de 30 secondes. C'est votre voix qui raconte, sur tous les plans du film."),
+    h("p", { class: "mv-rappel" }, "Alfred, vous m'avez dit préférer ne pas prêter votre voix : je ne la retiens pas par défaut. L'option reste là si vous changez d'avis."),
+    h("ol", { class: "mv-etapes" },
+      h("li", {}, h("b", {}, "Lisez ce texte à voix haute"), h("span", { class: "note" }, "Environ 30 secondes, dans une pièce calme, à 20 cm du micro. La première phrase vaut accord, dite de votre voix."),
+        h("blockquote", { class: "mv-texte" }, TEXTE_MA_VOIX),
+        h("div", { class: "mv-actions" }, btnEnreg, fichier, h("label", { for: "mv-fichier", class: "bouton leger", role: "button", tabindex: "0", onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fichier.click(); } } }, "Importer un enregistrement")),
+        lecteurEch, etat),
+      h("li", {}, h("b", {}, "Confirmez que c'est votre voix"),
+        h("label", { class: "mv-consent", for: "mv-consent" }, consent, h("span", {}, "C'est ma voix, et j'autorise sa reproduction pour mes propres projets. Je pourrai la supprimer à tout moment."))),
+      h("li", {}, h("b", {}, "Écoutez-la lire votre histoire"),
+        mv.demandee
+          ? h("div", { class: "mv-resultat" }, h("p", { style: "margin:0" }, "Dans le gent, votre voix serait recomposée ici en une minute environ, puis elle lirait le texte du film. Vous l'écouteriez dans le tableau, comme les autres voix."),
+              h("p", { class: "note", style: "margin:0" }, "Prototype : rien n'est envoyé. L'enregistrement reste dans ce navigateur et disparaît quand vous fermez la page."),
+              h("div", { class: "mv-actions" }, h("button", { class: "mini-b", type: "button", "aria-pressed": String(choisie), onclick: () => { S.voix = choisie ? null : "mavoix"; garder(); rendre(); } }, choisie ? "Choisie pour la narration" : "Choisir ma voix"),
+                h("button", { class: "mini-b non", type: "button", onclick: () => { S.maVoix = { consentement: false, demandee: false }; if (S.voix === "mavoix") S.voix = null; if (echantillon) { URL.revokeObjectURL(echantillon.url); echantillon = null; } garder(); rendre(); } }, "Supprimer ma voix")))
+          : h("div", { class: "mv-actions" }, creer))),
+    h("p", { class: "note", style: "margin:0" }, "Votre voix ne sert qu'à vos projets, jamais à ceux d'un autre auteur. Modèle de recomposition à choisir : Mistral est pressenti, son offre reste à vérifier."));
 }
 
 const VUES = {
@@ -650,6 +736,7 @@ const VUES = {
       h("div", { class: "tableau-voix" }, h("table", {},
         h("thead", {}, h("tr", {}, h("th", { scope: "col" }, "Voix"), h("th", { scope: "col" }, "Genre"), h("th", { scope: "col" }, "Timbre annoncé"), h("th", { scope: "col", style: "width:34%" }, "Extrait · 7 s"), h("th", { scope: "col" }, h("span", { class: "sr" }, "Actions")))),
         h("tbody", {}, VOIX.map(ligne)))),
+      blocMaVoix(),
       h("div", { style: "display:grid;gap:10px" }, h("h3", { class: "section-t" }, "Comment la voix doit-elle jouer ?"),
         h("div", { class: "jeux" }, JEUX.map((j) => h("button", { class: "mini-b", type: "button", "aria-pressed": String(S.jeu === j.id), title: j.note, onclick: () => { S.jeu = S.jeu === j.id ? null : j.id; garder(); rendre(); } }, j.nom + (j.reco ? " · recommandé" : "")))),
         h("p", { class: "note", style: "margin:0" }, "Ce réglage s'applique à la prise finale : il n'est pas encore entendu ici. Le timbre est celui que Google annonce pour chaque voix.")),
@@ -703,7 +790,7 @@ const VUES = {
         "Pour <strong>ajouter, supprimer ou déplacer</strong> une scène, dites-le en bas, dans vos remarques sur l'ensemble. L'<strong>animatique</strong> fait défiler les croquis avec la voix et la musique choisies."),
       h("div", { class: "sb-tete" },
         h("button", { class: "bouton corail", type: "button", onclick: lancerAnimatique }, "▶ Lire l'animatique (72 s)"),
-        h("span", { class: "note" }, `Avec ${S.voix ? nomVoix(S.voix) : nomVoix(VOIX_DEFAUT) + ", en attendant votre choix de voix,"} et « ${MUSIQUES.find((m) => m.id === musAnim).nom} »${S.musique ? "" : " (ma recommandation)"}.` + (voEditee ? " La voix lit encore le texte d'origine : vos changements seront enregistrés à la production." : ""))),
+        h("span", { class: "note" }, `Avec ${S.voix === "mavoix" ? nomVoix(VOIX_DEFAUT) + " à la place de votre voix, pas encore recomposée," : S.voix ? nomVoix(S.voix) : nomVoix(VOIX_DEFAUT) + ", en attendant votre choix de voix,"} et « ${MUSIQUES.find((m) => m.id === musAnim).nom} »${S.musique ? "" : " (ma recommandation)"}.` + (voEditee ? " La voix lit encore le texte d'origine : vos changements seront enregistrés à la production." : ""))),
       h("section", { class: "sequences", "aria-label": "Scènes" }, ...lignes),
       h("section", { class: "global", "aria-labelledby": "titre-global" },
         h("h3", { id: "titre-global" }, "Vos remarques sur l'ensemble"),
@@ -751,7 +838,8 @@ const VUES = {
   },
 };
 const nomDe = (liste, id) => (liste.find((x) => x.id === id) || {}).nom || null;
-const nomVoix = (id) => (VOIX.find(([v]) => v === id) || [, id])[1];
+const nomVoix = (id) => id === "mavoix" ? "Ma voix" : (VOIX.find(([v]) => v === id) || [, id])[1];
+const voixJouable = (id) => id && id !== "mavoix" ? id : VOIX_DEFAUT;
 
 /* ── Navigation ──────────────────────────────────────────── */
 const fait = (id) => ({ visuel: !!S.visuel, typo: !!S.typo, couleurs: !!S.couleurs, musique: !!S.musique, voix: !!S.voix, storyboard: S.etape === "recap" || S.valide, recap: S.valide, entretien: S.etape !== "entretien" })[id];
@@ -799,7 +887,7 @@ async function tampon(url) {
 function image(src) { return cacheImg[src] || (cacheImg[src] = new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; })); }
 async function lancerAnimatique() {
   audio.pause();
-  const voix = S.voix || VOIX_DEFAUT, mus = S.musique || "souvenir";
+  const voix = voixJouable(S.voix), mus = S.musique || "souvenir";
   const ov = $("#animatique"); ov.hidden = false; $("#an-st").textContent = "Chargement…"; $("#an-info").textContent = `${nomVoix(voix)} · ${nomDe(MUSIQUES, mus)}`;
   const toile = $("#an-toile"), g = toile.getContext("2d");
   const dpr = Math.min(2, devicePixelRatio || 1); toile.width = toile.clientWidth * dpr; toile.height = toile.clientHeight * dpr;
@@ -837,7 +925,7 @@ async function lancerAnimatique() {
     const p = PLANS[i], k = (t - p.t[0]) / (p.t[1] - p.t[0]);
     if (i > 0 && t - p.t[0] < 0.5) dessiner(imgs[i - 1], 1, 1.04);
     dessiner(imgs[i], i === 0 ? 1 : Math.min(1, (t - p.t[0]) / 0.5), 1 + 0.04 * k);
-    const l = LIGNES.findIndex(([d], n) => t >= d && t < d + (DUREES[S.voix || VOIX_DEFAUT] || DUREES[VOIX_DEFAUT])[n] + 0.5);
+    const l = LIGNES.findIndex(([d], n) => t >= d && t < d + (DUREES[voixJouable(S.voix)])[n] + 0.5);
     $("#an-st").textContent = l >= 0 ? LIGNES[l][1] : `${i + 1}. ${p.titre}`;
     $("#an-fil").style.width = Math.min(100, t / 72 * 100) + "%";
     if (t >= 72.5) return arreterAnimatique();
