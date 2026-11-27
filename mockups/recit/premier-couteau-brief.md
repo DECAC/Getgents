@@ -387,3 +387,9 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   côté serveur (Chromium) pour un MP4 sans perte.
 - Clé Gemini (27/11) : `lyria-3.5` disponible (plus récent que la Lyria 3
   du prototype) ; AUCUN modèle vidéo (Veo) listé sur cette clé.
+- **La FORME du résultat est une question OUVERTE de l'entretien** (éditeur,
+  27/11) : film, présentation animée, expérience au clic façon The Last
+  Boring Slide, jeu… Elle se pose AU DÉBUT du processus, avant la direction
+  artistique. Le film du « Premier couteau » n'était qu'un exemple. La Page
+  reste le contenant dans tous les cas ; le reste (étapes de direction
+  artistique, storyboard, exports) dépend de la forme choisie.
