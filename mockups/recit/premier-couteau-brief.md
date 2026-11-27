@@ -448,3 +448,30 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   (version 7). NON écoutées par l'agent. Le compte Mistral porte déjà une
   voix PERSONNALISÉE privée « Charles » (créée le 07/08) : non utilisée.
   « Ma voix » : l'enregistrement ne doit JAMAIS entrer dans le dépôt (public).
+
+## Décisions avant le code (27/11, éditeur, questions posées une à une)
+
+- **Accès** : gent RÉSERVÉ à l'éditeur (comptes complets). Pas ouvert aux
+  comptes « Getgents Pages » pour l'instant.
+- **Formes de la première version** : film, histoire au clic, présentation
+  animée (pas le jeu). Choix contre l'avis de l'agent (« film seul
+  d'abord ») : trois storyboards, trois rendus, trois jeux d'exports avant
+  d'en avoir validé un. L'histoire au clic ne donne pas de fichier publiable
+  sur les réseaux.
+- **Facturation** : clés de la plateforme (Gemini, Mistral), AVEC un plafond
+  par compte et par mois. Ces fournisseurs ne passent pas par OpenRouter : il
+  faut un chemin de facturation à part de `openRouterKey.ts` (même
+  discipline : contexte explicite, test de garde).
+- **Voix** : Mistral SEUL. Décidé sans écoute. Conséquence : aucune voix
+  d'homme toute prête, donc un récit masculin exige « Ma voix ». À
+  reconsidérer si le test de « Ma voix » déçoit.
+- **Rendu MP4** : ESSAI ISOLÉ d'abord, serveur (Chromium, 300 s de Vercel)
+  contre navigateur (enregistrement façon habillage du prompteur), mesures
+  à l'appui, avant tout le reste.
+- **Entretien** : ÉCRIT en première version ; le mode voix vient ensuite.
+- **« Ma voix »** : enregistrement joint À CHAQUE REQUÊTE (`ref_audio`), rien
+  de gardé chez Mistral ; l'enregistrement vit dans un seau PRIVÉ Supabase,
+  supprimable par l'auteur. Jamais dans le dépôt.
+- **Préalables restants** : test réel de « Ma voix » (mémo de l'éditeur par
+  Gmail) ; essai du rendu MP4. Juridique (recomposition de voix, droits
+  Lyria/images, marques tierces) : avant toute ouverture à d'autres auteurs.
