@@ -516,3 +516,17 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   images, marques), modèle payant (donc SIREN : le régime anonyme tombe),
   plafond global. « Ma voix » ouverte au public seulement avec une vraie
   vérification d'identité et un avis juridique.
+- **Les trois décisions (27/11)** :
+  1. **Le Publiciste est un GENT.** Argument de l'éditeur : la page n'est
+     qu'UNE issue possible du travail, pas sa nature. Conséquence acceptée :
+     l'ouvrir au public exigera de rouvrir les gents aux comptes « Getgents
+     Pages » (ou de le diffuser comme gent public, payé par l'éditeur), ce qui
+     revient sur la décision du 13/11. À trancher le jour de l'ouverture.
+  2. **Générations longues pilotées par le NAVIGATEUR** : appels courts
+     enchaînés par la page, reprise sur échec, rien à ajouter à
+     l'hébergement. À revoir avant l'ouverture (limites de débit des
+     fournisseurs à plusieurs utilisateurs).
+  3. **Stockage des films : décidé PLUS TARD.** En attendant, les films
+     restent sur l'appareil de l'éditeur (téléchargés), aucun stockage
+     serveur. À trancher avant l'ouverture (Supabase gratuit : 50 Mo par
+     fichier).
