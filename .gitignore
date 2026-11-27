@@ -14,3 +14,7 @@ out/
 # Editor
 .DS_Store
 *.swp
+
+# « Ma voix » : voix recomposée de l’éditeur, jamais dans le dépôt public
+mockups/recit/publiciste/medias/*recomposee*
+mockups/recit/publiciste/medias/*mavoix*

@@ -2,9 +2,10 @@
 # Une phrase par appel (voxtral-mini-tts-3-0, voix françaises toutes prêtes), mêmes contrôles que casting-gemini.py :
 # durée ≤ place, silence interne, transcription (par Gemini), début de prise (rien d'ajouté avant le texte).
 # Voxtral n'a pas de consigne de style : le texte est envoyé seul. Produit medias/essai-<voix>.mp3 et voix-<voix>.mp3.
+# « Ma voix » : python3 casting-mistral.py Mavoix avec MA_VOIX_REF=<enregistrement wav> et MEDIAS_SORTIE hors du dépôt.
 # Niveau : aligné ensuite sur les voix Gemini (-18,3 LUFS, ebur128 + volume + alimiter), hors de ce script.
 import base64, json, subprocess, sys, os, re, difflib, unicodedata, time
-MEDIAS = "/home/user/Getgents/mockups/recit/publiciste/medias"
+MEDIAS = os.environ.get("MEDIAS_SORTIE", "/home/user/Getgents/mockups/recit/publiciste/medias")  # « Ma voix » : HORS du dépôt (public)
 LIGNES = [(1.8, "J'avais huit ans. C'était l'été, dans l'atelier."), (7.8, "Mon oncle m'a tendu mon premier couteau."),
   (18.5, "Avec, j'ai construit une cabane."), (24.0, "Et une petite voiture en bois, qui roulait… à peu près."),
   (34.5, "Il y a des objets qu'on n'oublie pas."), (38.5, "Ils sont faits par des mains patientes, ici, en France."),
@@ -28,7 +29,11 @@ def tts(voix, texte, f):
     for modele in MODELES:
         for essai in range(8):
             REQ = f"req-m-{os.getpid()}.json"
-            open(REQ, "w").write(json.dumps({"model": modele, "input": texte, "voice_id": VOIX_MISTRAL[voix], "response_format": "wav"}))
+            corps = {"model": modele, "input": texte, "response_format": "wav"}
+            if voix == "Mavoix":  # recomposition « zero-shot » : l'enregistrement de l'auteur joint à chaque requête, rien de gardé chez Mistral
+                corps["ref_audio"] = base64.b64encode(open(os.environ["MA_VOIX_REF"], "rb").read()).decode()
+            else: corps["voice_id"] = VOIX_MISTRAL[voix]
+            open(REQ, "w").write(json.dumps(corps))
             out = subprocess.run(["curl", "-sS", "--max-time", "120", "-X", "POST", "https://api.mistral.ai/v1/audio/speech",
                 "-H", f"Authorization: Bearer {CLE_MISTRAL}", "-H", "Content-Type: application/json", "-d", "@" + REQ], capture_output=True, text=True)
             try:

@@ -453,11 +453,9 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
 
 - **Accès** : gent RÉSERVÉ à l'éditeur (comptes complets). Pas ouvert aux
   comptes « Getgents Pages » pour l'instant.
-- **Formes de la première version** : film, histoire au clic, présentation
-  animée (pas le jeu). Choix contre l'avis de l'agent (« film seul
-  d'abord ») : trois storyboards, trois rendus, trois jeux d'exports avant
-  d'en avoir validé un. L'histoire au clic ne donne pas de fichier publiable
-  sur les réseaux.
+- **Formes** : LE FILM D'ABORD (revirement de l'éditeur, 27/11, après avoir
+  d'abord choisi film + histoire au clic + présentation animée). Les autres
+  formes viendront une fois le film éprouvé.
 - **Facturation** : clés de la plateforme (Gemini, Mistral), AVEC un plafond
   par compte et par mois. Ces fournisseurs ne passent pas par OpenRouter : il
   faut un chemin de facturation à part de `openRouterKey.ts` (même
@@ -475,3 +473,14 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
 - **Préalables restants** : test réel de « Ma voix » (mémo de l'éditeur par
   Gmail) ; essai du rendu MP4. Juridique (recomposition de voix, droits
   Lyria/images, marques tierces) : avant toute ouverture à d'autres auteurs.
+- **« Ma voix » ESSAYÉE (27/11)** sur un vrai mémo de l'éditeur (iPhone, m4a,
+  reçu par Gmail). Mistral REFUSE une référence de plus de **30 s** : coupée
+  dans une pause (29,1 s), remontée à −20 LUFS. Les 9 phrases du film passent
+  TOUTES au premier essai, transcription exacte (les voix toutes prêtes
+  demandaient plusieurs prises). Transcription faite par Mistral, pas Google :
+  la voix ne part que chez un fournisseur. Le mémo lisait un texte
+  encyclopédique, PAS le texte d'accord : le ton recomposé sera documentaire.
+  Ligne « Votre voix » dans le tableau (artefact privé, version 8). Fichiers
+  dans l'espace temporaire de l'agent et `.gitignore` (`*recomposee*`,
+  `*mavoix*`) : JAMAIS dans le dépôt. NON écoutée par l'agent. Dans le
+  produit : limiter l'enregistrement à 30 s, ou couper dans une pause.
