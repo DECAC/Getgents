@@ -393,3 +393,15 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   artistique. Le film du « Premier couteau » n'était qu'un exemple. La Page
   reste le contenant dans tous les cas ; le reste (étapes de direction
   artistique, storyboard, exports) dépend de la forme choisie.
+- **Étape 0 « L'entretien »** (27/11, maquette du Publiciste, version 5) :
+  qualifier le besoin, le FOND puis la FORME ; la forme peut rester
+  « pressentie » et s'affiner en direction artistique. L'entretien peut être
+  PUREMENT VOCAL (demande de l'éditeur) : mode voix plein écran (orbe, la
+  voix du Publiciste, la réponse transcrite). Dans la maquette, l'entretien
+  du 26/11 est RECONSTITUÉ à partir des notes (les phrases d'Alfred citées
+  dans ce brief sont les siennes, le reste est rédigé) et rejoué ; voix du
+  Publiciste : Gemini TTS « Sulafat », 10 répliques (`medias/pub-*.mp3`,
+  `-18 LUFS`), toutes conformes au premier essai, NON écoutées par l'agent.
+  Fiche « Ce que j'en retiens » à côté (fond, forme + degré de certitude).
+  Dans le gent réel : reconnaissance vocale (navigateur ou API) + TTS, à
+  concevoir — non fait.

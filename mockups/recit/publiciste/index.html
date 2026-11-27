@@ -254,6 +254,57 @@ h2.titre { margin: 0; font-size: clamp(26px, 5.4vw, 38px); line-height: 1.08; le
 .couts .tot { border-top: 1px solid var(--line); padding-top: 7px; font-weight: 600; }
 .valide { max-width: 780px; background: var(--succes-tint); border-radius: var(--r); padding: 14px 16px; font-size: 14.5px; }
 
+/* Entretien */
+.entretien { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 980px) { .entretien { grid-template-columns: minmax(0, 1fr) 360px; } }
+.fil-e { display: grid; gap: 14px; background: var(--card); border: 1px solid var(--line); border-radius: calc(var(--r) + 4px); box-shadow: var(--ombre); padding: 20px; min-width: 0; }
+.fil-tete { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid var(--line-soft); }
+.fil-tete .note { margin: 0; }
+.msg { display: grid; gap: 4px; max-width: 86%; min-width: 0; }
+.msg .qui { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.msg .corps-m { padding: 12px 14px; border-radius: 4px 16px 16px 16px; background: var(--bg); font-size: 15px; }
+.msg.a { justify-self: end; }
+.msg.a .qui { text-align: right; }
+.msg.a .corps-m { background: var(--ink); color: var(--card); border-radius: 16px 4px 16px 16px; }
+.msg.p .corps-m { display: grid; gap: 8px; }
+.ecouter { justify-self: start; display: inline-flex; align-items: center; gap: 8px; border: 0; background: var(--card); border-radius: 999px; padding: 5px 12px 5px 6px; font-size: 12.5px; color: var(--ink-2); box-shadow: 0 0 0 1px var(--line) inset; }
+.ecouter i { width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--card); display: grid; place-items: center; font-style: normal; }
+.ecouter i svg { width: 10px; height: 10px; }
+.ecouter[aria-pressed="true"] { box-shadow: 0 0 0 1.5px var(--corail) inset; color: var(--corail-700); }
+.ecouter[aria-pressed="true"] i { background: var(--corail); }
+.composer { display: flex; gap: 8px; align-items: flex-end; padding-top: 14px; border-top: 1px solid var(--line-soft); flex-wrap: wrap; }
+.composer textarea { flex: 1 1 220px; min-width: 0; min-height: 46px; border: 1px solid var(--line); border-radius: var(--r-s); padding: 11px 12px; resize: none; font-size: 15px; background: #fff; }
+.composer textarea:focus { border-color: var(--ink); outline: none; }
+.parler { display: inline-flex; align-items: center; gap: 8px; }
+.parler svg { width: 16px; height: 16px; }
+.fiche { display: grid; gap: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--ombre); overflow: hidden; }
+@media (min-width: 980px) { .fiche { position: sticky; top: 132px; } }
+.fiche h3 { margin: 0; padding: 14px 16px 10px; font-size: 16px; letter-spacing: -.01em; }
+.fiche .sec { display: grid; gap: 10px; padding: 12px 16px 16px; border-top: 1px solid var(--line-soft); }
+.fiche .sec-t { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.fiche dl { margin: 0; display: grid; gap: 10px; }
+.fiche dl div { display: grid; gap: 1px; }
+.fiche dt { font-size: 12px; color: var(--muted); }
+.fiche dd { margin: 0; font-size: 14px; }
+.certitude { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #fdf1d6; color: #7a5300; white-space: nowrap; }
+.certitude.ok { background: var(--succes-tint); color: #2f6e33; }
+.fiche .pied-f { padding: 12px 16px; background: var(--bg-2); font-size: 12.5px; color: var(--muted); }
+
+/* Mode voix */
+#vocal { position: fixed; inset: 0; z-index: 40; background: #1b1411; color: #f6ede6; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 16px;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+#vocal .v-haut, #vocal .v-bas { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+#vocal button { border: 0; border-radius: 999px; padding: 9px 16px; background: rgba(255,255,255,.12); color: #fff; font-size: 13.5px; }
+#vocal .centre { display: grid; place-items: center; align-content: center; gap: 28px; text-align: center; min-height: 0; }
+.orbe { width: 168px; height: 168px; border-radius: 50%; background: radial-gradient(circle at 38% 34%, #ff9aab, var(--corail) 46%, #8f2440 100%); box-shadow: 0 0 0 0 rgba(230,93,118,.35); transition: transform .12s; }
+.orbe.ecoute { background: radial-gradient(circle at 38% 34%, #fff, #e9dfd8 50%, #a99a90 100%); }
+@media (prefers-reduced-motion: no-preference) { .orbe.parle { animation: souffle 1.6s ease-in-out infinite; } .orbe.ecoute { animation: souffle 2.6s ease-in-out infinite; } }
+@keyframes souffle { 0%, 100% { box-shadow: 0 0 0 0 rgba(230,93,118,.30); } 50% { box-shadow: 0 0 0 26px rgba(230,93,118,0); } }
+#vocal .etat-v { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: #cbbcb2; }
+#vocal .phrase { max-width: 34ch; font-size: clamp(19px, 4.6vw, 26px); line-height: 1.35; letter-spacing: -.01em; text-wrap: balance; min-height: 3em; }
+#vocal .phrase.alfred { color: #e8dcd3; font-style: italic; }
+#vocal .note-v { font-size: 12.5px; color: #b5a69c; max-width: 52ch; }
+
 /* Brief */
 .brief { max-width: 780px; display: grid; margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; box-shadow: var(--ombre); }
 .brief div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; padding: 13px 16px; border-top: 1px solid var(--line-soft); font-size: 14.5px; }
@@ -289,6 +340,12 @@ h2.titre { margin: 0; font-size: clamp(26px, 5.4vw, 38px); line-height: 1.08; le
   </div>
 </footer>
 
+<div id="vocal" hidden role="dialog" aria-modal="true" aria-label="Entretien en mode voix">
+  <div class="v-haut"><span class="etat-v">Mode voix · entretien avec Alfred</span><button type="button" id="vo-fermer">Terminer</button></div>
+  <div class="centre"><div class="orbe" id="vo-orbe" aria-hidden="true"></div><span class="etat-v" id="vo-etat">Le Publiciste parle</span><p class="phrase" id="vo-phrase" aria-live="polite"></p></div>
+  <div class="v-bas"><span class="note-v">Démonstration : l'entretien du 26/11 rejoué. Dans le gent, vous parlez, et le Publiciste vous répond à voix haute.</span><span style="display:flex;gap:8px"><button type="button" id="vo-pause">Pause</button><button type="button" id="vo-suiv">Réplique suivante</button></span></div>
+</div>
+
 <div id="visionneuse" hidden role="dialog" aria-modal="true" aria-label="Croquis agrandi">
   <div class="v-haut"><span class="mono" id="vi-num" style="color:#cfc4bc"></span><button type="button" id="vi-fermer">Fermer</button></div>
   <img id="vi-img" alt="">
@@ -316,6 +373,7 @@ const h = (tag, attrs = {}, ...enfants) => {
   return e;
 };
 const ICONE = {
+  micro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>',
   pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>',
 };
@@ -381,8 +439,43 @@ const PLANS = [
   { t: [60.6, 67], titre: "Le retour au dessin", voit: "L'image redevient dessin d'écolier. La phrase s'écrit.", entend: "", vo: 8, trans: "Au pinceau, la photo redevient cahier." },
   { t: [67, 72], titre: "Votre coffret", voit: "La page à son nom : l'écrin gravé, trois coffrets, « Composer mon coffret ».", entend: "La musique s'éteint.", trans: "La page se tourne." },
 ];
+// L'entretien du 26/11, reconstitué à partir des notes (les phrases d'Alfred entre guillemets dans le brief sont les siennes).
+const ENTRETIEN = [
+  ["p", "Bonjour Alfred. Avant de parler de film ou de page, racontez-moi Le Cadeau Français. Qu'est-ce que vous vendez, au fond ?", 7.9],
+  ["a", "Des cadeaux d'entreprise fabriqués en France, personnalisés au logo : Opinel, Revol, Duralex, Michel Cluizel… Mes clients, ce sont surtout des élus de CSE et des RH."],
+  ["p", "Vous vous souvenez d'un lieu, d'une odeur, qui vous a donné envie de faire ce métier ?", 4.5],
+  ["a", "L'atelier d'un coutelier de Laguiole. Il sentait le bois et l'amour du travail bien fait."],
+  ["p", "Et plus loin encore ? Un souvenir d'enfance lié à ces objets ?", 4.1],
+  ["a", "Le Perche, chez mes grands-parents. Un cousin en vacances, un atelier plein d'outils, un oncle qui nous apprenait. On avait monté une voiture sur roues."],
+  ["p", "Si je reformule : votre marque parle à l'enfant qui a construit sa première cabane. C'est juste ?", 5.9],
+  ["a", "Oui. Une marque qui parle aux enfants que nous étions lorsque nous avons fait notre première cabane dans les bois."],
+  ["p", "Quand un salarié reçoit votre cadeau, que doit-il ressentir ?", 3.6],
+  ["a", "Qu'il retrouve l'enfant qui construisait sa première cabane, et la joie de transmettre ce souvenir à ses enfants."],
+  ["p", "Qu'est-ce qu'il ne faut surtout pas dire, ou pas montrer ?", 3.2],
+  ["a", "Rien qui fasse gadget. Les élus veulent sortir de l'ordinaire, à un prix raisonnable : leur budget est serré."],
+  ["p", "Parlons de la forme. Où voulez-vous qu'on le voie : sur LinkedIn, sur votre site, en rendez-vous, sur un salon ?", 6.8],
+  ["a", "Sur LinkedIn et sur mon site. Et pourquoi pas l'envoyer aux élus qui remplissent mon formulaire."],
+  ["p", "Alors je pense à un film d'une minute, qui se comprend même sans le son. Sur le site, on pourrait aller plus loin : une histoire qu'on fait avancer au clic, ou un petit jeu. On tranchera en voyant les pistes.", 12.3],
+  ["a", "Le film me parle. Mais montrez-moi aussi l'autre idée, je ne me l'étais jamais posée."],
+  ["p", "Dernière chose : avez-vous des photos, des images d'atelier, une voix qu'on pourrait utiliser ?", 5.7],
+  ["a", "Aucune photo du Perche. Et je préfère ne pas prêter ma voix."],
+  ["p", "C'est noté. Je vous prépare la direction artistique : trois pistes à chaque étape, et ma recommandation.", 6.0],
+];
+const FICHE_FOND = [
+  ["Ce qu'il vend", "Des cadeaux d'entreprise fabriqués en France, personnalisés au logo."],
+  ["Pour qui", "Les élus de CSE et les RH."],
+  ["Le cœur", "L'enfant qui construisait sa première cabane, dans un atelier plein d'outils."],
+  ["Ce que doit ressentir le salarié", "Retrouver cet enfant, et vouloir transmettre le souvenir."],
+  ["À ne pas dire", "Rien qui fasse gadget. Les budgets des élus sont serrés."],
+  ["Ce qu'on a sous la main", "Aucune photo du Perche. Alfred ne prête pas sa voix : un narrateur parlera."],
+];
+const FICHE_FORME = [
+  ["Où ce sera vu", "LinkedIn, le site, et un envoi aux élus après le formulaire."],
+  ["Forme pressentie", "Un film d'une minute, compréhensible sans le son."],
+  ["À montrer aussi", "Une histoire qu'on fait avancer au clic, ou un petit jeu, pour le site."],
+];
 const ETAPES = [
-  { id: "brief", nom: "Le brief" }, { id: "visuel", nom: "Direction visuelle" }, { id: "typo", nom: "Typographie" }, { id: "couleurs", nom: "Couleurs" },
+  { id: "entretien", nom: "L'entretien" }, { id: "visuel", nom: "Direction visuelle" }, { id: "typo", nom: "Typographie" }, { id: "couleurs", nom: "Couleurs" },
   { id: "musique", nom: "Musique" }, { id: "voix", nom: "Voix" }, { id: "storyboard", nom: "Storyboard" }, { id: "recap", nom: "Valider" },
 ];
 const COUTS_DA = [["Casting de 6 voix sur le texte entier (Google)", null], ["3 extraits de musique", 0.12], ["3 planches d'ambiance", 0.42], ["Storyboard, 11 plans", 0.38]];
@@ -390,13 +483,15 @@ const DEVIS_PROD = [["Images finales (≈ 16 dessins et photos, avec retouches)"
 
 /* ── État (gardé sur cet appareil) ───────────────────────── */
 const CLE = "publiciste:premier-couteau";
-const vierge = () => ({ etape: "brief", visuel: null, typo: null, couleurs: null, musique: null, voix: null, jeu: null, ecartees: [], retenues: [], sb: {}, sbCommentaire: "", sbEnvoye: false, valide: false, remarques: {} });
+const vierge = () => ({ etape: "entretien", visuel: null, typo: null, couleurs: null, musique: null, voix: null, jeu: null, ecartees: [], retenues: [], sb: {}, sbCommentaire: "", sbEnvoye: false, valide: false, remarques: {} });
 let S = vierge();
 try { Object.assign(S, JSON.parse(localStorage.getItem(CLE) || "{}")); } catch (e) {}
 const garder = () => { try { localStorage.setItem(CLE, JSON.stringify(S)); } catch (e) {} };
 const idsVoix = VOIX.map(([v]) => v);
 if (S.voix && !idsVoix.includes(S.voix)) S.voix = null;
 S.ecartees = (S.ecartees || []).filter((v) => idsVoix.includes(v));
+if (S.etape === "brief") S.etape = "entretien";
+if (location.hash === "#brief") location.hash = "#entretien";
 if (location.hash && ETAPES.some((e) => e.id === location.hash.slice(1))) S.etape = location.hash.slice(1);
 
 /* ── Lecteur audio partagé ───────────────────────────────── */
@@ -442,19 +537,37 @@ function autreDemande(cle, invite, prix) {
 }
 
 const VUES = {
-  brief() {
+  entretien() {
+    const messages = ENTRETIEN.map(([qui, t, d], i) => {
+      if (qui === "a") return h("div", { class: "msg a" }, h("span", { class: "qui" }, "Alfred"), h("div", { class: "corps-m" }, t));
+      const n = ENTRETIEN.slice(0, i + 1).filter((m) => m[0] === "p").length;
+      return h("div", { class: "msg p" }, h("span", { class: "qui" }, "Le Publiciste"),
+        h("div", { class: "corps-m" }, h("span", {}, t),
+          h("button", { class: "ecouter", type: "button", "aria-pressed": "false", "data-replique": String(n), onclick: (e) => ecouterReplique(n, e.currentTarget) },
+            h("i", { html: ICONE.play }), `Écouter · ${Math.round(d)} s`)));
+    });
+    const ta = h("textarea", { id: "entretien-reponse", rows: "1", placeholder: "Répondre au Publiciste…" });
+    const msg = h("p", { class: "note", hidden: true, style: "margin:0;flex-basis:100%" });
+    const section = (titre, items, certitude) => h("div", { class: "sec" },
+      h("div", { class: "sec-t" }, h("span", { class: "lab" }, titre), certitude),
+      h("dl", {}, items.map(([k, v]) => h("div", {}, h("dt", {}, k), h("dd", {}, v)))));
     return [
-      entete(0, "On choisit la direction avant de produire", "Sept décisions, une dizaine de minutes. Rien n'est produit tant que le storyboard n'est pas validé."),
-      bulle("Alfred, merci pour l'entretien. Voici ce que j'en ai retenu. Avant de fabriquer l'histoire, je vous propose de choisir <strong>ensemble</strong> son allure : les images, les lettres, les couleurs, la musique et la voix.",
-        "À chaque étape, je vous montre trois pistes et je vous dis laquelle je retiendrais, et pourquoi. Si aucune ne vous parle, dites-le avec vos mots : j'en refais."),
-      h("dl", { class: "brief" },
-        h("div", {}, h("dt", {}, "Pour qui"), h("dd", { style: "margin:0" }, "L'élu de CSE ou le RH qui vient de remplir votre formulaire, avant le devis.")),
-        h("div", {}, h("dt", {}, "Ce qu'il doit ressentir"), h("dd", { style: "margin:0" }, "Retrouver l'enfant de la première cabane, et vouloir transmettre ce souvenir.")),
-        h("div", {}, h("dt", {}, "Ce qu'il doit faire"), h("dd", { style: "margin:0" }, "« Composer mon coffret » : le devis part de ses choix.")),
-        h("div", {}, h("dt", {}, "Format"), h("dd", { style: "margin:0" }, "Une histoire de 60 s sur téléphone, puis une page à son nom.")),
-        h("div", {}, h("dt", {}, "Le texte"), h("dd", { style: "margin:0" }, h("blockquote", {}, "J'avais huit ans. C'était l'été, dans l'atelier. Mon oncle m'a tendu mon premier couteau… Offrez un cadeau qui a une histoire."))),
-        h("div", {}, h("dt", {}, "À ne pas dire"), h("dd", { style: "margin:0" }, "Rien qui sonne « gadget » ; pas de prix dans l'histoire.")),
-      ),
+      entete(0, "L'entretien", "On parle du fond, puis de la forme. Ici à l'écrit, ou à voix haute avec le mode voix."),
+      h("div", { class: "entretien" },
+        h("section", { class: "fil-e", "aria-label": "Conversation avec Alfred" },
+          h("div", { class: "fil-tete" },
+            h("p", { class: "note" }, "26 novembre · 19 messages · environ 15 minutes"),
+            h("button", { class: "bouton corail parler", type: "button", onclick: lancerVocal, html: ICONE.micro + "<span>Rejouer en mode voix</span>" })),
+          ...messages,
+          h("div", { class: "composer" }, ta,
+            h("button", { class: "bouton leger parler", type: "button", "aria-label": "Parler au Publiciste", onclick: lancerVocal, html: ICONE.micro + "<span>Parler</span>" }),
+            h("button", { class: "bouton", type: "button", onclick: () => { msg.hidden = false; msg.textContent = "Dans le gent, le Publiciste vous répondrait ici, et compléterait la fiche."; } }, "Envoyer"),
+            msg)),
+        h("aside", { class: "fiche", "aria-label": "Ce que le Publiciste en retient" },
+          h("h3", {}, "Ce que j'en retiens"),
+          section("Le fond", FICHE_FOND),
+          section("La forme", FICHE_FORME, h("span", { class: "certitude" }, "Pressentie")),
+          h("p", { class: "pied-f", style: "margin:0" }, "La forme peut rester ouverte : elle s'affine pendant la direction artistique, en voyant les pistes."))),
     ];
   },
   visuel() {
@@ -615,6 +728,7 @@ const VUES = {
       entete(7, "Valider la direction", "Vérifiez vos choix. La production ne démarre qu'après votre accord."),
       bulle(manque.length ? `Il reste ${manque.length === 1 ? "un choix" : manque.length + " choix"} à faire avant de lancer la production.` : "Tout est choisi. Si vous validez, je produis les images finales, la voix et la musique complètes sur cette base, puis je vous montre le film."),
       h("div", { class: "recap" },
+        ligne("Forme", "entretien", "Film d'une minute", "Pressentie à l'entretien · l'histoire au clic et le jeu restent à montrer"),
         ligne("Univers", "visuel", nomDe(DIRECTIONS, S.visuel)),
         ligne("Lettres", "typo", nomDe(TYPOS, S.typo), S.typo ? TYPOS.find((t) => t.id === S.typo).detail : null),
         ligne("Couleurs", "couleurs", nomDe(PALETTES, S.couleurs)),
@@ -640,7 +754,7 @@ const nomDe = (liste, id) => (liste.find((x) => x.id === id) || {}).nom || null;
 const nomVoix = (id) => (VOIX.find(([v]) => v === id) || [, id])[1];
 
 /* ── Navigation ──────────────────────────────────────────── */
-const fait = (id) => ({ visuel: !!S.visuel, typo: !!S.typo, couleurs: !!S.couleurs, musique: !!S.musique, voix: !!S.voix, storyboard: S.etape === "recap" || S.valide, recap: S.valide, brief: S.etape !== "brief" })[id];
+const fait = (id) => ({ visuel: !!S.visuel, typo: !!S.typo, couleurs: !!S.couleurs, musique: !!S.musique, voix: !!S.voix, storyboard: S.etape === "recap" || S.valide, recap: S.valide, entretien: S.etape !== "entretien" })[id];
 function aller(id) { S.etape = id; garder(); try { history.replaceState(null, "", "#" + id); } catch (e) {} rendre(); window.scrollTo(0, 0); }
 function rendre() {
   const nav = $("#etapes"); nav.textContent = "";
@@ -654,9 +768,9 @@ function rendre() {
 function majPied() {
   const i = ETAPES.findIndex((e) => e.id === S.etape);
   $("#prec").hidden = i === 0; $("#suiv").hidden = i === ETAPES.length - 1;
-  $("#suiv").textContent = i === 0 ? "Commencer" : "Suivant";
+  $("#suiv").textContent = i === 0 ? "Vers la direction artistique" : "Suivant";
   const msg = { visuel: S.visuel && "Univers : " + nomDe(DIRECTIONS, S.visuel), typo: S.typo && "Lettres : " + nomDe(TYPOS, S.typo), couleurs: S.couleurs && "Couleurs : " + nomDe(PALETTES, S.couleurs), musique: S.musique && "Musique : " + nomDe(MUSIQUES, S.musique), voix: S.voix && "Voix : " + nomVoix(S.voix) }[S.etape];
-  $("#etat").textContent = msg || (S.etape === "brief" ? "Environ 10 minutes" : S.etape === "recap" ? "" : S.etape === "storyboard" ? "11 scènes · 72 s" : "Pas encore choisi");
+  $("#etat").textContent = msg || (S.etape === "entretien" ? "Fond et forme, avant de produire" : S.etape === "recap" ? "" : S.etape === "storyboard" ? "11 scènes · 72 s" : "Pas encore choisi");
 }
 $("#prec").addEventListener("click", () => { const i = ETAPES.findIndex((e) => e.id === S.etape); if (i > 0) aller(ETAPES[i - 1].id); });
 $("#suiv").addEventListener("click", () => { const i = ETAPES.findIndex((e) => e.id === S.etape); if (i < ETAPES.length - 1) aller(ETAPES[i + 1].id); });
@@ -743,6 +857,60 @@ $("#an-pause").addEventListener("click", () => {
   if (!anim || !actx) return;
   if (actx.state === "running") { actx.suspend(); $("#an-pause").textContent = "Reprendre"; } else { actx.resume(); $("#an-pause").textContent = "Pause"; }
 });
+/* ── Entretien : écouter une réplique, rejouer en mode voix ─ */
+let repliqueActive = null;
+function ecouterReplique(n, bouton) {
+  arreterAnimatique(); arreterVocal();
+  document.querySelectorAll(".ecouter").forEach((b) => b.setAttribute("aria-pressed", "false"));
+  if (boutonActif) { boutonActif.innerHTML = ICONE.play; barreActive.style.width = "0"; boutonActif = null; }
+  if (repliqueActive === n && !audio.paused) { audio.pause(); repliqueActive = null; return; }
+  repliqueActive = n; audio.src = `medias/pub-${String(n).padStart(2, "0")}.mp3`; audio.dataset.entier = "";
+  bouton.setAttribute("aria-pressed", "true");
+  audio.onended = () => { bouton.setAttribute("aria-pressed", "false"); repliqueActive = null; audio.onended = null; };
+  audio.play().catch(() => {});
+}
+const voixPub = new Audio(); voixPub.preload = "auto";
+let vocal = null;
+function lancerVocal() {
+  audio.pause(); arreterAnimatique();
+  document.querySelectorAll(".ecouter").forEach((b) => b.setAttribute("aria-pressed", "false"));
+  vocal = { i: 0, pause: false, minuteur: null };
+  $("#vocal").hidden = false; $("#vo-pause").textContent = "Pause"; $("#vo-fermer").focus();
+  jouerVocal();
+}
+function jouerVocal() {
+  if (!vocal) return;
+  clearTimeout(vocal.minuteur); voixPub.onended = null;
+  if (vocal.i >= ENTRETIEN.length) { $("#vo-etat").textContent = "Fin de l'entretien"; $("#vo-orbe").className = "orbe"; $("#vo-phrase").textContent = "La direction artistique commence à l'étape 1."; $("#vo-phrase").className = "phrase"; return; }
+  const [qui, t] = ENTRETIEN[vocal.i];
+  const orbe = $("#vo-orbe"), phrase = $("#vo-phrase");
+  if (qui === "p") {
+    const n = ENTRETIEN.slice(0, vocal.i + 1).filter((m) => m[0] === "p").length;
+    orbe.className = "orbe parle"; $("#vo-etat").textContent = "Le Publiciste parle"; phrase.className = "phrase"; phrase.textContent = t;
+    voixPub.src = `medias/pub-${String(n).padStart(2, "0")}.mp3`;
+    voixPub.onended = () => { if (vocal && !vocal.pause) { vocal.i++; vocal.minuteur = setTimeout(jouerVocal, 500); } };
+    voixPub.play().catch(() => { vocal.minuteur = setTimeout(() => { vocal.i++; jouerVocal(); }, 3000); });
+  } else {
+    orbe.className = "orbe ecoute"; $("#vo-etat").textContent = "Alfred répond"; phrase.className = "phrase alfred"; phrase.textContent = "";
+    let k = 0; const mots = t.split(" ");
+    const taper = () => {
+      if (!vocal || vocal.pause) return;
+      phrase.textContent = mots.slice(0, ++k).join(" ");
+      vocal.minuteur = setTimeout(k < mots.length ? taper : () => { vocal.i++; jouerVocal(); }, k < mots.length ? 230 : 900);
+    };
+    vocal.reprendre = taper; vocal.minuteur = setTimeout(taper, 400);
+  }
+}
+function arreterVocal() { if (!vocal) return; clearTimeout(vocal.minuteur); voixPub.pause(); voixPub.onended = null; vocal = null; $("#vocal").hidden = true; }
+$("#vo-fermer").addEventListener("click", arreterVocal);
+$("#vo-suiv").addEventListener("click", () => { if (!vocal) return; voixPub.pause(); vocal.pause = false; $("#vo-pause").textContent = "Pause"; vocal.i++; jouerVocal(); });
+$("#vo-pause").addEventListener("click", () => {
+  if (!vocal) return; vocal.pause = !vocal.pause; $("#vo-pause").textContent = vocal.pause ? "Reprendre" : "Pause";
+  if (vocal.pause) { clearTimeout(vocal.minuteur); voixPub.pause(); }
+  else if (ENTRETIEN[vocal.i] && ENTRETIEN[vocal.i][0] === "p" && voixPub.currentTime > 0 && !voixPub.ended) voixPub.play().catch(() => {});
+  else jouerVocal();
+});
+
 /* ── Visionneuse : un croquis en grand ───────────────────── */
 let croquis = -1, retourFocus = null;
 function ouvrirCroquis(i) {
@@ -759,6 +927,7 @@ $("#vi-prec").addEventListener("click", () => ouvrirCroquis(croquis - 1));
 $("#vi-suiv").addEventListener("click", () => ouvrirCroquis(croquis + 1));
 $("#visionneuse").addEventListener("click", (e) => { if (e.target.id === "visionneuse") fermerCroquis(); });
 addEventListener("keydown", (e) => {
+  if (vocal && e.key === "Escape") { arreterVocal(); return; }
   if (croquis >= 0) { if (e.key === "Escape") fermerCroquis(); else if (e.key === "ArrowLeft") ouvrirCroquis(croquis - 1); else if (e.key === "ArrowRight") ouvrirCroquis(croquis + 1); return; }
   if (e.key === "Escape" && anim) arreterAnimatique();
 });
