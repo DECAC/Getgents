@@ -370,3 +370,20 @@ repris dans la charte Getgents : barre d'étapes à onglets soulignés corail,
 titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
 « 0,92 $ + voix » : le casting Gemini n'est pas relevé (facturation Google).
 
+
+## Cap redéfini par l'éditeur (27/11)
+
+- **Pas de film personnalisé par destinataire.** Le but : qu'Alfred se dise
+  « c'est un super film pour la promo du Cadeau Français, sur les réseaux
+  sociaux et sur mon site, je veux le publier ». Un film par projet, pour sa
+  marque. (La personnalisation par lien proposée le 27/11 est ABANDONNÉE.)
+- **La qualité de rendu prime toujours.** Coût, modèle de prix et juridique
+  passent au second plan : on expérimente, même avec Pages ouvert.
+- **Le Publiciste est un GENT, dont le résultat est une PAGE.**
+- Conséquence technique notée : les réseaux sociaux publient un FICHIER
+  vidéo, pas un lien. La page livrée doit donc contenir le film jouable ET
+  ses exports MP4 (9:16, 1:1, 16:9). Piste : chaque scène écrite comme une
+  fonction du temps, jouée en direct dans la page et rendue image par image
+  côté serveur (Chromium) pour un MP4 sans perte.
+- Clé Gemini (27/11) : `lyria-3.5` disponible (plus récent que la Lyria 3
+  du prototype) ; AUCUN modèle vidéo (Veo) listé sur cette clé.
