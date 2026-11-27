@@ -358,3 +358,15 @@ chaque carte : Voix 9 Charon, 10 Orus, 11 Puck (hommes), 12 Kore, 13 Aoede,
 - Payé en passant : `#animatique { display: grid }` annulait `hidden` en
   fichier local (le squelette des artefacts le masquait déjà).
 
+**Casting resserré et refonte (27/11, demande de l'éditeur : « Gemini TTS est
+bien mieux »).** Les 8 voix OpenAI sont RETIRÉES (fichiers compris : ils
+restent dans l'historique Git) ; voix par défaut de l'animatique : Charon. Les
+voix sont présentées en TABLEAU (nom, genre, timbre annoncé par Google —
+informatif, ferme, enjoué, ferme, aérien, juvénile —, extrait, texte entier,
+écarter, choisir), en lignes empilées sous 760 px. Storyboard : une carte par
+scène, croquis EN GRAND (jusqu'à 360 px de large) avec visionneuse plein écran
+(flèches, Échap) ; la voix en citation en tête de chaque scène. Design général
+repris dans la charte Getgents : barre d'étapes à onglets soulignés corail,
+titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
+« 0,92 $ + voix » : le casting Gemini n'est pas relevé (facturation Google).
+
