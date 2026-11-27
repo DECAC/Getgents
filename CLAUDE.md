@@ -1155,15 +1155,37 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (27/11)** : `mockups/recit/premier-couteau/` (page + `medias/`), publié en
   artefact privé (https://claude.ai/artifact/1eSthRc2VWqkYwhTxSCnbG). État,
   choix et limites : section « Prototype construit » du brief.
-- **« Le Publiciste » : lot 1 RETIRÉ (27/11, décision de l'éditeur)**. Un
-  « atelier du film » (storyboard en JSON + voix Mistral + MP4 fabriqué dans le
-  navigateur) a été en production quelques heures (`d2819e3`, `bae9877`), puis
-  annulé : l'éditeur veut le gent CONFORME À LA MAQUETTE
-  (`mockups/recit/publiciste/index.html`) — mêmes 8 étapes, vraies
-  générations. Le code annulé reste récupérable dans l'historique (rendu
-  WebCodecs, `lib/filmRendu.ts`, route de voix Mistral, test de discipline de
-  la clé) : à REPRENDRE plutôt qu'à réécrire. Décisions et suite :
-  `mockups/recit/premier-couteau-brief.md`, section « Décisions avant le code ».
+- **« Le Publiciste » = la MAQUETTE** (27/11, décision de l'éditeur ;
+  `mockups/recit/publiciste/index.html`, `lib/publiciste.ts`,
+  `components/publiciste/StudioPubliciste.tsx`, `lib/server/publicisteProjets.ts`,
+  `app/api/publiciste/projet`, migration 040 PASSÉE). Format de gent : la
+  coquille (`SharedGentBody`) rend les HUIT ÉTAPES de la maquette à la place
+  de la page ordinaire — même barre, mêmes bulles, même pied, mêmes mesures
+  (CSS reprise de la maquette, défauts en `:where()` : un réglage général de
+  couleur rendait invisible le texte des boutons). Ne RIEN ajouter que la
+  maquette n'a pas (consigne de l'éditeur) ; tout écran nouveau passe d'abord
+  par une maquette validée. **Lot 1 (écrit, branche, PAS encore en
+  production)** : entretien = VRAIE conversation ; la première question est
+  posée par l'écran et la consigne le sait ; le gent recopie à chaque réponse
+  la fiche « Ce que j'en retiens » entre `<!--FICHE-->` et `<!--/FICHE-->`
+  (JSON, rubriques FERMÉES, rien d'inventé), qui quitte le texte
+  (`m.fichePubliciste`). Projet enregistré par l'auteur (écriture
+  conditionnelle sur la version : un second onglet est refusé et relit) ;
+  l'APERÇU n'enregistre rien ; visiteur d'un lien : « pas encore ouvert ».
+  Étapes 1 à 6 : entête + bulle de la maquette + « arrive au lot N », rien
+  de simulé. **PLUSIEURS PROJETS PAR GENT (27/11, option choisie par
+  l'éditeur)** : un écran d'accueil liste les projets (nom, marque, statut,
+  avancement sur 8 étapes, coût dépensé, date ; « + Nouveau projet »,
+  Reprendre, ⋯ Renommer / Supprimer avec confirmation) — MAQUETTE à valider
+  (`mockups/recit/publiciste/projets.html`,
+  https://claude.ai/artifact/KHhTr4nW9imTD3JTN8Lq1o). Exige de modifier la
+  migration 040 (retirer `unique (owner_id, gent_id)`, ajouter un nom et un
+  identifiant de projet dans l'adresse). Lots suivants : 2 direction
+  visuelle, typo, couleurs ; 3 musique et voix (6 voix Gemini H/F + « Ma
+  voix » recomposée par Mistral, clé Gemini sur Vercel) ; 4 storyboard,
+  croquis, animatique, Valider. Le premier lot (« atelier du film »,
+  `d2819e3`, `bae9877`, annulés par `a8d5489`) : rendu MP4 WebCodecs et route
+  de voix Mistral à REPRENDRE de l'historique.
 - **Formes des boutons, À TRANCHER PLUS TARD** (27/11, l'éditeur « n'en peut
   plus » des pilules et du crème) : maquette de quatre pistes sur la fiche
   d'une page — A coupe franche (recommandée : angles droits, encre, corail

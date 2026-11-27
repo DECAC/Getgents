@@ -569,3 +569,10 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   ÉCARTÉES. Clé Gemini réglée sur Vercel (27/11). Migration 040
   (`supabase/migrations/040_publiciste.sql` : seau privé `publiciste`, tables
   `publiciste_projets` et `publiciste_fichiers`) à passer AVANT le lot 1.
+- **Lot 1 conforme à la maquette ÉCRIT (27/11)**, sur la branche, pas en
+  production : 8 étapes, entretien réel, fiche, projet enregistré.
+- **Plusieurs projets par gent (27/11, option 2 choisie par l'éditeur)** :
+  écran d'accueil « Vos projets » maquetté AVANT le code
+  (`mockups/recit/publiciste/projets.html`,
+  https://claude.ai/artifact/KHhTr4nW9imTD3JTN8Lq1o). À valider ; puis
+  migration 041 (plusieurs projets par auteur et par gent).

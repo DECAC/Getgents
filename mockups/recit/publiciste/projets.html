@@ -1,0 +1,216 @@
+<title>Projets du Publiciste</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Écran d'accueil du gent « Le Publiciste » : la liste des projets, avant les huit étapes.
+   Mêmes jetons que la maquette des étapes (index.html) : crème, corail, Sora. Une colonne de cartes en liste. */
+:root {
+  --ink: #2a1f19; --ink-2: #4d4139; --muted: #73665f; --faint: #a2958f;
+  --bg: #fbf3ed; --bg-2: #f6ebe3; --card: #fffdf9; --line: #eadbd3; --line-soft: #f3e9e3;
+  --corail: #e65d76; --corail-700: #c73758; --corail-tint: #ffdee2;
+  --succes: #57a45b; --succes-tint: #d4f1d4; --attente: #7a5300; --attente-tint: #fdf1d6;
+  --r: 18px; --r-s: 12px;
+  --ombre: 0 1px 2px rgba(42,31,25,.05), 0 8px 24px -12px rgba(42,31,25,.14);
+  --f-ui: "Sora", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --largeur: 1180px;
+  color-scheme: light;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--f-ui); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--corail); outline-offset: 2px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--card); }
+.mono { font-family: var(--f-mono); font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+
+.barre { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--card) 94%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+.barre-in { max-width: var(--largeur); margin: 0 auto; padding-block: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; align-items: center; gap: 12px; }
+.retour { color: var(--muted); text-decoration: none; font-size: 22px; line-height: 1; padding: 4px 6px; }
+.avatar { width: 38px; height: 38px; border-radius: 12px; flex: none; display: grid; place-items: center; background: var(--ink); color: var(--card); font-weight: 700; font-size: 15px; box-shadow: inset 0 -3px 0 var(--corail); }
+.ident b { display: block; font-size: 15px; line-height: 1.2; }
+.ident small { display: block; color: var(--muted); font-size: 12.5px; }
+
+main { max-width: var(--largeur); margin: 0 auto; padding-block: 36px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 24px; }
+.tete { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.intro { display: grid; gap: 6px; max-width: 760px; }
+h1 { margin: 0; font-size: clamp(26px, 5.4vw, 38px); line-height: 1.08; letter-spacing: -.03em; text-wrap: balance; }
+.sous { margin: 0; color: var(--muted); font-size: 16px; max-width: 62ch; }
+.bouton { border: 0; border-radius: 999px; background: var(--ink); color: var(--card); padding: 11px 20px; font-weight: 600; font-size: 14.5px; white-space: nowrap; }
+.bouton.corail { background: var(--corail); }
+.bouton.corail:hover { background: var(--corail-700); }
+.bouton.leger { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+
+/* Une carte par projet : vignette de l'univers, nom, marque, étape, avancement, coût */
+.liste { display: grid; gap: 14px; }
+.projet { position: relative; display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: 18px; align-items: center;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; box-shadow: var(--ombre); transition: border-color .15s, transform .15s; }
+.projet:hover { border-color: #d9c4b9; transform: translateY(-1px); }
+.projet.nouveau { border-color: var(--corail); }
+.lien-carte { position: absolute; inset: 0; border-radius: var(--r); }
+.vignette { box-sizing: border-box; width: 112px; max-width: 100%; aspect-ratio: 928 / 1152; border-radius: 10px; overflow: hidden; background: var(--line-soft); display: grid; place-items: center; }
+.vignette img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vignette.vide { color: var(--faint); font-size: 11.5px; text-align: center; padding: 8px; line-height: 1.35; }
+.corps { display: grid; gap: 8px; min-width: 0; }
+.nom { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.nom h2 { margin: 0; font-size: 19px; letter-spacing: -.015em; }
+.marque { color: var(--muted); font-size: 13.5px; }
+.statut { justify-self: start; font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.statut.entretien { background: var(--attente-tint); color: var(--attente); }
+.statut.direction { background: var(--corail-tint); color: var(--corail-700); }
+.statut.validee { background: var(--succes-tint); color: #2f6e33; }
+.avancement { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.points { display: flex; gap: 4px; }
+.points i { width: 22px; height: 5px; border-radius: 3px; background: var(--line); }
+.points i.fait { background: var(--succes); }
+.points i.cours { background: var(--corail); }
+.etape { font-size: 13px; color: var(--ink-2); }
+.meta { display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.actions { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; }
+.plus { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); font-size: 18px; line-height: 1; }
+.menu { position: absolute; right: 0; top: 44px; z-index: 3; min-width: 180px; display: grid; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-s); box-shadow: var(--ombre); overflow: hidden; }
+.menu button { border: 0; background: none; text-align: left; padding: 10px 14px; font-size: 14px; }
+.menu button:hover { background: var(--bg); }
+.menu .danger { color: var(--corail-700); }
+.renommer { display: flex; gap: 8px; flex-wrap: wrap; position: relative; z-index: 1; }
+.renommer input { flex: 1 1 220px; min-width: 0; border: 1px solid var(--line); border-radius: var(--r-s); padding: 8px 10px; font-size: 15px; background: #fff; }
+.confirmer { position: relative; z-index: 1; grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-radius: var(--r-s); background: var(--corail-tint); font-size: 14px; }
+.confirmer span { flex: 1 1 260px; min-width: 0; }
+
+.vide-etat { display: grid; gap: 14px; justify-items: start; max-width: 640px; background: var(--card); border: 1px dashed #d9c4b9; border-radius: var(--r); padding: 28px; }
+.vide-etat h2 { margin: 0; font-size: 21px; letter-spacing: -.015em; }
+.vide-etat ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--ink-2); }
+.revue { border-top: 1px dashed var(--line); padding-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.revue .mono { margin-right: 4px; }
+.revue button { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 6px 12px; font-size: 12.5px; }
+.revue button[aria-pressed="true"] { background: var(--ink); color: var(--card); border-color: var(--ink); }
+
+@media (max-width: 640px) {
+  .projet { grid-template-columns: 76px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .vignette { width: 76px; }
+  .actions { grid-column: 1 / -1; justify-content: flex-end; margin-top: -4px; }
+  .points i { width: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition-duration: .01s !important; } .projet:hover { transform: none; } }
+</style>
+
+<header class="barre">
+  <div class="barre-in">
+    <a href="#" class="retour" title="Tous mes gents" aria-label="Retour à Mes gents">‹</a>
+    <span class="avatar" aria-hidden="true">P</span>
+    <span class="ident"><b>Le Publiciste</b><small id="compte">3 projets</small></span>
+  </div>
+</header>
+
+<main>
+  <div class="tete">
+    <div class="intro">
+      <span class="mono">Vos projets</span>
+      <h1>Ce que nous racontons ensemble</h1>
+      <p class="sous">Chaque projet suit les huit étapes : l'entretien, la direction artistique, puis la validation. Reprenez là où vous vous étiez arrêté.</p>
+    </div>
+    <button class="bouton corail" id="nouveau" type="button">+ Nouveau projet</button>
+  </div>
+
+  <section class="liste" id="liste" aria-label="Projets"></section>
+
+  <div class="revue" aria-label="Pour la relecture de la maquette">
+    <span class="mono">Maquette · voir aussi</span>
+    <button type="button" id="voir-vide" aria-pressed="false">Le premier passage (aucun projet)</button>
+  </div>
+</main>
+
+<script>
+(() => {
+"use strict";
+const ETAPES = ["L'entretien", "Direction visuelle", "Typographie", "Couleurs", "Musique", "Voix", "Storyboard", "Valider"];
+// Exemples : le projet réel de l'éditeur, et deux projets fictifs pour montrer les autres états.
+let projets = [
+  { id: "couteau", nom: "Le premier couteau", marque: "Le Cadeau Français", etape: 6, statut: "direction", img: "medias/planche-cahier.webp",
+    cout: 4.74, quand: "Aujourd'hui, 14:12", lien: "https://claude.ai/artifact/4uz96sweiEHgrYvAPYTnmr" },
+  { id: "voeux", nom: "Vœux 2027", marque: "Atelier Morvan", etape: 0, statut: "entretien", rubriques: 5,
+    cout: 0.03, quand: "Hier, 18:40" },
+  { id: "cabane", nom: "La cabane d'hiver", marque: "Le Cadeau Français", etape: 7, statut: "validee", img: "medias/planche-atelier.webp",
+    cout: 6.12, quand: "12 novembre" },
+];
+let vide = false, menuOuvert = null, enRenommage = null, aSupprimer = null;
+const eur = (x) => x.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " $";
+const h = (tag, attrs = {}, ...enfants) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of enfants.flat()) if (c != null) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+};
+const libelleStatut = { entretien: "Entretien en cours", direction: "Direction artistique", validee: "Direction validée" };
+
+function carte(p) {
+  const etapeTxt = p.statut === "validee" ? "Validée · prête pour la production"
+    : p.statut === "entretien" ? (p.rubriques ? `L'entretien · fiche remplie à ${p.rubriques} sur 9` : "L'entretien · à commencer")
+    : `Étape ${p.etape} sur 7 · ${ETAPES[p.etape]}`;
+  const points = h("span", { class: "points", "aria-hidden": "true" },
+    ETAPES.map((_, i) => h("i", { class: p.statut === "validee" || i < p.etape ? "fait" : i === p.etape ? "cours" : "" })));
+  const nomBloc = enRenommage === p.id
+    ? (() => {
+        const champ = h("input", { id: `nom-${p.id}`, value: p.nom, "aria-label": "Nom du projet" });
+        requestAnimationFrame(() => { champ.focus(); champ.select(); });
+        const valider = () => { p.nom = champ.value.trim() || p.nom; enRenommage = null; rendre(); };
+        champ.addEventListener("keydown", (e) => { if (e.key === "Enter") valider(); if (e.key === "Escape") { enRenommage = null; rendre(); } });
+        return h("div", { class: "renommer" }, champ, h("button", { class: "bouton", type: "button", onclick: valider }, "Renommer"),
+          h("button", { class: "bouton leger", type: "button", onclick: () => { enRenommage = null; rendre(); } }, "Annuler"));
+      })()
+    : h("div", { class: "nom" }, h("h2", {}, p.nom), h("span", { class: "marque" }, p.marque || "Marque à préciser"));
+  const menu = menuOuvert === p.id ? h("div", { class: "menu", role: "menu" },
+    h("button", { type: "button", role: "menuitem", onclick: () => { menuOuvert = null; enRenommage = p.id; rendre(); } }, "Renommer"),
+    h("button", { type: "button", role: "menuitem", class: "danger", onclick: () => { menuOuvert = null; aSupprimer = p.id; rendre(); } }, "Supprimer…")) : null;
+  return h("article", { class: "projet" + (p.nouveau ? " nouveau" : ""), "aria-label": p.nom },
+    p.lien && enRenommage !== p.id ? h("a", { class: "lien-carte", href: p.lien, target: "_blank", rel: "noopener", "aria-label": `Ouvrir ${p.nom}` }) : null,
+    p.img ? h("div", { class: "vignette" }, h("img", { src: p.img, alt: "" })) : h("div", { class: "vignette vide" }, p.statut === "entretien" ? "L'univers viendra après l'entretien" : "—"),
+    h("div", { class: "corps" },
+      nomBloc,
+      h("span", { class: "statut " + p.statut }, libelleStatut[p.statut]),
+      h("div", { class: "avancement" }, points, h("span", { class: "etape" }, etapeTxt)),
+      h("div", { class: "meta" }, h("span", {}, "Modifié : " + p.quand), h("span", {}, "Dépensé : " + eur(p.cout)))),
+    h("div", { class: "actions" },
+      h("button", { class: "bouton leger", type: "button", onclick: () => p.lien ? window.open(p.lien, "_blank", "noopener") : null }, p.statut === "validee" ? "Revoir" : "Reprendre"),
+      h("button", { class: "plus", type: "button", "aria-label": `Plus d'actions pour ${p.nom}`, "aria-expanded": String(menuOuvert === p.id),
+        onclick: (e) => { e.stopPropagation(); menuOuvert = menuOuvert === p.id ? null : p.id; rendre(); } }, "⋯"),
+      menu),
+    aSupprimer === p.id ? h("div", { class: "confirmer", role: "alert" },
+      h("span", {}, `Supprimer « ${p.nom} » ? Son entretien, ses planches, musiques, voix et croquis seront effacés. Rien ne pourra être récupéré.`),
+      h("button", { class: "bouton leger", type: "button", onclick: () => { aSupprimer = null; rendre(); } }, "Annuler"),
+      h("button", { class: "bouton corail", type: "button", onclick: () => { projets = projets.filter((x) => x.id !== p.id); aSupprimer = null; rendre(); } }, "Supprimer")) : null);
+}
+
+function rendre() {
+  const liste = document.getElementById("liste");
+  liste.textContent = "";
+  const n = vide ? 0 : projets.length;
+  document.getElementById("compte").textContent = n ? `${n} projet${n > 1 ? "s" : ""}` : "Aucun projet";
+  document.getElementById("nouveau").hidden = n === 0;
+  if (!n) {
+    liste.append(h("div", { class: "vide-etat" },
+      h("h2", {}, "Votre premier projet commence par un entretien"),
+      h("p", { style: "margin:0;color:var(--muted)" }, "Une quinzaine de minutes pour parler de votre marque. Ensuite, je vous propose la direction artistique, étape par étape."),
+      h("ol", {}, h("li", {}, "L'entretien : le fond, puis la forme."), h("li", {}, "La direction artistique : univers, lettres, couleurs, musique, voix, storyboard."), h("li", {}, "Vous validez, puis on produit.")),
+      h("button", { class: "bouton corail", type: "button", onclick: nouveau }, "Commencer un projet")));
+    return;
+  }
+  projets.forEach((p) => liste.append(carte(p)));
+}
+function nouveau() {
+  vide = false; document.getElementById("voir-vide").setAttribute("aria-pressed", "false");
+  projets.unshift({ id: "n" + Date.now(), nom: "Nouveau projet", marque: "", etape: 0, statut: "entretien", rubriques: 0, cout: 0, quand: "À l'instant", nouveau: true });
+  rendre();
+}
+document.getElementById("nouveau").addEventListener("click", nouveau);
+document.getElementById("voir-vide").addEventListener("click", (e) => { vide = !vide; e.currentTarget.setAttribute("aria-pressed", String(vide)); rendre(); });
+document.addEventListener("click", () => { if (menuOuvert) { menuOuvert = null; rendre(); } });
+rendre();
+})();
+</script>
