@@ -1,0 +1,866 @@
+<title>Le premier couteau</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Concept : un carnet d'atelier. Couverture sur l'établi → histoire plein écran dessinée puis filmée → page de papier qui présente l'écrin.
+   Univers unique et assumé (papier, graphite, bois) : pas de thème sombre, toutes les couleurs sont posées ici. */
+:root {
+  --papier: #faf8ea;        /* papier des dessins, relevé sur les images */
+  --papier-ombre: #efe9d4;
+  --graphite: #2d2a24;      /* texte : mine de plomb */
+  --graphite-doux: #6b6455;
+  --ambre: #b8741f;         /* lumière d'été dans la sciure */
+  --nuit: #14120f;
+  --entreprise: #1f3a5f;    /* couleur de l'entreprise, réglée par la démo */
+  --f-titre: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --f-main: "Caveat", "Segoe Print", "Bradley Hand", cursive;
+  --f-util: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+html, body { height: 100%; }
+body { background: var(--nuit); color: var(--graphite); font-family: var(--f-util); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--ambre); outline-offset: 3px; }
+
+/* ── 1. Couverture ─────────────────────────────────────────── */
+#couverture {
+  position: fixed; inset: 0; overflow: hidden; display: grid; place-items: center;
+  background: var(--nuit) url("medias/etabli.webp") center / cover no-repeat;
+}
+#couverture::after { /* lumière : vignette chaude */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 80% at 60% 40%, transparent 35%, rgba(20,14,6,.55) 100%);
+  transition: opacity 1.4s ease;
+}
+.carnet-zone { position: relative; z-index: 1; display: grid; justify-items: center; gap: 22px; padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); }
+.carnet {
+  position: relative; width: min(66vw, 300px, 44vh); aspect-ratio: 3 / 4;
+  perspective: 1600px; cursor: pointer; border: 0; padding: 0; background: none;
+  transform: rotate(-4deg); transition: transform 1.7s cubic-bezier(.65,0,.25,1) .35s;
+  -webkit-tap-highlight-color: transparent;
+}
+.carnet .page {
+  position: absolute; inset: 1.5% 0 1.5% 2%; border-radius: 3px 8px 8px 3px; background: var(--papier);
+  box-shadow: inset 6px 0 14px -8px rgba(60,40,10,.35), 0 0 0 1px rgba(90,70,40,.12);
+}
+.carnet .page::before { /* tranche des pages */
+  content: ""; position: absolute; inset: 1% -1.2% 1% auto; width: 1.4%;
+  background: repeating-linear-gradient(180deg, #f3eedb 0 2px, #ddd5bd 2px 3px); border-radius: 0 3px 3px 0;
+}
+.carnet .plat {
+  position: absolute; inset: 0; transform-origin: 0 50%; transform-style: preserve-3d;
+  transition: transform 1.25s cubic-bezier(.55,.05,.3,1);
+}
+.plat .recto, .plat .verso { position: absolute; inset: 0; border-radius: 4px 10px 10px 4px; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.plat .recto {
+  background: #8a6a43 url("medias/couv.webp") center / cover;
+  box-shadow: 0 1px 0 rgba(255,240,210,.25) inset, 0 22px 40px -12px rgba(0,0,0,.7), 0 6px 12px rgba(0,0,0,.35);
+}
+.plat .verso { /* l'intérieur du carton */
+  transform: rotateY(180deg); border-radius: 10px 4px 4px 10px;
+  background: linear-gradient(90deg, #b99d70, #cdb48a 30%, #c6ab7f); box-shadow: inset 0 0 30px rgba(80,55,20,.35);
+}
+.etiquette {
+  position: absolute; left: 13%; right: 22%; top: 30%; padding: 12px 14px 10px;
+  background: #f6f1df; border-radius: 2px; transform: rotate(-2.5deg);
+  box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 0 0 1px rgba(120,100,60,.15) inset;
+  background-image: linear-gradient(transparent 0 calc(100% - 1px), rgba(80,110,160,.18) 0); background-size: 100% 1.55em;
+  font-family: var(--f-main); color: #2b3f63; text-align: left; line-height: 1.1;
+}
+.etiquette .pour { font-size: clamp(22px, 7vw, 30px); font-weight: 600; display: block; }
+.etiquette .ent { font-size: clamp(17px, 5vw, 22px); display: block; margin-top: 2px; }
+.ruban { /* ruban adhésif qui tient l'étiquette */
+  position: absolute; top: -9px; left: 38%; width: 34%; height: 16px; transform: rotate(4deg);
+  background: rgba(236,226,196,.7); box-shadow: 0 1px 1px rgba(0,0,0,.08);
+}
+.invite { font-family: var(--f-util); color: #f7efd9; text-align: center; text-shadow: 0 1px 8px rgba(0,0,0,.7); display: grid; gap: 6px; transition: opacity .5s; }
+.invite strong { font-weight: 500; font-size: 15px; letter-spacing: .02em; }
+.invite span { font-size: 12.5px; opacity: .8; }
+.invite .charge { display: inline-block; width: 90px; height: 2px; margin: 4px auto 0; background: rgba(255,255,255,.18); border-radius: 2px; overflow: hidden; }
+.invite .charge i { display: block; height: 100%; width: 0; background: #f2d49a; transition: width .3s; }
+.lien-reglages {
+  position: absolute; z-index: 2; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); right: calc(14px + env(safe-area-inset-right, 0px));
+  background: rgba(20,14,6,.45); border: 1px solid rgba(255,240,210,.22); color: #efe4c8; border-radius: 999px;
+  padding: 8px 14px; font-size: 12.5px; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+#couverture.ouvert .plat { transform: rotateY(-168deg); }
+#couverture.ouvert::after { opacity: .2; }
+#couverture.ouvert .invite, #couverture.ouvert .lien-reglages { opacity: 0; pointer-events: none; }
+
+/* ── 2. Histoire ───────────────────────────────────────────── */
+#histoire { position: fixed; inset: 0; background: var(--papier); opacity: 0; transition: opacity .6s ease; }
+#histoire.visible { opacity: 1; }
+#toile { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.commandes {
+  position: absolute; z-index: 3; top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px));
+  display: flex; gap: 8px; opacity: .0; transition: opacity .6s;
+}
+#histoire.visible .commandes { opacity: .78; }
+.commandes button {
+  border: 0; border-radius: 999px; padding: 8px 13px; font-size: 12.5px; cursor: pointer;
+  background: rgba(30,24,16,.38); color: #fbf5e6; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.sous-titre {
+  position: absolute; z-index: 2; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-inline: max(24px, env(safe-area-inset-left, 0px)) max(24px, env(safe-area-inset-right, 0px));
+  text-align: center; font-family: var(--f-titre); font-style: italic; font-size: clamp(17px, 4.6vw, 22px); line-height: 1.35;
+  color: #fffaf0; text-shadow: 0 1px 3px rgba(0,0,0,.8), 0 0 18px rgba(0,0,0,.45); opacity: 0; transition: opacity .35s;
+  text-wrap: balance;
+}
+.sous-titre.on { opacity: 1; }
+.devise {
+  position: absolute; z-index: 2; left: 0; right: 0; bottom: 18%;
+  padding-inline: max(28px, env(safe-area-inset-left, 0px)) max(28px, env(safe-area-inset-right, 0px));
+  text-align: center; font-family: var(--f-titre); font-weight: 400; font-size: clamp(26px, 7.4vw, 40px); line-height: 1.12;
+  color: var(--graphite); text-shadow: 0 0 18px #faf8ea, 0 0 6px #faf8ea, 0 0 2px #faf8ea; opacity: 0; transform: translateY(8px); transition: opacity 1.4s ease, transform 1.8s ease; text-wrap: balance;
+  letter-spacing: -.01em;
+}
+.devise em { font-style: italic; color: #7a4a12; }
+.devise.on { opacity: 1; transform: none; }
+.fil { position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: rgba(0,0,0,.08); }
+.fil i { display: block; height: 100%; width: 0; background: rgba(184,116,31,.75); }
+
+/* ── 3. Page finale ────────────────────────────────────────── */
+#fin {
+  position: fixed; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: var(--papier); opacity: 0; transition: opacity 1.2s ease; overscroll-behavior: contain;
+}
+#fin.visible { opacity: 1; }
+#fin::before { /* grain du papier */
+  content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .5;
+  background-image: var(--grain); background-size: 220px;
+}
+.feuille {
+  position: relative; max-width: 640px; margin: 0 auto;
+  padding-block: calc(28px + env(safe-area-inset-top, 0px)) calc(48px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 34px;
+}
+.en-tete { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 12.5px; color: var(--graphite-doux); letter-spacing: .02em; }
+.en-tete .main { font-family: var(--f-main); font-size: 21px; color: #2b3f63; letter-spacing: 0; }
+.ouverture h1 {
+  margin: 0; font-family: var(--f-titre); font-weight: 400; font-size: clamp(34px, 9.4vw, 52px); line-height: 1.02; letter-spacing: -.02em; text-wrap: balance;
+}
+.ouverture h1 em { font-style: italic; color: #7a4a12; }
+.ouverture p { margin: 14px 0 0; font-family: var(--f-titre); font-size: 18.5px; line-height: 1.5; color: #3d382f; max-width: 34em; }
+
+/* L'écrin, vu du dessus, ouvert */
+.ecrin-zone { display: grid; gap: 14px; }
+.ecrin { container-type: inline-size; width: 100%; max-width: 520px; justify-self: center; filter: drop-shadow(0 26px 30px rgba(60,40,12,.28)) drop-shadow(0 4px 6px rgba(60,40,12,.2)); }
+.ecrin .couvercle, .ecrin .fond {
+  position: relative; border-radius: 6px; background-color: var(--entreprise);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 3px),
+    linear-gradient(160deg, rgba(255,255,255,.14), rgba(0,0,0,.18));
+}
+.ecrin .couvercle { aspect-ratio: 16 / 6.2; border-radius: 6px 6px 2px 2px; transform: perspective(900px) rotateX(18deg); transform-origin: 50% 100%; }
+.couvercle .interieur {
+  position: absolute; inset: 5.5cqw; border-radius: 3px; display: grid; place-items: center; align-content: center; gap: 1.4cqw;
+  background: color-mix(in srgb, var(--entreprise) 82%, #000);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -1px 0 rgba(255,255,255,.08);
+}
+.couvercle .nom-grave {
+  font-family: var(--f-titre); font-size: 5.6cqw; letter-spacing: .14em; text-transform: uppercase; text-align: center; padding-inline: 4cqw;
+  color: color-mix(in srgb, var(--entreprise) 48%, #000); text-shadow: 0 1px 0 rgba(255,255,255,.22), 0 -1px 0 rgba(0,0,0,.45);
+}
+.couvercle .mention { font-size: 2.4cqw; letter-spacing: .3em; text-transform: uppercase; color: color-mix(in srgb, var(--entreprise) 55%, #fff); opacity: .55; }
+.ecrin .charniere { height: 1.6cqw; margin: 0 3%; background: linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.1)); border-radius: 0 0 2px 2px; }
+.ecrin .fond { aspect-ratio: 16 / 7.4; border-radius: 2px 2px 7px 7px; }
+.fond .feutre {
+  position: absolute; inset: 4.5cqw; border-radius: 3px; overflow: hidden;
+  background: color-mix(in srgb, var(--entreprise) 45%, #181512);
+  background-image: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.2px); background-size: 4px 4px;
+  box-shadow: inset 0 3px 9px rgba(0,0,0,.55);
+}
+.feutre .logement, .feutre .couteau {
+  position: absolute; left: 7%; top: 50%; width: 86%; aspect-ratio: 900 / 173; transform: translateY(-50%);
+}
+.feutre .logement { /* empreinte creusée dans le feutre */
+  background: rgba(0,0,0,.5); -webkit-mask: url("medias/couteau.webp") center / 100% 100% no-repeat; mask: url("medias/couteau.webp") center / 100% 100% no-repeat;
+  transform: translateY(-48%) scale(1.03); filter: blur(1.5px);
+}
+.feutre .couteau img { width: 100%; height: 100%; display: block; filter: drop-shadow(0 2px 2px rgba(0,0,0,.6)) drop-shadow(0 0 1px rgba(0,0,0,.5)); }
+.gravure { /* sur la lame : de 57 % à 93 % de la largeur du couteau */
+  position: absolute; left: 58.5%; width: 33%; top: 22%; height: 42%; display: flex; align-items: center; justify-content: center; gap: .9cqw;
+  color: rgba(55,52,48,.62); mix-blend-mode: multiply; pointer-events: none; overflow: hidden;
+}
+.gravure .mono {
+  flex: none; width: 3.8cqw; height: 3.8cqw; border: .22cqw solid currentColor; border-radius: 50%;
+  display: grid; place-items: center; font-family: var(--f-titre); font-size: 1.8cqw; letter-spacing: .02em;
+}
+.gravure .txt { font-family: var(--f-titre); font-size: 1.7cqw; letter-spacing: .09em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+.legende { font-size: 13px; color: var(--graphite-doux); text-align: center; line-height: 1.5; }
+
+.trio h2, .composer h2 { margin: 0 0 6px; font-family: var(--f-titre); font-weight: 500; font-size: 26px; letter-spacing: -.01em; }
+.trio > p { margin: 0 0 16px; color: #4b453a; font-size: 15px; line-height: 1.5; }
+.coffrets { display: grid; gap: 14px; }
+.coffret {
+  display: grid; grid-template-columns: 112px 1fr; gap: 14px; align-items: center; text-align: left; width: 100%;
+  padding: 10px; border-radius: 12px; border: 1.5px solid rgba(90,70,40,.16); background: rgba(255,255,255,.45); cursor: pointer;
+  transition: border-color .2s, background .2s, transform .2s;
+}
+.coffret:hover { border-color: rgba(184,116,31,.5); }
+.coffret[aria-pressed="true"] { border-color: var(--ambre); background: #fffdf4; box-shadow: 0 0 0 3px rgba(184,116,31,.16); }
+.coffret img { width: 112px; height: 112px; object-fit: cover; border-radius: 8px; display: block; }
+.coffret .corps { min-width: 0; display: grid; gap: 4px; }
+.coffret .nom { font-family: var(--f-titre); font-size: 20px; font-weight: 500; line-height: 1.15; }
+.coffret .contenu { font-size: 13.5px; color: #4b453a; line-height: 1.4; }
+.coffret .prix { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.coffret .prix b { font-size: 17px; font-weight: 600; }
+.coffret .prix small { font-size: 12px; color: var(--graphite-doux); }
+.coffret .coche { font-size: 12px; color: var(--ambre); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; visibility: hidden; }
+.coffret[aria-pressed="true"] .coche { visibility: visible; }
+
+.composer { display: grid; gap: 14px; padding: 20px; border-radius: 14px; background: #f3edd8; border: 1px solid rgba(90,70,40,.12); }
+.ligne { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 15px; }
+.ligne label { color: #3d382f; }
+.quantite { display: flex; align-items: center; gap: 6px; }
+.quantite button { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(90,70,40,.25); background: #fffdf4; cursor: pointer; font-size: 18px; }
+.quantite input { width: 72px; height: 38px; text-align: center; border-radius: 8px; border: 1px solid rgba(90,70,40,.25); background: #fffdf4; font: inherit; font-variant-numeric: tabular-nums; }
+.total { font-family: var(--f-titre); font-size: 22px; font-variant-numeric: tabular-nums; }
+.bouton {
+  width: 100%; min-height: 54px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--graphite); color: #fbf5e3; font-size: 16.5px; font-weight: 500; letter-spacing: .01em;
+  box-shadow: 0 10px 20px -10px rgba(45,42,36,.7); transition: transform .15s;
+}
+.bouton:active { transform: scale(.985); }
+.bouton[disabled] { opacity: .45; cursor: default; }
+.confirmation { padding: 16px; border-radius: 12px; background: #fffdf4; border: 1px solid rgba(184,116,31,.35); font-size: 15px; line-height: 1.5; }
+.confirmation p { margin: 0; }
+.confirmation p + p { margin-top: 6px; }
+.note-proto { font-size: 12px; color: var(--graphite-doux); line-height: 1.5; border-top: 1px solid rgba(90,70,40,.15); padding-top: 14px; }
+.liens-bas { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.discret { border: 1px solid rgba(90,70,40,.22); background: transparent; border-radius: 999px; padding: 9px 16px; cursor: pointer; font-size: 13.5px; color: #3d382f; }
+
+/* ── Réglages de la démo ───────────────────────────────────── */
+#reglages { position: fixed; inset: 0; z-index: 20; display: grid; place-items: end center; background: rgba(10,8,5,.55); }
+#reglages form {
+  width: min(100%, 520px); max-height: 90vh; overflow-y: auto; background: var(--papier); border-radius: 18px 18px 0 0;
+  padding-block: 20px calc(20px + env(safe-area-inset-bottom, 0px)); padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 14px;
+}
+#reglages h2 { margin: 0; font-family: var(--f-titre); font-weight: 500; font-size: 22px; }
+#reglages .aide { margin: 0; font-size: 13px; color: var(--graphite-doux); line-height: 1.45; }
+.champ { display: grid; gap: 5px; font-size: 13.5px; }
+.champ input, .champ select { height: 42px; border-radius: 9px; border: 1px solid rgba(90,70,40,.25); background: #fffdf4; padding: 0 11px; font: inherit; font-size: 16px; color: var(--graphite); }
+.deux { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pastilles { display: flex; gap: 8px; flex-wrap: wrap; }
+.pastilles button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; box-shadow: inset 0 0 0 2px rgba(255,255,255,.35); }
+.pastilles button[aria-pressed="true"] { border-color: var(--graphite); }
+.actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+@media (prefers-reduced-motion: reduce) {
+  .carnet, .carnet .plat, #histoire, #fin, .devise { transition-duration: .01s !important; }
+}
+</style>
+
+<section id="couverture" aria-label="Couverture">
+  <div class="carnet-zone">
+    <button class="carnet" id="carnet" type="button" aria-label="Ouvrir le carnet et lancer l'histoire (avec le son)">
+      <span class="page" aria-hidden="true"></span>
+      <span class="plat"><span class="verso"></span><span class="recto">
+        <span class="etiquette"><span class="ruban" aria-hidden="true"></span><span class="pour" id="etq-pour">Pour Sophie,</span><span class="ent" id="etq-ent">Ateliers Morvan</span></span>
+      </span></span>
+    </button>
+    <div class="invite" id="invite">
+      <strong id="invite-titre">Touchez le carnet pour l'ouvrir</strong>
+      <span>Une histoire d'une minute · avec le son</span>
+      <span class="charge" aria-hidden="true"><i id="charge"></i></span>
+    </div>
+  </div>
+  <button class="lien-reglages" id="ouvrir-reglages" type="button">Régler la démo</button>
+</section>
+
+<section id="histoire" hidden aria-label="L'histoire">
+  <canvas id="toile" aria-hidden="true"></canvas>
+  <p class="sous-titre" id="sous-titre" aria-live="polite"></p>
+  <p class="devise" id="devise">Offrez un cadeau<br>qui a <em>une histoire.</em></p>
+  <div class="commandes">
+    <button type="button" id="b-son" aria-pressed="false">Couper le son</button>
+    <button type="button" id="b-passer">Passer</button>
+  </div>
+  <div class="fil" aria-hidden="true"><i id="fil"></i></div>
+</section>
+
+<section id="fin" hidden aria-label="Votre coffret">
+  <div class="feuille">
+    <header class="en-tete">
+      <span class="main" id="fin-pour">Pour Sophie</span>
+      <span id="fin-ent">Ateliers Morvan · fêtes de fin d'année</span>
+    </header>
+
+    <div class="ouverture">
+      <h1>Le couteau qu'on garde,<br><em>puis qu'on transmet.</em></h1>
+      <p id="fin-intro">Fabriqué en France par des mains patientes, gravé au nom de votre entreprise, offert dans un écrin à vos couleurs. Un cadeau qu'on n'oublie pas dans un tiroir.</p>
+    </div>
+
+    <div class="ecrin-zone">
+      <div class="ecrin" aria-label="Aperçu de l'écrin à vos couleurs, couteau gravé">
+        <div class="couvercle"><div class="interieur"><span class="nom-grave" id="ecrin-nom">Ateliers Morvan</span><span class="mention">Fabriqué en France</span></div></div>
+        <div class="charniere"></div>
+        <div class="fond"><div class="feutre">
+          <span class="logement" aria-hidden="true"></span>
+          <span class="couteau"><img src="medias/couteau.webp" alt="Couteau pliant, manche en hêtre"><span class="gravure"><span class="mono" id="grav-mono">AM</span><span class="txt" id="grav-txt">Ateliers Morvan</span></span></span>
+        </div></div>
+      </div>
+      <p class="legende">Aperçu : écrin à vos couleurs, lame gravée de votre logo.<br>Une maquette vous est envoyée avant toute fabrication.</p>
+    </div>
+
+    <section class="trio" aria-labelledby="titre-trio">
+      <h2 id="titre-trio">Trois coffrets pour votre budget</h2>
+      <p id="trio-intro">Vous avez indiqué environ 45 € par salarié. Choisissez celui qui vous parle, on ajuste ensemble ensuite.</p>
+      <div class="coffrets" id="coffrets"></div>
+    </section>
+
+    <section class="composer" aria-labelledby="titre-composer">
+      <h2 id="titre-composer">Composer mon coffret</h2>
+      <div class="ligne">
+        <label for="qte">Nombre de salariés</label>
+        <div class="quantite"><button type="button" id="moins" aria-label="Un de moins">−</button><input id="qte" type="number" inputmode="numeric" min="1" max="5000" value="120"><button type="button" id="plus" aria-label="Un de plus">+</button></div>
+      </div>
+      <div class="ligne"><span id="choix-resume">Aucun coffret choisi</span><span class="total" id="total">—</span></div>
+      <button class="bouton" id="composer" type="button" disabled>Composer mon coffret</button>
+      <div class="confirmation" id="confirmation" hidden>
+        <p><strong>C'est noté.</strong> <span id="conf-texte"></span></p>
+        <p>Votre conseiller vous rappelle pour valider la maquette de l'écrin, puis vous envoie le devis.</p>
+      </div>
+    </section>
+
+    <div class="liens-bas">
+      <button class="discret" type="button" id="revoir">Revoir l'histoire</button>
+    </div>
+
+    <p class="note-proto">Prototype. Les prix, les coffrets et l'entreprise sont fictifs ; rien n'est envoyé. Dessins, photographies, voix et musique sont générés ; les sons (été, lame, roues, écrin) sont synthétisés et provisoires. Les images d'atelier sont à remplacer par de vraies images de marque.</p>
+  </div>
+</section>
+
+<div id="reglages" hidden>
+  <form id="form-reglages" aria-labelledby="titre-reglages">
+    <h2 id="titre-reglages">Régler la démo</h2>
+    <p class="aide">Ces réglages remplacent ce que le formulaire du client fournirait. Ils restent sur cet appareil.</p>
+    <div class="deux">
+      <label class="champ" for="r-prenom">Prénom<input id="r-prenom" maxlength="24" autocomplete="off"></label>
+      <label class="champ" for="r-budget">Budget par salarié (€)<input id="r-budget" type="number" inputmode="numeric" min="10" max="300"></label>
+    </div>
+    <label class="champ" for="r-ent">Entreprise<input id="r-ent" maxlength="40" autocomplete="off"></label>
+    <div class="champ"><span>Couleur de l'entreprise</span><div class="pastilles" id="r-couleurs"></div></div>
+    <div class="deux">
+      <label class="champ" for="r-voix">Voix
+        <select id="r-voix"><option value="cedar">Cedar</option><option value="ash">Ash</option><option value="ballad">Ballad</option></select></label>
+      <label class="champ" for="r-musique">Musique
+        <select id="r-musique"><option value="1">Version 1</option><option value="2">Version 2</option></select></label>
+    </div>
+    <div class="actions"><button class="discret" type="button" id="r-annuler">Annuler</button><button class="bouton" style="width:auto;padding:0 22px;min-height:44px" type="submit">Enregistrer</button></div>
+  </form>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ── Réglages ─────────────────────────────────────────────── */
+const COULEURS = ["#1f3a5f", "#7a1f2b", "#2f4a36", "#3b3b3f", "#8a5a1c", "#4a2f5c"];
+const DEFAUTS = { prenom: "Sophie", entreprise: "Ateliers Morvan", couleur: "#1f3a5f", budget: 45, voix: "cedar", musique: "1" };
+let R = { ...DEFAUTS };
+try { Object.assign(R, JSON.parse(localStorage.getItem("premier-couteau:reglages") || "{}")); } catch (e) {}
+const $ = (id) => document.getElementById(id);
+const initiales = (s) => s.split(/[\s'-]+/).filter(Boolean).slice(0, 2).map((m) => m[0].toUpperCase()).join("") || "·";
+const euros = (n) => n.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €";
+
+function appliquer() {
+  document.documentElement.style.setProperty("--entreprise", R.couleur);
+  $("etq-pour").textContent = `Pour ${R.prenom},`;
+  $("etq-ent").textContent = R.entreprise;
+  $("fin-pour").textContent = `Pour ${R.prenom}`;
+  $("fin-ent").textContent = `${R.entreprise} · fêtes de fin d'année`;
+  $("ecrin-nom").textContent = R.entreprise;
+  $("grav-txt").textContent = R.entreprise;
+  $("grav-mono").textContent = initiales(R.entreprise);
+  $("trio-intro").textContent = `Vous avez indiqué environ ${euros(+R.budget)} par salarié. Choisissez celui qui vous parle, on ajuste ensemble ensuite.`;
+  dessinerCoffrets();
+}
+
+/* ── Page finale : coffrets ───────────────────────────────── */
+const COFFRETS = [
+  { id: "premier", img: "coffret1", nom: "Le Premier couteau", contenu: "Couteau pliant savoyard, manche hêtre, lame gravée. Écrin à vos couleurs.", prix: 29 },
+  { id: "atelier", img: "coffret2", nom: "L'Atelier gourmand", contenu: "Le couteau gravé et une tablette de chocolat de maître chocolatier.", prix: 38 },
+  { id: "transmission", img: "coffret3", nom: "La Transmission", contenu: "Le couteau gravé et un premier couteau d'enfant à bout rond, pour le donner à son tour.", prix: 44 },
+];
+let choisi = null;
+function dessinerCoffrets() {
+  const zone = $("coffrets"); zone.textContent = "";
+  for (const c of COFFRETS) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "coffret"; b.setAttribute("aria-pressed", String(choisi === c.id));
+    const ecart = c.prix - R.budget;
+    b.innerHTML = `<img src="medias/${c.img}.webp" alt="" loading="lazy"><span class="corps"><span class="nom"></span><span class="contenu"></span><span class="prix"><b></b><small></small></span><span class="coche">Choisi</span></span>`;
+    b.querySelector(".nom").textContent = c.nom;
+    b.querySelector(".contenu").textContent = c.contenu;
+    b.querySelector("b").textContent = euros(c.prix);
+    b.querySelector("small").textContent = ecart > 0 ? `HT par salarié · ${euros(ecart)} au-dessus de votre budget` : "HT par salarié, gravure et écrin compris";
+    b.addEventListener("click", () => { choisi = choisi === c.id ? null : c.id; dessinerCoffrets(); calculer(); });
+    zone.appendChild(b);
+  }
+}
+function calculer() {
+  const q = Math.max(1, Math.min(5000, parseInt($("qte").value, 10) || 1));
+  const c = COFFRETS.find((x) => x.id === choisi);
+  $("composer").disabled = !c;
+  $("choix-resume").textContent = c ? `${c.nom} × ${q}` : "Choisissez un coffret ci-dessus";
+  $("total").textContent = c ? euros(c.prix * q) + " HT" : "—";
+  $("confirmation").hidden = true;
+}
+$("qte").addEventListener("input", calculer);
+$("moins").addEventListener("click", () => { $("qte").value = Math.max(1, (parseInt($("qte").value, 10) || 1) - 10); calculer(); });
+$("plus").addEventListener("click", () => { $("qte").value = Math.min(5000, (parseInt($("qte").value, 10) || 0) + 10); calculer(); });
+$("composer").addEventListener("click", () => {
+  const c = COFFRETS.find((x) => x.id === choisi); if (!c) return;
+  const q = parseInt($("qte").value, 10) || 1;
+  $("conf-texte").textContent = `${q} coffrets « ${c.nom} » pour ${R.entreprise}, environ ${euros(c.prix * q)} HT.`;
+  $("confirmation").hidden = false;
+});
+
+/* ── Panneau de réglages ──────────────────────────────────── */
+function ouvrirReglages() {
+  $("r-prenom").value = R.prenom; $("r-ent").value = R.entreprise; $("r-budget").value = R.budget;
+  $("r-voix").value = R.voix; $("r-musique").value = R.musique;
+  const p = $("r-couleurs"); p.textContent = "";
+  for (const c of COULEURS) {
+    const b = document.createElement("button"); b.type = "button"; b.style.background = c; b.dataset.c = c;
+    b.setAttribute("aria-label", "Couleur " + c); b.setAttribute("aria-pressed", String(c === R.couleur));
+    b.addEventListener("click", () => p.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))));
+    p.appendChild(b);
+  }
+  $("reglages").hidden = false;
+}
+$("ouvrir-reglages").addEventListener("click", ouvrirReglages);
+$("r-annuler").addEventListener("click", () => { $("reglages").hidden = true; });
+$("form-reglages").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const voixAvant = R.voix, musAvant = R.musique;
+  R.prenom = $("r-prenom").value.trim() || DEFAUTS.prenom;
+  R.entreprise = $("r-ent").value.trim() || DEFAUTS.entreprise;
+  R.budget = Math.max(10, Math.min(300, parseInt($("r-budget").value, 10) || DEFAUTS.budget));
+  R.voix = $("r-voix").value; R.musique = $("r-musique").value;
+  const sel = $("r-couleurs").querySelector('[aria-pressed="true"]'); if (sel) R.couleur = sel.dataset.c;
+  try { localStorage.setItem("premier-couteau:reglages", JSON.stringify(R)); } catch (e2) {}
+  $("reglages").hidden = true; appliquer();
+  if (voixAvant !== R.voix || musAvant !== R.musique) chargerAudio();
+});
+
+/* ── Constantes de l'histoire (secondes, temps du récit) ──── */
+const AMORCE = 1.8;             // la musique démarre au toucher ; le récit 1,8 s plus tard (ouverture du carnet)
+const FIN_RECIT = 66.6;          // passage à la page finale
+const LIGNES = [                 // départs posés dans la piste de voix (voix-*.mp3)
+  { t: 1.8,  texte: "J'avais huit ans. C'était l'été, dans l'atelier." },
+  { t: 7.8,  texte: "Mon oncle m'a tendu mon premier couteau." },
+  { t: 18.5, texte: "Avec, j'ai construit une cabane." },
+  { t: 24.0, texte: "Et une petite voiture en bois, qui roulait… à peu près." },
+  { t: 34.5, texte: "Il y a des objets qu'on n'oublie pas." },
+  { t: 38.5, texte: "Ils sont faits par des mains patientes, ici, en France." },
+  { t: 48.3, texte: "Cette année, mon entreprise m'en a offert un." },
+  { t: 56.5, texte: "Je crois que je sais à qui je vais le donner." },
+  { t: 62.0, texte: "Offrez un cadeau qui a une histoire." },
+];
+const DUREES = { // durée parlée de chaque ligne, mesurée
+  cedar:  [4.68, 3.08, 3.24, 4.79, 2.81, 6.57, 2.89, 3.72, 3.07],
+  ash:    [4.27, 4.06, 3.18, 4.98, 2.86, 4.98, 4.58, 3.34, 3.61],
+  ballad: [4.35, 7.21, 3.21, 5.93, 2.95, 5.45, 3.79, 3.54, 3.01],
+};
+/* Les cinq temps. entree : comment le plan arrive (crayon, lavis, pinceau, fondu, nuit). kb : lent mouvement de caméra. */
+const PLANS = [
+  { img: "s1a",   t0: 0,    t1: 7.9,  entree: "crayon",  d: 6.2, kb: [1.03, 1.10, 0, .02, -.01, -.02], sciure: true },
+  { img: "s1b",   t0: 7.2,  t1: 15.9, entree: "lavis",   d: 1.8, kb: [1.12, 1.02, .02, 0, 0, .01], sciure: true },
+  { img: "s2a",   t0: 15.2, t1: 19.9, entree: "lavis",   d: 1.5, kb: [1.02, 1.09, 0, -.02, 0, .02] },
+  { img: "s2b",   t0: 19.0, t1: 24.2, entree: "crayon",  d: 4.0, kb: [1.05, 1.00, 0, .01, 0, 0] },
+  { img: "s2c",   t0: 23.4, t1: 31.4, entree: "lavis",   d: 1.3, kb: [1.16, 1.16, .07, .03, -.07, .03] },
+  { img: "s3a_d", t0: 30.6, t1: 35.4, entree: "lavis",   d: 1.3, kb: [1.02, 1.12, 0, 0, 0, -.01], cam: [30.6, 38.8] },
+  { img: "s3a",   t0: 32.2, t1: 38.8, entree: "pinceau", d: 3.0, kb: [1.02, 1.12, 0, 0, 0, -.01], cam: [30.6, 38.8] },
+  { img: "s3b",   t0: 38.0, t1: 42.3, entree: "fondu",   d: 1.0, kb: [1.10, 1.02, 0, .02, 0, 0] },
+  { img: "s3c",   t0: 41.6, t1: 46.4, entree: "fondu",   d: 1.0, kb: [1.02, 1.12, .01, 0, -.01, .01] },
+  { img: "s4",    t0: 45.6, t1: 54.6, entree: "nuit",    d: 1.6, kb: [1.08, 1.0, 0, -.02, 0, .01] },
+  { img: "s5",    t0: 53.8, t1: 62.6, entree: "fondu",   d: 1.6, kb: [1.0, 1.12, 0, 0, 0, -.03], cam: [53.8, 70] },
+  { img: "s5_d",  t0: 60.4, t1: 70,   entree: "pinceau", d: 2.6, kb: [1.0, 1.12, 0, 0, 0, -.03], cam: [53.8, 70] },
+];
+// s3a_d → s3a et s5 → s5_d : le dessin et la photo ont la même composition ; ils partagent la même caméra (cam) pour que le passage tombe juste.
+
+/* ── Chargement ───────────────────────────────────────────── */
+const IMAGES = {};
+const PRETS = { images: 0, audio: false };
+const NOMS = [...new Set(PLANS.map((p) => p.img))];
+function progression() {
+  const v = (PRETS.images / NOMS.length) * 0.6 + (PRETS.audio ? 0.4 : 0);
+  $("charge").style.width = Math.round(v * 100) + "%";
+  $("invite-titre").textContent = v >= 1 ? "Touchez le carnet pour l'ouvrir" : "Le carnet se prépare…";
+}
+for (const n of NOMS) {
+  const im = new Image(); im.decoding = "async"; im.src = `medias/${n}.webp`;
+  im.onload = () => { IMAGES[n] = im; if (n === "s1a" || n === "s2b") IMAGES[n + ":graphite"] = graphite(im); PRETS.images++; progression(); };
+  im.onerror = () => { PRETS.images++; progression(); };
+}
+/* Version « mine de plomb » d'un dessin : on garde les traits sombres, les lavis disparaissent. */
+function graphite(im) {
+  const c = document.createElement("canvas"); c.width = im.naturalWidth; c.height = im.naturalHeight;
+  const x = c.getContext("2d"); x.drawImage(im, 0, 0);
+  try {
+    const d = x.getImageData(0, 0, c.width, c.height), p = d.data;
+    for (let i = 0; i < p.length; i += 4) {
+      const g = 0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2];
+      const trait = Math.max(0, Math.min(1, (205 - g) / 120)) ** 1.25; // 0 = papier, 1 = trait
+      p[i] = 250 - trait * 200; p[i + 1] = 248 - trait * 202; p[i + 2] = 235 - trait * 197;
+    }
+    x.putImageData(d, 0, 0);
+  } catch (e) { /* toile protégée : on garde l'image */ }
+  return c;
+}
+
+/* ── Son ──────────────────────────────────────────────────── */
+const AC = window.AudioContext || window.webkitAudioContext;
+let ctx = null, bufMusique = null, bufVoix = null, chargementAudio = 0;
+function creerContexte() { if (!ctx && AC) { try { ctx = new AC(); } catch (e) { ctx = null; } } return ctx; }
+function decoder(ab) { return new Promise((ok, ko) => { const r = ctx.decodeAudioData(ab, ok, ko); if (r && r.then) r.then(ok, ko); }); }
+async function chargerAudio() {
+  const n = ++chargementAudio; PRETS.audio = false; progression();
+  if (!creerContexte()) { PRETS.audio = true; progression(); return; }
+  try {
+    const [m, v] = await Promise.all([
+      fetch(`medias/musique-${R.musique}.mp3`).then((r) => r.arrayBuffer()).then(decoder),
+      fetch(`medias/voix-${R.voix}.mp3`).then((r) => r.arrayBuffer()).then(decoder),
+    ]);
+    if (n !== chargementAudio) return;
+    bufMusique = m; bufVoix = v;
+  } catch (e) { console.warn("Son indisponible", e); }
+  PRETS.audio = true; progression();
+}
+
+let bruitBuf = null;
+function bruit() {
+  if (bruitBuf) return bruitBuf;
+  bruitBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+  const d = bruitBuf.getChannelData(0); let b = 0;
+  for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1; b = (b + 0.02 * w) / 1.02; d[i] = w * 0.6 + b * 3; }
+  return bruitBuf;
+}
+/* Enveloppe de la musique, échantillonnée pour setValueCurveAtTime. tm = temps de la musique ; récit = tm − AMORCE. */
+function enveloppeMusique(dureeVoix) {
+  const pas = 0.05, n = Math.ceil(76 / pas), env = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const tm = i * pas, t = tm - AMORCE;
+    let g = t < 30.5 ? 0.6 : t < 45.8 ? 0.82 : t < 54 ? 0.07 : t < 65.8 ? 0.58 : 0.85;
+    if (t >= 45.8 && t < 47) g = 0.82 - (t - 45.8) / 1.2 * 0.75;          // la musique se retire à l'écrin
+    if (t >= 53 && t < 54.6) g = 0.07 + (t - 53) / 1.6 * 0.51;            // elle revient à la transmission
+    for (let k = 0; k < LIGNES.length; k++) {                               // elle s'efface sous la voix
+      const a = LIGNES[k].t, b = a + dureeVoix[k];
+      const dedans = t > a - 0.3 && t < b + 0.45;
+      if (dedans) g *= t < a ? 1 - 0.4 * (t - a + 0.3) / 0.3 : t > b ? 0.6 + 0.4 * (t - b) / 0.45 : 0.6;
+    }
+    if (tm < 0.4) g *= tm / 0.4;
+    if (tm > 72) g *= Math.max(0, 1 - (tm - 72) / 3.5);
+    env[i] = Math.max(0.0001, g);
+  }
+  return env;
+}
+/* Sons du récit, synthétisés (provisoires). Chaque fonction est posée à un instant du récit. */
+const SONS = {
+  ete(T, fin) { // vent doux, grillons, quelques oiseaux
+    const s = ctx.createBufferSource(); s.buffer = bruit(); s.loop = true;
+    const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 520;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, T); g.gain.linearRampToValueAtTime(0.05, T + 2); g.gain.setValueAtTime(0.05, fin - 1.5); g.gain.linearRampToValueAtTime(0, fin);
+    s.connect(f).connect(g).connect(SORTIE.sons); s.start(T); s.stop(fin + 0.1);
+    for (let t = T + 0.6; t < fin - 1; t += 0.85 + Math.random() * 0.5) {
+      for (let k = 0; k < 3; k++) {
+        const o = ctx.createOscillator(); o.frequency.value = 4550 + Math.random() * 120;
+        const e = ctx.createGain(), u = t + k * 0.055; e.gain.setValueAtTime(0, u); e.gain.linearRampToValueAtTime(0.006, u + 0.008); e.gain.linearRampToValueAtTime(0, u + 0.032);
+        o.connect(e).connect(SORTIE.sons); o.start(u); o.stop(u + 0.04);
+      }
+    }
+    for (const t0 of [3.2, 9.6, 12.9, 21.2, 27.4]) {
+      let u = T + t0; const notes = 2 + Math.floor(Math.random() * 3);
+      for (let k = 0; k < notes; k++) {
+        const o = ctx.createOscillator(); const f0 = 2600 + Math.random() * 900;
+        o.frequency.setValueAtTime(f0, u); o.frequency.exponentialRampToValueAtTime(f0 * 1.45, u + 0.07);
+        const e = ctx.createGain(); e.gain.setValueAtTime(0, u); e.gain.linearRampToValueAtTime(0.018, u + 0.012); e.gain.exponentialRampToValueAtTime(0.0001, u + 0.09);
+        o.connect(e).connect(SORTIE.sons); o.start(u); o.stop(u + 0.1); u += 0.12 + Math.random() * 0.08;
+      }
+    }
+  },
+  frottement(T, dur, fa, fb, vol, q = 1.4) {
+    const s = ctx.createBufferSource(); s.buffer = bruit();
+    const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = q; f.frequency.setValueAtTime(fa, T); f.frequency.linearRampToValueAtTime(fb, T + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, T); g.gain.linearRampToValueAtTime(vol, T + dur * 0.15); g.gain.exponentialRampToValueAtTime(0.0001, T + dur);
+    s.connect(f).connect(g).connect(SORTIE.sons); s.start(T, Math.random()); s.stop(T + dur + 0.05);
+  },
+  choc(T, freq, dur, vol, type = "lowpass") {
+    const s = ctx.createBufferSource(); s.buffer = bruit();
+    const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq;
+    const g = ctx.createGain(); g.gain.setValueAtTime(vol, T); g.gain.exponentialRampToValueAtTime(0.0001, T + dur);
+    s.connect(f).connect(g).connect(SORTIE.sons); s.start(T, Math.random()); s.stop(T + dur + 0.02);
+  },
+  sourd(T, freq, dur, vol) {
+    const o = ctx.createOscillator(); o.frequency.setValueAtTime(freq, T); o.frequency.exponentialRampToValueAtTime(freq * 0.6, T + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(vol, T); g.gain.exponentialRampToValueAtTime(0.0001, T + dur);
+    o.connect(g).connect(SORTIE.sons); o.start(T); o.stop(T + dur + 0.02);
+  },
+};
+let SORTIE = null;
+function poserSons(R0) { // R0 = instant (horloge audio) du temps 0 du récit
+  SONS.ete(R0 - AMORCE + 0.2, R0 + 31.5);
+  for (const t of [15.9, 16.75, 17.5, 18.2]) SONS.frottement(R0 + t, 0.26, 1800, 3400, 0.22);     // la lame sur la branche
+  for (let t = 24.3; t < 27.4; t += 0.36) SONS.choc(R0 + t, 1100, 0.035, 0.09);                   // les roues sur les lattes
+  SONS.frottement(R0 + 24.2, 3.3, 260, 420, 0.07, 0.7);
+  for (let t = 32.4, k = 0; t < 35.6; t += 0.62, k++) SONS.frottement(R0 + t, 0.42, k % 2 ? 3000 : 3800, k % 2 ? 3800 : 3000, 0.07, 0.9); // affûtage
+  SONS.frottement(R0 + 46.6, 0.5, 600, 900, 0.04, 0.8);                                          // le couvercle glisse
+  SONS.choc(R0 + 47.35, 2600, 0.018, 0.32, "highpass"); SONS.sourd(R0 + 47.39, 150, 0.09, 0.28);  // le déclic de l'écrin
+}
+
+/* ── Rendu ────────────────────────────────────────────────── */
+const toile = $("toile"), g2 = toile.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+const masque = document.createElement("canvas"), gm = masque.getContext("2d");
+const calque = document.createElement("canvas"), gc = calque.getContext("2d");
+const grain = document.createElement("canvas");
+function dimensionner() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = Math.round(toile.clientWidth * DPR); H = Math.round(toile.clientHeight * DPR);
+  toile.width = W; toile.height = H; calque.width = W; calque.height = H;
+  masque.width = Math.max(1, W >> 1); masque.height = Math.max(1, H >> 1);
+}
+(function fabriquerGrain() {
+  grain.width = grain.height = 192; const x = grain.getContext("2d"), d = x.createImageData(192, 192);
+  for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (Math.random() - 0.5) * 120; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+  x.putImageData(d, 0, 0);
+  const papier = document.createElement("canvas"); papier.width = papier.height = 220; const y = papier.getContext("2d"), e = y.createImageData(220, 220);
+  for (let i = 0; i < e.data.length; i += 4) { const v = Math.random(); e.data[i] = 120; e.data[i + 1] = 95; e.data[i + 2] = 50; e.data[i + 3] = v < 0.5 ? 0 : Math.round((v - 0.5) * 22); }
+  y.putImageData(e, 0, 0);
+  document.documentElement.style.setProperty("--grain", `url(${papier.toDataURL()})`);
+})();
+
+function alea(graine) { let s = graine >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+const ease = (x) => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+
+/* Tracés de masque, déterministes par plan */
+const TRACES = new Map();
+function traces(plan, type) {
+  const cle = plan.img + type; if (TRACES.has(cle)) return TRACES.get(cle);
+  const r = alea(cle.split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7)); let liste = [];
+  if (type === "hachures") {
+    const n = 170; // hachures croisées : deux familles d'angles, comme une mine qui va et vient
+    for (let i = 0; i < n; i++) {
+      const ang = (r() < 0.65 ? -0.62 : 0.5) + (r() - 0.5) * 0.45, x = r() * 1.3 - 0.15, y = r() * 1.2 - 0.1;
+      liste.push({ x, y, ang, l: 0.18 + r() * 0.42, w: 0.03 + r() * 0.045, ordre: y * 0.9 + x * 0.35 + r() * 0.5 });
+    }
+    liste.sort((a, b) => a.ordre - b.ordre); liste.forEach((s, i) => { s.t = (i / n) * 0.78; });
+  } else if (type === "lavis") {
+    const n = 16;
+    for (let i = 0; i < n; i++) {
+      const c = { x: 0.15 + r() * 0.7, y: 0.1 + r() * 0.8, R: 0.35 + r() * 0.35, t: (i / n) * 0.55, bords: [] };
+      for (let k = 0; k < 7; k++) c.bords.push({ dx: (r() - 0.5) * 0.5, dy: (r() - 0.5) * 0.5, k: 0.45 + r() * 0.5 });
+      liste.push(c);
+    }
+  } else if (type === "pinceau") {
+    const n = 8;
+    for (let i = 0; i < n; i++) {
+      const soies = []; for (let k = 0; k < 16; k++) soies.push({ dy: (r() - 0.5), a: 0.45 + r() * 0.55, w: 0.3 + r() * 0.9, ph: r() * 6 });
+      liste.push({ y: (i + 0.5) / n, h: 1.9 / n, sens: i % 2 ? -1 : 1, t: (i / n) * 0.55, soies });
+    }
+  }
+  TRACES.set(cle, liste); return liste;
+}
+function dessinerMasque(plan, type, p) {
+  const mw = masque.width, mh = masque.height, diag = Math.hypot(mw, mh);
+  gm.globalCompositeOperation = "source-over"; gm.clearRect(0, 0, mw, mh);
+  gm.fillStyle = gm.strokeStyle = "#fff";
+  if (type === "hachures") {
+    gm.lineCap = "round";
+    for (const s of traces(plan, type)) {
+      const q = clamp01((p - s.t) / 0.24); if (q <= 0) continue;
+      const x0 = s.x * mw, y0 = s.y * mh, dx = Math.cos(s.ang) * s.l * diag * q, dy = Math.sin(s.ang) * s.l * diag * q;
+      for (let k = -1; k <= 1; k++) { // trois passages de mine, légèrement décalés
+        gm.globalAlpha = k ? 0.35 : 0.7; gm.lineWidth = s.w * mw * (k ? 0.55 : 1);
+        gm.beginPath(); gm.moveTo(x0 + k * 3, y0 - k * 3); gm.lineTo(x0 + dx + k * 3, y0 + dy - k * 3); gm.stroke();
+      }
+    }
+    if (p > 0.8) { gm.globalAlpha = (p - 0.8) / 0.2; gm.fillRect(0, 0, mw, mh); }
+  } else if (type === "lavis") {
+    for (const c of traces(plan, type)) {
+      const q = clamp01((p - c.t) / 0.45); if (q <= 0) continue;
+      const rad = c.R * diag * ease(q) * 0.6;
+      for (const b of c.bords) { // contour irrégulier : plusieurs flaques
+        const cx = (c.x + b.dx * q * 0.3) * mw, cy = (c.y + b.dy * q * 0.3) * mh, rr = rad * b.k;
+        const gr = gm.createRadialGradient(cx, cy, rr * 0.55, cx, cy, rr);
+        gr.addColorStop(0, "rgba(255,255,255,.95)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+        gm.globalAlpha = 1; gm.fillStyle = gr; gm.beginPath(); gm.arc(cx, cy, rr, 0, 6.2832); gm.fill();
+      }
+    }
+    if (p > 0.85) { gm.globalAlpha = (p - 0.85) / 0.15; gm.fillStyle = "#fff"; gm.fillRect(0, 0, mw, mh); }
+  } else if (type === "pinceau") {
+    for (const b of traces(plan, type)) {
+      const q = ease(clamp01((p - b.t) / 0.42)); if (q <= 0) continue;
+      const xa = b.sens > 0 ? -0.1 * mw : 1.1 * mw, xb = xa + b.sens * 1.2 * mw * q;
+      for (const s of b.soies) {
+        const y = (b.y + s.dy * b.h) * mh;
+        gm.globalAlpha = s.a; gm.lineWidth = b.h * mh * 0.16 * s.w; gm.lineCap = "round";
+        gm.beginPath(); gm.moveTo(xa, y);
+        const pas = 12; for (let k = 1; k <= pas; k++) { const x = xa + (xb - xa) * k / pas; gm.lineTo(x, y + Math.sin(k * 0.8 + s.ph) * mh * 0.006); }
+        gm.stroke();
+      }
+    }
+    if (p > 0.85) { gm.globalAlpha = (p - 0.85) / 0.15; gm.fillRect(0, 0, mw, mh); }
+  }
+  gm.globalAlpha = 1;
+}
+function poser(ctx2, src, plan, t) {
+  if (!src) return;
+  const iw = src.naturalWidth || src.width, ih = src.naturalHeight || src.height;
+  const [c0, c1] = plan.cam || [plan.t0, plan.t1], k = clamp01((t - c0) / (c1 - c0)), e = ease(k), [s0, s1, x0, y0, x1, y1] = plan.kb;
+  const s = Math.max(W / iw, H / ih) * (s0 + (s1 - s0) * e);
+  const dw = iw * s, dh = ih * s, ox = (x0 + (x1 - x0) * e) * W, oy = (y0 + (y1 - y0) * e) * H;
+  ctx2.drawImage(src, (W - dw) / 2 + ox, (H - dh) / 2 + oy, dw, dh);
+}
+function avecMasque(dessin, plan, type, p) {
+  dessinerMasque(plan, type, p);
+  gc.globalCompositeOperation = "source-over"; gc.clearRect(0, 0, W, H); dessin(gc);
+  gc.globalCompositeOperation = "destination-in"; gc.drawImage(masque, 0, 0, W, H);
+  g2.drawImage(calque, 0, 0);
+}
+const SCIURE = Array.from({ length: 46 }, (_, i) => { const r = alea(i + 3); return { x: r(), y: r(), v: 0.004 + r() * 0.01, a: r() * 6.28, z: 0.5 + r() * 1.6 }; });
+
+function rendre(t) {
+  g2.globalCompositeOperation = "source-over"; g2.globalAlpha = 1;
+  g2.fillStyle = "#faf8ea"; g2.fillRect(0, 0, W, H);
+  const actifs = PLANS.filter((p) => t >= p.t0 && t < p.t1);
+  let photo = false;
+  for (const plan of actifs) {
+    const im = IMAGES[plan.img], p = clamp01((t - plan.t0) / plan.d);
+    const plein = (c) => poser(c, im, plan, t);
+    if (!plan.img.startsWith("s1") && !plan.img.startsWith("s2") && !plan.img.endsWith("_d")) photo = p > 0.5;
+    if (plan.img.endsWith("_d")) photo = p < 0.5 && photo;
+    if (p >= 1) { plein(g2); continue; }
+    if (plan.entree === "crayon") {
+      const gr = IMAGES[plan.img + ":graphite"] || im;
+      avecMasque((c) => poser(c, gr, plan, t), plan, "hachures", clamp01(p / 0.62));
+      if (p > 0.5) avecMasque(plein, plan, "lavis", clamp01((p - 0.5) / 0.5));
+    } else if (plan.entree === "lavis") avecMasque(plein, plan, "lavis", p);
+    else if (plan.entree === "pinceau") avecMasque(plein, plan, "pinceau", p);
+    else if (plan.entree === "nuit") {
+      g2.fillStyle = "#0d0b08"; g2.globalAlpha = clamp01(p * 2); g2.fillRect(0, 0, W, H);
+      g2.globalAlpha = clamp01((p - 0.45) / 0.55); plein(g2); g2.globalAlpha = 1;
+    } else { g2.globalAlpha = ease(p); plein(g2); g2.globalAlpha = 1; }
+  }
+  // sciure dans la lumière (souvenir)
+  const sc = actifs.some((p) => p.sciure) ? Math.min(1, t / 2, (15.9 - t) / 1.2) : 0;
+  if (sc > 0) {
+    g2.globalCompositeOperation = "lighter";
+    for (const s of SCIURE) {
+      const x = ((s.x + Math.sin(t * 0.3 + s.a) * 0.02) % 1) * W, y = (((s.y - t * s.v) % 1) + 1) % 1 * H;
+      g2.globalAlpha = sc * 0.22 * (0.6 + 0.4 * Math.sin(t * 2 + s.a));
+      g2.fillStyle = "#ffd98a"; g2.beginPath(); g2.arc(x, y, s.z * DPR, 0, 6.28); g2.fill();
+    }
+    g2.globalCompositeOperation = "source-over"; g2.globalAlpha = 1;
+  }
+  // grain de pellicule sur les vraies images, grain de papier sinon
+  g2.globalCompositeOperation = "overlay"; g2.globalAlpha = photo ? 0.16 : 0.07;
+  const ox = (Math.random() * 192) | 0, oy = (Math.random() * 192) | 0;
+  g2.fillStyle = g2.createPattern(grain, "repeat"); g2.save(); g2.translate(-ox, -oy); g2.scale(DPR, DPR); g2.fillRect(0, 0, W / DPR + 192, H / DPR + 192); g2.restore();
+  // vignette chaude
+  g2.globalCompositeOperation = "multiply"; g2.globalAlpha = photo ? 0.55 : 0.28;
+  const v = g2.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.35, W / 2, H / 2, Math.hypot(W, H) * 0.62);
+  v.addColorStop(0, "rgba(255,255,255,1)"); v.addColorStop(1, "rgba(120,82,40,1)");
+  g2.fillStyle = v; g2.fillRect(0, 0, W, H);
+  g2.globalCompositeOperation = "source-over"; g2.globalAlpha = 1;
+}
+
+/* ── Déroulé ──────────────────────────────────────────────── */
+let enCours = false, departHorloge = 0, departAudio = 0, sourcesAudio = [], muet = false, image = 0;
+let dernierT = -AMORCE;
+function tempsRecit() {
+  if (ctx && departAudio) return (dernierT = ctx.state === "running" ? ctx.currentTime - departAudio - AMORCE : dernierT); // son suspendu : l'image attend
+  return (dernierT = (performance.now() - departHorloge) / 1000 - AMORCE);
+}
+function boucle() {
+  if (!enCours) return;
+  const t = tempsRecit();
+  if (t >= 0) rendre(Math.min(t, FIN_RECIT));
+  $("fil").style.width = (clamp01(t / FIN_RECIT) * 100).toFixed(2) + "%";
+  // sous-titres : seulement quand le son est coupé (ou absent)
+  const ligne = LIGNES.findIndex((l, i) => t >= l.t && t < l.t + (DUREES[R.voix] || DUREES.cedar)[i] + 0.6);
+  const st = $("sous-titre"), montrer = (muet || !bufVoix) && ligne >= 0 && ligne < 8;
+  if (montrer && st.textContent !== LIGNES[ligne].texte) st.textContent = LIGNES[ligne].texte;
+  st.classList.toggle("on", montrer);
+  $("devise").classList.toggle("on", t >= 62.0);
+  if (t >= FIN_RECIT) return terminer(false);
+  image = requestAnimationFrame(boucle);
+}
+function lancer() {
+  if (enCours) return;
+  enCours = true;
+  const couv = $("couverture"), carnet = $("carnet");
+  // le carnet grandit jusqu'à remplir l'écran pendant que la couverture s'ouvre
+  const r = carnet.getBoundingClientRect();
+  const echelle = Math.max(innerWidth / r.width, innerHeight / r.height) * 1.08;
+  const dx = innerWidth / 2 - (r.left + r.width / 2), dy = innerHeight / 2 - (r.top + r.height / 2);
+  couv.classList.add("ouvert");
+  carnet.style.transform = `translate(${dx}px, ${dy}px) rotate(0deg) scale(${echelle})`;
+  // son : déverrouillé par ce geste
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+  departHorloge = performance.now(); departAudio = 0;
+  if (ctx && bufMusique) {
+    ctx.resume().then(() => {
+      if (!enCours) return;
+      SORTIE = { maitre: ctx.createGain(), musique: ctx.createGain(), voix: ctx.createGain(), sons: ctx.createGain() };
+      SORTIE.maitre.connect(ctx.destination); SORTIE.musique.connect(SORTIE.maitre); SORTIE.voix.connect(SORTIE.maitre); SORTIE.sons.connect(SORTIE.maitre);
+      SORTIE.voix.gain.value = 1.0; SORTIE.sons.gain.value = 1.0; SORTIE.maitre.gain.value = muet ? 0 : 1;
+      const t0 = ctx.currentTime + 0.06; departAudio = t0;
+      const m = ctx.createBufferSource(); m.buffer = bufMusique; m.connect(SORTIE.musique);
+      SORTIE.musique.gain.setValueAtTime(0.0001, t0);
+      try { SORTIE.musique.gain.setValueCurveAtTime(enveloppeMusique(DUREES[R.voix] || DUREES.cedar), t0, 76); } catch (e) { SORTIE.musique.gain.value = 0.6; }
+      m.start(t0); sourcesAudio.push(m);
+      if (bufVoix) { const v = ctx.createBufferSource(); v.buffer = bufVoix; v.connect(SORTIE.voix); v.start(t0 + AMORCE); sourcesAudio.push(v); }
+      poserSons(t0 + AMORCE);
+    }).catch(() => {});
+  }
+  const h = $("histoire");
+  setTimeout(() => { h.hidden = false; dimensionner(); rendre(0); requestAnimationFrame(() => h.classList.add("visible")); }, 1350);
+  setTimeout(() => { couv.hidden = true; }, 2300);
+  image = requestAnimationFrame(boucle);
+}
+function terminer(passe) {
+  enCours = false; cancelAnimationFrame(image);
+  if (passe && SORTIE && ctx) { // on laisse la musique s'éteindre doucement
+    const n = ctx.currentTime; SORTIE.maitre.gain.cancelScheduledValues(n); SORTIE.maitre.gain.setValueAtTime(SORTIE.maitre.gain.value, n); SORTIE.maitre.gain.linearRampToValueAtTime(0, n + 1.6);
+  }
+  const f = $("fin"); f.hidden = false; f.scrollTop = 0;
+  requestAnimationFrame(() => f.classList.add("visible"));
+  setTimeout(() => { $("histoire").hidden = true; $("histoire").classList.remove("visible"); }, 1300);
+}
+function arreterSon() { for (const s of sourcesAudio) { try { s.stop(); } catch (e) {} } sourcesAudio = []; if (SORTIE) { try { SORTIE.maitre.disconnect(); } catch (e) {} } SORTIE = null; }
+
+$("carnet").addEventListener("click", () => {
+  if (PRETS.images < NOMS.length || !PRETS.audio) { $("invite-titre").textContent = "Encore un instant…"; return; }
+  lancer();
+});
+$("b-passer").addEventListener("click", () => terminer(true));
+$("b-son").addEventListener("click", () => {
+  muet = !muet; $("b-son").setAttribute("aria-pressed", String(muet)); $("b-son").textContent = muet ? "Remettre le son" : "Couper le son";
+  if (SORTIE && ctx) { const n = ctx.currentTime; SORTIE.maitre.gain.cancelScheduledValues(n); SORTIE.maitre.gain.setTargetAtTime(muet ? 0 : 1, n, 0.08); }
+});
+$("revoir").addEventListener("click", () => {
+  arreterSon();
+  const couv = $("couverture"), carnet = $("carnet");
+  couv.hidden = false; couv.classList.remove("ouvert"); carnet.style.transform = "";
+  const f = $("fin"); f.classList.remove("visible"); setTimeout(() => { f.hidden = true; }, 600);
+  $("devise").classList.remove("on");
+});
+addEventListener("resize", () => { if (!$("histoire").hidden) dimensionner(); });
+document.addEventListener("visibilitychange", () => { // onglet caché : l'histoire s'arrête avec le son
+  if (!ctx) return; if (document.hidden) ctx.suspend().catch(() => {}); else if (enCours) ctx.resume().catch(() => {});
+});
+
+appliquer(); calculer(); progression(); chargerAudio();
+window.__premierCouteau = { rendre, dimensionner }; // pour les vérifications
+})();
+</script>

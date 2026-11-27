@@ -1,0 +1,625 @@
+<title>Le fil de Claire</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Page de comparaison sobre (thème clair/sombre) ; les deux récits sont des mondes plein écran à palette fixe. */
+:root {
+  --fond: #f6f5fa;
+  --surface: #ffffff;
+  --encre: #1d1a2b;
+  --doux: #625d78;
+  --trait: #e2dfee;
+  --accent: #5b46c9;
+  --accent-encre: #ffffff;
+  --code: #f0eef7;
+  --titre: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --texte: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fond: #14121d; --surface: #1d1a2a; --encre: #eeebf7; --doux: #a7a1bf; --trait: #312d44;
+    --accent: #a597ff; --accent-encre: #14121d; --code: #221f31; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --fond: #14121d; --surface: #1d1a2a; --encre: #eeebf7; --doux: #a7a1bf; --trait: #312d44;
+  --accent: #a597ff; --accent-encre: #14121d; --code: #221f31; color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--fond); color: var(--encre); font-family: var(--texte); font-size: 16px; line-height: 1.55; }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+
+/* ---------- Vue « comparer » ---------- */
+.comparer { max-width: 980px; margin: 0 auto; padding-block: 40px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 44px; }
+.entete { display: grid; gap: 10px; max-width: 62ch; }
+.etiquette { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--doux); font-weight: 600; }
+.comparer h1 { font-family: var(--titre); font-weight: 800; font-size: clamp(36px, 6vw, 56px); line-height: 1.02; margin: 0; text-wrap: balance; letter-spacing: -.02em; }
+.comparer h1 em { font-family: var(--serif); font-weight: 400; font-style: italic; letter-spacing: 0; }
+.comparer h2 { font-family: var(--titre); font-weight: 600; font-size: 22px; margin: 0; text-wrap: balance; }
+.comparer p { margin: 0; color: var(--doux); }
+.comparer p.fort { color: var(--encre); }
+.voies { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.voie { background: var(--surface); border: 1px solid var(--trait); border-radius: 18px; padding: 20px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.voie .num { font-family: var(--mono); font-size: 12px; color: var(--doux); }
+.apercu { height: 180px; border-radius: 12px; overflow: hidden; position: relative; }
+.apercu-ia { background: linear-gradient(135deg, #7b5cff, #4b8bff); display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 20px; text-align: center; padding: 12px; }
+.apercu-ia small { display: block; font-weight: 400; font-size: 13px; opacity: .85; margin-top: 6px; }
+.apercu-co { background: radial-gradient(120% 90% at 50% 110%, #f2b866 0%, #6b3f6e 38%, #17142a 72%); display: grid; place-items: center; }
+.apercu-co .env { width: 120px; height: 78px; background: #f4eee6; border-radius: 6px; position: relative; box-shadow: 0 12px 30px rgba(0,0,0,.35); display: grid; place-items: center; font-family: var(--serif); font-style: italic; font-size: 22px; color: #2a2547; }
+.apercu-co .env::before { content: ""; position: absolute; inset: 0 0 50% 0; background: #e7dccd; clip-path: polygon(0 0, 100% 0, 50% 100%); border-radius: 6px 6px 0 0; }
+.apercu-co .env span { position: relative; top: 14px; }
+.boutons { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.bouton { background: var(--accent); color: var(--accent-encre); border: 0; border-radius: 999px; padding: 11px 20px; font-weight: 600; text-decoration: none; display: inline-block; }
+.segment { display: inline-flex; border: 1px solid var(--trait); border-radius: 999px; padding: 3px; gap: 2px; }
+.segment button { border: 0; background: transparent; color: var(--doux); padding: 7px 14px; border-radius: 999px; font-size: 14px; }
+.segment button[aria-pressed="true"] { background: var(--code); color: var(--encre); font-weight: 600; }
+.bloc-doc { display: grid; gap: 12px; }
+.json { background: var(--code); border-radius: 14px; padding: 16px 18px; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; overflow-x: auto; color: var(--encre); margin: 0; max-height: 420px; }
+.couches { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.couche { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; }
+.couche b { display: block; font-weight: 600; }
+.couche span { color: var(--doux); font-size: 14px; }
+.tableau { overflow-x: auto; border: 1px solid var(--trait); border-radius: 14px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; min-width: 560px; font-size: 15px; }
+th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--trait); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--doux); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+.note { font-size: 14px; }
+
+/* ---------- Vue « voie IA » (ce qu'écrit un modèle par défaut) ---------- */
+.vue-ia { position: fixed; inset: 0; overflow-y: auto; background: #ffffff; color: #1f2333; font-family: var(--texte); z-index: 20; }
+.bandeau { position: sticky; top: 0; z-index: 3; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: calc(env(safe-area-inset-top, 0px) + 10px) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); background: rgba(20, 18, 29, .86); color: #fff; font-size: 13px; backdrop-filter: blur(8px); }
+.bandeau a { color: #fff; text-decoration: none; font-weight: 600; }
+.ia-hero { background: linear-gradient(135deg, #7b5cff, #4b8bff); color: #fff; text-align: center; padding: 56px 20px 64px; }
+.ia-hero h1 { font-size: clamp(30px, 7vw, 46px); margin: 0 0 10px; font-weight: 800; }
+.ia-hero p { margin: 0 auto; max-width: 46ch; opacity: .92; }
+.ia-musique { margin-top: 22px; background: #fff; color: #5b46c9; border: 0; border-radius: 10px; padding: 10px 18px; font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,.15); }
+.ia-corps { max-width: 720px; margin: 0 auto; padding: 36px max(16px, env(safe-area-inset-right, 0px)) 60px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 18px; }
+.ia-corps h2 { font-size: 24px; margin: 8px 0 0; text-align: center; }
+.ia-carte { background: #fff; border-radius: 14px; box-shadow: 0 4px 18px rgba(40, 40, 90, .10); padding: 18px 20px; display: grid; grid-template-columns: 44px 1fr; gap: 14px; }
+.ia-carte .ic { font-size: 26px; line-height: 1; }
+.ia-carte h3 { margin: 0 0 4px; font-size: 17px; }
+.ia-carte .d { color: #7b5cff; font-weight: 600; font-size: 13px; }
+.ia-carte p { margin: 4px 0 0; color: #4b5064; }
+.ia-citation { text-align: center; font-style: italic; font-size: 20px; color: #4b5064; padding: 10px 0; }
+.ia-fin { text-align: center; background: #f4f1ff; border-radius: 14px; padding: 28px 20px; }
+.ia-fin h2 { margin: 0 0 6px; }
+
+/* ---------- Vue « composée » ---------- */
+.vue-co { position: fixed; inset: 0; z-index: 20; overflow: hidden; background: var(--c-fond); color: var(--c-encre); font-family: var(--c-texte); user-select: none; -webkit-tap-highlight-color: transparent; transition: background .8s ease; }
+.vue-co[data-ton="remercier"] {
+  --c-fond: #17142a; --c-profond: #2a2547; --c-encre: #f4eee6; --c-doux: #b9b0d6; --c-chaud: #f2b866; --c-rose: #e58e8e; --c-papier: #f4eee6; --c-papier2: #e7dccd;
+  --c-titre: "Instrument Serif", Georgia, serif; --c-titre-style: italic; --c-titre-graisse: 400; --c-texte: "Inter", system-ui, sans-serif; --c-tempo: 1.1s;
+}
+.vue-co[data-ton="celebrer"] {
+  --c-fond: #2b1050; --c-profond: #5a1f8a; --c-encre: #fff6e8; --c-doux: #f3c9ff; --c-chaud: #ffcf3a; --c-rose: #ff5f8f; --c-papier: #fff6e8; --c-papier2: #ffe2a8;
+  --c-titre: "Bricolage Grotesque", system-ui, sans-serif; --c-titre-style: normal; --c-titre-graisse: 800; --c-texte: "Inter", system-ui, sans-serif; --c-tempo: .6s;
+}
+.co-haut { position: absolute; z-index: 5; top: 0; left: 0; right: 0; padding: calc(env(safe-area-inset-top, 0px) + 12px) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 10px; pointer-events: none; }
+.co-progression { display: flex; gap: 4px; }
+.co-progression i { flex: 1; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--c-encre) 22%, transparent); overflow: hidden; }
+.co-progression i.fait { background: var(--c-encre); }
+.co-commandes { display: flex; justify-content: space-between; gap: 8px; }
+.puce { pointer-events: auto; background: color-mix(in srgb, var(--c-fond) 55%, transparent); color: var(--c-encre); border: 1px solid color-mix(in srgb, var(--c-encre) 25%, transparent); border-radius: 999px; padding: 6px 12px; font-size: 13px; text-decoration: none; backdrop-filter: blur(6px); }
+.co-scene { position: absolute; inset: 0; }
+.bloc { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); opacity: 0; visibility: hidden; transition: opacity var(--c-tempo) ease, visibility 0s linear var(--c-tempo); }
+.bloc.actif { opacity: 1; visibility: visible; transition: opacity var(--c-tempo) ease, visibility 0s; }
+.bloc .monte { transform: translateY(18px); opacity: 0; transition: transform var(--c-tempo) cubic-bezier(.2,.7,.2,1), opacity var(--c-tempo) ease; }
+.bloc.actif .monte { transform: none; opacity: 1; }
+.bloc.actif .monte.d1 { transition-delay: .25s; } .bloc.actif .monte.d2 { transition-delay: .55s; } .bloc.actif .monte.d3 { transition-delay: .85s; }
+.centre { place-items: center; text-align: center; padding: 90px max(24px, env(safe-area-inset-right, 0px)) 80px max(24px, env(safe-area-inset-left, 0px)); }
+.co-titre { font-family: var(--c-titre); font-style: var(--c-titre-style); font-weight: var(--c-titre-graisse); line-height: .95; margin: 0; text-wrap: balance; }
+
+/* Ouverture */
+.bloc-ouverture { background: radial-gradient(120% 80% at 50% 115%, color-mix(in srgb, var(--c-chaud) 70%, transparent) 0%, var(--c-profond) 40%, var(--c-fond) 75%); }
+.ouv { display: grid; gap: 26px; justify-items: center; }
+.accroche { color: var(--c-doux); max-width: 30ch; margin: 0; font-size: 16px; }
+.enveloppe { width: min(300px, 74vw); aspect-ratio: 3 / 2; position: relative; perspective: 900px; border: 0; padding: 0; background: none; }
+.enveloppe .corps { position: absolute; inset: 0; background: var(--c-papier); border-radius: 10px; box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+.enveloppe .rabat { position: absolute; inset: 0 0 45% 0; background: var(--c-papier2); clip-path: polygon(0 0, 100% 0, 50% 100%); transform-origin: top; transition: transform .9s cubic-bezier(.3,.6,.2,1); border-radius: 10px 10px 0 0; z-index: 2; }
+.enveloppe .carte { position: absolute; inset: 8% 8% 8% 8%; background: #fffdf8; border-radius: 6px; display: grid; place-content: center; gap: 2px; color: #2a2547; transition: transform 1s cubic-bezier(.2,.7,.2,1) .35s; z-index: 1; }
+.enveloppe .carte .pour { font-size: 14px; letter-spacing: .14em; text-transform: uppercase; }
+.enveloppe .carte .nom { font-family: var(--c-titre); font-style: var(--c-titre-style); font-weight: var(--c-titre-graisse); font-size: 46px; line-height: 1; }
+.ouvert .enveloppe .rabat { transform: rotateX(180deg); z-index: 0; }
+.ouvert .enveloppe .carte { transform: translateY(-38%); }
+.toucher { color: var(--c-encre); font-size: 14px; letter-spacing: .1em; text-transform: uppercase; opacity: .85; animation: respire 2.4s ease-in-out infinite; }
+@keyframes respire { 50% { opacity: .35; } }
+
+/* Couverture */
+.bloc-couverture { background: radial-gradient(90% 70% at 50% 100%, var(--c-profond), var(--c-fond)); }
+.bloc-couverture .co-titre { font-size: clamp(80px, 24vw, 180px); color: var(--c-papier); }
+.sous { font-size: clamp(18px, 4.6vw, 24px); color: var(--c-doux); margin: 12px 0 0; }
+.annees { font-family: var(--mono); font-size: 13px; letter-spacing: .2em; color: var(--c-chaud); margin-top: 22px; }
+
+/* Étapes */
+.bloc-etape { align-content: end; }
+.bloc-etape .image { position: absolute; inset: 0; overflow: hidden; }
+.bloc-etape .image svg { width: 100%; height: 100%; display: block; transform: scale(1.06); transition: transform 8s ease-out; }
+.bloc-etape.actif .image svg { transform: scale(1); }
+.bloc-etape .image::after { content: ""; position: absolute; inset: auto 0 0 0; height: 62%; background: linear-gradient(transparent, color-mix(in srgb, var(--c-fond) 88%, transparent) 45%, var(--c-fond)); }
+.bloc-etape .texte { position: relative; padding: 0 max(24px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 72px) max(24px, env(safe-area-inset-left, 0px)); display: grid; align-content: start; gap: 10px; max-width: 620px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+.date { font-family: var(--mono); font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--c-chaud); margin: 0; }
+.bloc-etape h2 { font-family: var(--c-titre); font-style: var(--c-titre-style); font-weight: var(--c-titre-graisse); font-size: clamp(34px, 9vw, 52px); line-height: 1; margin: 0; text-wrap: balance; }
+.bloc-etape p.mots { margin: 0; font-size: 17px; line-height: 1.6; color: color-mix(in srgb, var(--c-encre) 86%, transparent); max-width: 40ch; }
+
+/* Tournant, citation */
+.bloc-tournant { background: #000; }
+.bloc-tournant .co-titre { font-size: clamp(40px, 12vw, 84px); color: var(--c-encre); }
+.bloc-citation { background: var(--c-profond); }
+.bloc-citation blockquote { margin: 0; font-family: var(--c-titre); font-style: var(--c-titre-style); font-weight: var(--c-titre-graisse); font-size: clamp(32px, 8.5vw, 60px); line-height: 1.08; max-width: 16ch; text-wrap: balance; }
+.bloc-citation cite { display: block; margin-top: 18px; font-style: normal; color: var(--c-doux); font-size: 15px; }
+
+/* Fin */
+.bloc-fin { background: radial-gradient(110% 80% at 50% 0%, var(--c-profond), var(--c-fond)); }
+.fin { display: grid; gap: 18px; justify-items: center; max-width: 30rem; }
+.bloc-fin .co-titre { font-size: clamp(54px, 15vw, 110px); color: var(--c-papier); }
+.signature { color: var(--c-doux); margin: 0; }
+.gestes { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 8px; }
+.geste { background: color-mix(in srgb, var(--c-encre) 10%, transparent); color: var(--c-encre); border: 1px solid color-mix(in srgb, var(--c-encre) 28%, transparent); border-radius: 999px; padding: 11px 18px; font-size: 15px; }
+.geste.coeur { background: var(--c-rose); border-color: var(--c-rose); color: #1b0f1f; font-weight: 600; }
+.mot { display: grid; gap: 8px; width: min(100%, 26rem); }
+.mot textarea { width: 100%; box-sizing: border-box; min-height: 88px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--c-encre) 30%, transparent); background: color-mix(in srgb, var(--c-fond) 60%, #000 10%); color: var(--c-encre); padding: 12px; font: inherit; resize: vertical; }
+.retour { font-size: 14px; color: var(--c-chaud); min-height: 1.4em; margin: 0; }
+.revoir { background: none; border: 0; color: var(--c-doux); text-decoration: underline; font-size: 14px; }
+.coeurs { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.coeurs span { position: absolute; bottom: -40px; font-size: 26px; color: var(--c-rose); animation: envol 2.6s ease-out forwards; }
+@keyframes envol { to { transform: translateY(-110vh) rotate(20deg); opacity: 0; } }
+
+/* Témoin : les couches de musique actives */
+.partition { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; padding: 0 max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 14px) max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 11.5px; letter-spacing: .06em; color: var(--c-doux); pointer-events: none; }
+.partition b { font-weight: 600; text-transform: uppercase; letter-spacing: .12em; }
+.partition span { display: inline-flex; align-items: center; gap: 5px; opacity: .35; transition: opacity .6s; }
+.partition span::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--c-chaud); }
+.partition span.on { opacity: 1; }
+.flech { position: absolute; z-index: 4; bottom: calc(env(safe-area-inset-bottom, 0px) + 40px); right: max(16px, env(safe-area-inset-right, 0px)); font-size: 13px; color: var(--c-doux); pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bloc, .bloc .monte, .bloc-etape .image svg, .enveloppe .rabat, .enveloppe .carte { transition: none !important; }
+  .bloc .monte { transform: none; }
+  .toucher { animation: none; }
+  .coeurs span { animation: none; display: none; }
+}
+</style>
+
+<!-- ======================= Vue : comparer ======================= -->
+<main class="comparer" id="vue-comparer">
+  <header class="entete">
+    <span class="etiquette">Maquette · Getgents</span>
+    <h1>Le fil de <em>Claire</em></h1>
+    <p class="fort">Une même histoire, racontée de deux façons. Ouvrez chacune sur votre téléphone, avec le son.</p>
+    <p>Claire quitte l'équipe après douze ans. L'équipe veut la remercier. L'histoire et les noms sont inventés.</p>
+  </header>
+
+  <section class="voies" aria-label="Les deux voies">
+    <article class="voie">
+      <span class="num">Voie 1</span>
+      <div class="apercu apercu-ia">🎉 Merci pour tout, Claire ! 🎉<small>Une page qui défile</small></div>
+      <h2>Écrite par l'IA de l'utilisateur</h2>
+      <p>Ce que produit Claude à qui l'on demande « une belle page pour le départ de Claire ». Soignée, libre, mais semblable à mille autres. La musique se lance par un bouton et tourne en boucle.</p>
+      <div class="boutons"><a class="bouton" href="#ia">Ouvrir la voie 1</a></div>
+    </article>
+    <article class="voie">
+      <span class="num">Voie 2</span>
+      <div class="apercu apercu-co"><div class="env"><span>Claire</span></div></div>
+      <h2>Composée par Getgents</h2>
+      <p>L'équipe dépose ses souvenirs et son intention. Getgents met en scène : une enveloppe à ouvrir, une étape à la fois, une musique qui suit le récit.</p>
+      <div class="boutons">
+        <a class="bouton" href="#composee">Ouvrir la voie 2</a>
+        <div class="segment" role="group" aria-label="Intention">
+          <button type="button" id="ton-remercier" data-ton="remercier" aria-pressed="true">Remercier</button>
+          <button type="button" id="ton-celebrer" data-ton="celebrer" aria-pressed="false">Célébrer</button>
+        </div>
+      </div>
+      <p class="note">Même histoire, autre intention : couleurs, typographie, rythme et musique changent.</p>
+    </article>
+  </section>
+
+  <section class="bloc-doc">
+    <h2>Ce que le créateur fournit</h2>
+    <p>Pour la voie 2, pas de code : un récit, une intention, et ses souvenirs. Getgents choisit la mise en scène. Dans le produit, ce seraient de vraies photos à la place des dessins.</p>
+    <pre class="json" id="json-recit"></pre>
+  </section>
+
+  <section class="bloc-doc">
+    <h2>Une musique qui suit le récit</h2>
+    <p>Le morceau est fait de quatre couches que le récit allume et éteint, toujours sur un temps fort. Ici c'est un son de synthèse provisoire : le principe vaut pour un morceau composé par un professionnel et livré en pistes séparées.</p>
+    <div class="couches">
+      <div class="couche"><b>Ambiance</b><span>Dès l'enveloppe. Elle ne s'arrête jamais.</span></div>
+      <div class="couche"><b>Harmonie</b><span>Entre quand le nom de Claire apparaît.</span></div>
+      <div class="couche"><b>Rythme</b><span>Avec les premiers projets, puis l'équipe qui grandit.</span></div>
+      <div class="couche"><b>Mélodie</b><span>Au moment où l'équipe est au complet. Tout se retire au tournant, puis revient pour la fierté.</span></div>
+    </div>
+  </section>
+
+  <section class="bloc-doc">
+    <h2>Ce que chaque voie gagne et perd</h2>
+    <div class="tableau">
+      <table>
+        <thead><tr><th></th><th>Voie 1 · IA de l'utilisateur</th><th>Voie 2 · composée par Getgents</th></tr></thead>
+        <tbody>
+          <tr><td>Liberté</td><td>Totale : n'importe quelle forme, n'importe quel jeu.</td><td>Celle d'un vocabulaire : seuil, étape, tournant, citation, fin.</td></tr>
+          <tr><td>Émotion</td><td>Dépend du talent du modèle ce jour-là.</td><td>Garantie par la mise en scène, quelle que soit l'IA.</td></tr>
+          <tr><td>Photos, musique</td><td>Voyagent mal : le code les appelle, il faut les joindre à part.</td><td>Déposées avec le récit, la musique suit le rythme de lecture.</td></tr>
+          <tr><td>Effort du créateur</td><td>Écrire un bon prompt, reprendre le code.</td><td>Ses souvenirs, quelques phrases, une intention.</td></tr>
+          <tr><td>Reconnaissance</td><td>Chaque page est différente : on ne reconnaît pas Getgents.</td><td>Une expérience reconnaissable, qui devient une signature.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- ======================= Vue : voie IA ======================= -->
+<div class="vue-ia" id="vue-ia" hidden>
+  <div class="bandeau"><span>Voie 1 · écrite par l'IA de l'utilisateur</span><a href="#">← Comparer</a></div>
+  <section class="ia-hero">
+    <h1>🎉 Merci pour tout, Claire ! 🎉</h1>
+    <p>Après 12 années incroyables, l'heure est venue de te dire au revoir. Voici un petit retour sur ton parcours parmi nous !</p>
+    <button type="button" class="ia-musique" id="ia-musique">🎵 Lancer la musique</button>
+  </section>
+  <div class="ia-corps" id="ia-corps"></div>
+</div>
+
+<!-- ======================= Vue : composée ======================= -->
+<div class="vue-co" id="vue-co" data-ton="remercier" hidden>
+  <div class="co-haut">
+    <div class="co-progression" id="co-progression" aria-hidden="true"></div>
+    <div class="co-commandes">
+      <a class="puce" href="#" id="co-quitter">← Comparer</a>
+      <span style="display:flex;gap:8px">
+        <button type="button" class="puce" id="co-ton">Intention : remercier</button>
+        <button type="button" class="puce" id="co-son" aria-pressed="false">Son : actif</button>
+      </span>
+    </div>
+  </div>
+  <div class="co-scene" id="co-scene" aria-live="polite"></div>
+  <div class="coeurs" id="coeurs"></div>
+  <div class="flech" id="co-aide" hidden>Toucher pour continuer →</div>
+  <div class="partition" id="partition" aria-hidden="true"><b>Musique</b><span data-c="ambiance">ambiance</span><span data-c="harmonie">harmonie</span><span data-c="rythme">rythme</span><span data-c="melodie">mélodie</span></div>
+</div>
+
+<script>
+/* ---------------------------------------------------------------
+   Le RÉCIT : ce que le créateur fournit (souvenirs + intention).
+   La mise en scène, les couleurs et la musique en découlent.
+---------------------------------------------------------------- */
+var RECIT = {
+  pour: "Claire",
+  de: "Hugo, Inès, Malik, Sarah et toute l'équipe",
+  intention: "remercier",
+  blocs: [
+    { type: "ouverture", musique: ["ambiance"] },
+    { type: "couverture", titre: "Claire", sous: "douze ans avec nous", annees: "2014 · 2026", musique: ["ambiance", "harmonie"] },
+    { type: "etape", date: "Mars 2014", titre: "Le premier lundi", image: "arrivee",
+      mots: "Il pleuvait, tu avais un carton sous le bras. Tu as demandé où était la machine à café, puis tu as réparé l'imprimante.", musique: ["ambiance", "harmonie"] },
+    { type: "etape", date: "Automne 2015", titre: "La médiathèque", image: "projet",
+      mots: "Trois semaines de nuits courtes, et ce message à 2 h du matin : « ça marche ». Notre premier vrai projet.", musique: ["ambiance", "harmonie", "rythme"] },
+    { type: "etape", date: "2018", titre: "De quatre à quinze", image: "equipe",
+      mots: "Tu as accueilli chacun des onze suivants. Avec le même café, et la même patience.", musique: ["ambiance", "harmonie", "rythme", "melodie"] },
+    { type: "tournant", texte: "Et puis, 2020.", musique: ["ambiance"] },
+    { type: "etape", date: "Printemps 2020", titre: "Les vendredis", image: "difficile",
+      mots: "Quand tout s'est arrêté, c'est toi qui appelais chacun d'entre nous, chaque vendredi. Personne ne l'a oublié.", musique: ["ambiance", "harmonie"] },
+    { type: "etape", date: "Juin 2023", titre: "Sur la scène", image: "fierte", ponctuation: "revelation",
+      mots: "Le prix régional. Au micro, tu as dit « c'est l'équipe ». On sait que c'était un peu toi.", musique: ["ambiance", "harmonie", "rythme", "melodie"] },
+    { type: "citation", texte: "Fais simple, et fais-le bien.", auteur: "Claire, à chaque réunion", musique: ["harmonie", "melodie"] },
+    { type: "etape", date: "Décembre 2026", titre: "La route", image: "depart",
+      mots: "Une nouvelle ville, un nouveau métier. Nous gardons la machine à café, et tout le reste.", musique: ["ambiance", "harmonie", "melodie"] },
+    { type: "fin", ponctuation: "fin", musique: ["ambiance", "harmonie"] }
+  ]
+};
+
+var TONS = {
+  remercier: { accroche: "Toute l'équipe a préparé quelque chose pour toi.", fin: "Merci, Claire.", libelle: "remercier" },
+  celebrer:  { accroche: "Ce soir, on fête tes douze ans avec nous.", fin: "Bravo, Claire !", libelle: "célébrer" }
+};
+
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+function lire(cle, defaut) { try { return localStorage.getItem(cle) || defaut; } catch (e) { return defaut; } }
+function ecrire(cle, v) { try { localStorage.setItem(cle, v); } catch (e) {} }
+
+/* ---------------------------------------------------------------
+   Musique adaptative (synthèse provisoire) : quatre couches jouées
+   en permanence, dont le récit règle le volume sur un temps fort,
+   et trois ponctuations (ouverture, révélation, fin).
+---------------------------------------------------------------- */
+var Son = (function () {
+  var ac, maitre, couches = {}, timer = null, origine = 0, prochaine = 0, mesure = 0, actif = false, muet = false, ton;
+  var NOMS = ["ambiance", "harmonie", "rythme", "melodie"];
+  var REGLAGES = {
+    remercier: { bpm: 66, onde: "sine", accords: [[53, 57, 60, 64], [57, 60, 64, 67], [50, 53, 57, 60], [46, 50, 53, 57]], motif: [0, 2, 1, 3, 2, 1, 0, -1], croches: false },
+    celebrer:  { bpm: 108, onde: "triangle", accords: [[60, 64, 67, 71], [57, 60, 64, 67], [53, 57, 60, 64], [55, 59, 62, 65]], motif: [0, 1, 2, 3, 2, 1, 2, 3], croches: true }
+  };
+  function hz(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+  function note(dest, f, t, duree, vol, onde, attaque, relache) {
+    var o = ac.createOscillator(), g = ac.createGain();
+    o.type = onde; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + attaque);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + duree + relache);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + duree + relache + 0.05);
+  }
+  function installer() {
+    maitre = ac.createGain(); maitre.gain.value = 0;
+    var filtre = ac.createBiquadFilter(); filtre.type = "lowpass"; filtre.frequency.value = 2800;
+    var echo = ac.createDelay(); echo.delayTime.value = 0.34;
+    var retour = ac.createGain(); retour.gain.value = 0.32;
+    var mouille = ac.createGain(); mouille.gain.value = 0.22;
+    maitre.connect(filtre); filtre.connect(ac.destination);
+    maitre.connect(echo); echo.connect(retour); retour.connect(echo); echo.connect(mouille); mouille.connect(filtre);
+    NOMS.forEach(function (n) { var g = ac.createGain(); g.gain.value = 0; g.connect(maitre); couches[n] = g; });
+  }
+  function jouerMesure(t) {
+    var temps = 60 / ton.bpm, dm = temps * 4, ch = ton.accords[mesure % ton.accords.length];
+    note(couches.ambiance, hz(ch[0] - 24), t, dm, 0.22, "sine", 1.2, 1.6);
+    note(couches.ambiance, hz(ch[0] - 5), t, dm, 0.07, "sine", 1.4, 1.6);
+    ch.forEach(function (n) { note(couches.harmonie, hz(n - 12), t, dm * 0.92, 0.055, ton.onde, 0.35, 1.2); });
+    for (var b = 0; b < 4; b++) {
+      note(couches.rythme, hz(ch[0] - 24), t + b * temps, 0.1, 0.32, "sine", 0.005, 0.16);
+      if (ton.croches) note(couches.rythme, hz(ch[2] + 12), t + b * temps + temps / 2, 0.04, 0.035, "triangle", 0.004, 0.07);
+    }
+    ton.motif.forEach(function (deg, k) {
+      if (deg < 0) return;
+      note(couches.melodie, hz(ch[deg % ch.length] + 12), t + k * temps / 2, temps / 2 * 0.9, 0.06, "triangle", 0.01, 0.4);
+    });
+  }
+  function planifier() {
+    var dm = 60 / ton.bpm * 4;
+    while (prochaine < ac.currentTime + 0.3) { jouerMesure(prochaine); prochaine += dm; mesure++; }
+  }
+  function prochainTemps() {
+    var temps = 60 / ton.bpm, now = ac.currentTime;
+    return origine + Math.ceil((now - origine) / temps) * temps;
+  }
+  return {
+    demarrer: function (nomTon) {
+      try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return false; }
+      if (ac.resume) ac.resume();
+      ton = REGLAGES[nomTon];
+      if (!maitre) installer();
+      var now = ac.currentTime;
+      maitre.gain.cancelScheduledValues(now); maitre.gain.setValueAtTime(maitre.gain.value, now);
+      maitre.gain.linearRampToValueAtTime(muet ? 0 : 0.9, now + 2.5);
+      if (!actif) { actif = true; origine = prochaine = now + 0.1; mesure = 0; timer = setInterval(planifier, 60); }
+      return true;
+    },
+    changerTon: function (nomTon) { ton = REGLAGES[nomTon]; },
+    couches: function (liste) {
+      if (!actif) return;
+      var now = ac.currentTime, t = Math.max(prochainTemps(), now + 0.05);
+      NOMS.forEach(function (n) {
+        var g = couches[n].gain, on = liste.indexOf(n) >= 0;
+        g.cancelScheduledValues(now); g.setValueAtTime(g.value, now);
+        g.setValueAtTime(g.value, t);
+        g.linearRampToValueAtTime(on ? 1 : 0, t + (on ? 1.6 : 2.4));
+      });
+    },
+    ponctuation: function (type) {
+      if (!actif || muet) return;
+      var t = Math.max(prochainTemps(), ac.currentTime + 0.05), ch = ton.accords[(mesure + 3) % ton.accords.length];
+      if (type === "ouverture") ch.concat([ch[0] + 12]).forEach(function (n, k) { note(maitre, hz(n + 12), t + k * 0.11, 0.2, 0.09, "sine", 0.005, 2.2); });
+      if (type === "revelation") ch.forEach(function (n) { note(maitre, hz(n + 24), t, 0.4, 0.05, "triangle", 0.02, 3.5); });
+      if (type === "fin") { var r = ton.accords[0]; r.forEach(function (n) { note(maitre, hz(n), t, 2.5, 0.07, "sine", 0.6, 4); note(maitre, hz(n - 24), t, 2.5, 0.05, "sine", 0.8, 4); }); }
+    },
+    muet: function (v) {
+      muet = v; if (!actif) return;
+      var now = ac.currentTime;
+      maitre.gain.cancelScheduledValues(now); maitre.gain.setValueAtTime(maitre.gain.value, now);
+      maitre.gain.linearRampToValueAtTime(v ? 0 : 0.9, now + 0.6);
+    },
+    arreter: function () {
+      if (!actif) return;
+      var now = ac.currentTime;
+      maitre.gain.cancelScheduledValues(now); maitre.gain.setValueAtTime(maitre.gain.value, now);
+      maitre.gain.linearRampToValueAtTime(0, now + 1.2);
+      setTimeout(function () { clearInterval(timer); actif = false; NOMS.forEach(function (n) { couches[n].gain.value = 0; }); }, 1300);
+    },
+    get actif() { return actif; },
+    get estMuet() { return muet; }
+  };
+})();
+
+/* ---------------------------------------------------------------
+   Illustrations provisoires (à la place des photos du créateur).
+---------------------------------------------------------------- */
+function scene(nom, i) {
+  var g = "g" + i, ciel, contenu = "";
+  var pluie = function (n) { var s = ""; for (var k = 0; k < n; k++) { var x = (k * 37) % 400, y = (k * 53) % 220; s += '<line x1="' + x + '" y1="' + y + '" x2="' + (x - 6) + '" y2="' + (y + 18) + '" stroke="var(--c-doux)" stroke-opacity=".35" stroke-width="1.5"/>'; } return s; };
+  var etoiles = function (n) { var s = ""; for (var k = 0; k < n; k++) { s += '<circle cx="' + ((k * 71) % 400) + '" cy="' + ((k * 29) % 150) + '" r="' + (k % 3 ? 1 : 1.8) + '" fill="var(--c-papier)" fill-opacity=".7"/>'; } return s; };
+  if (nom === "arrivee") {
+    ciel = ["var(--c-profond)", "var(--c-rose)"];
+    contenu = pluie(26) + '<rect x="0" y="222" width="400" height="78" fill="var(--c-fond)"/><rect x="140" y="80" width="120" height="142" fill="var(--c-profond)"/><rect x="183" y="158" width="34" height="64" fill="var(--c-chaud)"/><rect x="155" y="100" width="22" height="26" fill="var(--c-chaud)" fill-opacity=".55"/><rect x="223" y="100" width="22" height="26" fill="var(--c-fond)" fill-opacity=".6"/><circle cx="196" cy="208" r="7" fill="var(--c-fond)"/><rect x="190" y="214" width="12" height="8" fill="var(--c-fond)"/>';
+  } else if (nom === "projet") {
+    ciel = ["var(--c-fond)", "var(--c-profond)"];
+    contenu = etoiles(28) + '<polygon points="250,95 160,230 330,230" fill="var(--c-chaud)" fill-opacity=".22"/><line x1="250" y1="60" x2="250" y2="95" stroke="var(--c-doux)" stroke-width="3"/><ellipse cx="250" cy="96" rx="16" ry="7" fill="var(--c-chaud)"/><rect x="90" y="150" width="120" height="76" rx="4" fill="var(--c-doux)" fill-opacity=".85"/><rect x="98" y="158" width="104" height="58" fill="var(--c-fond)"/><rect x="106" y="168" width="60" height="5" fill="var(--c-chaud)"/><rect x="106" y="180" width="80" height="5" fill="var(--c-doux)" fill-opacity=".6"/><rect x="106" y="192" width="40" height="5" fill="var(--c-doux)" fill-opacity=".6"/><rect x="40" y="230" width="320" height="8" fill="var(--c-doux)" fill-opacity=".5"/>';
+  } else if (nom === "equipe") {
+    ciel = ["var(--c-profond)", "var(--c-fond)"];
+    for (var k = 0; k < 15; k++) {
+      var ang = Math.PI * (0.12 + 0.76 * k / 14), r = 120, cx = 200 - Math.cos(ang) * r * 1.3, cy = 250 - Math.sin(ang) * r;
+      contenu += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="13" fill="' + (k < 4 ? "var(--c-chaud)" : "var(--c-doux)") + '" fill-opacity="' + (k < 4 ? 1 : 0.75) + '"/>';
+    }
+    contenu += '<circle cx="200" cy="232" r="22" fill="var(--c-rose)"/>';
+  } else if (nom === "difficile") {
+    ciel = ["#08070d", "var(--c-profond)"];
+    contenu = pluie(34);
+    for (var c = 0; c < 4; c++) for (var l = 0; l < 3; l++) {
+      var allume = c === 2 && l === 1;
+      contenu += '<rect x="' + (78 + c * 64) + '" y="' + (70 + l * 52) + '' + '" width="40" height="34" fill="' + (allume ? "var(--c-chaud)" : "var(--c-fond)") + '" fill-opacity="' + (allume ? 1 : 0.8) + '"/>';
+    }
+  } else if (nom === "fierte") {
+    ciel = ["var(--c-fond)", "var(--c-profond)"];
+    contenu = '<polygon points="200,0 120,240 280,240" fill="var(--c-chaud)" fill-opacity=".25"/><rect x="60" y="236" width="280" height="20" fill="var(--c-doux)" fill-opacity=".55"/><circle cx="200" cy="168" r="14" fill="var(--c-papier)"/><rect x="186" y="184" width="28" height="52" rx="10" fill="var(--c-papier)"/><polygon points="214,150 222,142 230,150 222,158" fill="var(--c-chaud)"/>' + etoiles(16);
+  } else {
+    ciel = ["var(--c-rose)", "var(--c-chaud)"];
+    contenu = '<circle cx="200" cy="168" r="46" fill="var(--c-papier)" fill-opacity=".9"/><rect x="0" y="168" width="400" height="132" fill="var(--c-profond)"/><polygon points="188,168 212,168 330,300 70,300" fill="var(--c-fond)"/><rect x="198" y="190" width="4" height="12" fill="var(--c-chaud)"/><rect x="197" y="220" width="6" height="18" fill="var(--c-chaud)"/><rect x="195" y="262" width="10" height="26" fill="var(--c-chaud)"/>';
+  }
+  return '<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="' + g + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + ciel[0] + '"/><stop offset="1" stop-color="' + ciel[1] + '"/></linearGradient></defs><rect width="400" height="300" fill="url(#' + g + ')"/>' + contenu + '</svg>';
+}
+
+/* ---------------------------------------------------------------
+   Voie 2 : le moteur qui joue le récit.
+---------------------------------------------------------------- */
+var vueCo = document.getElementById("vue-co"), sceneEl = document.getElementById("co-scene");
+var progression = document.getElementById("co-progression"), aide = document.getElementById("co-aide");
+var ton = lire("recit:ton", "remercier"), indice = 0, ouvert = false;
+
+function rendreBloc(b, i) {
+  var t = TONS[ton];
+  if (b.type === "ouverture") return '<div class="ouv"><button type="button" class="enveloppe" id="enveloppe" aria-label="Ouvrir le message pour ' + esc(RECIT.pour) + '"><span class="corps"></span><span class="carte"><span class="pour">Pour toi,</span><span class="nom">' + esc(RECIT.pour) + '</span></span><span class="rabat"></span></button><p class="accroche monte d1">' + esc(t.accroche) + '</p><span class="toucher monte d2">Toucher pour ouvrir</span></div>';
+  if (b.type === "couverture") return '<div><h1 class="co-titre monte">' + esc(b.titre) + '</h1><p class="sous monte d1">' + esc(b.sous) + '</p><p class="annees monte d2">' + esc(b.annees) + '</p></div>';
+  if (b.type === "etape") return '<div class="image">' + scene(b.image, i) + '</div><div class="texte"><p class="date monte">' + esc(b.date) + '</p><h2 class="monte d1">' + esc(b.titre) + '</h2><p class="mots monte d2">' + esc(b.mots) + '</p></div>';
+  if (b.type === "tournant") return '<h2 class="co-titre monte">' + esc(b.texte) + '</h2>';
+  if (b.type === "citation") return '<figure style="margin:0"><blockquote class="monte">« ' + esc(b.texte) + ' »</blockquote><cite class="monte d1">' + esc(b.auteur) + '</cite></figure>';
+  return '<div class="fin"><h2 class="co-titre monte">' + esc(t.fin) + '</h2><p class="signature monte d1">De la part de ' + esc(RECIT.de) + '.</p>' +
+    '<div class="gestes monte d2"><button type="button" class="geste coeur" id="g-coeur">♥ Envoyer un cœur</button><button type="button" class="geste" id="g-mot">Laisser un mot</button><button type="button" class="geste" id="g-touche">Ça m\'a touchée</button></div>' +
+    '<div class="mot" id="mot" hidden><textarea id="mot-texte" placeholder="Votre mot pour l\'équipe…"></textarea><button type="button" class="geste" id="mot-envoyer">Envoyer</button></div>' +
+    '<p class="retour" id="retour" aria-live="polite"></p><button type="button" class="revoir monte d3" id="revoir">Revoir depuis le début</button></div>';
+}
+
+function construire() {
+  vueCo.dataset.ton = ton;
+  document.getElementById("co-ton").textContent = "Intention : " + TONS[ton].libelle;
+  sceneEl.innerHTML = "";
+  RECIT.blocs.forEach(function (b, i) {
+    var s = document.createElement("section");
+    s.className = "bloc bloc-" + b.type + (b.type === "etape" ? "" : " centre");
+    s.innerHTML = rendreBloc(b, i);
+    sceneEl.appendChild(s);
+  });
+  progression.innerHTML = RECIT.blocs.slice(1).map(function () { return "<i></i>"; }).join("");
+  brancherFin();
+  var env = document.getElementById("enveloppe");
+  env.addEventListener("click", function (e) { e.stopPropagation(); ouvrir(); });
+  montrer(indice, true);
+}
+
+function montrer(i, sansSon) {
+  indice = Math.max(0, Math.min(RECIT.blocs.length - 1, i));
+  var blocs = sceneEl.children;
+  for (var k = 0; k < blocs.length; k++) blocs[k].classList.toggle("actif", k === indice);
+  var traits = progression.children;
+  for (var p = 0; p < traits.length; p++) traits[p].classList.toggle("fait", p < indice);
+  var b = RECIT.blocs[indice];
+  aide.hidden = !(ouvert && indice > 0 && indice < 3);
+  partition(b.musique);
+  if (!sansSon) { Son.couches(b.musique); if (b.ponctuation) Son.ponctuation(b.ponctuation); }
+}
+
+function partition(liste) {
+  document.querySelectorAll("#partition span").forEach(function (s) { s.classList.toggle("on", Son.actif && !Son.estMuet && liste.indexOf(s.dataset.c) >= 0); });
+}
+
+function ouvrir() {
+  if (ouvert) return;
+  ouvert = true;
+  Son.changerTon(ton);
+  Son.demarrer(ton);
+  Son.couches(["ambiance"]);
+  Son.ponctuation("ouverture");
+  sceneEl.children[0].classList.add("ouvert");
+  setTimeout(function () { montrer(1); }, 1500);
+}
+
+function suivant() { if (!ouvert) return ouvrir(); if (indice < RECIT.blocs.length - 1) montrer(indice + 1); }
+function precedent() { if (ouvert && indice > 1) montrer(indice - 1); }
+
+sceneEl.addEventListener("click", function (e) {
+  if (e.target.closest("button, textarea, a")) return;
+  var x = e.clientX / window.innerWidth;
+  if (x < 0.28) precedent(); else suivant();
+});
+var depart = null;
+sceneEl.addEventListener("touchstart", function (e) { depart = e.touches[0].clientX; }, { passive: true });
+sceneEl.addEventListener("touchend", function (e) {
+  if (depart === null) return;
+  var dx = e.changedTouches[0].clientX - depart; depart = null;
+  if (Math.abs(dx) > 50) { e.preventDefault(); if (dx < 0) suivant(); else precedent(); }
+});
+document.addEventListener("keydown", function (e) {
+  if (vueCo.hidden || e.target.closest("textarea")) return;
+  if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); suivant(); }
+  if (e.key === "ArrowLeft") precedent();
+});
+
+document.getElementById("co-son").addEventListener("click", function () {
+  var m = !Son.estMuet; Son.muet(m);
+  this.textContent = m ? "Son : coupé" : "Son : actif"; this.setAttribute("aria-pressed", String(m));
+  partition(RECIT.blocs[indice].musique);
+});
+document.getElementById("co-ton").addEventListener("click", function () {
+  choisirTon(ton === "remercier" ? "celebrer" : "remercier");
+  var garde = indice; construire(); if (ouvert) { sceneEl.children[0].classList.add("ouvert"); montrer(garde); }
+});
+
+function brancherFin() {
+  var retour = document.getElementById("retour");
+  var dire = function (t) { retour.textContent = t; };
+  document.getElementById("g-coeur").addEventListener("click", function () {
+    var c = document.getElementById("coeurs");
+    for (var k = 0; k < 14; k++) { var s = document.createElement("span"); s.textContent = "♥"; s.style.left = (5 + Math.random() * 90) + "%"; s.style.animationDelay = (k * 0.08) + "s"; c.appendChild(s); setTimeout(function (el) { el.remove(); }.bind(null, s), 3200); }
+    try { if (navigator.vibrate) navigator.vibrate([30, 40, 30]); } catch (e) {}
+    dire("Maquette : votre cœur partirait vers l'équipe.");
+  });
+  document.getElementById("g-touche").addEventListener("click", function () { dire("Maquette : l'équipe saurait que ce message vous a touchée."); });
+  document.getElementById("g-mot").addEventListener("click", function () { var m = document.getElementById("mot"); m.hidden = !m.hidden; if (!m.hidden) document.getElementById("mot-texte").focus(); });
+  document.getElementById("mot-envoyer").addEventListener("click", function () {
+    var t = document.getElementById("mot-texte").value.trim();
+    dire(t ? "Maquette : votre mot partirait vers l'équipe." : "Écrivez quelques mots avant d'envoyer.");
+  });
+  document.getElementById("revoir").addEventListener("click", function () { montrer(1); });
+}
+
+/* ---------------------------------------------------------------
+   Voie 1 : la page « libre » que produirait un modèle.
+---------------------------------------------------------------- */
+(function () {
+  var emo = { arrivee: "🌧️", projet: "💻", equipe: "👥", difficile: "📞", fierte: "🏆", depart: "🚗" };
+  var html = "<h2>📅 Ton parcours</h2>";
+  RECIT.blocs.forEach(function (b) {
+    if (b.type === "etape") html += '<div class="ia-carte"><div class="ic">' + emo[b.image] + '</div><div><span class="d">' + esc(b.date) + '</span><h3>' + esc(b.titre) + '</h3><p>' + esc(b.mots) + '</p></div></div>';
+    if (b.type === "citation") html += '<p class="ia-citation">💬 « ' + esc(b.texte) + ' » ' + esc(b.auteur) + '</p>';
+  });
+  html += '<div class="ia-fin"><h2>💜 Merci pour tout, Claire !</h2><p>Bonne route pour la suite. Tu vas nous manquer !<br>De la part de ' + esc(RECIT.de) + '.</p></div>';
+  document.getElementById("ia-corps").innerHTML = html;
+  var bouton = document.getElementById("ia-musique"), joue = false;
+  bouton.addEventListener("click", function () {
+    joue = !joue;
+    if (joue) { Son.changerTon("remercier"); Son.demarrer("remercier"); Son.couches(["ambiance", "harmonie", "melodie"]); bouton.textContent = "⏸ Couper la musique"; }
+    else { Son.arreter(); bouton.textContent = "🎵 Lancer la musique"; }
+  });
+})();
+
+/* ---------------------------------------------------------------
+   Page de comparaison, intention, navigation par l'adresse.
+---------------------------------------------------------------- */
+function choisirTon(t) {
+  ton = t; ecrire("recit:ton", t);
+  document.querySelectorAll(".segment button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.ton === t)); });
+  afficherJson();
+}
+document.querySelectorAll(".segment button").forEach(function (b) { b.addEventListener("click", function () { choisirTon(b.dataset.ton); }); });
+
+function afficherJson() {
+  var court = { pour: RECIT.pour, de: RECIT.de, intention: ton, souvenirs: RECIT.blocs.filter(function (b) { return b.type === "etape"; }).map(function (b) { return { date: b.date, titre: b.titre, photo: b.image + ".jpg", mots: b.mots }; }), citation: "Fais simple, et fais-le bien." };
+  document.getElementById("json-recit").textContent = JSON.stringify(court, null, 2);
+}
+
+function router() {
+  var h = location.hash.replace("#", "");
+  var co = h === "composee", ia = h === "ia";
+  document.getElementById("vue-comparer").hidden = co || ia;
+  document.getElementById("vue-ia").hidden = !ia;
+  vueCo.hidden = !co;
+  if (!co && !ia) window.scrollTo(0, 0);
+  if (co) { indice = 0; ouvert = false; construire(); }
+  else Son.arreter();
+  if (ia) document.getElementById("ia-musique").textContent = "🎵 Lancer la musique";
+}
+window.addEventListener("hashchange", router);
+choisirTon(ton);
+router();
+</script>
