@@ -1155,6 +1155,32 @@ l'utilisateur qui joue le scénario et colle les journaux Vercel.
   (27/11)** : `mockups/recit/premier-couteau/` (page + `medias/`), publié en
   artefact privé (https://claude.ai/artifact/1eSthRc2VWqkYwhTxSCnbG). État,
   choix et limites : section « Prototype construit » du brief.
+- **« Le Publiciste », lot 1** (27/11, format de gent ; `lib/publiciste.ts`,
+  `lib/filmRendu.ts`, `components/publiciste/`, `app/api/publiciste/voix`,
+  `lib/server/mistral.ts`). Brief et décisions : `mockups/recit/premier-couteau-brief.md`.
+  Réservé aux comptes complets. Entretien ÉCRIT, puis le gent encadre le
+  storyboard (JSON) entre `<!--STORYBOARD-->` et `<!--/STORYBOARD-->`
+  (`consignePubliciste`, FORME seulement) ; le bloc quitte le texte, `m.storyboard`
+  le porte, bouton « Atelier du film ». L'atelier : voix Mistral (4 voix
+  françaises toutes prêtes, TOUTES féminines) générée scène par scène — UN
+  appel court par phrase, enchaînés par le navigateur (jamais de génération
+  longue dans une fonction) ; images et musique IMPORTÉES (le lot 2 les
+  générera) ; aperçu en direct ; MP4 vertical fabriqué DANS LE NAVIGATEUR
+  (WebCodecs + `mp4-muxer`, H.264 High, AAC sinon Opus signalé), choix tranché
+  par un essai mesuré (`mockups/recit/rendu-essai/`) et vérifié sur le Mac et
+  l'iPhone de l'éditeur. Une scène dont la voix déborde est ALLONGÉE, jamais
+  coupée. Les « … » partent avant la synthèse (Voxtral improvisait dessus).
+  `MISTRAL_API_KEY` n'est lue QUE par `lib/server/mistral.ts` (test de
+  discipline) : toujours payée par la plateforme ; plafond EN MÉMOIRE (300
+  phrases/heure par compte, approximatif) — un vrai plafond en base avant toute
+  ouverture. **Variable à régler sur Vercel AVANT le déploiement**, sinon la
+  route répond 503 « voix pas encore branchée » (rien ne casse). Gardé dans le
+  navigateur : retouches du storyboard et voix choisie ; perdus à la fermeture :
+  images, musique, voix générées, film (confirmation avant de fermer un film non
+  enregistré). Vérifié au navigateur (`next dev`, vrai modèle via OpenRouter,
+  vraie voix Mistral) : entretien → storyboard → voix → film de 40 s fabriqué
+  en 8 s, transcription fidèle, −18 LUFS ; téléphone sans débordement. NON
+  vérifié : en production, et sur un vrai iPhone (mémoire d'un film entier).
 - **Formes des boutons, À TRANCHER PLUS TARD** (27/11, l'éditeur « n'en peut
   plus » des pilules et du crème) : maquette de quatre pistes sur la fiche
   d'une page — A coupe franche (recommandée : angles droits, encre, corail

@@ -73,6 +73,7 @@ import { langueDeLEnTete } from "@/lib/langue";
 import { modeleConversationEffectif } from "@/lib/modeleConversation";
 import { noteDepuisReponse } from "@/lib/noteDepuisReponse";
 import { extraireScript, titreScript, TYPE_SCRIPT } from "@/lib/prompteur";
+import { extraireStoryboard, type Storyboard } from "@/lib/publiciste";
 import { amorcesAJour } from "@/lib/amorcesContextuelles";
 import { noteEnTexte, TYPE_NOTE, TYPE_NOTE_MISE_EN_FORME } from "@/lib/miseEnForme";
 import {
@@ -264,6 +265,10 @@ interface EspaceContextValue {
    * gardée : ouvre la note au lieu d'en créer une seconde.
    */
   garderEnNote: (indexMessage: number) => void;
+  /** Gent « Publiciste » : le storyboard ouvert dans l'atelier du film, ou rien. */
+  atelierFilm: { storyboard: Storyboard; cle: string } | null;
+  ouvrirAtelierFilm: (indexMessage: number) => void;
+  fermerAtelierFilm: () => void;
   /** Gent « Prompteur » : le texte ouvert au prompteur, ou rien. */
   prompteurOuvert: { titre: string; texte: string } | null;
   ouvrirPrompteur: (titre: string, texte: string) => void;
@@ -808,6 +813,18 @@ export function EspaceProvider({
     [openArtefactModal]
   );
 
+  const [atelierFilm, setAtelierFilm] = useState<{ storyboard: Storyboard; cle: string } | null>(null);
+  const ouvrirAtelierFilm = useCallback((indexMessage: number) => {
+    const espace = espacesRef.current[currentIdRef.current];
+    if (!espace) return;
+    const fil = getActiveConversation(espace.conversations, espace.activeConversationId);
+    const message = fil.messages[indexMessage];
+    if (!message?.storyboard) return;
+    // La clé range les retouches de l'atelier (dans ce navigateur) : par gent et par réponse.
+    setAtelierFilm({ storyboard: message.storyboard, cle: `${currentIdRef.current}:${message.id ?? indexMessage}` });
+  }, []);
+  const fermerAtelierFilm = useCallback(() => setAtelierFilm(null), []);
+
   const [prompteurOuvert, setPrompteurOuvert] = useState<{ titre: string; texte: string } | null>(null);
   const ouvrirPrompteur = useCallback((titre: string, texte: string) => {
     if (texte.trim()) setPrompteurOuvert({ titre, texte });
@@ -1191,7 +1208,10 @@ export function EspaceProvider({
         // Gent « Prompteur » : le texte à dire, encadré par ses marqueurs. Les
         // marqueurs partent, le texte reste visible dans la réponse.
         const afterScript = espace.prompteur?.enabled ? extraireScript(fullRaw) : { text: fullRaw, script: undefined };
-        const afterEtatJeu = extractEtatJeu(afterScript.text);
+        // Gent « Publiciste » : le storyboard voyage en JSON entre ses marqueurs ;
+        // il quitte le texte (jamais affiché brut) et s'ouvre dans l'atelier.
+        const afterStoryboard = espace.publiciste?.enabled ? extraireStoryboard(afterScript.text) : { text: afterScript.text, storyboard: undefined };
+        const afterEtatJeu = extractEtatJeu(afterStoryboard.text);
         const jeuEtat = afterEtatJeu.etat ?? undefined;
         const extracted = extractQuestions(afterEtatJeu.text);
         // Repli : le modèle a posé une question et listé les choix en clair
@@ -1311,6 +1331,7 @@ export function EspaceProvider({
                   followups,
                   reasoning: reasoning || undefined,
                   script: afterScript.script,
+                  storyboard: afterStoryboard.storyboard,
                 };
               msgs.push({
                 id: proposalId,
@@ -1353,6 +1374,7 @@ export function EspaceProvider({
                   followups,
                   reasoning: reasoning || undefined,
                   script: afterScript.script,
+                  storyboard: afterStoryboard.storyboard,
                   artefactEchec,
                   artefactPossible: afterPossible.possible && !proposition && !artefactEchec,
                 };
@@ -1387,6 +1409,7 @@ export function EspaceProvider({
             followups,
             reasoning: reasoning || undefined,
             script: afterScript.script,
+            storyboard: afterStoryboard.storyboard,
             artefactEchec,
             artefactPossible: afterPossible.possible && !proposition && !artefactEchec,
           }));
@@ -2478,6 +2501,9 @@ export function EspaceProvider({
         ouvrirPrompteur,
         fermerPrompteur,
         lancerPrompteur,
+        atelierFilm,
+        ouvrirAtelierFilm,
+        fermerAtelierFilm,
         versionPersonnelle: versionsDiffuseesIds.has(currentId) ? "diffusee" : "travail",
         mettreEnForme,
         miseEnFormeDisponible: !shareToken,

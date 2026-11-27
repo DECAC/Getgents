@@ -543,3 +543,7 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   son AAC, sur Mac comme sur iPhone. Non vérifié : un film COMPLET de 72 s
   sur iPhone (mémoire : ~30-50 Mo par format gardés en mémoire ; baisser le
   débit à 4-5 Mb/s).
+- **Lot 1 CODÉ (27/11)** : gent « Le Publiciste », entretien écrit,
+  storyboard, atelier du film (voix Mistral, images et musique importées,
+  aperçu, MP4 vertical dans le navigateur). Détails dans CLAUDE.md. Prochain :
+  lot 2, la direction artistique générée.

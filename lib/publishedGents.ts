@@ -750,6 +750,7 @@ export function draftToEspace(draft: GentDraft): Espace {
     jumpForm: draft.jumpForm,
     moteurJeu: draft.moteurJeu,
     prompteur: draft.prompteur?.enabled ? { enabled: true, dureeCible: draft.prompteur.dureeCible } : undefined,
+    publiciste: draft.publiciste?.enabled ? { enabled: true } : undefined,
     chantier: draft.chantier?.enabled ? { enabled: true } : undefined,
     routine: draft.routine,
     channel: draft.channel,

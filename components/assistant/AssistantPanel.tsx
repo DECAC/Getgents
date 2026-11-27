@@ -106,6 +106,7 @@ export function AssistantPanel({
     openArtefactModal,
     garderEnNote,
     lancerPrompteur,
+    ouvrirAtelierFilm,
     viewArtefact,
     restaurerVersionArtefact,
     sendMessage,
@@ -953,6 +954,8 @@ export function AssistantPanel({
     const noteGardee = !!m.noteId && currentEspace.artefacts.some((a) => a.id === m.noteId);
     // Gent « Prompteur » : la réponse porte une version complète du texte à dire.
     const peutPrompter = isAgent && !!m.script && !!currentEspace.prompteur?.enabled && !(isLastMessage && isThinking);
+    // Gent « Publiciste » : la réponse porte un storyboard complet.
+    const peutFilmer = isAgent && !!m.storyboard && !!currentEspace.publiciste?.enabled && !(isLastMessage && isThinking);
     return (
       <div key={i} className={[styles.msg, isAgent ? styles.msgAgent : styles.msgUser].join(" ")}>
         <div className={styles.av}>{isAgent ? "🤖" : "CL"}</div>
@@ -989,6 +992,20 @@ export function AssistantPanel({
             {isAgent && (canCopy || peutGarder) ? (
               <div className={styles.piedReponse}>
                 <span className={styles.t}>{m.t}</span>
+              {peutFilmer && (
+                <button
+                  type="button"
+                  className={[styles.copyBtn, styles.noteBtn].join(" ")}
+                  onClick={() => ouvrirAtelierFilm(i)}
+                  title="Ouvrir ce storyboard dans l'atelier : voix, aperçu et fabrication du film"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                    <path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4" />
+                  </svg>
+                  Atelier du film
+                </button>
+              )}
               {peutPrompter && (
                 <button
                   type="button"
