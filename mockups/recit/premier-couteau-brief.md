@@ -261,7 +261,7 @@ pistes par étape et une recommandation argumentée. Tout est réellement géné
 - La marque est NOMMÉE dans l'interface du gent (c'est son client), mais
   aucun logo n'est reproduit.
 
-## Reprise : voix Gemini TTS (27/11, NON fait — bloqué par les crédits AI Studio)
+## Voix Gemini TTS (27/11, FAIT — 6 voix ajoutées au casting du Publiciste)
 
 Demande de l'éditeur : tester les voix Gemini TTS, **3 voix d'homme et 3 de
 femme**, et les ajouter au casting (étape « Voix ») de
@@ -334,4 +334,27 @@ seulement le texte (onyx a rendu 6 s de silence une fois).
   de `publiciste/index.html` (l'animatique s'en sert). Reprendre une phrase
   seule en cas d'échec de contrôle. Accélérer (`atempo`) au plus ×1,2 si une
   prise déborde.
+
+**Fait (27/11, après recharge des crédits par l'éditeur).** Six voix ajoutées
+à l'étape « Voix » du Publiciste (artefact republié à la même adresse,
+version 3), groupe « Gemini » sous le groupe « OpenAI », genre indiqué sur
+chaque carte : Voix 9 Charon, 10 Orus, 11 Puck (hommes), 12 Kore, 13 Aoede,
+14 Leda (femmes). NON écoutées par l'agent.
+- Modèle : `gemini-3.1-flash-tts-preview`, UNE phrase par appel (le quota
+  payant le permet), consigne en tête du texte : « Dis en français de France,
+  accent parisien neutre, d'une voix basse et chaude, comme une confidence,
+  sans traîner : … ». 54 phrases conformes, UNE reprise (Aoede, phrase 4 :
+  « Et » manquant) et un refus `SAFETY` réessayé ; aucune accélération.
+  Durées par phrase : 1,9 à 4,7 s, dans les places (`DUREES` de la page).
+- Contrôles du script (`publiciste/casting-gemini.py`) : durée ≤ place
+  jusqu'à l'instant suivant, silence interne ≤ 1,1 s, transcription du
+  fichier ET des 1,3 premières secondes (premier mot du texte attendu,
+  aucun mot de la consigne).
+- Pièges : appels EN PARALLÈLE → 429 (limite par minute) : passer une voix
+  après l'autre. Niveau Gemini 3 à 11 dB sous OpenAI : aligné sur
+  `voix-cedar.mp3` (−17,5 LUFS) → −18 à −19 LUFS après limiteur. Coût non
+  mesuré (facturation Google, pas OpenRouter) : le récapitulatif des coûts
+  de la page ne l'inclut PAS.
+- Payé en passant : `#animatique { display: grid }` annulait `hidden` en
+  fichier local (le squelette des artefacts le masquait déjà).
 

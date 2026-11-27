@@ -140,6 +140,8 @@ h2.titre { margin: 4px 0 0; font-size: clamp(22px, 5.2vw, 28px); line-height: 1.
 @media (min-width: 640px) { .voix-grille { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 980px) { .voix-grille { grid-template-columns: repeat(4, 1fr); } }
 .voix { padding: 12px; gap: 8px; }
+.voix-groupes { display: grid; gap: 18px; }
+.voix-groupe h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; color: var(--muted); }
 .voix.ecartee { opacity: .45; }
 .voix .tete { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0 4px; }
 .voix .tete b { font-size: 16px; }
@@ -188,6 +190,7 @@ h2.titre { margin: 4px 0 0; font-size: clamp(22px, 5.2vw, 28px); line-height: 1.
 @media (max-width: 520px) { .seq-scene, .seq-texte { padding: 10px; } .seq textarea { font-size: 13.5px; } .seq textarea.vo { font-size: 14px; } }
 /* Animatique */
 #animatique { position: fixed; inset: 0; z-index: 30; background: #0f0c0a; display: grid; place-items: center; }
+#animatique[hidden] { display: none; }
 #animatique canvas { width: 100%; height: 100%; display: block; }
 .an-haut { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #f3ece6; font-size: 12.5px; }
 .an-haut .mono { color: #cfc4bc; }
@@ -302,9 +305,12 @@ const MUSIQUES = [
     demande: "Piano droit feutré, petit quatuor à cordes qui entre doucement · 72 bpm · lente montée" },
 ];
 const VOIX = [
-  ["alloy", "Voix 1"], ["ash", "Voix 2"], ["ballad", "Voix 3"], ["cedar", "Voix 4"], ["echo", "Voix 5"], ["marin", "Voix 6"], ["onyx", "Voix 7"], ["verse", "Voix 8"],
+  ["alloy", "Voix 1", "openai"], ["ash", "Voix 2", "openai"], ["ballad", "Voix 3", "openai"], ["cedar", "Voix 4", "openai"], ["echo", "Voix 5", "openai"], ["marin", "Voix 6", "openai"], ["onyx", "Voix 7", "openai"], ["verse", "Voix 8", "openai"],
+  ["charon", "Voix 9", "gemini", "homme"], ["orus", "Voix 10", "gemini", "homme"], ["puck", "Voix 11", "gemini", "homme"],
+  ["kore", "Voix 12", "gemini", "femme"], ["aoede", "Voix 13", "gemini", "femme"], ["leda", "Voix 14", "gemini", "femme"],
 ];
-const DUREES = { alloy: [3.92, 3.11, 3.67, 4.43, 2.58, 4.38, 3.04, 3.31, 3.3], ash: [4.3, 4.08, 3.24, 6.85, 3.27, 5.41, 4.07, 2.95, 3.81], ballad: [4.93, 2.63, 3.08, 5, 2.68, 5.53, 4.12, 2.27, 4.38], cedar: [3.94, 2.43, 2.98, 4.88, 2.49, 4.5, 3.15, 2.84, 3.36], echo: [4.36, 2.74, 3.77, 5.09, 2.64, 5.49, 3.13, 2.38, 3.46], marin: [5.62, 2.97, 3.18, 4.93, 2.51, 4.41, 3.43, 3.87, 4.26], onyx: [4.83, 3.03, 2.9, 4.56, 2.65, 4.41, 4.26, 2.63, 2.75], verse: [5.25, 2.9, 3.11, 6.1, 3.01, 5.21, 3.17, 2.87, 3.83] };
+const GROUPES_VOIX = [["openai", "OpenAI · gpt-audio"], ["gemini", "Gemini · 3 voix d'homme, 3 voix de femme"]];
+const DUREES = { alloy: [3.92, 3.11, 3.67, 4.43, 2.58, 4.38, 3.04, 3.31, 3.3], ash: [4.3, 4.08, 3.24, 6.85, 3.27, 5.41, 4.07, 2.95, 3.81], ballad: [4.93, 2.63, 3.08, 5, 2.68, 5.53, 4.12, 2.27, 4.38], cedar: [3.94, 2.43, 2.98, 4.88, 2.49, 4.5, 3.15, 2.84, 3.36], echo: [4.36, 2.74, 3.77, 5.09, 2.64, 5.49, 3.13, 2.38, 3.46], marin: [5.62, 2.97, 3.18, 4.93, 2.51, 4.41, 3.43, 3.87, 4.26], onyx: [4.83, 3.03, 2.9, 4.56, 2.65, 4.41, 4.26, 2.63, 2.75], verse: [5.25, 2.9, 3.11, 6.1, 3.01, 5.21, 3.17, 2.87, 3.83], charon: [3.61, 2.73, 2.41, 3.92, 2.14, 4.41, 3.07, 2.42, 3.02], orus: [4.06, 2.44, 2.41, 3.84, 2.07, 3.99, 2.74, 2.21, 2.42], puck: [3.54, 2.8, 2.63, 3.97, 2.1, 4.01, 2.58, 1.98, 2.21], kore: [3.96, 2.75, 3.1, 4.73, 2.72, 4.33, 2.73, 1.93, 2.52], aoede: [3.72, 2.55, 2.72, 4.57, 2.09, 3.82, 2.86, 2.08, 2.34], leda: [3.74, 2.46, 2.77, 3.69, 1.93, 4.3, 2.72, 2.43, 2.41] };
 const JEUX = [
   { id: "confie", nom: "Confiée à l'oreille", reco: true, note: "Basse, proche, presque un secret." },
   { id: "conteur", nom: "Conteur posé", note: "Plus de distance, plus de rythme." },
@@ -462,19 +468,21 @@ const VUES = {
     ];
   },
   voix() {
-    const grille = h("div", { class: "voix-grille" }, VOIX.map(([id, nom]) => {
+    const carte = ([id, nom, , genre]) => {
       const ecartee = S.ecartees.includes(id), choisie = S.voix === id;
       const basc = (liste, val) => { const i = S[liste].indexOf(id); if (val && i < 0) S[liste].push(id); if (!val && i >= 0) S[liste].splice(i, 1); };
       return h("div", { class: "carte voix" + (ecartee ? " ecartee" : "") + (choisie ? " choisie" : ""), role: "group", "aria-label": nom },
-        h("div", { class: "tete" }, h("b", {}, nom), h("span", { class: "mono" }, choisie ? "votre choix" : "")),
+        h("div", { class: "tete" }, h("b", {}, nom), h("span", { class: "mono" }, choisie ? "votre choix" : (genre || ""))),
         lecteur(`medias/essai-${id}.mp3`, nom + ", deux phrases"),
         h("div", { class: "rangee" },
           h("button", { class: "mini-b", type: "button", onclick: (e) => lireTexteEntier(id, e.currentTarget) }, "Texte entier"),
           h("button", { class: "mini-b non", type: "button", "aria-pressed": String(ecartee), onclick: () => { basc("ecartees", !ecartee); if (!ecartee && S.voix === id) S.voix = null; garder(); rendre(); } }, ecartee ? "Écartée" : "Accent à écarter"),
           h("button", { class: "mini-b", type: "button", "aria-pressed": String(choisie), onclick: () => { S.voix = choisie ? null : id; basc("ecartees", false); garder(); rendre(); } }, choisie ? "Choisie" : "Choisir")));
-    }));
+    };
+    const grille = h("div", { class: "voix-groupes" }, GROUPES_VOIX.map(([g, titre]) => h("section", { class: "voix-groupe", "aria-label": titre },
+      h("h3", {}, titre), h("div", { class: "voix-grille" }, VOIX.filter((v) => v[2] === g).map(carte)))));
     return [
-      entete(5, "Voix", "Huit voix lisent le même texte. Écartez, puis choisissez."),
+      entete(5, "Voix", "Quatorze voix lisent le même texte. Écartez, puis choisissez."),
       bulle("Toutes ont reçu la même consigne : <strong>français de France</strong>, pas d'accent québécois, belge ou du Midi. Mais je n'entends pas les accents moi-même : c'est votre oreille qui tranche.",
         "Commencez par écarter celles qui ne sonnent pas d'ici. Pour comparer les meilleures, « Texte entier » fait entendre l'histoire complète, avec ses silences."),
       grille,
