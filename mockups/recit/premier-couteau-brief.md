@@ -564,3 +564,8 @@ titres plus forts, cartes ombrées, largeur 1 180 px. Le coût affiché est
   étape Voix conforme à la maquette : 6 voix Gemini + 4 voix Mistral + « Ma
   voix » (revient sur « Mistral seul »). Le code du lot 1 (rendu MP4 dans le
   navigateur, route de voix Mistral) reste dans l'historique, à reprendre.
+- **Voix (27/11, éditeur)** : 6 voix GEMINI (3 hommes, 3 femmes) + « Ma
+  voix » recomposée par MISTRAL. Les 4 voix Mistral toutes prêtes sont
+  ÉCARTÉES. Clé Gemini réglée sur Vercel (27/11). Migration 040
+  (`supabase/migrations/040_publiciste.sql` : seau privé `publiciste`, tables
+  `publiciste_projets` et `publiciste_fichiers`) à passer AVANT le lot 1.
