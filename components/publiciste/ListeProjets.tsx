@@ -112,7 +112,7 @@ export function ListeProjets({ gentId, ouvrir }: { gentId: string; ouvrir: (id: 
 
   const n = projets?.length ?? 0;
   return (
-    <div className={styles.studio}>
+    <div className={styles.studio} data-defilement-studio="">
       <header className={styles.barre}>
         <div className={[styles.barreIn, styles.barreSeule].join(" ")}>
           <div className={styles.ident}>

@@ -122,6 +122,11 @@ function useProjet(projetId: string | null, auRevoir: () => void) {
   return { etat, modifier, statut, message };
 }
 
+/** Le studio défile lui-même (html et body ne défilent pas) : remonter = faire défiler son conteneur. */
+function remonter() {
+  document.querySelector("[data-defilement-studio]")?.scrollTo(0, 0);
+}
+
 /** Le projet ouvert se lit dans l'adresse (`?projet=…`) : un lien, un rechargement, le bouton Retour le retrouvent. */
 function projetDeLAdresse(): string | null {
   if (typeof window === "undefined") return null;
@@ -147,12 +152,12 @@ export function StudioPubliciste({ apercuDe, personnelDe, token }: { apercuDe?: 
     else u.searchParams.delete("projet");
     window.history.pushState(window.history.state, "", u);
     setProjetId(id);
-    window.scrollTo(0, 0);
+    remonter();
   }, []);
 
   if (token) {
     return (
-      <div className={styles.studio}>
+      <div className={styles.studio} data-defilement-studio="">
         <main className={styles.main}>
           <div className={styles.intro}>
             <h2 className={styles.titre}>Le Publiciste</h2>
@@ -196,7 +201,7 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
 
   const aller = (id: EtapePubliciste) => {
     modifier((e) => (e.etape === id ? e : { ...e, etape: id }));
-    window.scrollTo(0, 0);
+    remonter();
   };
   const index = ETAPES_PUBLICISTE.findIndex((e) => e.id === etat.etape);
   const fait = (id: EtapePubliciste) =>
@@ -219,7 +224,7 @@ function Projet({ projetId, apercuDe, retourListe }: { projetId: string | null; 
         : "Pas encore choisi";
 
   return (
-    <div className={styles.studio}>
+    <div className={styles.studio} data-defilement-studio="">
       {apercuDe && (
         <div className={styles.bandeau} role="note">
           <span>
